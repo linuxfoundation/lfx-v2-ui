@@ -6,7 +6,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { CalendarComponent } from '@components/calendar/calendar.component';
 import { SelectComponent } from '@components/select/select.component';
-import { SURVEY_AUTO_REMINDER_FREQUENCY_OPTIONS, SURVEY_DISTRIBUTION_OPTIONS, SURVEY_REMINDER_TYPE_OPTIONS } from '@lfx-one/shared/constants';
+import { SURVEY_AUTO_REMINDER_FREQUENCY_OPTIONS, SURVEY_DISTRIBUTION_OPTIONS, SURVEY_IMMEDIATE_SEND_OFFSET_MS, SURVEY_REMINDER_TYPE_OPTIONS } from '@lfx-one/shared/constants';
 import { SurveyDistributionMethod, SurveyReminderType } from '@lfx-one/shared/interfaces';
 import { map, startWith, switchMap, of } from 'rxjs';
 
@@ -133,10 +133,10 @@ export class SurveyTimingRemindersComponent {
           return nextDay;
         }
       }
-      const tomorrow = new Date(this.todayDate);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(0, 0, 0, 0);
-      return tomorrow;
+      const sendAt = new Date(Date.now() + SURVEY_IMMEDIATE_SEND_OFFSET_MS);
+      sendAt.setDate(sendAt.getDate() + 1);
+      sendAt.setHours(0, 0, 0, 0);
+      return sendAt;
     });
   }
 }

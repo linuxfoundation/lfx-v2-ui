@@ -412,7 +412,9 @@ Thank you,
 
         const scheduledDateValid = distributionMethod === 'scheduled' ? !!scheduledDate : true;
 
-        const effectiveSendDate = scheduledDate;
+        const effectiveSendDate = distributionMethod === 'immediate'
+          ? new Date(Date.now() + SURVEY_IMMEDIATE_SEND_OFFSET_MS)
+          : scheduledDate;
         const cutoffDateValid = !!cutoffDate && (!effectiveSendDate || cutoffDate > effectiveSendDate);
 
         const reminderTypeValid = !!form.get('reminderType')?.valid;
