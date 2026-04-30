@@ -838,7 +838,6 @@ export class UserService {
     if (email) {
       const emailParticipants = await fetchAllQueryResources<PastMeetingParticipant>(req, (pageToken) =>
         this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipant>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-          v: '1',
           type: 'v1_past_meeting_participant',
           tags: `email:${email}`,
           ...(pageToken && { page_token: pageToken }),
@@ -851,7 +850,6 @@ export class UserService {
       const plainUsername = stripAuthPrefix(username);
       const usernameParticipants = await fetchAllQueryResources<PastMeetingParticipant>(req, (pageToken) =>
         this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipant>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-          v: '1',
           type: 'v1_past_meeting_participant',
           tags: `username:${plainUsername}`,
           ...(pageToken && { page_token: pageToken }),
