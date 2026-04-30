@@ -36,6 +36,9 @@ export class PlausibleService {
    * Initialize the analytics service - should be called from app component
    */
   public initialize(): void {
+    if (!environment.plausible?.enabled) {
+      return;
+    }
     afterNextRender(() => {
       this.loadPlausibleScript();
       this.setupRouteTracking();
@@ -109,7 +112,6 @@ export class PlausibleService {
       // analyticsReady is gated on the real script loading — onload fires
       // only after the bundle has executed and replaced the queue stub.
       script.onload = () => {
-        this.scriptLoaded = true;
         this.analyticsReady = true;
       };
 
@@ -117,6 +119,10 @@ export class PlausibleService {
         console.error('Failed to load Plausible analytics script:', error);
       };
 
+      // Mark scriptLoaded BEFORE appending so any re-entry into
+      // loadPlausibleScript() short-circuits and we never inject a duplicate
+      // <script> tag.
+      this.scriptLoaded = true;
       document.head.appendChild(script);
     } catch (error) {
       console.error('Error initializing Plausible:', error);
@@ -134,7 +140,7 @@ export class PlausibleService {
       )
       .subscribe((event: NavigationEnd) => {
         this.trackPage({
-          path: event.urlAfterRedirects,
+          path: this.getSanitizedPath(event.urlAfterRedirects),
           url: this.getSanitizedUrl(),
           title: document.title,
         });
@@ -148,5 +154,18 @@ export class PlausibleService {
    */
   private getSanitizedUrl(): string {
     return `${window.location.origin}${window.location.pathname}`;
+  }
+
+  /**
+   * Strip query params and hash from a router-emitted URL so we never
+   * forward sensitive segments through the `path` prop. Falls back to the
+   * raw input if URL parsing fails.
+   */
+  private getSanitizedPath(rawPath: string): string {
+    try {
+      return new URL(rawPath, window.location.origin).pathname;
+    } catch {
+      return rawPath;
+    }
   }
 }
