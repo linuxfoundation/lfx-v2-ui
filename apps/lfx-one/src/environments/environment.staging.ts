@@ -16,8 +16,6 @@ export const environment = {
     enabled: true,
   },
   plausible: {
-    src: 'https://plausible.io/js/pa-5WzbGW1iBhdv7vxTOxXEQ.js',
-    domain: 'app.lfx.dev',
     enabled: false,
   },
   datadog: {

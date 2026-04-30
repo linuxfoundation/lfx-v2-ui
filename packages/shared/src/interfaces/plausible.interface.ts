@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * Plausible configuration from environment
+ * Plausible configuration from environment.
+ *
+ * Only `enabled` varies per environment — the script URL and registered
+ * domain are environment-invariant constants in `@lfx-one/shared/constants`
+ * (`PLAUSIBLE_SRC`, `PLAUSIBLE_DOMAIN`).
  */
 export interface PlausibleConfig {
-  /** Plausible script URL (CDN or proxied) */
-  src: string;
-  /** Domain registered in Plausible (kept for clarity / future portability) */
-  domain: string;
   /** Whether analytics is enabled for this environment */
   enabled: boolean;
 }

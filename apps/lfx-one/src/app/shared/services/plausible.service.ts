@@ -5,6 +5,7 @@ import { afterNextRender, DestroyRef, inject, Injectable } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
 import { environment } from '@environments/environment';
+import { PLAUSIBLE_DOMAIN, PLAUSIBLE_SRC } from '@lfx-one/shared/constants';
 import { filter } from 'rxjs';
 
 /**
@@ -50,7 +51,7 @@ export class PlausibleService {
    * @param properties Optional page properties
    */
   public trackPage(properties?: Record<string, unknown>): void {
-    if (this.impersonating || !this.analyticsReady || !window.plausible) {
+    if (typeof window === 'undefined' || this.impersonating || !this.analyticsReady || !window.plausible) {
       return;
     }
 
@@ -67,7 +68,7 @@ export class PlausibleService {
    * @param properties Event properties
    */
   public trackEvent(eventName: string, properties?: Record<string, unknown>): void {
-    if (this.impersonating || !this.analyticsReady || !window.plausible) {
+    if (typeof window === 'undefined' || this.impersonating || !this.analyticsReady || !window.plausible) {
       return;
     }
 
@@ -102,10 +103,8 @@ export class PlausibleService {
       window.plausible.init();
 
       const script = document.createElement('script');
-      script.src = environment.plausible.src;
-      if (environment.plausible.domain) {
-        script.setAttribute('data-domain', environment.plausible.domain);
-      }
+      script.src = PLAUSIBLE_SRC;
+      script.setAttribute('data-domain', PLAUSIBLE_DOMAIN);
       script.async = true;
       script.defer = true;
 
