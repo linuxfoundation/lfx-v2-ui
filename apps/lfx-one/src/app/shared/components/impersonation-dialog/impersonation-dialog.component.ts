@@ -1,19 +1,21 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, Signal } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
+import { AutocompleteComponent } from '@components/autocomplete/autocomplete.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
-import { PersonaType } from '@lfx-one/shared/interfaces';
+import { PersonaType, RecentImpersonation } from '@lfx-one/shared/interfaces';
 import { ImpersonationService } from '@services/impersonation.service';
+import { AutoCompleteCompleteEvent, AutoCompleteSelectEvent } from 'primeng/autocomplete';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
 import { take } from 'rxjs';
 
 @Component({
   selector: 'lfx-impersonation-dialog',
-  imports: [InputTextComponent, SelectComponent, ButtonComponent],
+  imports: [AutocompleteComponent, InputTextComponent, SelectComponent, ButtonComponent],
   templateUrl: './impersonation-dialog.component.html',
 })
 export class ImpersonationDialogComponent {
@@ -35,6 +37,10 @@ export class ImpersonationDialogComponent {
 
   protected loading = signal(false);
   protected error = signal('');
+  protected recentImpersonations = signal<RecentImpersonation[]>(this.impersonationService.getRecentImpersonations());
+  private searchQuery = signal('');
+
+  protected suggestions: Signal<RecentImpersonation[]> = this.initSuggestions();
 
   public submit(): void {
     const target = this.targetUserForm.controls.targetUser.value.trim();
@@ -51,7 +57,15 @@ export class ImpersonationDialogComponent {
       .startImpersonation(target, personaContext)
       .pipe(take(1))
       .subscribe({
-        next: () => {
+        next: (response) => {
+          this.impersonationService.addRecentImpersonation({
+            targetUser: target,
+            email: response.targetUser.email,
+            username: response.targetUser.username,
+            name: response.targetUser.name,
+            picture: response.targetUser.picture,
+            personaContext,
+          });
           this.dialogRef.close(true);
           window.location.reload();
         },
@@ -66,5 +80,36 @@ export class ImpersonationDialogComponent {
 
   public cancel(): void {
     this.dialogRef.close(false);
+  }
+
+  protected onSearchComplete(event: AutoCompleteCompleteEvent): void {
+    this.searchQuery.set(event.query ?? '');
+  }
+
+  protected onSuggestionSelected(event: AutoCompleteSelectEvent): void {
+    const targetUser = event.value;
+    if (typeof targetUser !== 'string') return;
+
+    const entry = this.recentImpersonations().find((r) => r.targetUser === targetUser);
+    if (!entry) return;
+
+    this.targetUserForm.controls.personaContext.setValue(entry.personaContext ?? null);
+  }
+
+  private initSuggestions(): Signal<RecentImpersonation[]> {
+    return computed(() => {
+      const query = this.searchQuery().trim().toLowerCase();
+      const recents = this.recentImpersonations();
+      if (!query) {
+        return recents;
+      }
+      return recents.filter(
+        (r) =>
+          r.email.toLowerCase().includes(query) ||
+          r.username?.toLowerCase().includes(query) ||
+          (r.name?.toLowerCase().includes(query) ?? false) ||
+          r.targetUser.toLowerCase().includes(query)
+      );
+    });
   }
 }
