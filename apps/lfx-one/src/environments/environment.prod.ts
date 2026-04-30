@@ -15,6 +15,11 @@ export const environment = {
     cdnUrl: 'https://lfx-segment.platform.linuxfoundation.org/latest/lfx-segment-analytics.min.js?ver=1.0.1',
     enabled: true,
   },
+  plausible: {
+    src: 'https://plausible.io/js/pa-5WzbGW1iBhdv7vxTOxXEQ.js',
+    domain: 'app.lfx.dev',
+    enabled: true,
+  },
   datadog: {
     site: 'datadoghq.com',
     service: 'lfx-one',
