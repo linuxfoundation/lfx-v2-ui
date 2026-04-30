@@ -10,6 +10,8 @@ import {
   SCHEDULE_SURVEY_CONFIRMATION,
   SEND_SURVEY_CONFIRMATION,
   SURVEY_AUTO_REMINDER_FREQUENCY_OPTIONS,
+  SURVEY_IMMEDIATE_CUTOFF_PERIOD_MS,
+  SURVEY_IMMEDIATE_SEND_OFFSET_MS,
   SURVEY_LABEL,
   SURVEY_MANAGE_TOTAL_STEPS,
 } from '@lfx-one/shared/constants';
@@ -29,8 +31,6 @@ import { SurveyEmailDraftComponent } from '../components/survey-email-draft/surv
 import { SurveyReviewComponent } from '../components/survey-review/survey-review.component';
 import { SurveyTimingRemindersComponent } from '../components/survey-timing-reminders/survey-timing-reminders.component';
 
-/** Upstream requires survey_send_date in the future — offset for "immediate" sends. */
-const IMMEDIATE_SEND_OFFSET_MS = 5 * 60 * 1000;
 
 @Component({
   selector: 'lfx-survey-manage',
@@ -244,8 +244,8 @@ export class SurveyManageComponent {
     const committees = formData.committees as CommitteeReference[];
     const distributionMethod = formData.distributionMethod as SurveyDistributionMethod;
     const isImmediate = distributionMethod === 'immediate';
-    const immediateSendAtMs = Date.now() + IMMEDIATE_SEND_OFFSET_MS;
-    const immediateCutoffMs = immediateSendAtMs + 30 * 24 * 60 * 60 * 1000;
+    const immediateSendAtMs = Date.now() + SURVEY_IMMEDIATE_SEND_OFFSET_MS;
+    const immediateCutoffMs = immediateSendAtMs + SURVEY_IMMEDIATE_CUTOFF_PERIOD_MS;
 
     const surveyData: CreateSurveyRequest = {
       survey_monkey_id: formData.surveyTemplate,

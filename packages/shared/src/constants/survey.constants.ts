@@ -112,6 +112,16 @@ export const SURVEY_TYPE_LABELS = {
 // ============================================================================
 
 /**
+ * Delay before an "immediate" survey send_date to satisfy the upstream future-date requirement.
+ */
+export const SURVEY_IMMEDIATE_SEND_OFFSET_MS = 5 * 60 * 1000;
+
+/**
+ * Auto-calculated cutoff window for immediate surveys (send date + 30 days).
+ */
+export const SURVEY_IMMEDIATE_CUTOFF_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
  * Step titles for the survey creation/edit stepper
  * @description Array of human-readable titles for each step in the survey form
  */
