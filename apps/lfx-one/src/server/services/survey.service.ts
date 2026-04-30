@@ -16,6 +16,13 @@ import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
 import { ProjectService } from './project.service';
 
+const SURVEY_LINK_ALLOWLIST = [
+  'https://www.surveymonkey.com',
+  'https://linuxfoundation.surveymonkey.com',
+  'https://www.research.net',
+  'https://linuxfoundation.research.net',
+];
+
 /**
  * Service for handling survey business logic with microservice proxy
  */
@@ -216,8 +223,11 @@ export class SurveyService {
 
     const surveyLinkMap = new Map<string, string>();
     for (const r of responses) {
-      const validatedLink = validateAndSanitizeUrl(r.survey_link?.trim() ?? '', ['https://www.surveymonkey.com', 'https://linuxfoundation.surveymonkey.com']);
-      if (r.survey_uid && validatedLink && !surveyLinkMap.has(r.survey_uid)) {
+      if (!r.survey_uid || !r.survey_link || surveyLinkMap.has(r.survey_uid)) {
+        continue;
+      }
+      const validatedLink = validateAndSanitizeUrl(r.survey_link.trim(), SURVEY_LINK_ALLOWLIST);
+      if (validatedLink) {
         surveyLinkMap.set(r.survey_uid, validatedLink);
       }
     }

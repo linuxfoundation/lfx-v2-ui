@@ -246,15 +246,14 @@ export class SurveyManageComponent {
     const committees = formData.committees as CommitteeReference[];
     const distributionMethod = formData.distributionMethod as SurveyDistributionMethod;
     const isImmediate = distributionMethod === 'immediate';
+    const immediateSendAtMs = Date.now() + IMMEDIATE_SEND_OFFSET_MS;
 
     const surveyData: CreateSurveyRequest = {
       survey_monkey_id: formData.surveyTemplate,
       survey_title: committees[0]?.name ? `${committees[0].name} Survey` : 'New Survey',
       send_immediately: isImmediate,
-      survey_send_date: isImmediate ? new Date(Date.now() + IMMEDIATE_SEND_OFFSET_MS).toISOString() : new Date(formData.scheduledDate).toISOString(),
-      survey_cutoff_date: isImmediate
-        ? new Date(Date.now() + IMMEDIATE_SEND_OFFSET_MS + IMMEDIATE_DEFAULT_CUTOFF_MS).toISOString()
-        : new Date(formData.cutoffDate).toISOString(),
+      survey_send_date: isImmediate ? new Date(immediateSendAtMs).toISOString() : new Date(formData.scheduledDate).toISOString(),
+      survey_cutoff_date: isImmediate ? new Date(immediateSendAtMs + IMMEDIATE_DEFAULT_CUTOFF_MS).toISOString() : new Date(formData.cutoffDate).toISOString(),
       survey_reminder_rate_days: parseInt(formData.reminderFrequency, 10) || 7,
       email_subject: formData.emailSubject,
       email_body: `<!DOCTYPE html><html><body>${formData.emailBody}</body></html>`,
