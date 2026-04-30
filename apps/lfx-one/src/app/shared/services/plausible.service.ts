@@ -22,6 +22,12 @@ export class PlausibleService {
   private analyticsReady = false;
   private impersonating = false;
 
+  /**
+   * Enable or disable analytics suppression for the current session.
+   * Pass `true` while the user is impersonating another account so their
+   * activity does not pollute the impersonated user's analytics.
+   * @param isImpersonating Whether the current session is impersonated
+   */
   public setImpersonating(isImpersonating: boolean): void {
     this.impersonating = isImpersonating;
   }
