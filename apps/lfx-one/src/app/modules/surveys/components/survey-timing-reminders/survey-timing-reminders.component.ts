@@ -123,16 +123,20 @@ export class SurveyTimingRemindersComponent {
   }
 
   private initMinCutoffDate(): Signal<Date> {
-    // Uses scheduledDate signal (not form control value directly) to establish proper
-    // signal dependency. This ensures minCutoffDate re-evaluates when scheduledDate changes.
     return computed(() => {
       if (this.isScheduled()) {
         const scheduledDate = this.scheduledDate();
         if (scheduledDate) {
-          return scheduledDate;
+          const nextDay = new Date(scheduledDate);
+          nextDay.setDate(nextDay.getDate() + 1);
+          nextDay.setHours(0, 0, 0, 0);
+          return nextDay;
         }
       }
-      return this.todayDate;
+      const tomorrow = new Date(this.todayDate);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      return tomorrow;
     });
   }
 }
