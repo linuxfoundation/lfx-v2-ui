@@ -124,27 +124,16 @@ export class PublicMeetingController {
       // Log the success
       logger.success(req, 'get_public_meeting_by_id', startTime, { meeting_id: id, project_uid: meeting.project_uid, title: meeting.title });
 
-      // Check if the meeting visibility is public and not restricted, if so, get join URL and return the meeting and project
+      // For public, non-restricted meetings, return the meeting and project.
+      // The join URL is fetched on demand by the dedicated POST /public/api/meetings/:id/join-url
+      // endpoint so each viewer gets their own per-user join link with the correct access checks.
       if (meeting.visibility === MeetingVisibility.PUBLIC && !meeting.restricted) {
-        // Only get join URL if within allowed join time window
-        if (this.isWithinJoinWindow(meeting)) {
-          // Fetch join URL if not already available from ITX data
-          if (!meeting.public_link) {
-            await this.handleJoinUrlForPublicMeeting(req, meeting, id);
-          }
-        } else {
-          // Remove public link outside join window
-          delete meeting.public_link;
-        }
         res.json({
           meeting,
           project: { name: project.name, slug: project.slug, logo_url: project.logo_url, uid: project.uid, parent_uid: project.parent_uid },
         });
         return;
       }
-
-      // Remove public link for restricted/private meetings (will be provided after password validation)
-      delete meeting.public_link;
 
       // Check if the user has passed in a password, if so, check if it's correct
       const { password } = req.query;
@@ -312,12 +301,9 @@ export class PublicMeetingController {
         await this.restrictedMeetingCheck(req, next, email, id);
       }
 
-      // Return public_link if available from ITX data, otherwise fetch from API
-      if (meeting.public_link) {
-        res.json({ link: meeting.public_link });
-        return;
-      }
-
+      // Always fetch the per-user join URL from ITX. The meeting object's public_link
+      // field is the LFX landing-page URL (used in calendar invites), not a direct Zoom
+      // join URL — using it here caused the join-page cascade.
       const joinUrlData = await this.meetingService.getMeetingJoinUrl(req, id, email);
 
       // Log the success
@@ -497,31 +483,6 @@ export class PublicMeetingController {
     });
 
     return meeting;
-  }
-
-  /**
-   * Handles join URL logic for public meetings
-   */
-  private async handleJoinUrlForPublicMeeting(req: Request, meeting: any, id: string): Promise<void> {
-    const startTime = logger.startOperation(req, 'handle_link_for_public_meeting', {
-      meeting_id: id,
-    });
-
-    try {
-      const joinUrlData = await this.meetingService.getMeetingJoinUrl(req, id);
-      meeting.public_link = joinUrlData.link;
-
-      logger.success(req, 'handle_link_for_public_meeting', startTime, {
-        meeting_id: id,
-        has_link: !!joinUrlData.link,
-      });
-    } catch (error) {
-      logger.warning(req, 'handle_link_for_public_meeting', 'Failed to fetch join URL, continuing without it', {
-        meeting_id: id,
-        has_token: !!req.bearerToken,
-        err: error,
-      });
-    }
   }
 
   /**
