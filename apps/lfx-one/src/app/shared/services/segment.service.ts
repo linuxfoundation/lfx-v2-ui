@@ -35,16 +35,12 @@ export class SegmentService {
 
   public setImpersonating(isImpersonating: boolean): void {
     this.impersonating = isImpersonating;
-    if (isImpersonating) {
-      this.identifyQueue = [];
-    }
   }
 
   /**
    * Initialize the analytics service - should be called from app component
    */
   public initialize(): void {
-    // SSR-safe initialization using afterNextRender
     afterNextRender(() => {
       this.loadSegmentScript();
       this.setupRouteTracking();

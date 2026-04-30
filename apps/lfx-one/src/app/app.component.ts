@@ -62,18 +62,12 @@ export class AppComponent {
         this.accountContextService.initializeUserOrganizations(this.auth.organizations);
       }
 
-      // Hydrate canImpersonate permission from server context
-      if (this.auth?.canImpersonate) {
-        this.userService.canImpersonate.set(true);
-      }
+      this.userService.canImpersonate.set(Boolean(this.auth?.canImpersonate));
 
       const isImpersonating = Boolean(this.auth?.impersonating);
       this.segmentService.setImpersonating(isImpersonating);
-
-      if (isImpersonating) {
-        this.userService.impersonating.set(true);
-        this.userService.impersonator.set(this.auth.impersonator ?? null);
-      }
+      this.userService.impersonating.set(isImpersonating);
+      this.userService.impersonator.set(isImpersonating ? (this.auth.impersonator ?? null) : null);
 
       this.segmentService.identifyUser(this.auth.user);
 
