@@ -33,6 +33,18 @@ export class PendingActionsComponent {
   // Cookie-backed dismissals live outside the signal graph; bumping forces the computed to recompute.
   private readonly hiddenActionsVersion = signal(0);
   protected readonly expandedRsvpKey = signal<string | null>(null);
+  // Tracks the row currently in the 1.5s post-RSVP confirmation window so the row background can
+  // briefly tint green to acknowledge the response before the row visually collapses. Cleared
+  // inside the `timer(1500)` callback in `handleRsvpChanged`. Note: persistence (cookie write via
+  // `hideAction`) runs SYNCHRONOUSLY before that timer — only the visual cue lives on the timer,
+  // so a route change inside the window can't undo the dismissal. Independent from
+  // `expandedRsvpKey` because the row stays expanded (showing the selected response button) for
+  // the full 1.5s — the tint is an additive cue, not an exclusive state.
+  protected readonly dismissingRowKey = signal<string | null>(null);
+
+  // The meetingUid currently being fetched (if any). Per-meeting tracking instead of a global flag
+  // so a stale response from row A's request can't clobber row B's loading state when the user
+  // quickly toggles between rows.
   private readonly loadingMeetingUid = signal<string | null>(null);
   private readonly rsvpMeetingCache = signal<Record<string, Meeting>>({});
 
@@ -60,16 +72,33 @@ export class PendingActionsComponent {
 
   protected handleRsvpChanged(item: DecoratedPendingAction): void {
     // Skip `actionClick` emit so the parent dashboard doesn't refresh and skeleton-flash sibling rows.
-    // Defer the dismiss so the chosen response and toast register before the row vanishes.
-    // Guard the collapse on rowKey so A's timer can't collapse B if the user moved on.
+    // Persist the dismissal SYNCHRONOUSLY (before the timer) so a route change / unmount within
+    // the 1.5s window can't cancel the cookie write via `takeUntilDestroyed` and cause the
+    // already-RSVPed row to reappear on the next visit. The timer below is purely the visual
+    // confirmation cue — it owns `dismissingRowKey` (emerald tint), the deferred collapse of
+    // `expandedRsvpKey`, and the `hiddenActionsVersion` bump that triggers the re-filter. All
+    // three are safe to drop on unmount because the row is gone anyway, and persistence has
+    // already happened via `hideAction` above.
+    this.hiddenActionsService.hideAction(item);
+
+    // Defer the visual cleanup so the chosen response and toast register before the row vanishes.
+    // The `hiddenActionsVersion` bump is intentionally deferred too: bumping it synchronously
+    // would re-run `visibleActions`, filter the just-RSVPed row out, and prevent the 1.5s
+    // emerald confirmation tint from ever rendering. Guard all three on rowKey so A's timer
+    // can't collapse / re-filter for B if the user moved on.
     const rowKey = this.getRowKey(item);
+    this.dismissingRowKey.set(rowKey);
     timer(1500)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         if (this.expandedRsvpKey() === rowKey) {
           this.expandedRsvpKey.set(null);
         }
-        this.hiddenActionsService.hideAction(item);
+        // Same staleness guard as `expandedRsvpKey` — a deferred clear from row A must not wipe
+        // row B's confirmation tint if the user RSVPed B during A's 1.5s window.
+        if (this.dismissingRowKey() === rowKey) {
+          this.dismissingRowKey.set(null);
+        }
         this.hiddenActionsVersion.update((v) => v + 1);
       });
   }
@@ -86,16 +115,36 @@ export class PendingActionsComponent {
     return `${item.type}-${item.text}-${item.buttonLink ?? ''}`;
   }
 
+  // Per-row background tint, baked into each `DecoratedPendingAction` alongside its other view state.
+  //  - Post-RSVP confirmation window wins (soft emerald) so the user gets a "registered" cue
+  //    during the 1.5s pre-dismiss timer, regardless of row position or type.
+  //  - RSVP rows otherwise carry a soft amber tint — they're the most common row type and the
+  //    warm tone reads as the card's primary "respond now" affordance.
+  //  - Other types zebra-stripe by visible-list index so adjacent same-type items don't blur
+  //    into one another. `gray-50/60` is light enough to keep text contrast comfortable.
+  // All states use solid `background-color` (not gradients) so the row's `transition-colors`
+  // can cross-fade between them — `transition-colors` doesn't animate `background-image`, so a
+  // gradient → emerald swap would snap rather than fade and defeat the confirmation cue.
+  // All tints reference LFX palette tokens (lfxColors in tailwind.config.js) — no raw hex.
   private initDecoratedActions(): Signal<DecoratedPendingAction[]> {
     return computed(() => {
       const expandedKey = this.expandedRsvpKey();
       const loadingUid = this.loadingMeetingUid();
       const cache = this.rsvpMeetingCache();
+      const dismissingKey = this.dismissingRowKey();
 
-      return this.visibleActions().map((item) => {
+      return this.visibleActions().map((item, index) => {
         const rowKey = this.getRowKey(item);
         const isRsvpInline = this.isRsvpInline(item);
         const meeting = item.meetingUid ? (cache[item.meetingUid] ?? null) : null;
+        let rowClass: string;
+        if (dismissingKey === rowKey) {
+          rowClass = 'bg-emerald-50/60';
+        } else if (item.type === 'RSVP') {
+          rowClass = 'bg-amber-50/60';
+        } else {
+          rowClass = index % 2 === 0 ? 'bg-white' : 'bg-gray-50/60';
+        }
         return {
           ...item,
           rowKey,
@@ -104,6 +153,7 @@ export class PendingActionsComponent {
           isExpanded: expandedKey === rowKey,
           isLoading: !!item.meetingUid && loadingUid === item.meetingUid,
           meeting,
+          rowClass,
         };
       });
     });
