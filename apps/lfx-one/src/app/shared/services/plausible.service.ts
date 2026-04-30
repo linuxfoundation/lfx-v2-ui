@@ -100,7 +100,11 @@ export class PlausibleService {
         ((options?: Record<string, unknown>) => {
           window.plausible!.o = options || {};
         });
-      window.plausible.init();
+      // Disable the SDK's automatic initial pageview so impersonated sessions
+      // (where setImpersonating(true) lands after initialize()) cannot leak a
+      // hit. We fire the first pageview manually from onload, gated on
+      // `impersonating`, and subsequent navigations go through trackPage().
+      window.plausible.init({ autoCapturePageviews: false });
 
       const script = document.createElement('script');
       script.src = PLAUSIBLE_SRC;
@@ -112,9 +116,12 @@ export class PlausibleService {
       // only after the bundle has executed and replaced the queue stub.
       script.onload = () => {
         this.analyticsReady = true;
+        this.trackPage();
       };
 
       script.onerror = (error) => {
+        // Reset so a future initialize() can retry after a transient failure.
+        this.scriptLoaded = false;
         console.error('Failed to load Plausible analytics script:', error);
       };
 
@@ -164,17 +171,18 @@ export class PlausibleService {
 
   /**
    * Strip query params and hash from a router-emitted URL so we never
-   * forward sensitive segments through the `path` prop. Falls back to the
-   * raw input if URL parsing fails or if called outside the browser (SSR).
+   * forward sensitive segments through the `path` prop. Both the SSR
+   * fallback and the URL-parse-failure fallback also strip `?` and `#` so
+   * sanitization is guaranteed regardless of which path runs.
    */
   private getSanitizedPath(rawPath: string): string {
     if (typeof window === 'undefined') {
-      return rawPath;
+      return rawPath.split('#')[0].split('?')[0];
     }
     try {
       return new URL(rawPath, window.location.origin).pathname;
     } catch {
-      return rawPath;
+      return rawPath.split('#')[0].split('?')[0];
     }
   }
 }
