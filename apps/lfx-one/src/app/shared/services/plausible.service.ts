@@ -138,6 +138,9 @@ export class PlausibleService {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((event: NavigationEnd) => {
+        if (typeof document === 'undefined') {
+          return;
+        }
         this.trackPage({
           path: this.getSanitizedPath(event.urlAfterRedirects),
           url: this.getSanitizedUrl(),
@@ -150,17 +153,24 @@ export class PlausibleService {
    * Build a privacy-safe URL string for Plausible.
    * Strips query params and hash to avoid leaking auth tokens, OTPs, or
    * password-reset codes that callbacks sometimes carry in the URL.
+   * Returns an empty string when called outside the browser (SSR).
    */
   private getSanitizedUrl(): string {
+    if (typeof window === 'undefined') {
+      return '';
+    }
     return `${window.location.origin}${window.location.pathname}`;
   }
 
   /**
    * Strip query params and hash from a router-emitted URL so we never
    * forward sensitive segments through the `path` prop. Falls back to the
-   * raw input if URL parsing fails.
+   * raw input if URL parsing fails or if called outside the browser (SSR).
    */
   private getSanitizedPath(rawPath: string): string {
+    if (typeof window === 'undefined') {
+      return rawPath;
+    }
     try {
       return new URL(rawPath, window.location.origin).pathname;
     } catch {
