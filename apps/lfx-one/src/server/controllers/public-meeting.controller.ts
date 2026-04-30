@@ -124,9 +124,6 @@ export class PublicMeetingController {
       // Log the success
       logger.success(req, 'get_public_meeting_by_id', startTime, { meeting_id: id, project_uid: meeting.project_uid, title: meeting.title });
 
-      // For public, non-restricted meetings, return the meeting and project.
-      // The join URL is fetched on demand by the dedicated POST /public/api/meetings/:id/join-url
-      // endpoint so each viewer gets their own per-user join link with the correct access checks.
       if (meeting.visibility === MeetingVisibility.PUBLIC && !meeting.restricted) {
         res.json({
           meeting,
@@ -301,9 +298,6 @@ export class PublicMeetingController {
         await this.restrictedMeetingCheck(req, next, email, id);
       }
 
-      // Always fetch the per-user join URL from ITX. The meeting object's public_link
-      // field is the LFX landing-page URL (used in calendar invites), not a direct Zoom
-      // join URL — using it here caused the join-page cascade.
       const joinUrlData = await this.meetingService.getMeetingJoinUrl(req, id, email);
 
       // Log the success
