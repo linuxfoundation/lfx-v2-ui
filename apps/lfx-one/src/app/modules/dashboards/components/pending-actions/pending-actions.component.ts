@@ -75,13 +75,17 @@ export class PendingActionsComponent {
     // Persist the dismissal SYNCHRONOUSLY (before the timer) so a route change / unmount within
     // the 1.5s window can't cancel the cookie write via `takeUntilDestroyed` and cause the
     // already-RSVPed row to reappear on the next visit. The timer below is purely the visual
-    // confirmation cue — it owns `dismissingRowKey` (emerald tint) and the deferred collapse of
-    // `expandedRsvpKey`, both of which are safe to drop on unmount because the row is gone anyway.
+    // confirmation cue — it owns `dismissingRowKey` (emerald tint), the deferred collapse of
+    // `expandedRsvpKey`, and the `hiddenActionsVersion` bump that triggers the re-filter. All
+    // three are safe to drop on unmount because the row is gone anyway, and persistence has
+    // already happened via `hideAction` above.
     this.hiddenActionsService.hideAction(item);
-    this.hiddenActionsVersion.update((v) => v + 1);
 
     // Defer the visual cleanup so the chosen response and toast register before the row vanishes.
-    // Guard the collapse on rowKey so A's timer can't collapse B if the user moved on.
+    // The `hiddenActionsVersion` bump is intentionally deferred too: bumping it synchronously
+    // would re-run `visibleActions`, filter the just-RSVPed row out, and prevent the 1.5s
+    // emerald confirmation tint from ever rendering. Guard all three on rowKey so A's timer
+    // can't collapse / re-filter for B if the user moved on.
     const rowKey = this.getRowKey(item);
     this.dismissingRowKey.set(rowKey);
     timer(1500)
@@ -95,6 +99,7 @@ export class PendingActionsComponent {
         if (this.dismissingRowKey() === rowKey) {
           this.dismissingRowKey.set(null);
         }
+        this.hiddenActionsVersion.update((v) => v + 1);
       });
   }
 
