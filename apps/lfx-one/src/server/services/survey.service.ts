@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { SURVEY_LINK_ALLOWLIST } from '@lfx-one/shared/constants';
 import { SurveyStatus } from '@lfx-one/shared/enums';
 import { CreateSurveyRequest, QueryServiceResponse, Survey } from '@lfx-one/shared/interfaces';
 import { getSurveyDisplayStatus } from '@lfx-one/shared/utils';
@@ -16,12 +17,6 @@ import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
 import { ProjectService } from './project.service';
 
-const SURVEY_LINK_ALLOWLIST = [
-  'https://www.surveymonkey.com',
-  'https://linuxfoundation.surveymonkey.com',
-  'https://www.research.net',
-  'https://linuxfoundation.research.net',
-];
 
 /**
  * Service for handling survey business logic with microservice proxy

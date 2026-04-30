@@ -10,7 +10,6 @@ import {
   SCHEDULE_SURVEY_CONFIRMATION,
   SEND_SURVEY_CONFIRMATION,
   SURVEY_AUTO_REMINDER_FREQUENCY_OPTIONS,
-  SURVEY_IMMEDIATE_CUTOFF_PERIOD_MS,
   SURVEY_IMMEDIATE_SEND_OFFSET_MS,
   SURVEY_LABEL,
   SURVEY_MANAGE_TOTAL_STEPS,
@@ -245,14 +244,13 @@ export class SurveyManageComponent {
     const distributionMethod = formData.distributionMethod as SurveyDistributionMethod;
     const isImmediate = distributionMethod === 'immediate';
     const immediateSendAtMs = Date.now() + SURVEY_IMMEDIATE_SEND_OFFSET_MS;
-    const immediateCutoffMs = immediateSendAtMs + SURVEY_IMMEDIATE_CUTOFF_PERIOD_MS;
 
     const surveyData: CreateSurveyRequest = {
       survey_monkey_id: formData.surveyTemplate,
       survey_title: committees[0]?.name ? `${committees[0].name} Survey` : 'New Survey',
       send_immediately: isImmediate,
       survey_send_date: isImmediate ? new Date(immediateSendAtMs).toISOString() : new Date(formData.scheduledDate).toISOString(),
-      survey_cutoff_date: isImmediate ? new Date(immediateCutoffMs).toISOString() : new Date(formData.cutoffDate).toISOString(),
+      survey_cutoff_date: new Date(formData.cutoffDate).toISOString(),
       survey_reminder_rate_days: parseInt(formData.reminderFrequency, 10) || 7,
       email_subject: formData.emailSubject,
       email_body: `<!DOCTYPE html><html><body>${formData.emailBody}</body></html>`,
@@ -412,11 +410,10 @@ Thank you,
         const scheduledDate = form.get('scheduledDate')?.value as Date | null;
         const cutoffDate = form.get('cutoffDate')?.value as Date | null;
 
-        const isImmediate = distributionMethod === 'immediate';
         const scheduledDateValid = distributionMethod === 'scheduled' ? !!scheduledDate : true;
 
         const effectiveSendDate = scheduledDate;
-        const cutoffDateValid = isImmediate || (!!cutoffDate && (!effectiveSendDate || cutoffDate > effectiveSendDate));
+        const cutoffDateValid = !!cutoffDate && (!effectiveSendDate || cutoffDate > effectiveSendDate);
 
         const reminderTypeValid = !!form.get('reminderType')?.valid;
 

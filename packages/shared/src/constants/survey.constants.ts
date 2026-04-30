@@ -117,9 +117,14 @@ export const SURVEY_TYPE_LABELS = {
 export const SURVEY_IMMEDIATE_SEND_OFFSET_MS = 5 * 60 * 1000;
 
 /**
- * Auto-calculated cutoff window for immediate surveys (send date + 30 days).
+ * Allowed origins for survey response links surfaced to members.
  */
-export const SURVEY_IMMEDIATE_CUTOFF_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
+export const SURVEY_LINK_ALLOWLIST = [
+  'https://www.surveymonkey.com',
+  'https://linuxfoundation.surveymonkey.com',
+  'https://www.research.net',
+  'https://linuxfoundation.research.net',
+] as const;
 
 /**
  * Step titles for the survey creation/edit stepper
