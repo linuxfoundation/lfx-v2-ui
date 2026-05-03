@@ -71,9 +71,19 @@ interface CommitteeDocumentUpstreamResponse {
 
 /**
  * Query-service shape for an indexed `committee_document` resource. Files are not exposed
- * via a list endpoint upstream; they're discovered via /query/resources?type=committee_document
- * &tags=committee_uid:{uid}. See pkg/constants/subjects.go in lfx-v2-committee-service —
- * IndexCommitteeDocumentSubject = "lfx.index.committee_document".
+ * via a list endpoint upstream; they're discovered via the indexer (subject
+ * `lfx.index.committee_document`).
+ *
+ * Per `CommitteeDocument.Tags()` in lfx-v2-committee-service, every committee_document
+ * resource is indexed with the following tags:
+ *   - the bare uid                          → `{uid}`
+ *   - `committee_document_uid:{uid}`        — single-document lookup (returns at most 1)
+ *   - `committee_uid:{committeeUID}`        — list all documents for a committee
+ *   - `content_type:{contentType}`          — filter by MIME type
+ *   - `uploaded_by:{uploadedByUsername}`    — filter by uploader
+ *
+ * Use `committee_uid:` for listing and `committee_document_uid:` for single-document lookups
+ * to avoid scanning every file in the committee.
  */
 interface CommitteeDocumentQueryResult {
   uid: string;
@@ -733,19 +743,23 @@ export class CommitteeService {
         });
         return [] as CommitteeLink[];
       }),
-      this.microserviceProxy
-        .proxyRequest<QueryServiceResponse<CommitteeDocumentQueryResult>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+      // Use cursor-based pagination — once a committee accumulates more than the
+      // upstream page size of uploaded files, a single-page fetch would silently
+      // drop the rest. Matches the pattern used everywhere else /query/resources
+      // is called in this service (committees, members, etc.).
+      fetchAllQueryResources<CommitteeDocumentQueryResult>(req, (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeDocumentQueryResult>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
           type: 'committee_document',
           tags: `committee_uid:${committeeId}`,
+          ...(pageToken && { page_token: pageToken }),
         })
-        .then((resp) => resp.resources?.map((r) => r.data) ?? [])
-        .catch((err) => {
-          logger.warning(req, 'get_committee_documents', 'Failed to fetch committee files via query service, returning empty list', {
-            committee_uid: committeeId,
-            error: err instanceof Error ? err.message : 'Unknown error',
-          });
-          return [] as CommitteeDocumentQueryResult[];
-        }),
+      ).catch((err) => {
+        logger.warning(req, 'get_committee_documents', 'Failed to fetch committee files via query service, returning empty list', {
+          committee_uid: committeeId,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
+        return [] as CommitteeDocumentQueryResult[];
+      }),
     ]);
 
     // Normalize folders → CommitteeDocument
@@ -933,12 +947,13 @@ export class CommitteeService {
    * controller can set `Content-Type` and `Content-Disposition` headers before
    * streaming the binary back.
    *
-   * Queries the indexer with the same `committee_uid` tag pattern used by
-   * `getCommitteeDocuments` (matches the documented contract — see the
-   * `lfx.index.committee_document` subject in the upstream service) and finds
-   * the matching document by uid in the returned set. Falls back to safe
-   * defaults if the metadata fetch fails so a download attempt is never blocked
-   * by a stale or unavailable index.
+   * Queries by `committee_document_uid:{documentId}` — every committee document is
+   * indexed with this tag (per CommitteeDocument.Tags() in the upstream service), so
+   * the query returns at most one resource. This avoids scanning the entire committee's
+   * file list and keeps the lookup O(1) regardless of how many files the committee has.
+   *
+   * Falls back to safe defaults if the metadata fetch fails or returns nothing so a
+   * download attempt is never blocked by a stale or unavailable index.
    */
   public async getCommitteeDocumentMetadata(req: Request, committeeId: string, documentId: string): Promise<{ contentType: string; fileName: string }> {
     logger.debug(req, 'get_committee_document_metadata', 'Fetching document metadata from indexer', {
@@ -949,9 +964,9 @@ export class CommitteeService {
     const metadata = await this.microserviceProxy
       .proxyRequest<QueryServiceResponse<CommitteeDocumentQueryResult>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'committee_document',
-        tags: `committee_uid:${committeeId}`,
+        tags: `committee_document_uid:${documentId}`,
       })
-      .then((resp) => resp.resources?.find((r) => r.data?.uid === documentId)?.data ?? null)
+      .then((resp) => resp.resources?.[0]?.data ?? null)
       .catch((err) => {
         logger.warning(req, 'get_committee_document_metadata', 'Failed to fetch document metadata, using fallback values', {
           document_uid: documentId,

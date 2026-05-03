@@ -106,12 +106,39 @@ export class ApiClientService {
       Object.assign(headers, customHeaders);
     }
 
-    const response = await fetch(fullUrl, {
-      method: type,
-      headers,
-      signal: AbortSignal.timeout(this.config.timeout),
-      redirect: 'error',
-    });
+    let response: Response;
+    try {
+      response = await fetch(fullUrl, {
+        method: type,
+        headers,
+        signal: AbortSignal.timeout(this.config.timeout),
+        redirect: 'error',
+      });
+    } catch (error: unknown) {
+      // Mirror executeRequest()'s transport-error classification so callers see
+      // consistent typed MicroserviceError instances regardless of which client
+      // method they used (timeout → 408, network → 500 with cause code).
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          throw new MicroserviceError(`Request timeout after ${this.config.timeout}ms`, 408, 'TIMEOUT', {
+            operation: 'api_client_stream_timeout',
+            service: 'api_client_service',
+            path: url,
+          });
+        }
+
+        const errorWithCause = error as Error & { cause?: { code?: string } };
+        if (errorWithCause.cause?.code) {
+          throw new MicroserviceError(`Request failed: ${error.message}`, 500, errorWithCause.cause.code || 'NETWORK_ERROR', {
+            operation: 'api_client_stream_network_error',
+            service: 'api_client_service',
+            path: url,
+            originalError: error,
+          });
+        }
+      }
+      throw error;
+    }
 
     if (!response.ok) {
       // Read the body once for error context, then throw — the caller never
