@@ -469,8 +469,8 @@ export interface CommitteeEngagementMetrics {
 /** Type of a committee document entry */
 export type CommitteeDocumentType = 'file' | 'link' | 'folder';
 
-/** Subset of document types that can be created via the BFF (excludes 'file' — meeting attachments only) */
-export type CreateCommitteeDocumentType = 'link' | 'folder';
+/** Subset of document types that can be created via the BFF */
+export type CreateCommitteeDocumentType = 'link' | 'folder' | 'file';
 
 /**
  * A document or resource link associated with a committee.
@@ -511,6 +511,24 @@ export interface CreateCommitteeDocumentRequest {
   parent_uid?: string;
   /** Display name of the creator (populated by BFF from session) */
   created_by_name?: string;
+}
+
+/**
+ * Multipart upload payload for a committee file document.
+ * The actual `File` is sent separately via FormData / raw body — this interface
+ * captures the metadata sent alongside it.
+ */
+export interface UploadCommitteeDocumentRequest {
+  /** Display name for the document (max 500 chars) */
+  name: string;
+  /** Original file name (max 500 chars) */
+  file_name: string;
+  /** MIME type of the uploaded file */
+  content_type: string;
+  /** File size in bytes */
+  file_size: number;
+  /** Optional description (max 2000 chars) */
+  description?: string;
 }
 
 /** Attachment enriched with meeting context for display. */

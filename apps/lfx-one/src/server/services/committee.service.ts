@@ -16,8 +16,10 @@ import {
   MyCommittee,
   QueryServiceCountResponse,
   QueryServiceResponse,
+  UploadCommitteeDocumentRequest,
 } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
+import FormData from 'form-data';
 
 import { ResourceNotFoundError } from '../errors';
 import { fetchAllQueryResources } from '../helpers/query-service.helper';
@@ -51,6 +53,39 @@ interface CommitteeLink {
   created_by_name?: string;
   created_at?: string;
   updated_at?: string;
+}
+
+/** Upstream response shape for committee document file uploads */
+interface CommitteeDocumentUpstreamResponse {
+  uid: string;
+  name: string;
+  file_name: string;
+  file_size: number;
+  content_type: string;
+  description?: string;
+  committee_uid?: string;
+  created_at?: string;
+  updated_at?: string;
+  uploaded_by_username?: string;
+}
+
+/**
+ * Query-service shape for an indexed `committee_document` resource. Files are not exposed
+ * via a list endpoint upstream; they're discovered via /query/resources?type=committee_document
+ * &tags=committee_uid:{uid}. See pkg/constants/subjects.go in lfx-v2-committee-service —
+ * IndexCommitteeDocumentSubject = "lfx.index.committee_document".
+ */
+interface CommitteeDocumentQueryResult {
+  uid: string;
+  name: string;
+  file_name?: string;
+  file_size?: number;
+  content_type?: string;
+  description?: string;
+  committee_uid?: string;
+  created_at?: string;
+  updated_at?: string;
+  uploaded_by_username?: string;
 }
 
 /**
@@ -677,8 +712,13 @@ export class CommitteeService {
       committee_uid: committeeId,
     });
 
-    // Fetch folders and links in parallel
-    const [folders, links] = await Promise.all([
+    // Fetch folders, links, and uploaded files in parallel.
+    //
+    // Files have no upstream LIST endpoint, so we query the indexer (resource type
+    // `committee_document`, indexed by lfx-v2-committee-service via the
+    // `lfx.index.committee_document` subject — see CommitteeDocument.Tags() in the
+    // upstream domain model) to discover them by `committee_uid` tag.
+    const [folders, links, files] = await Promise.all([
       this.microserviceProxy.proxyRequest<CommitteeFolder[]>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/folders`, 'GET').catch((err) => {
         logger.warning(req, 'get_committee_documents', 'Failed to fetch committee folders, returning empty list', {
           committee_uid: committeeId,
@@ -693,6 +733,19 @@ export class CommitteeService {
         });
         return [] as CommitteeLink[];
       }),
+      this.microserviceProxy
+        .proxyRequest<QueryServiceResponse<CommitteeDocumentQueryResult>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+          type: 'committee_document',
+          tags: `committee_uid:${committeeId}`,
+        })
+        .then((resp) => resp.resources?.map((r) => r.data) ?? [])
+        .catch((err) => {
+          logger.warning(req, 'get_committee_documents', 'Failed to fetch committee files via query service, returning empty list', {
+            committee_uid: committeeId,
+            error: err instanceof Error ? err.message : 'Unknown error',
+          });
+          return [] as CommitteeDocumentQueryResult[];
+        }),
     ]);
 
     // Normalize folders → CommitteeDocument
@@ -722,7 +775,21 @@ export class CommitteeService {
       committee_uid: l.committee_uid,
     }));
 
-    return [...folderDocs, ...linkDocs];
+    // Normalize uploaded files → CommitteeDocument
+    const fileDocs: CommitteeDocument[] = (files || []).map((f) => ({
+      uid: f.uid,
+      type: 'file' as const,
+      name: f.name,
+      description: f.description,
+      file_size: f.file_size,
+      mime_type: f.content_type,
+      created_at: f.created_at,
+      updated_at: f.updated_at,
+      uploaded_by: f.uploaded_by_username,
+      committee_uid: f.committee_uid,
+    }));
+
+    return [...folderDocs, ...linkDocs, ...fileDocs];
   }
 
   /**
@@ -797,6 +864,110 @@ export class CommitteeService {
       uploaded_by: link.created_by_name,
       parent_uid: link.folder_uid,
       committee_uid: link.committee_uid,
+    };
+  }
+
+  /**
+   * Uploads a file document to a committee. Builds a multipart/form-data
+   * request and forwards it to the upstream committee service.
+   *
+   * The api-client (`api-client.service.ts`) detects FormData via duck typing
+   * and sets the appropriate Content-Type header with multipart boundary.
+   */
+  public async uploadCommitteeDocument(
+    req: Request,
+    committeeId: string,
+    fileBuffer: Buffer,
+    uploadData: UploadCommitteeDocumentRequest
+  ): Promise<CommitteeDocument> {
+    logger.debug(req, 'upload_committee_document', 'Uploading file to committee service', {
+      committee_uid: committeeId,
+      file_name: uploadData.file_name,
+      file_size: uploadData.file_size,
+    });
+
+    const formData = new FormData();
+    formData.append('file', fileBuffer, {
+      filename: uploadData.file_name,
+      contentType: uploadData.content_type,
+    });
+    formData.append('name', uploadData.name);
+    formData.append('file_name', uploadData.file_name);
+    formData.append('content_type', uploadData.content_type);
+    if (uploadData.description) {
+      formData.append('description', uploadData.description);
+    }
+
+    const result = await this.microserviceProxy.proxyRequest<CommitteeDocumentUpstreamResponse>(
+      req,
+      'LFX_V2_SERVICE',
+      `/committees/${committeeId}/documents`,
+      'POST',
+      undefined,
+      formData
+    );
+
+    logger.info(req, 'upload_committee_document', 'Committee document uploaded successfully', {
+      committee_uid: committeeId,
+      document_uid: result.uid,
+      file_name: result.file_name,
+      file_size: result.file_size,
+    });
+
+    return {
+      uid: result.uid,
+      type: 'file',
+      name: result.name,
+      description: result.description,
+      file_size: result.file_size,
+      mime_type: result.content_type,
+      created_at: result.created_at,
+      updated_at: result.updated_at,
+      uploaded_by: result.uploaded_by_username,
+      committee_uid: result.committee_uid,
+    };
+  }
+
+  /**
+   * Downloads a committee document file from upstream and returns the binary plus
+   * the metadata needed to set Content-Type and Content-Disposition on the response.
+   *
+   * The upstream `/download` endpoint returns raw binary; we fetch the indexed metadata
+   * separately to recover `content_type` and `file_name`. We fall back to safe defaults
+   * if the metadata fetch fails so a download attempt is never blocked by a stale index.
+   */
+  public async downloadCommitteeDocument(
+    req: Request,
+    committeeId: string,
+    documentId: string
+  ): Promise<{ buffer: Buffer; contentType: string; fileName: string }> {
+    logger.debug(req, 'download_committee_document', 'Fetching file binary from committee service', {
+      committee_uid: committeeId,
+      document_uid: documentId,
+    });
+
+    // Fetch binary and metadata in parallel — metadata gives us the original file name + MIME type.
+    const [buffer, metadata] = await Promise.all([
+      this.microserviceProxy.proxyBinaryRequest(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/documents/${documentId}/download`, 'GET'),
+      this.microserviceProxy
+        .proxyRequest<QueryServiceResponse<CommitteeDocumentQueryResult>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+          type: 'committee_document',
+          tags: `committee_document_uid:${documentId}`,
+        })
+        .then((resp) => resp.resources?.[0]?.data ?? null)
+        .catch((err) => {
+          logger.warning(req, 'download_committee_document', 'Failed to fetch document metadata, using fallback values', {
+            document_uid: documentId,
+            error: err instanceof Error ? err.message : 'Unknown error',
+          });
+          return null;
+        }),
+    ]);
+
+    return {
+      buffer,
+      contentType: metadata?.content_type || 'application/octet-stream',
+      fileName: metadata?.file_name || `${documentId}.bin`,
     };
   }
 

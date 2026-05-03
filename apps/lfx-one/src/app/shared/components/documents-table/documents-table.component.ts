@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { ButtonComponent } from '@components/button/button.component';
 import { SummaryModalComponent } from '@components/summary-modal/summary-modal.component';
 import { TableComponent } from '@components/table/table.component';
@@ -28,8 +28,15 @@ export class DocumentsTableComponent {
   public readonly testIdPrefix = input<string>('documents');
   public readonly emptyMessage = input<string>('No documents found');
 
+  /** Emitted when a row with `isFolder: true` is clicked. Consumers use this to drill into the folder. */
+  public readonly folderOpen = output<MyDocumentItem>();
+
   protected readonly colSpan = computed(() => (this.showFoundation() ? 6 : 5));
   protected readonly hasDocuments = computed(() => this.documents().length > 0);
+
+  protected onFolderClick(doc: MyDocumentItem): void {
+    this.folderOpen.emit(doc);
+  }
 
   protected openDocument(doc: MyDocumentItem): void {
     if (!doc.url) return;
@@ -61,10 +68,14 @@ export class DocumentsTableComponent {
   }
 
   protected downloadDocument(doc: MyDocumentItem): void {
-    if (!doc.url) return;
-    const proxyUrl = `/api/documents/download?url=${encodeURIComponent(doc.url)}&filename=${encodeURIComponent(doc.name || 'download')}`;
+    // Prefer the explicit BFF download URL (used by committee files served by lfx-v2-ui itself)
+    // — the BFF already sets Content-Disposition. Otherwise route through the generic
+    // /api/documents/download proxy that fetches an external URL on the user's behalf.
+    const targetUrl =
+      doc.downloadUrl ?? (doc.url ? `/api/documents/download?url=${encodeURIComponent(doc.url)}&filename=${encodeURIComponent(doc.name || 'download')}` : null);
+    if (!targetUrl) return;
     const a = document.createElement('a');
-    a.href = proxyUrl;
+    a.href = targetUrl;
     a.download = doc.name || 'download';
     a.click();
   }

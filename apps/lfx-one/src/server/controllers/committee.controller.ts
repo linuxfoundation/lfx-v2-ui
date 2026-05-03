@@ -7,6 +7,7 @@ import {
   CreateCommitteeDocumentRequest,
   CreateCommitteeMemberRequest,
   CreateCommitteeJoinApplicationRequest,
+  UploadCommitteeDocumentRequest,
 } from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
@@ -595,6 +596,158 @@ export class CommitteeController {
 
       res.status(201).json(newDocument);
     } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /committees/:id/documents/upload
+   *
+   * Receives a raw binary file body, forwards as multipart/form-data to the
+   * committee service. Metadata passed as query params: name, file_name,
+   * content_type, file_size, description?
+   */
+  public async uploadCommitteeDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const { name, file_name, content_type, file_size, description } = req.query as Record<string, string>;
+
+    const startTime = logger.startOperation(req, 'upload_committee_document', {
+      committee_id: id,
+      file_name,
+      file_size,
+      content_type,
+    });
+
+    try {
+      if (!id) {
+        const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
+          operation: 'upload_committee_document',
+          service: 'committee_controller',
+          path: req.path,
+        });
+
+        next(validationError);
+        return;
+      }
+
+      const fieldErrors: Record<string, string> = {};
+      if (!name) fieldErrors['name'] = 'Document name is required';
+      if (!file_name) fieldErrors['file_name'] = 'File name is required';
+      if (!content_type) fieldErrors['content_type'] = 'Content type is required';
+      if (!file_size) fieldErrors['file_size'] = 'File size is required';
+
+      if (Object.keys(fieldErrors).length > 0) {
+        const validationError = ServiceValidationError.fromFieldErrors(fieldErrors, 'Upload request validation failed', {
+          operation: 'upload_committee_document',
+          service: 'committee_controller',
+          path: req.path,
+        });
+
+        next(validationError);
+        return;
+      }
+
+      const fileBuffer = req.body as Buffer;
+      const fileSizeNum = parseInt(file_size, 10);
+
+      if (isNaN(fileSizeNum) || fileSizeNum <= 0) {
+        const validationError = ServiceValidationError.forField('file_size', 'File size must be a positive number', {
+          operation: 'upload_committee_document',
+          service: 'committee_controller',
+          path: req.path,
+        });
+
+        next(validationError);
+        return;
+      }
+
+      if (!Buffer.isBuffer(fileBuffer) || fileBuffer.length === 0) {
+        const validationError = ServiceValidationError.forField('body', 'Request body must contain file data', {
+          operation: 'upload_committee_document',
+          service: 'committee_controller',
+          path: req.path,
+        });
+
+        next(validationError);
+        return;
+      }
+
+      const uploadData: UploadCommitteeDocumentRequest = {
+        name,
+        file_name,
+        content_type,
+        file_size: fileSizeNum,
+        ...(description && { description }),
+      };
+
+      const result = await this.committeeService.uploadCommitteeDocument(req, id, fileBuffer, uploadData);
+
+      logger.success(req, 'upload_committee_document', startTime, {
+        committee_id: id,
+        document_uid: result.uid,
+        file_name,
+        file_size: fileSizeNum,
+      });
+
+      res.status(201).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /committees/:id/documents/:documentId/download
+   *
+   * Streams the file binary from the upstream committee service to the browser
+   * with a Content-Disposition: attachment header so the browser triggers a download.
+   */
+  public async downloadCommitteeDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id, documentId } = req.params;
+    const startTime = logger.startOperation(req, 'download_committee_document', {
+      committee_id: id,
+      document_id: documentId,
+    });
+
+    try {
+      if (!id) {
+        const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
+          operation: 'download_committee_document',
+          service: 'committee_controller',
+          path: req.path,
+        });
+
+        next(validationError);
+        return;
+      }
+
+      if (!documentId) {
+        const validationError = ServiceValidationError.forField('documentId', 'Document ID is required', {
+          operation: 'download_committee_document',
+          service: 'committee_controller',
+          path: req.path,
+        });
+
+        next(validationError);
+        return;
+      }
+
+      const { buffer, contentType, fileName } = await this.committeeService.downloadCommitteeDocument(req, id, documentId);
+
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName.replace(/"/g, '\\"')}"`);
+      res.setHeader('Content-Length', String(buffer.length));
+
+      logger.success(req, 'download_committee_document', startTime, {
+        committee_id: id,
+        document_uid: documentId,
+        file_name: fileName,
+        file_size: buffer.length,
+      });
+
+      res.end(buffer);
+    } catch (error) {
+      // Controllers that send their own response in the catch block must log themselves —
+      // but here we haven't sent anything yet, so apiErrorHandler will log centrally.
       next(error);
     }
   }
