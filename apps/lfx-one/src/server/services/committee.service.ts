@@ -929,46 +929,57 @@ export class CommitteeService {
   }
 
   /**
-   * Downloads a committee document file from upstream and returns the binary plus
-   * the metadata needed to set Content-Type and Content-Disposition on the response.
+   * Fetches the indexed metadata for a single committee document file so the
+   * controller can set `Content-Type` and `Content-Disposition` headers before
+   * streaming the binary back.
    *
-   * The upstream `/download` endpoint returns raw binary; we fetch the indexed metadata
-   * separately to recover `content_type` and `file_name`. We fall back to safe defaults
-   * if the metadata fetch fails so a download attempt is never blocked by a stale index.
+   * Queries the indexer with the same `committee_uid` tag pattern used by
+   * `getCommitteeDocuments` (matches the documented contract — see the
+   * `lfx.index.committee_document` subject in the upstream service) and finds
+   * the matching document by uid in the returned set. Falls back to safe
+   * defaults if the metadata fetch fails so a download attempt is never blocked
+   * by a stale or unavailable index.
    */
-  public async downloadCommitteeDocument(
-    req: Request,
-    committeeId: string,
-    documentId: string
-  ): Promise<{ buffer: Buffer; contentType: string; fileName: string }> {
-    logger.debug(req, 'download_committee_document', 'Fetching file binary from committee service', {
+  public async getCommitteeDocumentMetadata(req: Request, committeeId: string, documentId: string): Promise<{ contentType: string; fileName: string }> {
+    logger.debug(req, 'get_committee_document_metadata', 'Fetching document metadata from indexer', {
       committee_uid: committeeId,
       document_uid: documentId,
     });
 
-    // Fetch binary and metadata in parallel — metadata gives us the original file name + MIME type.
-    const [buffer, metadata] = await Promise.all([
-      this.microserviceProxy.proxyBinaryRequest(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/documents/${documentId}/download`, 'GET'),
-      this.microserviceProxy
-        .proxyRequest<QueryServiceResponse<CommitteeDocumentQueryResult>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-          type: 'committee_document',
-          tags: `committee_document_uid:${documentId}`,
-        })
-        .then((resp) => resp.resources?.[0]?.data ?? null)
-        .catch((err) => {
-          logger.warning(req, 'download_committee_document', 'Failed to fetch document metadata, using fallback values', {
-            document_uid: documentId,
-            error: err instanceof Error ? err.message : 'Unknown error',
-          });
-          return null;
-        }),
-    ]);
+    const metadata = await this.microserviceProxy
+      .proxyRequest<QueryServiceResponse<CommitteeDocumentQueryResult>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        type: 'committee_document',
+        tags: `committee_uid:${committeeId}`,
+      })
+      .then((resp) => resp.resources?.find((r) => r.data?.uid === documentId)?.data ?? null)
+      .catch((err) => {
+        logger.warning(req, 'get_committee_document_metadata', 'Failed to fetch document metadata, using fallback values', {
+          document_uid: documentId,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
+        return null;
+      });
 
     return {
-      buffer,
       contentType: metadata?.content_type || 'application/octet-stream',
       fileName: metadata?.file_name || `${documentId}.bin`,
     };
+  }
+
+  /**
+   * Opens a streaming HTTP request against the upstream document download
+   * endpoint and returns the raw fetch Response. The caller is expected to
+   * pipe `response.body` directly to its own Express response — buffering the
+   * whole file would create memory pressure under concurrent downloads given
+   * the 100MB upload limit.
+   */
+  public async getCommitteeDocumentStream(req: Request, committeeId: string, documentId: string): Promise<Response> {
+    logger.debug(req, 'get_committee_document_stream', 'Opening upstream stream for committee document', {
+      committee_uid: committeeId,
+      document_uid: documentId,
+    });
+
+    return this.microserviceProxy.proxyStreamRequest(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/documents/${documentId}/download`, 'GET');
   }
 
   /**

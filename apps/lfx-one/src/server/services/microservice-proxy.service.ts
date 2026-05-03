@@ -130,4 +130,43 @@ export class MicroserviceProxyService {
       throw error;
     }
   }
+
+  /**
+   * Proxy a streaming request to a microservice. Returns the raw fetch Response
+   * so the caller can pipe `response.body` directly to an Express response,
+   * avoiding the memory pressure of buffering the whole payload (important for
+   * large file downloads under concurrent load).
+   *
+   * Use this instead of `proxyBinaryRequest` whenever the caller can stream
+   * straight through to the client.
+   */
+  public async proxyStreamRequest(
+    req: Request,
+    service: keyof MicroserviceUrls,
+    path: string,
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET',
+    query?: Record<string, any>,
+    customHeaders?: Record<string, string>
+  ): Promise<Response> {
+    const operation = `${method.toLowerCase()}_${path.replace(/\//g, '_')}`;
+
+    try {
+      const MICROSERVICE_URLS: MicroserviceUrls = {
+        LFX_V2_SERVICE: process.env['LFX_V2_SERVICE'] || 'http://lfx-api.k8s.orb.local',
+      };
+
+      const baseUrl = MICROSERVICE_URLS[service];
+      const endpoint = `${baseUrl}${path}`;
+      const token = req.bearerToken;
+
+      const mergedQuery = { ...query, ...DEFAULT_QUERY_PARAMS };
+
+      return await this.apiClient.streamRequest(method, endpoint, token, mergedQuery, customHeaders);
+    } catch (error: any) {
+      if (error.status && error.code) {
+        throw MicroserviceError.fromMicroserviceResponse(error.status, error.message, error.errorBody, service, path, operation);
+      }
+      throw error;
+    }
+  }
 }

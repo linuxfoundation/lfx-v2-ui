@@ -141,6 +141,11 @@ export class CommitteeDocumentsComponent {
     dialogRef?.onClose.pipe(take(1)).subscribe({
       next: (result: boolean | undefined) => {
         if (result) {
+          // The upstream upload API does not accept a folder_uid yet (filed separately),
+          // so files always land at the root of the committee. If the user uploaded from
+          // inside a folder, refreshing the current folder view would leave the new file
+          // invisible. Pop back to the root so the just-uploaded file is the first row.
+          this.currentFolderUid.set(null);
           this.refreshTrigger.update((v) => v + 1);
         }
       },

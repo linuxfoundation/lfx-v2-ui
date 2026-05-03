@@ -69,14 +69,22 @@ export class DocumentsTableComponent {
 
   protected downloadDocument(doc: MyDocumentItem): void {
     // Prefer the explicit BFF download URL (used by committee files served by lfx-v2-ui itself)
-    // — the BFF already sets Content-Disposition. Otherwise route through the generic
-    // /api/documents/download proxy that fetches an external URL on the user's behalf.
+    // — the BFF already sets Content-Disposition with the original file name. Otherwise route
+    // through the generic /api/documents/download proxy that fetches an external URL.
+    const useBffDownload = !!doc.downloadUrl;
     const targetUrl =
       doc.downloadUrl ?? (doc.url ? `/api/documents/download?url=${encodeURIComponent(doc.url)}&filename=${encodeURIComponent(doc.name || 'download')}` : null);
     if (!targetUrl) return;
     const a = document.createElement('a');
     a.href = targetUrl;
-    a.download = doc.name || 'download';
+    // For BFF downloads we deliberately omit `a.download` so the browser respects the
+    // server-provided Content-Disposition filename (the original `file_name`). Setting
+    // `a.download` on a same-origin URL would override that with the display `name`,
+    // which can differ (e.g., user renamed it). The proxy path falls back to display
+    // name because the proxy can't always recover the original filename from the URL.
+    if (!useBffDownload) {
+      a.download = doc.name || 'download';
+    }
     a.click();
   }
 }

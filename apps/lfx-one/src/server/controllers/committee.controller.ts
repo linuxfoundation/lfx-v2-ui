@@ -10,6 +10,8 @@ import {
   UploadCommitteeDocumentRequest,
 } from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 
 import { ServiceValidationError } from '../errors';
 import { buildVCalendar, fetchAllMeetingPages, meetingsToVEvents } from '../helpers/ics.helper';
@@ -17,6 +19,19 @@ import { logger } from '../services/logger.service';
 import { CommitteeService } from '../services/committee.service';
 import { MeetingService } from '../services/meeting.service';
 import { generateM2MToken } from '../utils/m2m-token.util';
+
+/**
+ * Build an RFC 5987 compliant `Content-Disposition: attachment` header value
+ * with both an ASCII fallback (`filename=`) and a UTF-8 encoded variant
+ * (`filename*=UTF-8''...`). The ASCII fallback strips non-ASCII characters and
+ * neutralizes quotes / backslashes / control chars to prevent header injection
+ * (CR/LF) and broken responses. Mirrors the pattern in `document.controller.ts`.
+ */
+function contentDispositionAttachment(fileName: string): string {
+  const safeAscii = fileName.replace(/[^\x20-\x7E]/g, '_').replace(/["\\]/g, '_');
+  const encoded = encodeURIComponent(fileName);
+  return `attachment; filename="${safeAscii}"; filename*=UTF-8''${encoded}`;
+}
 
 /**
  * Controller for handling committee HTTP requests
@@ -672,6 +687,25 @@ export class CommitteeController {
         return;
       }
 
+      // Defense in depth: the client claims one size in the query param but the
+      // request body is the source of truth. A mismatch usually means a truncated
+      // upload or a tampered query param — either way we should refuse rather than
+      // forward inaccurate metadata to upstream.
+      if (fileSizeNum !== fileBuffer.length) {
+        const validationError = ServiceValidationError.forField(
+          'file_size',
+          `Reported file_size (${fileSizeNum}) does not match request body length (${fileBuffer.length})`,
+          {
+            operation: 'upload_committee_document',
+            service: 'committee_controller',
+            path: req.path,
+          }
+        );
+
+        next(validationError);
+        return;
+      }
+
       const uploadData: UploadCommitteeDocumentRequest = {
         name,
         file_name,
@@ -698,8 +732,10 @@ export class CommitteeController {
   /**
    * GET /committees/:id/documents/:documentId/download
    *
-   * Streams the file binary from the upstream committee service to the browser
-   * with a Content-Disposition: attachment header so the browser triggers a download.
+   * Streams the file binary from the upstream committee service straight to the
+   * browser with `Content-Disposition: attachment` (RFC 5987 encoded) so the
+   * browser triggers a download without the BFF buffering the whole payload in
+   * memory — important under concurrent downloads given the 100MB upload limit.
    */
   public async downloadCommitteeDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { id, documentId } = req.params;
@@ -731,23 +767,48 @@ export class CommitteeController {
         return;
       }
 
-      const { buffer, contentType, fileName } = await this.committeeService.downloadCommitteeDocument(req, id, documentId);
+      // Fetch metadata + open the upstream stream in parallel; the metadata fetch
+      // is small and lets us set Content-Disposition before we start piping bytes.
+      const [{ contentType, fileName }, upstream] = await Promise.all([
+        this.committeeService.getCommitteeDocumentMetadata(req, id, documentId),
+        this.committeeService.getCommitteeDocumentStream(req, id, documentId),
+      ]);
 
       res.setHeader('Content-Type', contentType);
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName.replace(/"/g, '\\"')}"`);
-      res.setHeader('Content-Length', String(buffer.length));
+      res.setHeader('Content-Disposition', contentDispositionAttachment(fileName));
+      const upstreamLength = upstream.headers.get('content-length');
+      if (upstreamLength) {
+        res.setHeader('Content-Length', upstreamLength);
+      }
+
+      // upstream.body is a web ReadableStream; pipeline() lets stream errors
+      // propagate to the catch block instead of leaving a hung response.
+      // The ! is safe — proxyStreamRequest already throws if body is null.
+      // The `as any` works around a Node typing quirk where the global ReadableStream
+      // and `stream/web`'s ReadableStream don't unify cleanly (same workaround in
+      // document.controller.ts).
+      await pipeline(Readable.fromWeb(upstream.body as any), res);
 
       logger.success(req, 'download_committee_document', startTime, {
         committee_id: id,
         document_uid: documentId,
         file_name: fileName,
-        file_size: buffer.length,
       });
-
-      res.end(buffer);
     } catch (error) {
-      // Controllers that send their own response in the catch block must log themselves —
-      // but here we haven't sent anything yet, so apiErrorHandler will log centrally.
+      // If we already started writing the response (Content-Type set, but stream
+      // failed mid-pipe), the headers are committed and we can only end it.
+      // Otherwise apiErrorHandler will log + send a structured error response.
+      if (res.headersSent) {
+        logger.error(req, 'download_committee_document', startTime, error, {
+          committee_id: id,
+          document_uid: documentId,
+          stage: 'streaming',
+        });
+        if (!res.writableEnded) {
+          res.end();
+        }
+        return;
+      }
       next(error);
     }
   }

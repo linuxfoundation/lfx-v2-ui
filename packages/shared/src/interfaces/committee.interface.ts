@@ -469,8 +469,18 @@ export interface CommitteeEngagementMetrics {
 /** Type of a committee document entry */
 export type CommitteeDocumentType = 'file' | 'link' | 'folder';
 
-/** Subset of document types that can be created via the BFF */
-export type CreateCommitteeDocumentType = 'link' | 'folder' | 'file';
+/**
+ * Document types accepted by the JSON `POST /committees/:id/documents` create endpoint.
+ * Files are uploaded via a separate multipart endpoint, not this one — keep this union
+ * narrow so misuse (sending `type: 'file'` to the JSON endpoint) is caught at compile time.
+ */
+export type CreateCommitteeDocumentType = 'link' | 'folder';
+
+/**
+ * Mode discriminator for the shared document form dialog. A superset of
+ * `CreateCommitteeDocumentType` because the file mode dispatches to the upload endpoint.
+ */
+export type DocumentFormMode = CreateCommitteeDocumentType | 'file';
 
 /**
  * A document or resource link associated with a committee.

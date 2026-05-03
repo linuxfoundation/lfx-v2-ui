@@ -10,7 +10,7 @@ import { InputTextComponent } from '@components/input-text/input-text.component'
 import { SelectComponent } from '@components/select/select.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
 import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from '@lfx-one/shared/constants';
-import { CreateCommitteeDocumentType, CreateCommitteeDocumentRequest } from '@lfx-one/shared/interfaces';
+import { CreateCommitteeDocumentRequest, CreateCommitteeDocumentType, DocumentFormMode } from '@lfx-one/shared/interfaces';
 import { generateAcceptString, getAcceptedFileTypesDisplay, getMimeTypeDisplayName, isFileTypeAllowed } from '@lfx-one/shared/utils';
 import { CommitteeService } from '@services/committee.service';
 import { MessageService } from 'primeng/api';
@@ -41,7 +41,7 @@ export class DocumentFormComponent {
   // Config-based properties
   public readonly committeeId: string;
   /** Pre-set mode: 'link', 'folder', or 'file' — determines which form fields are shown */
-  public readonly mode: CreateCommitteeDocumentType;
+  public readonly mode: DocumentFormMode;
   /** Available folders for the folder selector (links only) */
   public readonly folderOptions: { label: string; value: string }[];
   /** Default parent folder UID — used to pre-select the folder when opening from inside a folder view */
@@ -114,8 +114,11 @@ export class DocumentFormComponent {
 
     this.submitting.set(true);
 
+    // We returned early above for file mode, so the only remaining values are link/folder.
+    // The cast preserves narrowness for CreateCommitteeDocumentRequest, which excludes 'file'.
+    const createType = this.mode as CreateCommitteeDocumentType;
     const createData: CreateCommitteeDocumentRequest = {
-      type: this.mode,
+      type: createType,
       name: formValue.name,
       ...(this.isLink() && { url: formValue.url }),
       description: formValue.description || undefined,
