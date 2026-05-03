@@ -15,6 +15,7 @@ import { pipeline } from 'node:stream/promises';
 
 import { ServiceValidationError } from '../errors';
 import { buildVCalendar, fetchAllMeetingPages, meetingsToVEvents } from '../helpers/ics.helper';
+import { getStringQueryParam } from '../helpers/validation.helper';
 import { logger } from '../services/logger.service';
 import { CommitteeService } from '../services/committee.service';
 import { MeetingService } from '../services/meeting.service';
@@ -624,13 +625,22 @@ export class CommitteeController {
    */
   public async uploadCommitteeDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { id } = req.params;
-    const { name, file_name, content_type, file_size, description } = req.query as Record<string, string>;
+    // Use getStringQueryParam to prevent type confusion via parameter tampering
+    // (CodeQL js/type-confusion-through-parameter-tampering). Express req.query
+    // values can be string | string[] | ParsedQs | ParsedQs[]; the helper
+    // returns undefined for anything that is not a plain string so an attacker
+    // cannot inject arrays by repeating query-string keys (e.g. file_size[]=1).
+    const name = getStringQueryParam(req, 'name');
+    const fileName = getStringQueryParam(req, 'file_name');
+    const contentType = getStringQueryParam(req, 'content_type');
+    const fileSize = getStringQueryParam(req, 'file_size');
+    const description = getStringQueryParam(req, 'description');
 
     const startTime = logger.startOperation(req, 'upload_committee_document', {
       committee_id: id,
-      file_name,
-      file_size,
-      content_type,
+      file_name: fileName,
+      file_size: fileSize,
+      content_type: contentType,
     });
 
     try {
@@ -647,9 +657,9 @@ export class CommitteeController {
 
       const fieldErrors: Record<string, string> = {};
       if (!name) fieldErrors['name'] = 'Document name is required';
-      if (!file_name) fieldErrors['file_name'] = 'File name is required';
-      if (!content_type) fieldErrors['content_type'] = 'Content type is required';
-      if (!file_size) fieldErrors['file_size'] = 'File size is required';
+      if (!fileName) fieldErrors['file_name'] = 'File name is required';
+      if (!contentType) fieldErrors['content_type'] = 'Content type is required';
+      if (!fileSize) fieldErrors['file_size'] = 'File size is required';
 
       if (Object.keys(fieldErrors).length > 0) {
         const validationError = ServiceValidationError.fromFieldErrors(fieldErrors, 'Upload request validation failed', {
@@ -663,7 +673,9 @@ export class CommitteeController {
       }
 
       const fileBuffer = req.body as Buffer;
-      const fileSizeNum = parseInt(file_size, 10);
+      // fileSize is guaranteed non-empty by the fieldErrors early-return above;
+      // the ! assertion satisfies TypeScript's narrowing.
+      const fileSizeNum = parseInt(fileSize!, 10);
 
       if (isNaN(fileSizeNum) || fileSizeNum <= 0) {
         const validationError = ServiceValidationError.forField('file_size', 'File size must be a positive number', {
@@ -707,9 +719,11 @@ export class CommitteeController {
       }
 
       const uploadData: UploadCommitteeDocumentRequest = {
-        name,
-        file_name,
-        content_type,
+        // These are guaranteed non-undefined by the fieldErrors early-return above;
+        // the non-null assertions satisfy TypeScript's narrowing.
+        name: name!,
+        file_name: fileName!,
+        content_type: contentType!,
         file_size: fileSizeNum,
         ...(description && { description }),
       };
@@ -719,7 +733,7 @@ export class CommitteeController {
       logger.success(req, 'upload_committee_document', startTime, {
         committee_id: id,
         document_uid: result.uid,
-        file_name,
+        file_name: fileName,
         file_size: fileSizeNum,
       });
 
