@@ -81,8 +81,11 @@ app.get(
   })
 );
 
-// Health endpoint before logger middleware so health checks aren't logged.
-app.get('/health', (_req: Request, res: Response) => {
+// Liveness and readiness endpoints registered before logger middleware so
+// Kubernetes probe traffic is not request-logged. Both are also registered
+// before auth and rate-limit middleware so they are always reachable
+// unauthenticated. auth.middleware.ts lists /livez and /readyz as public.
+app.get('/livez', (_req: Request, res: Response) => {
   res.send('OK');
 });
 
@@ -95,10 +98,7 @@ app.get('/health', (_req: Request, res: Response) => {
 // though many SSR pages render fine without them. Per-feature dependency
 // failures are handled at the route level, not by pulling the whole pod out
 // of the Service endpoints list.
-// Registered before pino-http, auth, and rate-limit middleware so probes don't
-// pollute request logs and the endpoint is always reachable unauthenticated.
-// (No rate-limit changes needed — /health/* is not under /api/.)
-app.get('/health/ready', (_req: Request, res: Response) => {
+app.get('/readyz', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'ready' });
 });
 
