@@ -102,7 +102,7 @@ export class ProjectContextService {
   }
 
   private initCanWrite(): Signal<boolean> {
-    return toSignal(
+    const projectWriter = toSignal(
       toObservable(this.activeContext).pipe(
         switchMap((ctx) => {
           if (!ctx?.slug) {
@@ -116,5 +116,10 @@ export class ProjectContextService {
       ),
       { initialValue: false }
     );
+
+    // Root writers (writers on the TLF pseudo-project) bypass the per-project FGA check —
+    // they're treated as writers everywhere, mirroring lens-visibility behavior in
+    // lens.service.ts (showFoundation/showProject already OR-in isRootWriter).
+    return computed(() => this.personaService.isRootWriter() || projectWriter());
   }
 }

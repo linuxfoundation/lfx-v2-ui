@@ -44,6 +44,9 @@ export class MailingListManageComponent {
   private readonly messageService = inject(MessageService);
   private readonly projectContextService = inject(ProjectContextService);
   private readonly projectService = inject(ProjectService);
+  // Pin project context from URL when present (set by dashboard quicklinks). Snapshot read so
+  // context is stable for the entire create flow regardless of project-selector changes.
+  private readonly projectUidFromUrl = this.route.snapshot.queryParamMap.get('project_uid');
 
   // Protected constants
   public readonly totalSteps = MAILING_LIST_TOTAL_STEPS;
@@ -451,7 +454,7 @@ export class MailingListManageComponent {
     const serviceData: CreateGroupsIOServiceRequest = {
       type: GroupsIOServiceType.SHARED,
       prefix: `${this.cleanSlug(project.slug)}`,
-      project_uid: project.uid,
+      project_uid: this.projectUidFromUrl || project.uid,
       domain: parent.domain,
     };
 

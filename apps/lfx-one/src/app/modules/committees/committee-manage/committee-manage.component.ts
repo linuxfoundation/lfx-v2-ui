@@ -44,6 +44,9 @@ export class CommitteeManageComponent {
   private readonly committeeService = inject(CommitteeService);
   private readonly messageService = inject(MessageService);
   private readonly projectContextService = inject(ProjectContextService);
+  // Pin project context from URL when present (set by dashboard quicklinks). Snapshot read so
+  // context is stable for the entire create flow regardless of project-selector changes.
+  private readonly projectUidFromUrl = this.route.snapshot.queryParamMap.get('project_uid');
   // Mode and state signals
   public mode = signal<'create' | 'edit'>('create');
   public committeeId = signal<string | null>(null);
@@ -192,7 +195,7 @@ export class CommitteeManageComponent {
       },
       display_name: this.form.value.display_name || this.form.value.name,
       website: this.form.value.website || null,
-      project_uid: this.committee()?.project_uid || this.project()?.uid || null,
+      project_uid: this.committee()?.project_uid || this.projectUidFromUrl || this.project()?.uid || null,
     };
 
     const committeeData = this.cleanFormData(formValue);
@@ -285,7 +288,7 @@ export class CommitteeManageComponent {
       },
       display_name: this.form.value.display_name || this.form.value.name,
       website: this.form.value.website || null,
-      project_uid: this.committee()?.project_uid || this.project()?.uid || null,
+      project_uid: this.committee()?.project_uid || this.projectUidFromUrl || this.project()?.uid || null,
     };
 
     const committeeData = this.cleanFormData(formValue);

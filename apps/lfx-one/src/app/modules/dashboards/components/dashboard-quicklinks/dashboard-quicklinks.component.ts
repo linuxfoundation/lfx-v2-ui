@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject, Signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DashboardQuickLink } from '@lfx-one/shared/interfaces';
 import { ProjectContextService } from '@services/project-context.service';
@@ -21,4 +21,18 @@ export class DashboardQuicklinksComponent {
   ];
 
   protected readonly canWrite = this.projectContextService.canWrite;
+
+  /**
+   * When the active context has a project UID, pin it to the create-flow URL so the form
+   * binds to that project regardless of subsequent project-selector changes (mirrors how
+   * committee → Schedule Meeting pins `committee_uid`).
+   */
+  protected readonly contextQueryParams: Signal<Record<string, string>> = this.initContextQueryParams();
+
+  private initContextQueryParams(): Signal<Record<string, string>> {
+    return computed(() => {
+      const uid = this.projectContextService.activeContextUid();
+      return uid ? { project_uid: uid } : {};
+    });
+  }
 }
