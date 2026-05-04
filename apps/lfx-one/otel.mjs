@@ -107,6 +107,26 @@ if (!otlpEndpoint) {
           const url = req.url || '';
           return url === '/health' || url === '/api/health' || url.startsWith('/.well-known');
         },
+        applyCustomAttributesOnSpan: (span, request, response) => {
+          const req = 'req' in response ? response.req : undefined;
+          if (!req) return;
+
+          if (req.route?.path) {
+            const baseUrl = req.baseUrl || '';
+            const fullRoute = `${baseUrl}${req.route.path}`;
+            span.setAttribute('http.route', fullRoute);
+            span.updateName(`${request.method} ${fullRoute}`);
+            return;
+          }
+
+          const url = (req.originalUrl || req.url || '').split('?')[0];
+          const segments = url.split('/').filter(Boolean);
+          if (segments.length > 0) {
+            const bucket = `/${segments[0]}/*`;
+            span.setAttribute('http.route', bucket);
+            span.updateName(`${request.method} ${bucket}`);
+          }
+        },
       }),
       new ExpressInstrumentation(),
       new UndiciInstrumentation({
