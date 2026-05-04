@@ -73,18 +73,13 @@ app.use(
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
-app.get(
-  '**',
-  express.static(browserDistFolder, {
-    maxAge: '1y',
-    index: false,
-  })
-);
-
-// Liveness and readiness endpoints registered before logger middleware so
-// Kubernetes probe traffic is not request-logged. Both are also registered
-// before auth and rate-limit middleware so they are always reachable
-// unauthenticated. auth.middleware.ts lists /livez and /readyz as public.
+// Liveness and readiness endpoints registered before the static handler,
+// logger, auth, and rate-limit middleware so:
+//   - probes are served directly with no filesystem lookup (no I/O overhead
+//     on frequent Kubernetes probe traffic)
+//   - probe traffic is not request-logged
+//   - endpoints are always reachable unauthenticated
+// auth.middleware.ts lists /livez and /readyz as public.
 app.get('/livez', (_req: Request, res: Response) => {
   res.send('OK');
 });
@@ -101,6 +96,14 @@ app.get('/livez', (_req: Request, res: Response) => {
 app.get('/readyz', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'ready' });
 });
+
+app.get(
+  '**',
+  express.static(browserDistFolder, {
+    maxAge: '1y',
+    index: false,
+  })
+);
 
 const httpLogger = pinoHttp({
   logger: serverLogger,

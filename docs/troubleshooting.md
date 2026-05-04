@@ -301,7 +301,7 @@ pm2 restart lfx-one
 
 ```bash
 # Application health
-curl http://localhost:4200/livez
+curl http://localhost:4000/livez
 
 # Check Angular build
 yarn build
