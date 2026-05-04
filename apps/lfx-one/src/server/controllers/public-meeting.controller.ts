@@ -509,7 +509,7 @@ export class PublicMeetingController {
     });
 
     if (!email && !username) {
-      throw ServiceValidationError.forField('email', 'Email is required', {
+      throw ServiceValidationError.forField('email', 'Email or authenticated user identity is required', {
         operation: 'post_meeting_link',
         service: 'public_meeting_controller',
         path: req.path,
@@ -535,7 +535,7 @@ export class PublicMeetingController {
     }
 
     if (registrants.length === 0) {
-      throw new AuthorizationError('The email address is not registered for this restricted meeting', {
+      throw new AuthorizationError('You are not registered for this restricted meeting', {
         operation: 'post_meeting_link',
         service: 'public_meeting_controller',
         path: `/itx/meetings/${id}`,
