@@ -117,9 +117,7 @@ export class ProjectContextService {
       { initialValue: false }
     );
 
-    // Root writers (writers on the TLF pseudo-project) bypass the per-project FGA check —
-    // they're treated as writers everywhere, mirroring lens-visibility behavior in
-    // lens.service.ts (showFoundation/showProject already OR-in isRootWriter).
+    // Root writers are treated as writers on all projects.
     return computed(() => this.personaService.isRootWriter() || projectWriter());
   }
 }

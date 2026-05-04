@@ -22,11 +22,6 @@ export class DashboardQuicklinksComponent {
 
   protected readonly canWrite = this.projectContextService.canWrite;
 
-  /**
-   * When the active context has a project UID, pin it to the create-flow URL so the form
-   * binds to that project regardless of subsequent project-selector changes (mirrors how
-   * committee → Schedule Meeting pins `committee_uid`).
-   */
   protected readonly contextQueryParams: Signal<Params> = this.initContextQueryParams();
 
   private initContextQueryParams(): Signal<Params> {

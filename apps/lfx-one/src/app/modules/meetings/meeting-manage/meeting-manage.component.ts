@@ -91,9 +91,7 @@ export class MeetingManageComponent {
   // Committee context — when navigated from a committee tab with ?committee_uid=
   public readonly committeeContext = signal<Committee | null>(null);
   private readonly committeeUidFromUrl = this.route.snapshot.queryParamMap.get('committee_uid');
-  // Pin project context from URL when present (set by dashboard quicklinks). Falls back
-  // to ProjectContextService.activeContextUid() if absent. Snapshot read so context is
-  // stable for the entire create flow regardless of project-selector changes.
+  // Snapshot read — stable for the entire create flow.
   private readonly projectUidFromUrl = this.route.snapshot.queryParamMap.get('project_uid');
 
   // Mode and state signals

@@ -9,7 +9,14 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CommitteeSelectorComponent } from '@components/committee-selector/committee-selector.component';
 import { COMMITTEE_LABEL, MAILING_LIST_TOTAL_STEPS } from '@lfx-one/shared/constants';
 import { GroupsIOServiceType, MailingListAudienceAccess, MailingListType } from '@lfx-one/shared/enums';
-import { CommitteeReference, CreateGroupsIOServiceRequest, CreateMailingListRequest, GroupsIOMailingList, GroupsIOService, ProjectContext } from '@lfx-one/shared/interfaces';
+import {
+  CommitteeReference,
+  CreateGroupsIOServiceRequest,
+  CreateMailingListRequest,
+  GroupsIOMailingList,
+  GroupsIOService,
+  ProjectContext,
+} from '@lfx-one/shared/interfaces';
 import { markFormControlsAsTouched } from '@lfx-one/shared/utils';
 import { announcementVisibilityValidator, htmlMaxLengthValidator, htmlMinLengthValidator, htmlRequiredValidator } from '@lfx-one/shared/validators';
 import { MailingListService } from '@services/mailing-list.service';
@@ -44,8 +51,7 @@ export class MailingListManageComponent {
   private readonly messageService = inject(MessageService);
   private readonly projectContextService = inject(ProjectContextService);
   private readonly projectService = inject(ProjectService);
-  // Pin project context from URL when present (set by dashboard quicklinks). Snapshot read so
-  // context is stable for the entire create flow regardless of project-selector changes.
+  // Snapshot read — stable for the entire create flow.
   private readonly projectUidFromUrl = this.route.snapshot.queryParamMap.get('project_uid');
 
   // Protected constants
@@ -224,18 +230,12 @@ export class MailingListManageComponent {
   }
 
   private initProject(): Signal<ReturnType<typeof this.projectContextService.selectedProject>> {
-    // If a project_uid is pinned in the URL (e.g. from dashboard quicklinks), lock the
-    // project signal to that project for the entire create flow. Otherwise fall back to the
-    // reactive active-context signal. The URL pin prevents downstream consumers
-    // (availableServices, selectedService, servicePrefix, createSharedService) from
-    // following project-selector changes mid-form, which would otherwise move the new
-    // mailing list to a different project than the user originally chose.
     if (this.projectUidFromUrl) {
-      // Backend's /api/projects/:slug accepts UUIDs too — dispatches to getProjectById
-      // when the param looks like a UUID (see project.controller.ts isUuid check).
       return toSignal(
         this.projectService.getProject(this.projectUidFromUrl, false).pipe(
-          map((p) => (p ? ({ uid: p.uid, name: p.name, slug: p.slug, parent_uid: p.parent_uid } as ProjectContext) : null)),
+          map((p) =>
+            p ? ({ uid: p.uid, name: p.name, slug: p.slug, parent_uid: p.parent_uid } as ProjectContext) : this.projectContextService.activeContext()
+          ),
           catchError(() => of(this.projectContextService.activeContext()))
         ),
         { initialValue: this.projectContextService.activeContext() }

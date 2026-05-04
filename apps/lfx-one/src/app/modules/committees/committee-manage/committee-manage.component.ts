@@ -44,8 +44,7 @@ export class CommitteeManageComponent {
   private readonly committeeService = inject(CommitteeService);
   private readonly messageService = inject(MessageService);
   private readonly projectContextService = inject(ProjectContextService);
-  // Pin project context from URL when present (set by dashboard quicklinks). Snapshot read so
-  // context is stable for the entire create flow regardless of project-selector changes.
+  // Snapshot read — stable for the entire create flow.
   private readonly projectUidFromUrl = this.route.snapshot.queryParamMap.get('project_uid');
   // Mode and state signals
   public mode = signal<'create' | 'edit'>('create');
