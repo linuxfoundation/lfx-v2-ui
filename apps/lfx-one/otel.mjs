@@ -121,11 +121,9 @@ if (!otlpEndpoint) {
 
           const url = (req.originalUrl || req.url || '').split('?')[0];
           const segments = url.split('/').filter(Boolean);
-          if (segments.length > 0) {
-            const bucket = `/${segments[0]}/*`;
-            span.setAttribute('http.route', bucket);
-            span.updateName(`${request.method} ${bucket}`);
-          }
+          const bucket = segments.length > 0 ? `/${segments[0]}/*` : '/';
+          span.setAttribute('http.route', bucket);
+          span.updateName(`${request.method} ${bucket}`);
         },
       }),
       new ExpressInstrumentation(),
