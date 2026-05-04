@@ -109,7 +109,7 @@ export class EventGrowthDrawerComponent {
         .map((event) => ({
           ...event,
           formattedRevenue: EventGrowthDrawerComponent.formatMoney(event.revenue),
-          isPast: event.date < today,
+          isPast: !!event.date && event.date < today,
         }));
     });
   }
