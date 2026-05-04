@@ -2829,10 +2829,11 @@ export interface EmailCtrResponse {
 
 // ============================================
 // Marketing Overview Card (Executive Director Dashboard)
+// Interface names retain the "MarketingMetrics" prefix for backwards compatibility.
 // ============================================
 
 /**
- * Email campaign section data for the Marketing Overview card
+ * Email campaign section data for the Marketing Overview (formerly "Marketing Metrics") card.
  */
 export interface MarketingMetricsEmailSection {
   ctr: string;
@@ -2846,7 +2847,7 @@ export interface MarketingMetricsEmailSection {
 }
 
 /**
- * Paid campaign section data for the Marketing Overview card
+ * Paid campaign section data for the Marketing Overview (formerly "Marketing Metrics") card.
  */
 export interface MarketingMetricsPaidSection {
   impressions: string;
@@ -2860,7 +2861,7 @@ export interface MarketingMetricsPaidSection {
 }
 
 /**
- * Composite data for the Marketing Overview card.
+ * Composite data for the Marketing Overview (formerly "Marketing Metrics") card.
  * Pre-formatted for template binding — no formatting in the template.
  */
 export interface MarketingMetricsCardData {
