@@ -535,10 +535,13 @@ export class PublicMeetingController {
     }
 
     if (registrants.length === 0) {
+      // Specific code so the frontend can show the "join with a different email" affordance
+      // without coupling to the human-readable message text.
       throw new AuthorizationError('You are not registered for this restricted meeting', {
         operation: 'post_meeting_link',
         service: 'public_meeting_controller',
         path: `/itx/meetings/${id}`,
+        code: 'NOT_REGISTERED_FOR_MEETING',
       });
     }
 
