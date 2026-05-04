@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, inject, Signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Params, RouterLink } from '@angular/router';
 import { DashboardQuickLink } from '@lfx-one/shared/interfaces';
 import { ProjectContextService } from '@services/project-context.service';
 
@@ -27,9 +27,9 @@ export class DashboardQuicklinksComponent {
    * binds to that project regardless of subsequent project-selector changes (mirrors how
    * committee → Schedule Meeting pins `committee_uid`).
    */
-  protected readonly contextQueryParams: Signal<Record<string, string>> = this.initContextQueryParams();
+  protected readonly contextQueryParams: Signal<Params> = this.initContextQueryParams();
 
-  private initContextQueryParams(): Signal<Record<string, string>> {
+  private initContextQueryParams(): Signal<Params> {
     return computed(() => {
       const uid = this.projectContextService.activeContextUid();
       return uid ? { project_uid: uid } : {};
