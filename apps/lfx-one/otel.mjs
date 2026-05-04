@@ -111,9 +111,18 @@ if (!otlpEndpoint) {
           const req = 'req' in response ? response.req : undefined;
           if (!req) return;
 
-          if (req.route?.path) {
+          const routePath = req.route?.path;
+          // Skip pure wildcard route paths ('**', '*', '/*', '/**') leaked from
+          // static-asset fallthrough — they collapse SSR traffic into a single bucket.
+          const isWildcardOnly = typeof routePath === 'string' && /^\/?\*+$/.test(routePath);
+
+          if (routePath && !isWildcardOnly) {
             const baseUrl = req.baseUrl || '';
-            const fullRoute = `${baseUrl}${req.route.path}`;
+            let fullRoute = `${baseUrl}${routePath}`;
+            // Strip trailing slash from mounted router root (e.g. `/api/meetings/` → `/api/meetings`).
+            if (fullRoute.length > 1 && fullRoute.endsWith('/')) {
+              fullRoute = fullRoute.slice(0, -1);
+            }
             span.setAttribute('http.route', fullRoute);
             span.updateName(`${request.method} ${fullRoute}`);
             return;
@@ -121,7 +130,15 @@ if (!otlpEndpoint) {
 
           const url = (req.originalUrl || req.url || '').split('?')[0];
           const segments = url.split('/').filter(Boolean);
-          const bucket = segments.length > 0 ? `/${segments[0]}/*` : '/';
+          let bucket;
+          if (segments.length === 0) {
+            bucket = '/';
+          } else if (segments.length === 1) {
+            // Single-segment URLs (e.g. `/login`) are concrete endpoints, not prefixes.
+            bucket = `/${segments[0]}`;
+          } else {
+            bucket = `/${segments[0]}/*`;
+          }
           span.setAttribute('http.route', bucket);
           span.updateName(`${request.method} ${bucket}`);
         },
