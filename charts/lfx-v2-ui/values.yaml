@@ -153,8 +153,8 @@ resources:
     memory: 512Mi
 
 # Liveness probe — restarts the pod if the process becomes unresponsive.
-# Targets GET /health (plain text "OK") which Express serves before all
-# middleware, so it is always available if the process is alive.
+# Targets GET /health (plain text "OK"), registered before logging, auth, and
+# rate-limit middleware so it is always reachable if the process is alive.
 # Set to null to disable: livenessProbe: null
 livenessProbe:
   httpGet:
