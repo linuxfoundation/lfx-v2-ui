@@ -37,7 +37,7 @@ export const appConfig: ApplicationConfig = {
     provideZonelessChangeDetection(),
     provideRouter(routes, withPreloading(CustomPreloadingStrategy), withInMemoryScrolling({ scrollPositionRestoration: 'top' })),
     provideClientHydration(withEventReplay(), withIncrementalHydration(), withHttpTransferCacheOptions({ includeHeaders: ['Authorization'] })),
-    provideHttpClient(withFetch(), withInterceptors([ssrBaseUrlInterceptor, authenticationInterceptor])),
+    provideHttpClient(withFetch(), withInterceptors([authenticationInterceptor, ssrBaseUrlInterceptor])),
     provideAnimationsAsync(),
     providePrimeNG({
       theme: {
