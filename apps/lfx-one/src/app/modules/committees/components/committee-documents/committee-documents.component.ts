@@ -13,7 +13,7 @@ import { MEETING_GROUP_SOURCES } from '@lfx-one/shared/constants';
 import { Committee, CommitteeDocument, MyDocumentItem, MyDocumentSource } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
-import { catchError, combineLatest, debounceTime, distinctUntilChanged, filter, finalize, map, of, startWith, switchMap, take } from 'rxjs';
+import { combineLatest, debounceTime, distinctUntilChanged, filter, finalize, map, startWith, switchMap, take } from 'rxjs';
 
 import { DocumentFormComponent } from '../document-form/document-form.component';
 
@@ -92,8 +92,6 @@ export class CommitteeDocumentsComponent {
 
   /** Drill into a folder shown in the table — switches the view to that folder's contents. */
   public onFolderOpen(doc: MyDocumentItem): void {
-    // The folder UID is encoded in `id` as `committee_folder:<uid>` per toDisplayItem; prefer the
-    // explicit `groupOrMeetingUid`/`parentUid` only as a fallback.
     const folderUid = doc.id.startsWith('committee_folder:') ? doc.id.slice('committee_folder:'.length) : null;
     if (folderUid) {
       this.currentFolderUid.set(folderUid);
@@ -141,10 +139,7 @@ export class CommitteeDocumentsComponent {
     dialogRef?.onClose.pipe(take(1)).subscribe({
       next: (result: boolean | undefined) => {
         if (result) {
-          // The upstream upload API does not accept a folder_uid yet (filed separately),
-          // so files always land at the root of the committee. If the user uploaded from
-          // inside a folder, refreshing the current folder view would leave the new file
-          // invisible. Pop back to the root so the just-uploaded file is the first row.
+          // Upload API doesn't accept folder_uid yet — pop to root so the new file is visible.
           this.currentFolderUid.set(null);
           this.refreshTrigger.update((v) => v + 1);
         }
@@ -239,7 +234,8 @@ export class CommitteeDocumentsComponent {
         if (query && !doc.name.toLowerCase().includes(query) && !(doc.groupOrMeetingName ?? '').toLowerCase().includes(query)) {
           return false;
         }
-        if (source && doc.source !== source && !(source === 'meeting' && MEETING_GROUP_SOURCES.includes(doc.source))) {
+        // Folder rows are structural navigation, not content — never filter them out by source.
+        if (source && !doc.isFolder && doc.source !== source && !(source === 'meeting' && MEETING_GROUP_SOURCES.includes(doc.source))) {
           return false;
         }
         return true;
@@ -253,11 +249,7 @@ export class CommitteeDocumentsComponent {
         filter(([committee]) => !!committee?.uid),
         switchMap(([committee]) => {
           this.loading.set(true);
-          return this.committeeService.getCommitteeDocuments(committee.uid).pipe(
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            catchError((_err) => of([] as CommitteeDocument[])),
-            finalize(() => this.loading.set(false))
-          );
+          return this.committeeService.getCommitteeDocuments(committee.uid).pipe(finalize(() => this.loading.set(false)));
         })
       ),
       { initialValue: [] as CommitteeDocument[] }
@@ -266,12 +258,9 @@ export class CommitteeDocumentsComponent {
 
   /**
    * Maps an upstream-shaped CommitteeDocument to the unified MyDocumentItem the table renders.
-   * Folders are mapped to source `'link'` with no URL — the table renders them as a plain
-   * row with no action button. `isChild` is set by the caller when the row sits under a folder.
-   *
-   * For files, `downloadUrl` points at the BFF endpoint that streams the binary back with
-   * a Content-Disposition header — the documents-table follows it directly instead of
-   * routing through the generic external-URL download proxy.
+   * Folders use source `'link'` as a placeholder (the row is rendered via `isFolder` and
+   * skipped by the Source filter — see `initFilteredDocuments`). Files get a `downloadUrl`
+   * pointing at the BFF streaming endpoint.
    */
   private toDisplayItem(
     doc: CommitteeDocument,

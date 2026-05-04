@@ -114,8 +114,6 @@ export class DocumentFormComponent {
 
     this.submitting.set(true);
 
-    // We returned early above for file mode, so the only remaining values are link/folder.
-    // The cast preserves narrowness for CreateCommitteeDocumentRequest, which excludes 'file'.
     const createType = this.mode as CreateCommitteeDocumentType;
     const createData: CreateCommitteeDocumentRequest = {
       type: createType,

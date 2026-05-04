@@ -115,9 +115,7 @@ export class ApiClientService {
         redirect: 'error',
       });
     } catch (error: unknown) {
-      // Mirror executeRequest()'s transport-error classification so callers see
-      // consistent typed MicroserviceError instances regardless of which client
-      // method they used (timeout → 408, network → 500 with cause code).
+      // Mirror executeRequest() transport-error classification for consistent MicroserviceError types.
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
           throw new MicroserviceError(`Request timeout after ${this.config.timeout}ms`, 408, 'TIMEOUT', {
@@ -141,8 +139,7 @@ export class ApiClientService {
     }
 
     if (!response.ok) {
-      // Read the body once for error context, then throw — the caller never
-      // sees the body so we don't have to worry about double-consumption.
+      // Read body once for error context.
       let errorBody: any = null;
       try {
         const errorText = await response.text();

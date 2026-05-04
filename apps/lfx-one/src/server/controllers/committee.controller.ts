@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { ALLOWED_FILE_TYPES } from '@lfx-one/shared/constants';
 import {
   CommitteeCreateData,
   CommitteeUpdateData,
@@ -9,8 +10,10 @@ import {
   CreateCommitteeJoinApplicationRequest,
   UploadCommitteeDocumentRequest,
 } from '@lfx-one/shared/interfaces';
+import { isFileTypeAllowed } from '@lfx-one/shared/utils';
 import { NextFunction, Request, Response } from 'express';
 import { Readable } from 'node:stream';
+import { ReadableStream as NodeReadableStream } from 'node:stream/web';
 import { pipeline } from 'node:stream/promises';
 
 import { ServiceValidationError } from '../errors';
@@ -625,11 +628,7 @@ export class CommitteeController {
    */
   public async uploadCommitteeDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { id } = req.params;
-    // Use getStringQueryParam to prevent type confusion via parameter tampering
-    // (CodeQL js/type-confusion-through-parameter-tampering). Express req.query
-    // values can be string | string[] | ParsedQs | ParsedQs[]; the helper
-    // returns undefined for anything that is not a plain string so an attacker
-    // cannot inject arrays by repeating query-string keys (e.g. file_size[]=1).
+    // Prevents type confusion via repeated query-string keys (e.g. file_size[]=1).
     const name = getStringQueryParam(req, 'name');
     const fileName = getStringQueryParam(req, 'file_name');
     const contentType = getStringQueryParam(req, 'content_type');
@@ -673,8 +672,6 @@ export class CommitteeController {
       }
 
       const fileBuffer = req.body as Buffer;
-      // fileSize is guaranteed non-empty by the fieldErrors early-return above;
-      // the ! assertion satisfies TypeScript's narrowing.
       const fileSizeNum = parseInt(fileSize!, 10);
 
       if (isNaN(fileSizeNum) || fileSizeNum <= 0) {
@@ -699,10 +696,7 @@ export class CommitteeController {
         return;
       }
 
-      // Defense in depth: the client claims one size in the query param but the
-      // request body is the source of truth. A mismatch usually means a truncated
-      // upload or a tampered query param — either way we should refuse rather than
-      // forward inaccurate metadata to upstream.
+      // Reject if reported size doesn't match the actual body length.
       if (fileSizeNum !== fileBuffer.length) {
         const validationError = ServiceValidationError.forField(
           'file_size',
@@ -718,9 +712,34 @@ export class CommitteeController {
         return;
       }
 
+      // Server-side allowlist check — frontend allowlist can be bypassed by direct API calls.
+      // Uses the same ALLOWED_FILE_TYPES + extension fallback as the file-upload component.
+      if (!isFileTypeAllowed(contentType!, fileName!, ALLOWED_FILE_TYPES)) {
+        next(
+          ServiceValidationError.forField('content_type', `File type "${contentType}" is not allowed`, {
+            operation: 'upload_committee_document',
+            service: 'committee_controller',
+            path: req.path,
+          })
+        );
+        return;
+      }
+
+      // Reject path-traversal patterns in the filename so upstream can't be tricked into
+      // writing or referencing files outside the committee scope. Frontend strips these
+      // already; the server enforces the same rule for direct callers.
+      if (/[/\\\0]/.test(fileName!) || fileName!.includes('..')) {
+        next(
+          ServiceValidationError.forField('file_name', 'File name contains invalid characters', {
+            operation: 'upload_committee_document',
+            service: 'committee_controller',
+            path: req.path,
+          })
+        );
+        return;
+      }
+
       const uploadData: UploadCommitteeDocumentRequest = {
-        // These are guaranteed non-undefined by the fieldErrors early-return above;
-        // the non-null assertions satisfy TypeScript's narrowing.
         name: name!,
         file_name: fileName!,
         content_type: contentType!,
@@ -781,8 +800,7 @@ export class CommitteeController {
         return;
       }
 
-      // Fetch metadata + open the upstream stream in parallel; the metadata fetch
-      // is small and lets us set Content-Disposition before we start piping bytes.
+      // Fetch metadata and open the upstream stream in parallel.
       const [{ contentType, fileName }, upstream] = await Promise.all([
         this.committeeService.getCommitteeDocumentMetadata(req, id, documentId),
         this.committeeService.getCommitteeDocumentStream(req, id, documentId),
@@ -795,13 +813,8 @@ export class CommitteeController {
         res.setHeader('Content-Length', upstreamLength);
       }
 
-      // upstream.body is a web ReadableStream; pipeline() lets stream errors
-      // propagate to the catch block instead of leaving a hung response.
-      // The ! is safe — proxyStreamRequest already throws if body is null.
-      // The `as any` works around a Node typing quirk where the global ReadableStream
-      // and `stream/web`'s ReadableStream don't unify cleanly (same workaround in
-      // document.controller.ts).
-      await pipeline(Readable.fromWeb(upstream.body as any), res);
+      // pipeline() propagates stream errors to the catch block instead of hanging.
+      await pipeline(Readable.fromWeb(upstream.body as NodeReadableStream<Uint8Array>), res);
 
       logger.success(req, 'download_committee_document', startTime, {
         committee_id: id,
@@ -809,9 +822,7 @@ export class CommitteeController {
         file_name: fileName,
       });
     } catch (error) {
-      // If we already started writing the response (Content-Type set, but stream
-      // failed mid-pipe), the headers are committed and we can only end it.
-      // Otherwise apiErrorHandler will log + send a structured error response.
+      // Headers already committed — can only end the stream.
       if (res.headersSent) {
         logger.error(req, 'download_committee_document', startTime, error, {
           committee_id: id,

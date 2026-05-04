@@ -718,35 +718,27 @@ export class CommitteeService {
   // ── Committee Documents ────────────────────────────────────────────────────
 
   public async getCommitteeDocuments(req: Request, committeeId: string): Promise<CommitteeDocument[]> {
-    logger.debug(req, 'get_committee_documents', 'Fetching committee folders and links', {
+    logger.debug(req, 'get_committee_documents', 'Fetching committee folders, links, and files', {
       committee_uid: committeeId,
     });
 
-    // Fetch folders, links, and uploaded files in parallel.
-    //
-    // Files have no upstream LIST endpoint, so we query the indexer (resource type
-    // `committee_document`, indexed by lfx-v2-committee-service via the
-    // `lfx.index.committee_document` subject — see CommitteeDocument.Tags() in the
-    // upstream domain model) to discover them by `committee_uid` tag.
+    // No upstream LIST endpoint for files — query the indexer by `committee_uid` tag.
     const [folders, links, files] = await Promise.all([
       this.microserviceProxy.proxyRequest<CommitteeFolder[]>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/folders`, 'GET').catch((err) => {
         logger.warning(req, 'get_committee_documents', 'Failed to fetch committee folders, returning empty list', {
           committee_uid: committeeId,
-          error: err instanceof Error ? err.message : 'Unknown error',
+          err,
         });
         return [] as CommitteeFolder[];
       }),
       this.microserviceProxy.proxyRequest<CommitteeLink[]>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/links`, 'GET').catch((err) => {
         logger.warning(req, 'get_committee_documents', 'Failed to fetch committee links, returning empty list', {
           committee_uid: committeeId,
-          error: err instanceof Error ? err.message : 'Unknown error',
+          err,
         });
         return [] as CommitteeLink[];
       }),
-      // Use cursor-based pagination — once a committee accumulates more than the
-      // upstream page size of uploaded files, a single-page fetch would silently
-      // drop the rest. Matches the pattern used everywhere else /query/resources
-      // is called in this service (committees, members, etc.).
+      // Cursor-based pagination — single page may silently truncate large committees.
       fetchAllQueryResources<CommitteeDocumentQueryResult>(req, (pageToken) =>
         this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeDocumentQueryResult>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
           type: 'committee_document',
@@ -756,7 +748,7 @@ export class CommitteeService {
       ).catch((err) => {
         logger.warning(req, 'get_committee_documents', 'Failed to fetch committee files via query service, returning empty list', {
           committee_uid: committeeId,
-          error: err instanceof Error ? err.message : 'Unknown error',
+          err,
         });
         return [] as CommitteeDocumentQueryResult[];
       }),
@@ -882,11 +874,7 @@ export class CommitteeService {
   }
 
   /**
-   * Uploads a file document to a committee. Builds a multipart/form-data
-   * request and forwards it to the upstream committee service.
-   *
-   * The api-client (`api-client.service.ts`) detects FormData via duck typing
-   * and sets the appropriate Content-Type header with multipart boundary.
+   * Uploads a file document to a committee via multipart/form-data.
    */
   public async uploadCommitteeDocument(
     req: Request,
@@ -900,6 +888,9 @@ export class CommitteeService {
       file_size: uploadData.file_size,
     });
 
+    // file_size is intentionally omitted — upstream UploadCommitteeDocumentRequestBody
+    // only declares name, file_name, content_type, file, description. Goa silently
+    // drops unknown multipart fields.
     const formData = new FormData();
     formData.append('file', fileBuffer, {
       filename: uploadData.file_name,
@@ -970,7 +961,7 @@ export class CommitteeService {
       .catch((err) => {
         logger.warning(req, 'get_committee_document_metadata', 'Failed to fetch document metadata, using fallback values', {
           document_uid: documentId,
-          error: err instanceof Error ? err.message : 'Unknown error',
+          err,
         });
         return null;
       });
