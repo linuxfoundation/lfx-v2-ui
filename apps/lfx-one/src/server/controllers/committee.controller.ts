@@ -654,9 +654,13 @@ export class CommitteeController {
         return;
       }
 
+      // Trim before validating so whitespace-only strings fail the required-field check.
+      const trimmedName = name?.trim();
+      const trimmedFileName = fileName?.trim();
+
       const fieldErrors: Record<string, string> = {};
-      if (!name) fieldErrors['name'] = 'Document name is required';
-      if (!fileName) fieldErrors['file_name'] = 'File name is required';
+      if (!trimmedName) fieldErrors['name'] = 'Document name is required';
+      if (!trimmedFileName) fieldErrors['file_name'] = 'File name is required';
       if (!contentType) fieldErrors['content_type'] = 'Content type is required';
       if (!fileSize) fieldErrors['file_size'] = 'File size is required';
 
@@ -714,7 +718,7 @@ export class CommitteeController {
 
       // Server-side allowlist check — frontend allowlist can be bypassed by direct API calls.
       // Uses the same ALLOWED_FILE_TYPES + extension fallback as the file-upload component.
-      if (!isFileTypeAllowed(contentType!, fileName!, ALLOWED_FILE_TYPES)) {
+      if (!isFileTypeAllowed(contentType!, trimmedFileName!, ALLOWED_FILE_TYPES)) {
         next(
           ServiceValidationError.forField('content_type', `File type "${contentType}" is not allowed`, {
             operation: 'upload_committee_document',
@@ -728,7 +732,7 @@ export class CommitteeController {
       // Reject path-traversal patterns in the filename so upstream can't be tricked into
       // writing or referencing files outside the committee scope. Frontend strips these
       // already; the server enforces the same rule for direct callers.
-      if (/[/\\\0]/.test(fileName!) || fileName!.includes('..')) {
+      if (/[/\\\0]/.test(trimmedFileName!) || trimmedFileName!.includes('..')) {
         next(
           ServiceValidationError.forField('file_name', 'File name contains invalid characters', {
             operation: 'upload_committee_document',
@@ -740,8 +744,8 @@ export class CommitteeController {
       }
 
       const uploadData: UploadCommitteeDocumentRequest = {
-        name: name!,
-        file_name: fileName!,
+        name: trimmedName!,
+        file_name: trimmedFileName!,
         content_type: contentType!,
         file_size: fileSizeNum,
         ...(description && { description }),
@@ -752,7 +756,7 @@ export class CommitteeController {
       logger.success(req, 'upload_committee_document', startTime, {
         committee_id: id,
         document_uid: result.uid,
-        file_name: fileName,
+        file_name: trimmedFileName,
         file_size: fileSizeNum,
       });
 

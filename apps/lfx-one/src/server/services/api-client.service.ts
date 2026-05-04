@@ -134,6 +134,14 @@ export class ApiClientService {
             originalError: error,
           });
         }
+
+        // Fallback for any other Error subclass — keep all transport failures classified.
+        throw new MicroserviceError(`Request failed: ${error.message}`, 500, 'NETWORK_ERROR', {
+          operation: 'api_client_stream_network_error',
+          service: 'api_client_service',
+          path: url,
+          originalError: error,
+        });
       }
       throw error;
     }
