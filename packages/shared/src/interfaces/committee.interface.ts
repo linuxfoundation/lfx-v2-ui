@@ -535,10 +535,20 @@ export interface UploadCommitteeDocumentRequest {
   file_name: string;
   /** MIME type of the uploaded file */
   content_type: string;
-  /** File size in bytes */
+  /**
+   * File size in bytes. **BFF-only** — used to validate the request body
+   * length against the client-reported size. Not forwarded to upstream
+   * (upstream `UploadCommitteeDocumentRequestBody` has no `file_size` field).
+   */
   file_size: number;
   /** Optional description (max 2000 chars) */
   description?: string;
+  /**
+   * TODO: add once upstream `POST /committees/{uid}/documents` accepts `folder_uid`.
+   * Until then, all uploaded files land at the committee root.
+   * @see https://linuxfoundation.atlassian.net/browse/LFXV2-1632
+   */
+  folder_uid?: string;
 }
 
 /** Attachment enriched with meeting context for display. */
