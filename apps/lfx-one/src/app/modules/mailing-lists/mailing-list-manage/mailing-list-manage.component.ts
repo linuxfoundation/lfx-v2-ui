@@ -9,7 +9,7 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CommitteeSelectorComponent } from '@components/committee-selector/committee-selector.component';
 import { COMMITTEE_LABEL, MAILING_LIST_TOTAL_STEPS } from '@lfx-one/shared/constants';
 import { GroupsIOServiceType, MailingListAudienceAccess, MailingListType } from '@lfx-one/shared/enums';
-import { CommitteeReference, CreateGroupsIOServiceRequest, CreateMailingListRequest, GroupsIOMailingList, GroupsIOService } from '@lfx-one/shared/interfaces';
+import { CommitteeReference, CreateGroupsIOServiceRequest, CreateMailingListRequest, GroupsIOMailingList, GroupsIOService, ProjectContext } from '@lfx-one/shared/interfaces';
 import { markFormControlsAsTouched } from '@lfx-one/shared/utils';
 import { announcementVisibilityValidator, htmlMaxLengthValidator, htmlMinLengthValidator, htmlRequiredValidator } from '@lfx-one/shared/validators';
 import { MailingListService } from '@services/mailing-list.service';
@@ -17,7 +17,7 @@ import { ProjectContextService } from '@services/project-context.service';
 import { ProjectService } from '@services/project.service';
 import { MessageService } from 'primeng/api';
 import { StepperModule } from 'primeng/stepper';
-import { catchError, filter, Observable, of, switchMap, tap, throwError } from 'rxjs';
+import { catchError, filter, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
 
 import { MailingListBasicInfoComponent } from '../components/mailing-list-basic-info/mailing-list-basic-info.component';
 import { MailingListSettingsComponent } from '../components/mailing-list-settings/mailing-list-settings.component';
@@ -224,6 +224,23 @@ export class MailingListManageComponent {
   }
 
   private initProject(): Signal<ReturnType<typeof this.projectContextService.selectedProject>> {
+    // If a project_uid is pinned in the URL (e.g. from dashboard quicklinks), lock the
+    // project signal to that project for the entire create flow. Otherwise fall back to the
+    // reactive active-context signal. The URL pin prevents downstream consumers
+    // (availableServices, selectedService, servicePrefix, createSharedService) from
+    // following project-selector changes mid-form, which would otherwise move the new
+    // mailing list to a different project than the user originally chose.
+    if (this.projectUidFromUrl) {
+      // Backend's /api/projects/:slug accepts UUIDs too — dispatches to getProjectById
+      // when the param looks like a UUID (see project.controller.ts isUuid check).
+      return toSignal(
+        this.projectService.getProject(this.projectUidFromUrl, false).pipe(
+          map((p) => (p ? ({ uid: p.uid, name: p.name, slug: p.slug, parent_uid: p.parent_uid } as ProjectContext) : null)),
+          catchError(() => of(this.projectContextService.activeContext()))
+        ),
+        { initialValue: this.projectContextService.activeContext() }
+      );
+    }
     return computed(() => this.projectContextService.activeContext());
   }
 
@@ -454,7 +471,7 @@ export class MailingListManageComponent {
     const serviceData: CreateGroupsIOServiceRequest = {
       type: GroupsIOServiceType.SHARED,
       prefix: `${this.cleanSlug(project.slug)}`,
-      project_uid: this.projectUidFromUrl || project.uid,
+      project_uid: project.uid,
       domain: parent.domain,
     };
 
