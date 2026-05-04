@@ -2983,6 +2983,7 @@ export interface EventGrowthTopEvent {
  */
 export interface EventGrowthTopEventView extends EventGrowthTopEvent {
   formattedRevenue: string;
+  isPast: boolean;
 }
 
 /**
