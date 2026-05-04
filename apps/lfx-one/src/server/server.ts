@@ -86,6 +86,22 @@ app.get('/health', (_req: Request, res: Response) => {
   res.send('OK');
 });
 
+// Readiness endpoint for Kubernetes (LFXV2-1640).
+// Signals that this pod can accept HTTP traffic: Express is listening and the
+// Angular SSR engine loaded successfully (constructed at module load above —
+// a load failure crashes the process before reaching this point).
+// Intentionally does NOT probe NATS / Snowflake / microservice-proxy: those
+// clients are lazy-initialized and report not-connected at startup even
+// though many SSR pages render fine without them. Per-feature dependency
+// failures are handled at the route level, not by pulling the whole pod out
+// of the Service endpoints list.
+// Registered before pino-http so probes don't pollute request logs. Auth is
+// covered by the existing '/health' public entry in auth.middleware.ts via
+// the startsWith matcher. No rate-limit changes needed (not under /api/).
+app.get('/health/ready', (_req: Request, res: Response) => {
+  res.status(200).json({ status: 'ready' });
+});
+
 const httpLogger = pinoHttp({
   logger: serverLogger,
   serializers: {
