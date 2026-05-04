@@ -38,6 +38,12 @@
           <i [class]="icon() + ' w-4 h-4 text-gray-500 flex-shrink-0'"></i>
         }
         <h5 class="text-sm font-medium flex-1">{{ title() }}</h5>
+        @if (infoTooltip()) {
+          <i
+            class="fa-light fa-circle-info text-gray-400 hover:text-gray-600 cursor-help text-xs flex-shrink-0"
+            [pTooltip]="infoTooltip()!"
+            tooltipPosition="top"></i>
+        }
       </div>
 
       <!-- Description -->
