@@ -197,7 +197,9 @@ export class NavigationService {
 
   private buildQuery(lens: NavLens, pageToken: string | undefined, name: string | undefined): LensItemsQuery {
     // legal_entity_type negation is post-filtered (filter grammar has no exclusions).
-    const base: LensItemsQuery = { type: 'project', filters: [], sort: 'name_asc' };
+    // Switch to relevance ordering whenever the user is searching — alphabetical sort would bury
+    // an exact match (e.g. "LF Products") under every other prefix-matching project.
+    const base: LensItemsQuery = { type: 'project', filters: [], sort: name ? 'best_match' : 'name_asc' };
     if (lens === 'foundation') {
       // Funding + membership required (AND); Active or Formation - Engaged accepted (OR).
       // This ensures pre-launch foundations appear in the dropdown before they go Active.
