@@ -6,6 +6,7 @@ import { Component, computed, inject, input, model, Signal } from '@angular/core
 import { RouterModule } from '@angular/router';
 import { AvatarComponent } from '@components/avatar/avatar.component';
 import { BadgeComponent } from '@components/badge/badge.component';
+import { OrgSelectorComponent } from '@components/org-selector/org-selector.component';
 import { ProjectSelectorComponent } from '@components/project-selector/project-selector.component';
 import { environment } from '@environments/environment';
 import { PERSONA_OPTIONS, PERSONA_PRIORITY } from '@lfx-one/shared/constants';
@@ -27,7 +28,7 @@ const PERSONA_ICONS: Partial<Record<PersonaType, string>> = {
 
 @Component({
   selector: 'lfx-sidebar',
-  imports: [NgClass, NgTemplateOutlet, RouterModule, AvatarComponent, BadgeComponent, ProjectSelectorComponent, SkeletonModule],
+  imports: [NgClass, NgTemplateOutlet, RouterModule, AvatarComponent, BadgeComponent, OrgSelectorComponent, ProjectSelectorComponent, SkeletonModule],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss',
 })
@@ -43,6 +44,7 @@ export class SidebarComponent {
   public readonly collapsed = input<boolean>(false);
   public readonly styleClass = input<string>('');
   public readonly showProjectSelector = input<boolean>(false);
+  public readonly showOrgSelector = input<boolean>(false);
   public readonly showMeSelector = input<boolean>(false);
   public readonly mobile = input<boolean>(false);
   public readonly selectorPanelOpen = model<boolean>(false);
@@ -100,7 +102,7 @@ export class SidebarComponent {
 
   private initLensLoaded(): Signal<boolean> {
     return computed(() => {
-      if (this.isOrgLens()) return false;
+      if (this.isOrgLens()) return true;
       const lens = this.navLens();
       if (!lens) return true;
       return this.navigationService.loaded(lens)();

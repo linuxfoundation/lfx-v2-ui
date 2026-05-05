@@ -10,4 +10,12 @@ export interface Account {
   accountId: string;
   /** Organization display name */
   accountName: string;
+  /** URL-friendly slug derived from the account name */
+  accountSlug?: string;
+  /** Logo URL for the organization */
+  logoUrl?: string;
+  /** Highest membership tier across active memberships (e.g. "Platinum", "Gold") */
+  membershipTier?: string;
+  /** Related accounts in the same Salesforce hierarchy (conglomerate siblings) */
+  accountsRelated?: Account[];
 }
