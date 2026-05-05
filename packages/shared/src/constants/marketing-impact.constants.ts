@@ -1,7 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import type { MarketingImpactMonthOption } from '../interfaces/marketing-impact.interface';
+import { FilterPillOption } from '../interfaces/dashboard-metric.interface';
+import type { MarketingImpactMonthOption, MarketingImpactTab } from '../interfaces/marketing-impact.interface';
 
 /** Number of past months to show in the Marketing Impact month picker. */
 const MONTH_COUNT = 12;
@@ -33,3 +34,23 @@ export function getDefaultMarketingImpactMonth(): string {
   const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
 }
+
+/** Focus program filter options for the Marketing Impact FOCUS bar. */
+export const MARKETING_IMPACT_FOCUS_OPTIONS: FilterPillOption[] = [
+  { id: 'all', label: 'All programs' },
+  { id: 'events', label: 'Events' },
+  { id: 'newsletters', label: 'Newsletters' },
+  { id: 'surveys', label: 'Surveys' },
+  { id: 'trainings', label: 'Trainings' },
+];
+
+/** Tab definitions for the Marketing Impact section tabs. */
+export const MARKETING_IMPACT_TABS: { id: MarketingImpactTab; label: string }[] = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'attribution', label: 'Attribution' },
+  { id: 'performance-marketing', label: 'Performance Marketing' },
+  { id: 'email', label: 'Email' },
+  { id: 'web-activity', label: 'Web Activity' },
+  { id: 'social-accounts', label: 'Social Accounts' },
+  { id: 'social-listening', label: 'Social Listening' },
+];

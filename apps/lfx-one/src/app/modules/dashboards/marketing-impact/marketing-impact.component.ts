@@ -1,20 +1,26 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, Signal } from '@angular/core';
+import { Component, computed, inject, signal, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
+import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { SelectComponent } from '@components/select/select.component';
-import { buildMarketingImpactMonthOptions, getDefaultMarketingImpactMonth } from '@lfx-one/shared/constants';
+import {
+  buildMarketingImpactMonthOptions,
+  getDefaultMarketingImpactMonth,
+  MARKETING_IMPACT_FOCUS_OPTIONS,
+  MARKETING_IMPACT_TABS,
+} from '@lfx-one/shared/constants';
 import { ProjectContextService } from '@services/project-context.service';
 import { startWith } from 'rxjs';
 
-import type { MarketingImpactMonthOption } from '@lfx-one/shared/interfaces';
+import type { FilterPillOption, MarketingImpactFocusProgram, MarketingImpactMonthOption, MarketingImpactTab } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-marketing-impact',
-  imports: [ReactiveFormsModule, SelectComponent, ButtonComponent],
+  imports: [ReactiveFormsModule, SelectComponent, ButtonComponent, FilterPillsComponent],
   templateUrl: './marketing-impact.component.html',
   styleUrl: './marketing-impact.component.scss',
 })
@@ -29,14 +35,26 @@ export class MarketingImpactComponent {
 
   // Static data
   protected readonly monthOptions: MarketingImpactMonthOption[] = buildMarketingImpactMonthOptions();
+  protected readonly focusOptions: FilterPillOption[] = MARKETING_IMPACT_FOCUS_OPTIONS;
+  protected readonly tabs = MARKETING_IMPACT_TABS;
 
   // Signals
   protected readonly hasFoundation = computed(() => !!this.projectContextService.selectedFoundation());
   protected readonly foundationName = computed(() => this.projectContextService.selectedFoundation()?.name ?? '');
+  protected readonly selectedFocus = signal<MarketingImpactFocusProgram>('all');
+  protected readonly selectedTab = signal<MarketingImpactTab>('overview');
 
   // Complex computed signals
   protected readonly selectedMonth: Signal<string | null> = this.initSelectedMonth();
   protected readonly contextLabel: Signal<string> = this.initContextLabel();
+
+  protected onFocusChange(focusId: string): void {
+    this.selectedFocus.set(focusId as MarketingImpactFocusProgram);
+  }
+
+  protected onTabChange(tabId: MarketingImpactTab): void {
+    this.selectedTab.set(tabId);
+  }
 
   private initSelectedMonth(): Signal<string | null> {
     return toSignal(this.headerForm.get('month')!.valueChanges.pipe(startWith(getDefaultMarketingImpactMonth())), {
