@@ -180,7 +180,6 @@ export class CommitteeDocumentsComponent {
     return computed(() => {
       const committee = this.committee();
       const docs = this.committeeDocuments();
-      const projectUid = committee?.project_uid;
       const committeeUid = committee?.uid;
       const groupName = committee?.name ?? '';
       const currentFolderUid = this.currentFolderUid();
@@ -194,7 +193,7 @@ export class CommitteeDocumentsComponent {
         return nonFolders
           .filter((d) => d.parent_uid === currentFolderUid)
           .sort((a, b) => a.name.localeCompare(b.name))
-          .map((d) => this.toDisplayItem(d, projectUid, committeeUid, groupName, false));
+          .map((d) => this.toDisplayItem(d, committeeUid, groupName, false));
       }
 
       // Root view — folders (with child counts) followed by orphan items.
@@ -209,7 +208,7 @@ export class CommitteeDocumentsComponent {
       const sortedFolders = [...folders].sort((a, b) => a.name.localeCompare(b.name));
       for (const folder of sortedFolders) {
         ordered.push({
-          ...this.toDisplayItem(folder, projectUid, committeeUid, groupName, false),
+          ...this.toDisplayItem(folder, committeeUid, groupName, false),
           isFolder: true,
           childCount: childCountByFolder.get(folder.uid) ?? 0,
         });
@@ -218,7 +217,7 @@ export class CommitteeDocumentsComponent {
       // Orphans appear at the bottom of the root view so newly uploaded files don't disappear.
       const orphans = nonFolders.filter((d) => !d.parent_uid || !folderUids.has(d.parent_uid)).sort((a, b) => a.name.localeCompare(b.name));
       for (const orphan of orphans) {
-        ordered.push(this.toDisplayItem(orphan, projectUid, committeeUid, groupName, false));
+        ordered.push(this.toDisplayItem(orphan, committeeUid, groupName, false));
       }
 
       return ordered;
@@ -262,13 +261,7 @@ export class CommitteeDocumentsComponent {
    * skipped by the Source filter — see `initFilteredDocuments`). Files get a `downloadUrl`
    * pointing at the BFF streaming endpoint.
    */
-  private toDisplayItem(
-    doc: CommitteeDocument,
-    projectUid: string | undefined,
-    committeeUid: string | undefined,
-    groupName: string,
-    isChild: boolean
-  ): MyDocumentItem {
+  private toDisplayItem(doc: CommitteeDocument, committeeUid: string | undefined, groupName: string, isChild: boolean): MyDocumentItem {
     const isFile = doc.type === 'file';
     const ownerCommitteeUid = committeeUid ?? doc.committee_uid ?? '';
     return {
@@ -276,7 +269,10 @@ export class CommitteeDocumentsComponent {
       name: doc.name,
       source: (isFile ? 'file' : 'link') as MyDocumentSource,
       foundationName: '',
-      foundationUid: projectUid,
+      // Intentionally undefined for committee documents — committee.project_uid may be a
+      // sub-project, not a foundation, so populating this would mislabel any downstream
+      // consumer that uses it for foundation-scoped routing. The column is hidden here.
+      foundationUid: undefined,
       groupOrMeetingName: groupName,
       groupOrMeetingUid: ownerCommitteeUid,
       date: doc.created_at ?? doc.updated_at ?? '',

@@ -738,7 +738,7 @@ export class CommitteeService {
         });
         return [] as CommitteeLink[];
       }),
-      // Cursor-based pagination — single page may silently truncate large committees.
+      // Follows page_token across all pages so large committees aren't truncated.
       fetchAllQueryResources<CommitteeDocumentQueryResult>(req, (pageToken) =>
         this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeDocumentQueryResult>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
           type: 'committee_document',
@@ -939,10 +939,11 @@ export class CommitteeService {
    * controller can set `Content-Type` and `Content-Disposition` headers before
    * streaming the binary back.
    *
-   * Queries by `committee_document_uid:{documentId}` — every committee document is
-   * indexed with this tag (per CommitteeDocument.Tags() in the upstream service), so
-   * the query returns at most one resource. This avoids scanning the entire committee's
-   * file list and keeps the lookup O(1) regardless of how many files the committee has.
+   * Queries by `committee_document_uid:{documentId}` AND `committee_uid:{committeeId}`
+   * — every committee document is indexed with both tags (per CommitteeDocument.Tags()
+   * in the upstream service). Using `tags_all` ensures a document UID from one committee
+   * can't return metadata for a document owned by another. The query returns at most
+   * one resource, keeping the lookup O(1) regardless of file count.
    *
    * Falls back to safe defaults if the metadata fetch fails or returns nothing so a
    * download attempt is never blocked by a stale or unavailable index.
@@ -953,10 +954,12 @@ export class CommitteeService {
       document_uid: documentId,
     });
 
+    // Scope by committee_uid in addition to committee_document_uid so a leaked or guessed
+    // documentId can't surface metadata for a document belonging to a different committee.
     const metadata = await this.microserviceProxy
       .proxyRequest<QueryServiceResponse<CommitteeDocumentQueryResult>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'committee_document',
-        tags: `committee_document_uid:${documentId}`,
+        tags_all: [`committee_document_uid:${documentId}`, `committee_uid:${committeeId}`],
       })
       .then((resp) => resp.resources?.[0]?.data ?? null)
       .catch((err) => {

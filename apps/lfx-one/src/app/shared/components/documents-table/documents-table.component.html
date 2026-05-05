@@ -35,9 +35,12 @@
             <i class="fa-light fa-arrow-turn-down-right text-gray-300 text-xs shrink-0" aria-hidden="true"></i>
           }
           @if (doc.isFolder) {
-            <i class="fa-light fa-folder text-amber-500 text-base shrink-0"></i>
+            <i class="fa-light fa-folder text-amber-500 text-base shrink-0" aria-hidden="true"></i>
           } @else {
-            <i [class]="(doc.source | myDocumentSourceTag: 'icon') + ' ' + (doc.source | myDocumentSourceTag: 'iconClass')" class="text-base shrink-0"></i>
+            <i
+              [class]="(doc.source | myDocumentSourceTag: 'icon') + ' ' + (doc.source | myDocumentSourceTag: 'iconClass')"
+              class="text-base shrink-0"
+              aria-hidden="true"></i>
           }
           @if (doc.isFolder) {
             <button

@@ -148,25 +148,18 @@ export class MicroserviceProxyService {
     query?: Record<string, any>,
     customHeaders?: Record<string, string>
   ): Promise<Response> {
-    const operation = `${method.toLowerCase()}_${path.replace(/\//g, '_')}`;
+    const MICROSERVICE_URLS: MicroserviceUrls = {
+      LFX_V2_SERVICE: process.env['LFX_V2_SERVICE'] || 'http://lfx-api.k8s.orb.local',
+    };
 
-    try {
-      const MICROSERVICE_URLS: MicroserviceUrls = {
-        LFX_V2_SERVICE: process.env['LFX_V2_SERVICE'] || 'http://lfx-api.k8s.orb.local',
-      };
+    const baseUrl = MICROSERVICE_URLS[service];
+    const endpoint = `${baseUrl}${path}`;
+    const token = req.bearerToken;
 
-      const baseUrl = MICROSERVICE_URLS[service];
-      const endpoint = `${baseUrl}${path}`;
-      const token = req.bearerToken;
+    const mergedQuery = { ...query, ...DEFAULT_QUERY_PARAMS };
 
-      const mergedQuery = { ...query, ...DEFAULT_QUERY_PARAMS };
-
-      return await this.apiClient.streamRequest(method, endpoint, token, mergedQuery, customHeaders);
-    } catch (error: any) {
-      if (error.status && error.code) {
-        throw MicroserviceError.fromMicroserviceResponse(error.status, error.message, error.errorBody, service, path, operation);
-      }
-      throw error;
-    }
+    // ApiClientService.streamRequest already throws MicroserviceError with full context,
+    // so no try/catch wrapping is needed here.
+    return this.apiClient.streamRequest(method, endpoint, token, mergedQuery, customHeaders);
   }
 }

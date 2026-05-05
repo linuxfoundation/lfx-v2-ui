@@ -546,7 +546,6 @@ export interface UploadCommitteeDocumentRequest {
   /**
    * TODO: add once upstream `POST /committees/{uid}/documents` accepts `folder_uid`.
    * Until then, all uploaded files land at the committee root.
-   * @see https://linuxfoundation.atlassian.net/browse/LFXV2-1632
    */
   folder_uid?: string;
 }

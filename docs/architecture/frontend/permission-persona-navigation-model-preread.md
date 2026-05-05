@@ -8,11 +8,11 @@ This preread proposes a clear separation between access, experience, and authori
 
 ## Core Contract
 
-| Decision | Source of Truth | Meaning |
-| --- | --- | --- |
-| Where can I go? | View permission | Foundation/Project selector eligibility. |
-| What do I see there? | Persona / role | Sidebar links, page sections, dashboard variants, content shape. |
-| What can I do? | Manage / write permission | Create, edit, delete, configure, invite, assign, administer. |
+| Decision             | Source of Truth           | Meaning                                                          |
+| -------------------- | ------------------------- | ---------------------------------------------------------------- |
+| Where can I go?      | View permission           | Foundation/Project selector eligibility.                         |
+| What do I see there? | Persona / role            | Sidebar links, page sections, dashboard variants, content shape. |
+| What can I do?       | Manage / write permission | Create, edit, delete, configure, invite, assign, administer.     |
 
 ## Decision Boundaries
 
@@ -36,12 +36,12 @@ This preread proposes a clear separation between access, experience, and authori
 
 Defaulting should happen only after the selector candidate list has already been filtered by view permission.
 
-| Step | Foundation Lens | Project Lens |
-| --- | --- | --- |
-| 1 | Keep existing selected foundation if still view-permitted. | Keep existing selected project if still view-permitted. |
-| 2 | Choose Executive Director foundation if view-permitted. | Choose Maintainer project if view-permitted. |
-| 3 | Choose Board Member foundation if view-permitted. | Choose Contributor project if view-permitted. |
-| 4 | Choose first view-permitted foundation in stable order. | Choose first view-permitted project in stable order. |
+| Step | Foundation Lens                                            | Project Lens                                            |
+| ---- | ---------------------------------------------------------- | ------------------------------------------------------- |
+| 1    | Keep existing selected foundation if still view-permitted. | Keep existing selected project if still view-permitted. |
+| 2    | Choose Executive Director foundation if view-permitted.    | Choose Maintainer project if view-permitted.            |
+| 3    | Choose Board Member foundation if view-permitted.          | Choose Contributor project if view-permitted.           |
+| 4    | Choose first view-permitted foundation in stable order.    | Choose first view-permitted project in stable order.    |
 
 ## Implementation Priority
 
