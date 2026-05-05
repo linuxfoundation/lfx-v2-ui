@@ -300,8 +300,8 @@ pm2 restart lfx-one
 ### Health Checks
 
 ```bash
-# Application health
-curl http://localhost:4000/livez
+# Application health (yarn start serves on 4200; production SSR server on 4000)
+curl http://localhost:4200/livez
 
 # Check Angular build
 yarn build
