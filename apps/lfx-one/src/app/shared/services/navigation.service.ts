@@ -5,8 +5,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { computed, inject, Injectable, Signal, signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { BOARD_SCOPED_PERSONA_PRIORITY, LENS_DEFAULT_ROUTES, NAV_SEARCH_DEBOUNCE_MS } from '@lfx-one/shared/constants';
-import { LensItem, LensItemsResponse, LensPage, LensState, NavLens, TaggedLensPage } from '@lfx-one/shared/interfaces';
+import { BOARD_SCOPED_PERSONA_PRIORITY, LENS_DEFAULT_ROUTES, NAV_SEARCH_DEBOUNCE_MS, PROJECT_SCOPED_PERSONA_PRIORITY } from '@lfx-one/shared/constants';
+import { LensItem, LensItemsResponse, LensPage, LensState, NavLens, PersonaType, TaggedLensPage } from '@lfx-one/shared/interfaces';
 import { lensItemToProjectContext } from '@lfx-one/shared/utils';
 import { MessageService } from 'primeng/api';
 import { catchError, debounceTime, distinctUntilChanged, EMPTY, filter, map, merge, Observable, of, scan, skip, Subject, switchMap, tap } from 'rxjs';
@@ -61,14 +61,6 @@ export class NavigationService {
     return this.getState(lens).searchTerm;
   }
 
-  public bypassActive(lens: NavLens): Signal<boolean> {
-    return this.getState(lens).bypassActive;
-  }
-
-  public personaFetchFailed(lens: NavLens): Signal<boolean> {
-    return this.getState(lens).personaFetchFailed;
-  }
-
   public setSearchTerm(lens: NavLens, term: string): void {
     this.getState(lens).searchTerm.set(term);
   }
@@ -109,7 +101,8 @@ export class NavigationService {
       return;
     }
 
-    const defaultItem = lens === 'foundation' ? this.pickFoundationByPersonaPriority(page.items) : page.items[0];
+    const priority = lens === 'foundation' ? BOARD_SCOPED_PERSONA_PRIORITY : PROJECT_SCOPED_PERSONA_PRIORITY;
+    const defaultItem = this.pickItemByPersonaPriority(page.items, priority);
     const context = lensItemToProjectContext(defaultItem);
     if (lens === 'foundation') {
       this.projectContextService.setFoundation(context);
@@ -118,10 +111,10 @@ export class NavigationService {
     }
   }
 
-  /** Prefer a foundation the user is ED of, then Board Member of; fall back to the first item. */
-  private pickFoundationByPersonaPriority(items: LensItem[]): LensItem {
+  /** Prefer items where the user holds an in-priority persona; fall back to the first item. */
+  private pickItemByPersonaPriority(items: LensItem[], priority: readonly PersonaType[]): LensItem {
     const personaProjects = this.personaService.personaProjects();
-    for (const persona of BOARD_SCOPED_PERSONA_PRIORITY) {
+    for (const persona of priority) {
       const personaUids = new Set((personaProjects[persona] ?? []).map((p) => p.projectUid));
       if (personaUids.size === 0) continue;
       const match = items.find((item) => personaUids.has(item.uid));
@@ -131,8 +124,7 @@ export class NavigationService {
   }
 
   private handleEmptyLensResponse(lens: NavLens, page: LensPage): void {
-    const upstreamFailure = page.upstreamFailed || page.personaFetchFailed;
-    const toast = upstreamFailure
+    const toast = page.upstreamFailed
       ? { severity: 'error', summary: 'Unable to load', detail: 'We were unable to load your data. Please try again in a moment.' }
       : {
           severity: 'info',
@@ -150,26 +142,12 @@ export class NavigationService {
     const loading = signal<boolean>(false);
     const loaded = signal<boolean>(false);
     const nextPageToken = signal<string | null>(null);
-    const bypassActive = signal<boolean>(false);
-    const personaFetchFailed = signal<boolean>(false);
     const pendingDefaultSelection = signal<boolean>(false);
     const generation = signal<number>(0);
     const loadMore$ = new Subject<string>();
     const reload$ = new Subject<void>();
 
-    const items = this.initItems(
-      lens,
-      searchTerm,
-      loading,
-      loaded,
-      nextPageToken,
-      bypassActive,
-      personaFetchFailed,
-      pendingDefaultSelection,
-      generation,
-      loadMore$,
-      reload$
-    );
+    const items = this.initItems(lens, searchTerm, loading, loaded, nextPageToken, pendingDefaultSelection, generation, loadMore$, reload$);
     const hasMore = computed(() => nextPageToken() !== null);
 
     return {
@@ -179,8 +157,6 @@ export class NavigationService {
       loaded,
       nextPageToken,
       hasMore,
-      bypassActive,
-      personaFetchFailed,
       pendingDefaultSelection,
       generation,
       loadMore$,
@@ -194,8 +170,6 @@ export class NavigationService {
     loading: WritableSignal<boolean>,
     loaded: WritableSignal<boolean>,
     nextPageToken: WritableSignal<string | null>,
-    bypassActive: WritableSignal<boolean>,
-    personaFetchFailed: WritableSignal<boolean>,
     pendingDefaultSelection: WritableSignal<boolean>,
     generation: WritableSignal<number>,
     loadMore$: Subject<string>,
@@ -234,8 +208,6 @@ export class NavigationService {
         map(({ page }) => page),
         tap((page) => {
           nextPageToken.set(page.nextPageToken);
-          bypassActive.set(page.bypassActive);
-          personaFetchFailed.set(page.personaFetchFailed);
           loaded.set(true);
           if (page.reset && pendingDefaultSelection()) {
             pendingDefaultSelection.set(false);
@@ -277,7 +249,7 @@ export class NavigationService {
         clearLoadingIfActive();
         if (reset) {
           return of({
-            page: { items: [], nextPageToken: null, bypassActive: false, personaFetchFailed: false, upstreamFailed: true, reset: true },
+            page: { items: [], nextPageToken: null, upstreamFailed: true, reset: true },
             generation,
           });
         }
@@ -309,8 +281,6 @@ export class NavigationService {
     return {
       items: response.items,
       nextPageToken: response.next_page_token,
-      bypassActive: response.bypass_active,
-      personaFetchFailed: response.persona_fetch_failed,
       upstreamFailed: response.upstream_failed,
       reset,
     };
