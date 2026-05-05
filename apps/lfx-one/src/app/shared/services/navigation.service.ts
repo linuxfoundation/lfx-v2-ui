@@ -111,16 +111,28 @@ export class NavigationService {
     }
   }
 
-  /** Prefer items where the user holds an in-priority persona; fall back to the first item. */
+  /** Prefer items where the user holds an in-priority persona, in persona-array order; fall back to the first item. */
   private pickItemByPersonaPriority(items: LensItem[], priority: readonly PersonaType[]): LensItem {
     const personaProjects = this.personaService.personaProjects();
     for (const persona of priority) {
-      const personaUids = new Set((personaProjects[persona] ?? []).map((p) => p.projectUid));
-      if (personaUids.size === 0) continue;
-      const match = items.find((item) => personaUids.has(item.uid));
-      if (match) return match;
+      const projects = personaProjects[persona] ?? [];
+      for (const project of projects) {
+        const match = items.find((item) => item.uid === project.projectUid);
+        if (match) return match;
+      }
     }
     return items[0];
+  }
+
+  /** First project UID of the highest-priority persona the user holds for this lens, or null. */
+  private getPriorityUid(lens: NavLens): string | null {
+    const priority = lens === 'foundation' ? BOARD_SCOPED_PERSONA_PRIORITY : PROJECT_SCOPED_PERSONA_PRIORITY;
+    const personaProjects = this.personaService.personaProjects();
+    for (const persona of priority) {
+      const projects = personaProjects[persona] ?? [];
+      if (projects.length > 0) return projects[0].projectUid;
+    }
+    return null;
   }
 
   private handleEmptyLensResponse(lens: NavLens, page: LensPage): void {
@@ -274,7 +286,7 @@ export class NavigationService {
 
   private getSelectedUidForLens(lens: NavLens): string | null {
     const context = lens === 'foundation' ? this.projectContextService.selectedFoundation() : this.projectContextService.selectedProject();
-    return context?.uid ?? null;
+    return context?.uid ?? this.getPriorityUid(lens);
   }
 
   private toLensPage(response: LensItemsResponse, reset: boolean): LensPage {
