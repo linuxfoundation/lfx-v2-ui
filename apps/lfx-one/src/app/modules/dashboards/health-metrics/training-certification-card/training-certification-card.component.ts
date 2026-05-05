@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, inject, input, PLATFORM_ID, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, ElementRef, inject, input, output, PLATFORM_ID, signal } from '@angular/core';
 import { SkeletonModule } from 'primeng/skeleton';
+import { HealthMetricsCardEmptyStateComponent } from '../health-metrics-card-empty-state/health-metrics-card-empty-state.component';
 import { HEALTH_METRICS_TRAINING_CERTIFICATION_DEFAULT_SUMMARY } from '@lfx-one/shared/constants';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
@@ -18,7 +19,7 @@ type CardMode = 'enrollment' | 'revenue';
 @Component({
   selector: 'lfx-training-certification-card',
   standalone: true,
-  imports: [SkeletonModule],
+  imports: [SkeletonModule, HealthMetricsCardEmptyStateComponent],
   templateUrl: './training-certification-card.component.html',
   styleUrl: './training-certification-card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,6 +36,13 @@ export class TrainingCertificationCardComponent {
   protected readonly loading = signal(true);
   protected readonly summaryData = signal<TrainingCertificationSummaryResponse>(HEALTH_METRICS_TRAINING_CERTIFICATION_DEFAULT_SUMMARY);
   protected readonly activeMode = signal<CardMode>('enrollment');
+
+  protected readonly hasData = computed(() => {
+    const e = this.summaryData().enrollment;
+    return e.instructorLed > 0 || e.eLearning > 0 || e.certExams > 0 || e.edx > 0;
+  });
+
+  public readonly hasDataChange = output<boolean>();
 
   protected readonly activeMetrics = computed(() => {
     const mode = this.activeMode();
@@ -71,6 +79,11 @@ export class TrainingCertificationCardComponent {
     if (isPlatformBrowser(this.platformId)) {
       this.initializeDataFetching();
     }
+    effect(() => {
+      if (!this.loading()) {
+        this.hasDataChange.emit(this.hasData());
+      }
+    });
   }
 
   protected setMode(mode: CardMode): void {

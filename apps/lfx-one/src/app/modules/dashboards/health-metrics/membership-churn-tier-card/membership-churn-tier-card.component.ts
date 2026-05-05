@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, inject, input, PLATFORM_ID, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, ElementRef, inject, input, output, PLATFORM_ID, signal } from '@angular/core';
 import { SkeletonModule } from 'primeng/skeleton';
+import { HealthMetricsCardEmptyStateComponent } from '../health-metrics-card-empty-state/health-metrics-card-empty-state.component';
 import { HEALTH_METRICS_MEMBERSHIP_CHURN_DEFAULT_SUMMARY } from '@lfx-one/shared/constants';
 import { formatValueLost } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
@@ -17,7 +18,7 @@ import type { HealthMetricsRange, MembershipChurnDisplayTierRow, MembershipChurn
 @Component({
   selector: 'lfx-membership-churn-tier-card',
   standalone: true,
-  imports: [SkeletonModule],
+  imports: [SkeletonModule, HealthMetricsCardEmptyStateComponent],
   templateUrl: './membership-churn-tier-card.component.html',
   styleUrl: './membership-churn-tier-card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -33,6 +34,12 @@ export class MembershipChurnTierCardComponent {
 
   protected readonly loading = signal(true);
   protected readonly summaryData = signal<MembershipChurnPerTierSummaryResponse>(HEALTH_METRICS_MEMBERSHIP_CHURN_DEFAULT_SUMMARY);
+
+  protected readonly hasData = computed(
+    () => (this.summaryData().tiers ?? []).length > 0 || this.summaryData().currentPeriod.valueLost > 0
+  );
+
+  public readonly hasDataChange = output<boolean>();
 
   protected readonly currentPeriod = computed(() => this.summaryData().currentPeriod);
   protected readonly previousYear = computed(() => this.summaryData().previousYear);
@@ -87,6 +94,11 @@ export class MembershipChurnTierCardComponent {
     if (isPlatformBrowser(this.platformId)) {
       this.initializeDataFetching();
     }
+    effect(() => {
+      if (!this.loading()) {
+        this.hasDataChange.emit(this.hasData());
+      }
+    });
   }
 
   protected downloadCard(): void {

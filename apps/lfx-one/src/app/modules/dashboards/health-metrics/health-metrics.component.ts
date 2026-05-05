@@ -18,6 +18,7 @@ import { TrainingCertificationCardComponent } from './training-certification-car
 import { CodeContributionCardComponent } from './code-contribution-card/code-contribution-card.component';
 import { BoardMeetingCardComponent } from './board-meeting-card/board-meeting-card.component';
 import { FlywheelConversionCardComponent } from './flywheel-conversion-card/flywheel-conversion-card.component';
+import { HealthMetricsFullPageEmptyStateComponent } from './health-metrics-full-page-empty-state/health-metrics-full-page-empty-state.component';
 
 import type { HealthMetricsData, DisplayCard, HealthMetricsRange } from '@lfx-one/shared/interfaces';
 
@@ -43,6 +44,7 @@ const DEFAULT_DATA: HealthMetricsData = {
     CodeContributionCardComponent,
     BoardMeetingCardComponent,
     FlywheelConversionCardComponent,
+    HealthMetricsFullPageEmptyStateComponent,
   ],
   templateUrl: './health-metrics.component.html',
   styleUrl: './health-metrics.component.scss',
@@ -58,7 +60,26 @@ export class HealthMetricsComponent {
   protected readonly statusCount = HEALTH_METRICS_STATUS_COUNT;
   protected readonly selectedRange = signal<HealthMetricsRange>('YTD');
 
+  private readonly cardDataStates = signal<Record<string, boolean>>({});
+
   protected readonly hasFoundation = computed(() => !!this.projectContextService.selectedFoundation());
+
+  protected readonly allCardsEmpty = computed(() => {
+    if (this.loading()) return false;
+
+    // Foundation-level totals are filter-independent (cumulative). If any are
+    // present, the foundation has data somewhere in the year-filter range, so
+    // we must show the cards (with per-card empty states for the current
+    // filter) rather than the full-page empty state.
+    const data = this.metricsData();
+    const hasFoundationTotals =
+      (data.totalValue?.totalValue ?? 0) > 0 || (data.totalProjects?.totalProjects ?? 0) > 0 || (data.totalMembers?.totalMembers ?? 0) > 0;
+    if (hasFoundationTotals) return false;
+
+    const states = this.cardDataStates();
+    const cards = ['events', 'nps', 'outstanding-balance', 'membership-churn', 'participating-orgs', 'training', 'code-contribution', 'flywheel', 'board-meeting'];
+    return cards.every((name) => states[name] === false);
+  });
 
   protected readonly yearOptions = computed(() => buildHealthMetricsYearOptions());
 
@@ -110,6 +131,10 @@ export class HealthMetricsComponent {
 
   protected selectRange(range: HealthMetricsRange): void {
     this.selectedRange.set(range);
+  }
+
+  protected updateCardDataState(name: string, hasData: boolean): void {
+    this.cardDataStates.update((s) => ({ ...s, [name]: hasData }));
   }
 
   private initializeDataFetching(): void {

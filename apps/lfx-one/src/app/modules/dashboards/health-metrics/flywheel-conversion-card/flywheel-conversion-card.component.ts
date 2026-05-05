@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, input, PLATFORM_ID, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, input, output, PLATFORM_ID, signal } from '@angular/core';
 import type { Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ChartComponent } from '@components/chart/chart.component';
@@ -18,6 +18,7 @@ import { ProjectContextService } from '@services/project-context.service';
 import { downloadCardAsImage } from '@shared/utils/download-card.util';
 import { catchError, filter, finalize, map, of, switchMap, tap } from 'rxjs';
 import { SkeletonModule } from 'primeng/skeleton';
+import { HealthMetricsCardEmptyStateComponent } from '../health-metrics-card-empty-state/health-metrics-card-empty-state.component';
 
 import type { ChartData, ChartOptions } from 'chart.js';
 import type {
@@ -33,7 +34,7 @@ const CONVERSION_PRECISION = HEALTH_METRICS_FLYWHEEL_CONVERSION_DECIMAL_PLACES;
 @Component({
   selector: 'lfx-flywheel-conversion-card',
   standalone: true,
-  imports: [ChartComponent, SkeletonModule],
+  imports: [ChartComponent, SkeletonModule, HealthMetricsCardEmptyStateComponent],
   templateUrl: './flywheel-conversion-card.component.html',
   styleUrl: './flywheel-conversion-card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -58,6 +59,8 @@ export class FlywheelConversionCardComponent {
   protected readonly funnelStages: Signal<FlywheelHealthMetricsFunnelStage[]> = computed(() => buildFlywheelFunnelStages(this.data()));
 
   protected readonly banner: Signal<FlywheelHealthMetricsBannerView | null> = computed(() => selectFlywheelBannerView(this.data()));
+
+  public readonly hasDataChange = output<boolean>();
 
   protected readonly hasFlywheelData: Signal<boolean> = computed(() => {
     const payload = this.data();
@@ -150,6 +153,14 @@ export class FlywheelConversionCardComponent {
   });
 
   // === Protected Methods ===
+  public constructor() {
+    effect(() => {
+      if (!this.loading()) {
+        this.hasDataChange.emit(this.hasFlywheelData());
+      }
+    });
+  }
+
   protected downloadCard(): void {
     if (this.loading() || !this.hasFlywheelData()) return;
     downloadCardAsImage(this.elementRef.nativeElement, 'flywheel-conversion-rate');

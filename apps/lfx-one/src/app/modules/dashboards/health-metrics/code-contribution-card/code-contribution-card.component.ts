@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, inject, input, PLATFORM_ID, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, ElementRef, inject, input, output, PLATFORM_ID, signal } from '@angular/core';
 import { SkeletonModule } from 'primeng/skeleton';
+import { HealthMetricsCardEmptyStateComponent } from '../health-metrics-card-empty-state/health-metrics-card-empty-state.component';
 import { HEALTH_METRICS_CODE_CONTRIBUTION_DEFAULT_SUMMARY } from '@lfx-one/shared/constants';
 import { buildInsightsUrl } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
@@ -16,7 +17,7 @@ import type { CodeContributionSummaryResponse, HealthMetricsRange } from '@lfx-o
 @Component({
   selector: 'lfx-code-contribution-card',
   standalone: true,
-  imports: [SkeletonModule],
+  imports: [SkeletonModule, HealthMetricsCardEmptyStateComponent],
   templateUrl: './code-contribution-card.component.html',
   styleUrl: './code-contribution-card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,6 +35,9 @@ export class CodeContributionCardComponent {
   protected readonly summaryData = signal<CodeContributionSummaryResponse>(HEALTH_METRICS_CODE_CONTRIBUTION_DEFAULT_SUMMARY);
 
   protected readonly hasContributorData = computed(() => this.summaryData().dataAvailable);
+  protected readonly hasData = this.hasContributorData;
+
+  public readonly hasDataChange = output<boolean>();
 
   protected readonly formattedTotalContributors = computed(() => {
     return this.abbreviateCount(this.summaryData().totalContributors);
@@ -126,6 +130,11 @@ export class CodeContributionCardComponent {
     if (isPlatformBrowser(this.platformId)) {
       this.initializeDataFetching();
     }
+    effect(() => {
+      if (!this.loading()) {
+        this.hasDataChange.emit(this.hasData());
+      }
+    });
   }
 
   protected downloadCard(): void {

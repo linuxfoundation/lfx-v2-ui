@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, input, PLATFORM_ID, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, output, PLATFORM_ID, signal } from '@angular/core';
 import {
   HEALTH_METRICS_BOARD_MEETING_DEFAULT_SUMMARY,
   HEALTH_METRICS_BOARD_MEETING_JOB_TITLE_MAX_LENGTH,
@@ -13,6 +13,7 @@ import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { initializeRangeDataFetching } from '@shared/utils/health-metrics-data.util';
 import { SkeletonModule } from 'primeng/skeleton';
+import { HealthMetricsCardEmptyStateComponent } from '../health-metrics-card-empty-state/health-metrics-card-empty-state.component';
 
 import { environment } from '@environments/environment';
 
@@ -29,7 +30,7 @@ import type {
 @Component({
   selector: 'lfx-board-meeting-card',
   standalone: true,
-  imports: [SkeletonModule],
+  imports: [SkeletonModule, HealthMetricsCardEmptyStateComponent],
   templateUrl: './board-meeting-card.component.html',
   styleUrl: './board-meeting-card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -53,6 +54,8 @@ export class BoardMeetingCardComponent {
   protected readonly projectId = computed(() => this.summaryData().projectId);
   protected readonly hasData = computed(() => this.summaryData().dataAvailable);
   protected readonly hasInvitees = computed(() => this.summaryData().invitees.length > 0);
+
+  public readonly hasDataChange = output<boolean>();
 
   protected readonly addPastMeetingUrl = computed(() => {
     const id = this.projectId();
@@ -146,6 +149,11 @@ export class BoardMeetingCardComponent {
     if (isPlatformBrowser(this.platformId)) {
       this.initializeDataFetching();
     }
+    effect(() => {
+      if (!this.loading()) {
+        this.hasDataChange.emit(this.hasData());
+      }
+    });
   }
 
   protected onSort(field: BoardMeetingSortField): void {

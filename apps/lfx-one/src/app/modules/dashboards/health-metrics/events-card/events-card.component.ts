@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, inject, input, PLATFORM_ID, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, ElementRef, inject, input, output, PLATFORM_ID, signal } from '@angular/core';
 import { SkeletonModule } from 'primeng/skeleton';
+import { HealthMetricsCardEmptyStateComponent } from '../health-metrics-card-empty-state/health-metrics-card-empty-state.component';
 import { HEALTH_METRICS_EVENTS_DEFAULT_SUMMARY } from '@lfx-one/shared/constants';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
@@ -15,7 +16,7 @@ import type { EventsSummaryResponse, HealthMetricsRange } from '@lfx-one/shared/
 @Component({
   selector: 'lfx-events-card',
   standalone: true,
-  imports: [SkeletonModule],
+  imports: [SkeletonModule, HealthMetricsCardEmptyStateComponent],
   templateUrl: './events-card.component.html',
   styleUrl: './events-card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -31,6 +32,10 @@ export class EventsCardComponent {
 
   protected readonly loading = signal(true);
   protected readonly summaryData = signal<EventsSummaryResponse>(HEALTH_METRICS_EVENTS_DEFAULT_SUMMARY);
+
+  protected readonly hasData = computed(() => this.summaryData().totalEvents > 0 || this.summaryData().upcomingEvents > 0);
+
+  public readonly hasDataChange = output<boolean>();
 
   protected readonly formattedTotalEvents = computed(() => {
     return this.summaryData().totalEvents.toLocaleString();
@@ -98,6 +103,11 @@ export class EventsCardComponent {
     if (isPlatformBrowser(this.platformId)) {
       this.initializeDataFetching();
     }
+    effect(() => {
+      if (!this.loading()) {
+        this.hasDataChange.emit(this.hasData());
+      }
+    });
   }
 
   protected downloadCard(): void {
