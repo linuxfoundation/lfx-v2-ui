@@ -1,0 +1,22 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<main class="flex flex-col gap-6 p-6" data-testid="org-overview-page">
+  <header class="flex flex-col gap-1 md:flex-row md:items-center md:gap-3" data-testid="org-overview-header">
+    <h1 class="text-xl font-semibold text-gray-900" data-testid="org-overview-title">{{ companyName() }} Overview</h1>
+    @if (tierLabel(); as tier) {
+      <lfx-tag
+        [value]="tier"
+        severity="secondary"
+        icon="fa-light fa-star"
+        [rounded]="true"
+        styleClass="text-xs"
+        data-testid="org-overview-tier-badge" />
+    }
+  </header>
+
+  <p class="text-sm text-gray-500">
+    A summary of your organization&rsquo;s engagement, membership, and activity across the Linux Foundation. Detailed sections are being built and
+    will appear here as part of the Org Lens.
+  </p>
+</main>
