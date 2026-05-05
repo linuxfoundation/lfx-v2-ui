@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
-import { DatePipe, NgClass } from '@angular/common';
-import { Component, computed, DestroyRef, inject, OnInit, signal, Signal, WritableSignal } from '@angular/core';
+import { DatePipe, isPlatformServer, NgClass } from '@angular/common';
+import { Component, computed, DestroyRef, inject, OnInit, PLATFORM_ID, signal, Signal, WritableSignal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -117,6 +117,7 @@ export class MeetingJoinComponent implements OnInit {
   private readonly projectContextService = inject(ProjectContextService);
   private readonly dialogService = inject(DialogService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly platformId = inject(PLATFORM_ID);
 
   // Class variables with types
   public authenticated: WritableSignal<boolean>;
@@ -141,6 +142,7 @@ export class MeetingJoinComponent implements OnInit {
   public fetchedJoinUrl: Signal<string | undefined>;
   public isLoadingJoinUrl: WritableSignal<boolean> = signal<boolean>(false);
   public joinUrlError: WritableSignal<string | null> = signal<string | null>(null);
+  public joinUrlErrorCode: WritableSignal<string | null> = signal<string | null>(null);
   public attachments: Signal<MeetingAttachment[]>;
   public messageSeverity: Signal<'success' | 'info' | 'warn'>;
   public messageIcon: Signal<string>;
@@ -345,6 +347,7 @@ export class MeetingJoinComponent implements OnInit {
 
   public onEmailErrorClick(): void {
     this.joinUrlError.set(null);
+    this.joinUrlErrorCode.set(null);
     this.showGuestForm.set(true);
   }
 
@@ -765,6 +768,12 @@ export class MeetingJoinComponent implements OnInit {
 
           // Reset error state
           this.joinUrlError.set(null);
+          this.joinUrlErrorCode.set(null);
+
+          if (isPlatformServer(this.platformId)) {
+            this.isLoadingJoinUrl.set(false);
+            return of(undefined);
+          }
 
           // Only fetch when meeting is joinable and we have necessary user info
           if (!canJoin || !meeting?.id) {
@@ -827,6 +836,7 @@ export class MeetingJoinComponent implements OnInit {
       catchError((error) => {
         this.isLoadingJoinUrl.set(false);
         this.joinUrlError.set(error?.error?.error || 'Failed to load meeting join URL. Please try again.');
+        this.joinUrlErrorCode.set(error?.error?.code ?? null);
         return of(undefined);
       })
     );
@@ -999,9 +1009,7 @@ export class MeetingJoinComponent implements OnInit {
   }
 
   private initializeEmailError(): Signal<boolean> {
-    return computed(() => {
-      return this.joinUrlError()?.toLowerCase().includes('email address is not registered for this restricted meeting') ?? false;
-    });
+    return computed(() => this.joinUrlErrorCode() === 'NOT_REGISTERED_FOR_MEETING');
   }
 
   private initializeIsPastMeeting(): Signal<boolean> {
