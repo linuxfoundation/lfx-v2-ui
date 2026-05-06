@@ -24,7 +24,7 @@ export class EventsListComponent {
   public readonly searchQuery = input<string>('');
   public readonly status = input<string | null>(null);
 
-  protected readonly activeTab = signal<EventTabId>('upcoming');
+  public readonly activeTab = signal<EventTabId>('upcoming');
 
   public readonly upcomingEventsLoading = signal(true);
   public readonly registrationOpenEventsLoading = signal(true);
@@ -60,12 +60,22 @@ export class EventsListComponent {
   public readonly eventsStatsLoading = computed(() => this.upcomingEventsLoading() || this.registrationOpenEventsLoading() || this.pastEventsLoading());
 
   public constructor() {
-    // Reset both tabs to page 1 when shared filters change
-    combineLatest([toObservable(this.foundation), toObservable(this.searchQuery), toObservable(this.status)])
+    // Reset every tab to page 1 when foundation/search filters change.
+    combineLatest([toObservable(this.foundation), toObservable(this.searchQuery)])
       .pipe(skip(1), takeUntilDestroyed())
       .subscribe(() => {
         this.upcomingEventsPage.set({ offset: 0, pageSize: this.upcomingEventsPage().pageSize });
         this.registrationOpenEventsPage.set({ offset: 0, pageSize: this.registrationOpenEventsPage().pageSize });
+        this.pastEventsPage.set({ offset: 0, pageSize: this.pastEventsPage().pageSize });
+      });
+
+    // Status changes only affect tabs that honor the user-selected status —
+    // the Registration Open tab forces 'Active' and ignores the dropdown,
+    // so don't reset its page (avoids a wasted refetch).
+    toObservable(this.status)
+      .pipe(skip(1), takeUntilDestroyed())
+      .subscribe(() => {
+        this.upcomingEventsPage.set({ offset: 0, pageSize: this.upcomingEventsPage().pageSize });
         this.pastEventsPage.set({ offset: 0, pageSize: this.pastEventsPage().pageSize });
       });
   }

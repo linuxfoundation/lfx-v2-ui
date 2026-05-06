@@ -7,9 +7,10 @@
     <div class="flex items-start justify-between mt-3">
       <div class="flex flex-col gap-1">
         <h1 class="font-display font-light text-2xl" data-testid="foundation-event-page-title">Foundation Events</h1>
+        @let foundation = userFoundation();
         <p class="text-sm text-gray-500" data-testid="foundation-event-page-subtitle">
-          @if (userFoundation()) {
-            Events hosted by {{ userFoundation() }} and its ecosystem.
+          @if (foundation) {
+            Events hosted by {{ foundation }} and its ecosystem.
           } @else {
             Events hosted across this foundation portfolio.
           }
@@ -82,6 +83,7 @@
     <div class="bg-white rounded-lg border border-gray-200 p-4">
       <lfx-events-top-bar
         [showRoleFilter]="false"
+        [showStatusFilter]="eventsList.activeTab() !== 'registration-open'"
         [statusOptions]="foundationStatusOptions"
         searchPlaceholder="Search foundation events..."
         (searchQueryChange)="onSearchQueryChange($event)"
