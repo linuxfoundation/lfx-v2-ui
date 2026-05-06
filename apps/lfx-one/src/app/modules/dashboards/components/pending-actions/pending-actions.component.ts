@@ -34,7 +34,7 @@ export class PendingActionsComponent {
   // Cookie-backed dismissals live outside the signal graph; bumping forces the computed to recompute.
   private readonly hiddenActionsVersion = signal(0);
   protected readonly expandedRsvpKey = signal<string | null>(null);
-  protected readonly dismissingRowKey = signal<string | null>(null);
+  protected readonly dismissingRowKeys = signal<ReadonlySet<string>>(new Set());
   private readonly loadingMeetingUid = signal<string | null>(null);
   private readonly rsvpMeetingCache = signal<Record<string, Meeting>>({});
   // Pinned through the 1.5s post-RSVP cue window so a parent re-emit can't filter the row out
@@ -70,11 +70,9 @@ export class PendingActionsComponent {
     // cancel the cookie write via `takeUntilDestroyed` and resurrect the row on next visit.
     this.hiddenActionsService.hideAction(item);
 
-    // rowKey-guarded clears below stop A's timer from collapsing B if the user RSVPs B
-    // mid-window. The frozen-set delete intentionally skips that guard so each timer always
-    // unfreezes its own key.
+    // Per-row sets let concurrent RSVPs each keep their emerald tint until their own timer fires.
     const rowKey = this.getRowKey(item);
-    this.dismissingRowKey.set(rowKey);
+    this.dismissingRowKeys.update((keys) => new Set(keys).add(rowKey));
     this.frozenDismissingKeys.update((keys) => new Set(keys).add(rowKey));
     timer(1500)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -88,8 +86,14 @@ export class PendingActionsComponent {
           next.delete(rowKey);
           return next;
         });
-        if (this.dismissingRowKey() === rowKey) {
-          this.dismissingRowKey.set(null);
+        const wasDismissing = this.dismissingRowKeys().has(rowKey);
+        this.dismissingRowKeys.update((keys) => {
+          if (!keys.has(rowKey)) return keys;
+          const next = new Set(keys);
+          next.delete(rowKey);
+          return next;
+        });
+        if (wasDismissing) {
           this.hiddenActionsVersion.update((v) => v + 1);
         }
       });
@@ -112,14 +116,14 @@ export class PendingActionsComponent {
       const expandedKey = this.expandedRsvpKey();
       const loadingUid = this.loadingMeetingUid();
       const cache = this.rsvpMeetingCache();
-      const dismissingKey = this.dismissingRowKey();
+      const dismissing = this.dismissingRowKeys();
 
       return this.visibleActions().map((item) => {
         const rowKey = this.getRowKey(item);
         const isRsvpInline = this.isRsvpInline(item);
         const meeting = item.meetingUid ? (cache[item.meetingUid] ?? null) : null;
         let rowClass: string;
-        if (dismissingKey === rowKey) {
+        if (dismissing.has(rowKey)) {
           rowClass = 'bg-emerald-50/60';
         } else if (item.type === 'RSVP') {
           rowClass = 'bg-amber-50/60';
