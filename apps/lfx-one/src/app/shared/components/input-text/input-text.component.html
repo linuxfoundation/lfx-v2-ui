@@ -5,6 +5,46 @@
   @if (icon()) {
     <p-iconfield>
       <p-inputicon [class]="icon()" />
+      @if (type() === 'number') {
+        <input
+          pInputText
+          type="number"
+          [id]="id()"
+          [formControlName]="control()"
+          [pSize]="size()!"
+          [placeholder]="placeholder()"
+          [class]="styleClass()"
+          class="w-full"
+          [autocomplete]="autocomplete()"
+          [attr.data-test]="dataTest()" />
+      } @else {
+        <input
+          pInputText
+          [id]="id()"
+          [formControlName]="control()"
+          [pSize]="size()!"
+          [type]="type()"
+          [placeholder]="placeholder()"
+          [class]="styleClass()"
+          class="w-full"
+          [autocomplete]="autocomplete()"
+          [attr.data-test]="dataTest()" />
+      }
+    </p-iconfield>
+  } @else {
+    @if (type() === 'number') {
+      <input
+        pInputText
+        type="number"
+        [id]="id()"
+        [formControlName]="control()"
+        [pSize]="size()!"
+        [placeholder]="placeholder()"
+        [class]="styleClass()"
+        class="w-full"
+        [autocomplete]="autocomplete()"
+        [attr.data-test]="dataTest()" />
+    } @else {
       <input
         pInputText
         [id]="id()"
@@ -16,18 +56,6 @@
         class="w-full"
         [autocomplete]="autocomplete()"
         [attr.data-test]="dataTest()" />
-    </p-iconfield>
-  } @else {
-    <input
-      pInputText
-      [id]="id()"
-      [formControlName]="control()"
-      [pSize]="size()!"
-      [type]="type()"
-      [placeholder]="placeholder()"
-      [class]="styleClass()"
-      class="w-full"
-      [autocomplete]="autocomplete()"
-      [attr.data-test]="dataTest()" />
+    }
   }
 </ng-container>
