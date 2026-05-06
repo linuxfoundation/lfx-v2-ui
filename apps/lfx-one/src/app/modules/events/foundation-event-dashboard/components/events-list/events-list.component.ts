@@ -27,30 +27,37 @@ export class EventsListComponent {
   protected readonly activeTab = signal<EventTabId>('upcoming');
 
   public readonly upcomingEventsLoading = signal(true);
+  public readonly registrationOpenEventsLoading = signal(true);
   public readonly pastEventsLoading = signal(true);
 
   protected readonly upcomingEventsPage = signal<PageChangeEvent>({ offset: 0, pageSize: DEFAULT_EVENTS_PAGE_SIZE });
+  protected readonly registrationOpenEventsPage = signal<PageChangeEvent>({ offset: 0, pageSize: DEFAULT_EVENTS_PAGE_SIZE });
   protected readonly pastEventsPage = signal<PageChangeEvent>({ offset: 0, pageSize: DEFAULT_EVENTS_PAGE_SIZE });
 
   protected readonly upcomingSortField = signal('EVENT_START_DATE');
   protected readonly upcomingSortOrder = signal<'ASC' | 'DESC'>('ASC');
+  protected readonly registrationOpenSortField = signal('EVENT_START_DATE');
+  protected readonly registrationOpenSortOrder = signal<'ASC' | 'DESC'>('ASC');
   protected readonly pastSortField = signal('EVENT_START_DATE');
   protected readonly pastSortOrder = signal<'ASC' | 'DESC'>('DESC');
 
   protected readonly upcomingEvents: Signal<EventsResponse> = this.initializeUpcomingEvents();
+  protected readonly registrationOpenEvents: Signal<EventsResponse> = this.initializeRegistrationOpenEvents();
   protected readonly pastEvents: Signal<EventsResponse> = this.initializePastEvents();
 
   protected readonly tabs: EventTab[] = [
     { id: 'upcoming', label: 'Upcoming', countKey: 'upcoming' },
+    { id: 'registration-open', label: 'Registration Open', countKey: 'registrationOpen' },
     { id: 'past', label: 'Past', countKey: 'past' },
   ];
 
   public readonly tabCounts = computed(() => ({
     upcoming: this.upcomingEvents().total,
+    registrationOpen: this.registrationOpenEvents().total,
     past: this.pastEvents().total,
   }));
 
-  public readonly eventsStatsLoading = computed(() => this.upcomingEventsLoading() || this.pastEventsLoading());
+  public readonly eventsStatsLoading = computed(() => this.upcomingEventsLoading() || this.registrationOpenEventsLoading() || this.pastEventsLoading());
 
   public constructor() {
     // Reset both tabs to page 1 when shared filters change
@@ -58,6 +65,7 @@ export class EventsListComponent {
       .pipe(skip(1), takeUntilDestroyed())
       .subscribe(() => {
         this.upcomingEventsPage.set({ offset: 0, pageSize: this.upcomingEventsPage().pageSize });
+        this.registrationOpenEventsPage.set({ offset: 0, pageSize: this.registrationOpenEventsPage().pageSize });
         this.pastEventsPage.set({ offset: 0, pageSize: this.pastEventsPage().pageSize });
       });
   }
@@ -69,6 +77,11 @@ export class EventsListComponent {
   protected onUpcomingPageChange(event: PageChangeEvent): void {
     this.upcomingEventsLoading.set(true);
     this.upcomingEventsPage.set(event);
+  }
+
+  protected onRegistrationOpenPageChange(event: PageChangeEvent): void {
+    this.registrationOpenEventsLoading.set(true);
+    this.registrationOpenEventsPage.set(event);
   }
 
   protected onPastPageChange(event: PageChangeEvent): void {
@@ -86,6 +99,16 @@ export class EventsListComponent {
     this.upcomingEventsPage.set({ offset: 0, pageSize: this.upcomingEventsPage().pageSize });
   }
 
+  protected onRegistrationOpenSortChange(event: SortChangeEvent): void {
+    if (this.registrationOpenSortField() === event.field) {
+      this.registrationOpenSortOrder.set(this.registrationOpenSortOrder() === 'ASC' ? 'DESC' : 'ASC');
+    } else {
+      this.registrationOpenSortField.set(event.field);
+      this.registrationOpenSortOrder.set('ASC');
+    }
+    this.registrationOpenEventsPage.set({ offset: 0, pageSize: this.registrationOpenEventsPage().pageSize });
+  }
+
   protected onPastSortChange(event: SortChangeEvent): void {
     if (this.pastSortField() === event.field) {
       this.pastSortOrder.set(this.pastSortOrder() === 'ASC' ? 'DESC' : 'ASC');
@@ -100,6 +123,17 @@ export class EventsListComponent {
     return this.initializeEvents(false, this.upcomingEventsPage, this.upcomingEventsLoading, this.upcomingSortField, this.upcomingSortOrder);
   }
 
+  private initializeRegistrationOpenEvents(): Signal<EventsResponse> {
+    return this.initializeEvents(
+      false,
+      this.registrationOpenEventsPage,
+      this.registrationOpenEventsLoading,
+      this.registrationOpenSortField,
+      this.registrationOpenSortOrder,
+      'Active'
+    );
+  }
+
   private initializePastEvents(): Signal<EventsResponse> {
     return this.initializeEvents(true, this.pastEventsPage, this.pastEventsLoading, this.pastSortField, this.pastSortOrder);
   }
@@ -109,7 +143,8 @@ export class EventsListComponent {
     pageSignal: WritableSignal<PageChangeEvent>,
     loadingSignal: WritableSignal<boolean>,
     sortFieldSignal: WritableSignal<string>,
-    sortOrderSignal: WritableSignal<'ASC' | 'DESC'>
+    sortOrderSignal: WritableSignal<'ASC' | 'DESC'>,
+    forcedStatus?: EventStatusFilter
   ): Signal<EventsResponse> {
     return toSignal(
       toObservable(
@@ -117,7 +152,7 @@ export class EventsListComponent {
           ...pageSignal(),
           foundation: this.foundation(),
           searchQuery: this.searchQuery() || undefined,
-          status: (this.status() ?? undefined) as EventStatusFilter | undefined,
+          status: forcedStatus ?? ((this.status() ?? undefined) as EventStatusFilter | undefined),
           sortField: sortFieldSignal(),
           sortOrder: sortOrderSignal(),
         }))

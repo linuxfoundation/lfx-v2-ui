@@ -215,7 +215,7 @@ export class MainLayoutComponent {
       {
         label: 'Events',
         icon: 'fa-light fa-ticket',
-        routerLink: '/events',
+        routerLink: '/foundation/events',
       },
       {
         label: MAILING_LIST_LABEL.plural,
@@ -440,11 +440,12 @@ export class MainLayoutComponent {
    */
   private syncLensFromRoute(): void {
     let currentRoute = this.route;
+    let lens: unknown = currentRoute.snapshot.data['lens'];
     while (currentRoute.firstChild) {
       currentRoute = currentRoute.firstChild;
+      lens = currentRoute.snapshot.data['lens'] ?? lens;
     }
-    const lens = currentRoute.snapshot.data['lens'];
-    if (lens && lens in ALL_LENSES) {
+    if (typeof lens === 'string' && lens in ALL_LENSES) {
       this.lensService.setLens(lens as Lens);
     }
   }
