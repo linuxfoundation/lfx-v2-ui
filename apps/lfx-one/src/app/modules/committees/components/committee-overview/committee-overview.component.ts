@@ -7,6 +7,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { TagComponent } from '@components/tag/tag.component';
+import { PENDING_ACTION_SEVERITY } from '@lfx-one/shared/constants';
 import { CommitteeMemberRole, PollStatus, SurveyStatus } from '@lfx-one/shared/enums';
 import { Committee, CommitteeMember, Meeting, PastMeeting, PendingActionItem, Survey, Vote } from '@lfx-one/shared/interfaces';
 import { getSurveyDisplayStatus } from '@lfx-one/shared/utils';
@@ -345,14 +346,14 @@ export class CommitteeOverviewComponent {
     );
   }
 
-  private initPendingActionItems(): Signal<PendingActionItem[]> {
+  private initPendingActionItems(): Signal<(PendingActionItem & { rowKey: string; rowClass: string })[]> {
     return computed(() => {
       const voteItems: PendingActionItem[] = this.pendingVotes().map((vote) => ({
         type: 'Vote',
         badge: this.committee().name,
         text: vote.name,
         icon: 'fa-light fa-check-to-slot',
-        severity: 'warn' as const,
+        severity: PENDING_ACTION_SEVERITY.Vote,
         buttonText: 'Review and Vote',
         buttonLink: vote.uid,
         date: vote.end_time
@@ -364,13 +365,17 @@ export class CommitteeOverviewComponent {
         badge: this.committee().name,
         text: survey.survey_title,
         icon: 'fa-light fa-chart-simple',
-        severity: 'warn' as const,
+        severity: PENDING_ACTION_SEVERITY.Survey,
         buttonText: 'Submit Survey',
         date: survey.survey_cutoff_date
           ? `Deadline: ${new Date(survey.survey_cutoff_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
           : undefined,
       }));
-      return [...voteItems, ...surveyItems];
+      return [...voteItems, ...surveyItems].map((item, index) => {
+        const rowKey = item.buttonLink ? `${item.type}-${item.buttonLink}` : `${item.type}-${item.text}-${index}`;
+        const rowClass = index % 2 === 0 ? 'bg-white' : 'bg-gray-50/60';
+        return { ...item, rowKey, rowClass };
+      });
     });
   }
 

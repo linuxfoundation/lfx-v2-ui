@@ -470,12 +470,20 @@ export interface ProgressItemWithChart extends ProgressItem {
 }
 
 /**
+ * Discriminator values for pending action rows.
+ * Kept as a string union (rather than an enum) so it round-trips cleanly through JSON without a
+ * value-vs-key reverse-mapping footgun. The set is closed today; if a new type is added, update
+ * `PENDING_ACTION_SEVERITY` in the same change so the tag tone doesn't fall back to the default.
+ */
+export type PendingActionType = 'RSVP' | 'Vote' | 'Survey' | 'Agenda';
+
+/**
  * Pending action item for task list
  * @description Structure for pending action items
  */
 export interface PendingActionItem {
-  /** Action type (e.g., Issue, PR, Review) */
-  type: string;
+  /** Action type — drives the per-type tag tone via `PENDING_ACTION_SEVERITY`. */
+  type: PendingActionType;
   /** Project or repository badge */
   badge: string;
   /** Action description text */
@@ -513,6 +521,8 @@ export interface DecoratedPendingAction extends PendingActionItem {
   isLoading: boolean;
   /** Lazily-loaded Meeting passed to RsvpButtonGroupComponent; null until fetched */
   meeting: Meeting | null;
+  /** Tailwind background class for the row — encodes zebra striping, RSVP amber tint, and post-RSVP emerald confirmation */
+  rowClass: string;
 }
 
 /**
