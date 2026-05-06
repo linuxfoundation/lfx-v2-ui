@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: MIT
 
 name: Feature request
-description: Suggest a new feature for crowd.dev
-labels: ["type:enhancement ✨"]
+description: Suggest a new feature for lfx-v2-ui
+labels: ["type:enhancement"]
+type: Feature
 body:
   - type: textarea
     id: current-state

@@ -3,7 +3,8 @@
 
 name: Bug Report
 description: Create a report to help us improve
-labels: ["type:bug 🐞"]
+labels: ["type:bug"]
+type: Bug
 body:
   - type: markdown
     attributes:
