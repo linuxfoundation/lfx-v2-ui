@@ -56,7 +56,11 @@ export class MainLayoutComponent {
       case 'foundation':
         return this.foundationLensItems();
       case 'project':
-        return this.personaService.isBoardScoped() ? this.projectLensItems : this.projectLensItemsWithGovernance;
+        // Governance (Votes / Surveys / Permissions) is always surfaced under Project lens —
+        // matching Foundation lens behavior. Authorization for write actions (add user,
+        // edit role, remove, etc.) is enforced server-side and by per-page UI gating where
+        // implemented; pre-existing gaps in those gates are tracked separately.
+        return this.projectLensItemsWithGovernance;
       case 'org':
         return this.orgLensItems;
       default:
@@ -215,7 +219,7 @@ export class MainLayoutComponent {
       {
         label: 'Events',
         icon: 'fa-light fa-ticket',
-        routerLink: '/events',
+        routerLink: '/foundation/events',
       },
       {
         label: MAILING_LIST_LABEL.plural,
@@ -454,12 +458,13 @@ export class MainLayoutComponent {
    */
   private syncLensFromRoute(): void {
     let currentRoute = this.route;
+    let lens: Lens | undefined = currentRoute.snapshot.data['lens'];
     while (currentRoute.firstChild) {
       currentRoute = currentRoute.firstChild;
+      lens = currentRoute.snapshot.data['lens'] ?? lens;
     }
-    const lens = currentRoute.snapshot.data['lens'];
     if (lens && lens in ALL_LENSES) {
-      this.lensService.setLens(lens as Lens);
+      this.lensService.setLens(lens);
     }
   }
 }
