@@ -5,7 +5,7 @@ LFX Self Serve is committed to fostering a welcoming and inclusive community.
 ## Our Standard
 
 This project follows the
-[Linux Foundation Code of Conduct](https://docs.linuxfoundation.org/lfx/mentorship/mentee-guide/code-of-conduct).
+[Linux Foundation Code of Conduct](https://www.linuxfoundation.org/code-of-conduct).
 All participants — contributors, maintainers, and community members — are expected to uphold
 its standards in every project space.
 

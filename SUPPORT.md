@@ -11,7 +11,7 @@ The bot connects you directly with the product team and resolves questions faste
 
 > GitHub issues are reserved for **bugs**, **feature requests**, and **tracked tasks** —
 > not general usage questions. Consider using the
-[GitHub Discussions](../../discussions) instead.
+> [GitHub Discussions](../../discussions) instead.
 
 ## Bug Reports
 
