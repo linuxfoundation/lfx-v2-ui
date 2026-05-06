@@ -64,3 +64,19 @@ export function toTitleCase(value: string): string {
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join(' ');
 }
+
+/**
+ * Compute a stable 0/1 parity from a string key using a sum-of-charcodes hash.
+ *
+ * Use case: zebra-striping rows by stable identity instead of positional `index % 2`. Positional
+ * parity flips every time a list filters or removes a row — combined with `transition-colors`,
+ * that produces a visible cross-fade on rows the user did not interact with. Parity derived from
+ * the row's stable key (e.g., a uid-based `rowKey`) survives those reshuffles, so each row keeps
+ * its stripe across renders. Trade-off: adjacency is no longer guaranteed alternating, but
+ * adjacent same-stripe rows stay visually separated by `divide-y` borders.
+ */
+export function stableKeyParity(key: string): 0 | 1 {
+  let sum = 0;
+  for (let i = 0; i < key.length; i++) sum += key.charCodeAt(i);
+  return (sum & 1) as 0 | 1;
+}

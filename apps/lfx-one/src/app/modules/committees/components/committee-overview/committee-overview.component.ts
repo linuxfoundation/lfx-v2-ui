@@ -10,7 +10,7 @@ import { TagComponent } from '@components/tag/tag.component';
 import { PENDING_ACTION_SEVERITY } from '@lfx-one/shared/constants';
 import { CommitteeMemberRole, PollStatus, SurveyStatus } from '@lfx-one/shared/enums';
 import { Committee, CommitteeMember, Meeting, PastMeeting, PendingActionItem, Survey, Vote } from '@lfx-one/shared/interfaces';
-import { getSurveyDisplayStatus } from '@lfx-one/shared/utils';
+import { getSurveyDisplayStatus, stableKeyParity } from '@lfx-one/shared/utils';
 import { CommitteeService } from '@services/committee.service';
 import { MeetingService } from '@services/meeting.service';
 import { SurveyService } from '@services/survey.service';
@@ -160,7 +160,7 @@ export class CommitteeOverviewComponent {
   public pendingSurveys: Signal<Survey[]> = computed(() => this.surveys().filter((s) => getSurveyDisplayStatus(s) === SurveyStatus.OPEN));
   public hasPendingActions: Signal<boolean> = computed(() => this.pendingVotes().length > 0 || this.pendingSurveys().length > 0);
 
-  public pendingActionItems: Signal<PendingActionItem[]> = this.initPendingActionItems();
+  public pendingActionItems: Signal<(PendingActionItem & { rowKey: string; rowClass: string })[]> = this.initPendingActionItems();
   public pendingActionsViewAllTab: Signal<'votes' | 'surveys'> = this.initPendingActionsViewAllTab();
   public categoryLabel: Signal<string> = computed(() => (this.committee().category || 'Group').toLowerCase());
 
@@ -373,7 +373,9 @@ export class CommitteeOverviewComponent {
       }));
       return [...voteItems, ...surveyItems].map((item, index) => {
         const rowKey = item.buttonLink ? `${item.type}-${item.buttonLink}` : `${item.type}-${item.text}-${index}`;
-        const rowClass = index % 2 === 0 ? 'bg-white' : 'bg-gray-50/60';
+        // Parity from `rowKey` (not list index) so future row removals (e.g., a vote closing)
+        // don't flip following rows' stripes mid-`transition-colors`.
+        const rowClass = stableKeyParity(rowKey) === 0 ? 'bg-white' : 'bg-gray-50/60';
         return { ...item, rowKey, rowClass };
       });
     });
