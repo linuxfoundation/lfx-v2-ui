@@ -440,12 +440,13 @@ export class MainLayoutComponent {
    */
   private syncLensFromRoute(): void {
     let currentRoute = this.route;
+    let lens: Lens | undefined = currentRoute.snapshot.data['lens'];
     while (currentRoute.firstChild) {
       currentRoute = currentRoute.firstChild;
+      lens = currentRoute.snapshot.data['lens'] ?? lens;
     }
-    const lens = currentRoute.snapshot.data['lens'];
     if (lens && lens in ALL_LENSES) {
-      this.lensService.setLens(lens as Lens);
+      this.lensService.setLens(lens);
     }
   }
 }
