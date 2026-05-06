@@ -60,9 +60,13 @@ export class AccountContextService {
    */
   public initializeUserOrganizations(organizations: Account[]): void {
     this.initialized.set(true);
-    this.userOrganizations.set(organizations ?? []);
+    const enriched = (organizations ?? []).map((org) => {
+      const known = ACCOUNTS.find((a) => a.accountId === org.accountId);
+      return known ? { ...known, ...org, accountsRelated: known.accountsRelated, membershipTier: org.membershipTier ?? known.membershipTier } : org;
+    });
+    this.userOrganizations.set(enriched);
 
-    if (organizations && organizations.length > 0) {
+    if (enriched.length > 0) {
       // Validate stored selection against the user's detected organizations.
       // A stored selection from a prior session (or a leaked impersonator cookie)
       // must match one of the currently detected orgs; otherwise fall back to
@@ -70,12 +74,12 @@ export class AccountContextService {
       // Resolve to the canonical Account from organizations so we never trust
       // cookie-supplied fields (e.g. accountName) beyond the validated accountId.
       const stored = this.loadFromStorage();
-      const matchedOrganization = stored ? (organizations.find((org) => org.accountId === stored.accountId) ?? null) : null;
+      const matchedOrganization = stored ? (enriched.find((org) => org.accountId === stored.accountId) ?? null) : null;
 
       if (matchedOrganization) {
         this.selectedAccount.set(matchedOrganization);
       } else {
-        this.setAccount(organizations[0]);
+        this.setAccount(enriched[0]);
       }
     }
   }
@@ -96,14 +100,16 @@ export class AccountContextService {
   }
 
   private persistToStorage(account: Account): void {
-    // Store in cookie (SSR-compatible)
-    this.cookieService.set(this.storageKey, JSON.stringify(account), {
+    // Drop accountsRelated before stringify — conglomerate members share a circular
+    // reference into the family list. The cookie only needs the identifier; tier,
+    // logo, and family are re-enriched from ACCOUNTS / Snowflake on load.
+    const { accountsRelated: _accountsRelated, ...persistable } = account;
+    this.cookieService.set(this.storageKey, JSON.stringify(persistable), {
       expires: 30, // 30 days
       path: '/',
       sameSite: 'Lax',
       secure: process.env['NODE_ENV'] === 'production',
     });
-    // Register cookie for tracking
     this.cookieRegistry.registerCookie(this.storageKey);
   }
 

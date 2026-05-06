@@ -6,10 +6,12 @@
  * @description Maps account ID to organization name for board member dashboard
  */
 export interface Account {
-  /** Unique account identifier */
+  /** Salesforce account_id (also known as b2b_account_id) — primary join key */
   accountId: string;
   /** Organization display name */
   accountName: string;
+  /** Crowd.dev organization id — secondary identifier, mapped from accountId in Snowflake */
+  cdevOrgId?: string;
   /** URL-friendly slug derived from the account name */
   accountSlug?: string;
   /** Logo URL for the organization */
