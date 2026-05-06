@@ -1,6 +1,6 @@
 # Support
 
-This document explains where and how to get help with LFX One.
+This document explains where and how to get help with LFX Self Serve.
 Please read through the appropriate section before opening a GitHub issue.
 
 ## Product Usage Questions
@@ -10,7 +10,8 @@ If you have a question about **how to use the product**, please use the
 The bot connects you directly with the product team and resolves questions faster.
 
 > GitHub issues are reserved for **bugs**, **feature requests**, and **tracked tasks** —
-> not general usage questions.
+> not general usage questions. Consider using the
+[GitHub Discussions](../../discussions) instead.
 
 ## Bug Reports
 

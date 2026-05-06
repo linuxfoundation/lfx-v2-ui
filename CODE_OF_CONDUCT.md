@@ -1,6 +1,6 @@
 # Code of Conduct
 
-LFX One is committed to fostering a welcoming and inclusive community.
+LFX Self Serve is committed to fostering a welcoming and inclusive community.
 
 ## Our Standard
 
