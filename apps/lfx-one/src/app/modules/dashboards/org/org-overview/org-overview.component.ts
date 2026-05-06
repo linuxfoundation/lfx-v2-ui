@@ -3,11 +3,14 @@
 
 import { Component, computed, inject, Signal } from '@angular/core';
 import { TagComponent } from '@components/tag/tag.component';
+import { SkeletonModule } from 'primeng/skeleton';
 import { AccountContextService } from '@services/account-context.service';
+
+import { OrgOverviewInvolvementComponent } from '../components/org-overview-involvement/org-overview-involvement.component';
 
 @Component({
   selector: 'lfx-org-overview',
-  imports: [TagComponent],
+  imports: [TagComponent, SkeletonModule, OrgOverviewInvolvementComponent],
   templateUrl: './org-overview.component.html',
 })
 export class OrgOverviewComponent {
