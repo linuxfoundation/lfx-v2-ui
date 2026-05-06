@@ -669,17 +669,7 @@ export class MeetingService {
       }
     }
 
-    const deduplicated = [...seen.values()];
-
-    if (deduplicated.length !== raw.length) {
-      logger.warning(req, 'get_past_meeting_participants', 'Deduplicated participant records', {
-        past_meeting_id: pastMeetingUid,
-        raw_count: raw.length,
-        deduplicated_count: deduplicated.length,
-      });
-    }
-
-    return deduplicated;
+    return [...seen.values()];
   }
 
   /**
