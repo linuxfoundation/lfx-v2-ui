@@ -56,8 +56,10 @@ export class MainLayoutComponent {
       case 'foundation':
         return this.foundationLensItems();
       case 'project':
-        // Governance (Votes / Surveys / Permissions) is always surfaced under Project lens.
-        // Per-action authority is gated by canWrite() inside each page (mirrors Foundation lens).
+        // Governance (Votes / Surveys / Permissions) is always surfaced under Project lens —
+        // matching Foundation lens behavior. Authorization for write actions (add user,
+        // edit role, remove, etc.) is enforced server-side and by per-page UI gating where
+        // implemented; pre-existing gaps in those gates are tracked separately.
         return this.projectLensItemsWithGovernance;
       case 'org':
         return this.orgLensItems;
