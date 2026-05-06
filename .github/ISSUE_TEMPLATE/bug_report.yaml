@@ -10,6 +10,7 @@ body:
     attributes:
       value: |
         Thanks for taking the time to fill out this bug report!
+        ⚠️ This repository is public. Please remove secrets and personal/sensitive data (API keys, tokens, passwords, emails, internal hostnames, customer IDs) before submitting.
   - type: textarea
     id: what-happened
     attributes:
@@ -27,5 +28,5 @@ body:
     id: logs
     attributes:
       label: Relevant log output
-      description: Please copy and paste any relevant log output including errors and stacktraces. This will be automatically formatted into code, so no need for backticks.
+      description: Please copy and paste relevant errors/stack traces after redacting secrets and personal/sensitive data. This will be automatically formatted into code, so no need for backticks.
       render: shell

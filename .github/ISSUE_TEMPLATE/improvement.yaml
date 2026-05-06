@@ -19,7 +19,7 @@ body:
     id: problem
     attributes:
       label: Describe the problem
-      description: Is the documentation missing? Or What is confusing? Why is it confusing?
+      description: Is the documentation missing, or what is confusing? Why is it confusing?
     validations:
       required: true
   - type: textarea
