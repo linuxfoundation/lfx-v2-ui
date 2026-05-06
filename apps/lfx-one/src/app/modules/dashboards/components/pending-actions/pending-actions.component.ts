@@ -84,8 +84,8 @@ export class PendingActionsComponent {
     // Defer the visual cleanup so the chosen response and toast register before the row vanishes.
     // The `hiddenActionsVersion` bump is intentionally deferred too: bumping it synchronously
     // would re-run `visibleActions`, filter the just-RSVPed row out, and prevent the 1.5s
-    // emerald confirmation tint from ever rendering. Guard all three on rowKey so A's timer
-    // can't collapse / re-filter for B if the user moved on.
+    // emerald confirmation tint from ever rendering. All three updates are guarded on rowKey so
+    // A's timer can't collapse / re-filter for B if the user RSVPed B during A's 1.5s window.
     const rowKey = this.getRowKey(item);
     this.dismissingRowKey.set(rowKey);
     timer(1500)
@@ -98,8 +98,8 @@ export class PendingActionsComponent {
         // row B's confirmation tint if the user RSVPed B during A's 1.5s window.
         if (this.dismissingRowKey() === rowKey) {
           this.dismissingRowKey.set(null);
+          this.hiddenActionsVersion.update((v) => v + 1);
         }
-        this.hiddenActionsVersion.update((v) => v + 1);
       });
   }
 

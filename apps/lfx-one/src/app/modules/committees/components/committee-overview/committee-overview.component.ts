@@ -164,23 +164,6 @@ export class CommitteeOverviewComponent {
   public pendingActionsViewAllTab: Signal<'votes' | 'surveys'> = this.initPendingActionsViewAllTab();
   public categoryLabel: Signal<string> = computed(() => (this.committee().category || 'Group').toLowerCase());
 
-  // Per-row background tint mirroring the dashboard `<lfx-pending-actions>` palette so the two
-  // surfaces stay visually consistent. No RSVP / dismissing branches: `initPendingActionItems`
-  // only emits 'Vote' and 'Survey' items here, and committee-overview doesn't render the inline
-  // RSVP button group — there's no 1.5s pre-dismiss window to cue. Slated for extraction into
-  // a shared row component — see `docs/follow-ups/`.
-  // Memoized once per CD pass and looked up by row key from the template (instead of called
-  // per-row), matching the dashboard component's pattern.
-  // Tints are LFX palette tokens (lfxColors in tailwind.config.js); no raw hex / Tailwind defaults.
-  public readonly pendingActionRowClassByKey: Signal<Record<string, string>> = computed(() => {
-    const classes: Record<string, string> = {};
-    this.pendingActionItems().forEach((item, index) => {
-      const key = this.getPendingActionRowKey(item, index);
-      classes[key] = index % 2 === 0 ? 'bg-white' : 'bg-gray-50/60';
-    });
-    return classes;
-  });
-
   public nextMeeting: Signal<Meeting | null> = computed(() => {
     const upcoming = [...this.meetings()].sort((a, b) => a.start_time.localeCompare(b.start_time));
     return upcoming[0] ?? null;
@@ -211,10 +194,6 @@ export class CommitteeOverviewComponent {
     } else {
       this.tabNavigated.emit('surveys');
     }
-  }
-
-  public getPendingActionRowClass(item: PendingActionItem, index: number): string {
-    return this.pendingActionRowClassByKey()[this.getPendingActionRowKey(item, index)] ?? 'bg-white';
   }
 
   // Chairs edit methods
@@ -367,7 +346,7 @@ export class CommitteeOverviewComponent {
     );
   }
 
-  private initPendingActionItems(): Signal<PendingActionItem[]> {
+  private initPendingActionItems(): Signal<(PendingActionItem & { rowKey: string; rowClass: string })[]> {
     return computed(() => {
       const voteItems: PendingActionItem[] = this.pendingVotes().map((vote) => ({
         type: 'Vote',
@@ -392,7 +371,11 @@ export class CommitteeOverviewComponent {
           ? `Deadline: ${new Date(survey.survey_cutoff_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
           : undefined,
       }));
-      return [...voteItems, ...surveyItems];
+      return [...voteItems, ...surveyItems].map((item, index) => {
+        const rowKey = item.buttonLink ? `${item.type}-${item.buttonLink}` : `${item.type}-${item.text}-${index}`;
+        const rowClass = index % 2 === 0 ? 'bg-white' : 'bg-gray-50/60';
+        return { ...item, rowKey, rowClass };
+      });
     });
   }
 
@@ -401,14 +384,6 @@ export class CommitteeOverviewComponent {
       const hasVotes = this.pendingActionItems().some((item) => item.type === 'Vote');
       return hasVotes ? 'votes' : 'surveys';
     });
-  }
-
-  // Stable per-row key. Prefer `buttonLink` (vote uid) when present so two items with the same
-  // `text` (e.g., re-issued votes / surveys with identical titles) don't collide and overwrite
-  // each other's tint in `pendingActionRowClassByKey`. Surveys don't currently carry an id here,
-  // so fall back to `index` to keep the key unique within the visible list.
-  private getPendingActionRowKey(item: PendingActionItem, index: number): string {
-    return item.buttonLink ? `${item.type}-${item.buttonLink}` : `${item.type}-${item.text}-${index}`;
   }
 
   private initSurveys(): Signal<Survey[]> {
