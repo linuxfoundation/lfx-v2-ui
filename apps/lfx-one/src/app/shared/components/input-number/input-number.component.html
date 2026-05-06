@@ -7,10 +7,10 @@
       <p-inputicon [class]="icon()" />
       <input
         pInputText
+        type="number"
         [id]="id()"
         [formControlName]="control()"
         [pSize]="size()!"
-        [type]="type()"
         [placeholder]="placeholder()"
         [class]="styleClass()"
         class="w-full"
@@ -20,10 +20,10 @@
   } @else {
     <input
       pInputText
+      type="number"
       [id]="id()"
       [formControlName]="control()"
       [pSize]="size()!"
-      [type]="type()"
       [placeholder]="placeholder()"
       [class]="styleClass()"
       class="w-full"
