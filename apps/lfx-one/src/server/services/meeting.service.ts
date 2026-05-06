@@ -662,11 +662,27 @@ export class MeetingService {
 
     const seen = new Map<string, PastMeetingParticipant>();
     for (const participant of raw) {
-      const key = participant.email?.toLowerCase() ?? participant.uid;
+      const normalizedEmail = participant.email?.trim().toLowerCase();
+      const key = normalizedEmail || participant.uid;
       const existing = seen.get(key);
-      if (!existing || (!existing.is_attended && participant.is_attended)) {
+      if (!existing) {
         seen.set(key, participant);
+        continue;
       }
+      const preferred = participant.is_attended && !existing.is_attended ? participant : existing;
+      const other = preferred === participant ? existing : participant;
+      seen.set(key, {
+        ...preferred,
+        is_attended: existing.is_attended || participant.is_attended,
+        is_invited: existing.is_invited || participant.is_invited,
+        host: existing.host || participant.host,
+        org_is_member: existing.org_is_member || participant.org_is_member,
+        org_is_project_member: existing.org_is_project_member || participant.org_is_project_member,
+        avatar_url: preferred.avatar_url ?? other.avatar_url,
+        job_title: preferred.job_title ?? other.job_title,
+        org_name: preferred.org_name ?? other.org_name,
+        username: preferred.username ?? other.username,
+      });
     }
 
     return [...seen.values()];
