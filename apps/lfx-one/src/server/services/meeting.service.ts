@@ -640,7 +640,10 @@ export class MeetingService {
   }
 
   /**
-   * Fetches past meeting participants by past meeting UID
+   * Fetches past meeting participants by past meeting UID.
+   * Deduplicates by email (case-insensitive), preferring the attended record when both exist.
+   * The query service can emit multiple records per person (e.g. one for the invitation and one
+   * for the Zoom join event), causing doubled rows on the past-meeting attendee list (LFXV2-1649).
    */
   public async getPastMeetingParticipants(req: Request, pastMeetingUid: string): Promise<PastMeetingParticipant[]> {
     logger.debug(req, 'get_past_meeting_participants', 'Fetching past meeting participants', {
@@ -652,12 +655,33 @@ export class MeetingService {
       tags: `meeting_and_occurrence_id:${pastMeetingUid}`,
     };
 
-    return fetchAllQueryResources<PastMeetingParticipant>(req, (pageToken) =>
+    const raw = await fetchAllQueryResources<PastMeetingParticipant>(req, (pageToken) =>
       this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipant>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         ...params,
         ...(pageToken && { page_token: pageToken }),
       })
     );
+
+    const seen = new Map<string, PastMeetingParticipant>();
+    for (const participant of raw) {
+      const key = participant.email?.toLowerCase() ?? participant.uid;
+      const existing = seen.get(key);
+      if (!existing || (!existing.is_attended && participant.is_attended)) {
+        seen.set(key, participant);
+      }
+    }
+
+    const deduplicated = [...seen.values()];
+
+    if (deduplicated.length !== raw.length) {
+      logger.warning(req, 'get_past_meeting_participants', 'Deduplicated participant records', {
+        past_meeting_id: pastMeetingUid,
+        raw_count: raw.length,
+        deduplicated_count: deduplicated.length,
+      });
+    }
+
+    return deduplicated;
   }
 
   /**
