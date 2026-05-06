@@ -9,7 +9,7 @@ import { CardComponent } from '@components/card/card.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { PENDING_ACTION_SEVERITY } from '@lfx-one/shared/constants';
 import { CommitteeMemberRole, PollStatus, SurveyStatus } from '@lfx-one/shared/enums';
-import { Committee, CommitteeMember, Meeting, PastMeeting, PendingActionItem, Survey, Vote } from '@lfx-one/shared/interfaces';
+import { Committee, CommitteeMember, CommitteePendingActionRow, Meeting, PastMeeting, PendingActionItem, Survey, Vote } from '@lfx-one/shared/interfaces';
 import { getSurveyDisplayStatus, stableKeyParity } from '@lfx-one/shared/utils';
 import { CommitteeService } from '@services/committee.service';
 import { MeetingService } from '@services/meeting.service';
@@ -160,7 +160,7 @@ export class CommitteeOverviewComponent {
   public pendingSurveys: Signal<Survey[]> = computed(() => this.surveys().filter((s) => getSurveyDisplayStatus(s) === SurveyStatus.OPEN));
   public hasPendingActions: Signal<boolean> = computed(() => this.pendingVotes().length > 0 || this.pendingSurveys().length > 0);
 
-  public pendingActionItems: Signal<(PendingActionItem & { rowKey: string; rowClass: string })[]> = this.initPendingActionItems();
+  public pendingActionItems: Signal<CommitteePendingActionRow[]> = this.initPendingActionItems();
   public pendingActionsViewAllTab: Signal<'votes' | 'surveys'> = this.initPendingActionsViewAllTab();
   public categoryLabel: Signal<string> = computed(() => (this.committee().category || 'Group').toLowerCase());
 
@@ -346,7 +346,7 @@ export class CommitteeOverviewComponent {
     );
   }
 
-  private initPendingActionItems(): Signal<(PendingActionItem & { rowKey: string; rowClass: string })[]> {
+  private initPendingActionItems(): Signal<CommitteePendingActionRow[]> {
     return computed(() => {
       const voteItems: PendingActionItem[] = this.pendingVotes().map((vote) => ({
         type: 'Vote',
