@@ -56,7 +56,9 @@ export class MainLayoutComponent {
       case 'foundation':
         return this.foundationLensItems();
       case 'project':
-        return this.personaService.isBoardScoped() ? this.projectLensItems : this.projectLensItemsWithGovernance;
+        // Governance (Votes / Surveys / Permissions) is always surfaced under Project lens.
+        // Per-action authority is gated by canWrite() inside each page (mirrors Foundation lens).
+        return this.projectLensItemsWithGovernance;
       case 'org':
         return this.orgLensItems;
       default:
