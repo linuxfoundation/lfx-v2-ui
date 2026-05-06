@@ -8,6 +8,8 @@ nav:
   - Build Time Secrets: build-time-secrets.md
   - Deployment: deployment.md
   - Troubleshooting: troubleshooting.md
+  - Product Specs:
+    - Foundation Webinar Self-Service: product/foundation-webinar-self-service-prd.md
   - Architecture Guide:
     - Overview: architecture/README.md
     - Backend:
