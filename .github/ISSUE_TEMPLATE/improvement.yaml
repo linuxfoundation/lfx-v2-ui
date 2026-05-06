@@ -4,7 +4,6 @@
 name: Improvement
 description: Help us improve the product, website, and/or documentation
 labels: ["type:improvement"]
-type: Improvement
 body:
   - type: markdown
     attributes:
