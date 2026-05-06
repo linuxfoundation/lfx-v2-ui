@@ -93,14 +93,14 @@ All work below rolls up to epic LFXV2-1654.
 
 | Jira | Priority | Current Jira status | Work item | Why it matters | Estimated effort |
 | --- | --- | --- | --- | --- | --- |
-| LFXV2-1655 | P0 | Backlog | Confirm Foundation/Project selector permission contract with query/resource API owners. | This decides whether the BFF can rely on upstream filtering or must explicitly check `viewer`. | 0.5 day |
-| LFXV2-1656 | P1 | Backlog | Add explicit viewer check to Foundation/Project selector in BFF. | Makes "where can I go" locally testable and prevents persona from acting as access control. | 1-2 days |
-| LFXV2-1657 | P1 | Backlog | Add tests for default Foundation/Project selection. | Protects the highest-priority flow: multiple contexts, persona priority, and fallback behavior. | 1 day |
-| LFXV2-1658 | P1 | Backlog | Wire manage/write guard to direct create/edit/admin routes. | Hidden buttons are not enough; direct URLs must be protected. | 1-2 days |
-| LFXV2-1659 | P1 | Backlog | Gate Settings and permission-management admin actions by manage/write/admin. | These are high-impact admin operations and should not be visible or executable without authority. | 1 day |
-| LFXV2-1660 | P2 | Backlog | Document persona-to-sidebar and persona-to-page-content matrix. | Gives product, architecture, and engineering one shared contract for "what I see." | 0.5-1 day |
-| LFXV2-1661 | P2 | Backlog | Add persona/navigation regression tests for sidebar and key page content. | Prevents future accidental coupling between persona visibility and permission authority. | 1-2 days |
-| LFXV2-1662 | P2 | Backlog | Review backend write enforcement per managed domain. | Confirms UI guards are UX helpers, not the only security control. | 1 day |
+| [LFXV2-1655](https://linuxfoundation.atlassian.net/browse/LFXV2-1655) | P0 | Backlog | Confirm Foundation/Project selector permission contract with query/resource API owners. | This decides whether the BFF can rely on upstream filtering or must explicitly check `viewer`. | 0.5 day |
+| [LFXV2-1656](https://linuxfoundation.atlassian.net/browse/LFXV2-1656) | P1 | Backlog | Add explicit viewer check to Foundation/Project selector in BFF. | Makes "where can I go" locally testable and prevents persona from acting as access control. | 1-2 days |
+| [LFXV2-1657](https://linuxfoundation.atlassian.net/browse/LFXV2-1657) | P1 | Backlog | Add tests for default Foundation/Project selection. | Protects the highest-priority flow: multiple contexts, persona priority, and fallback behavior. | 1 day |
+| [LFXV2-1658](https://linuxfoundation.atlassian.net/browse/LFXV2-1658) | P1 | Backlog | Wire manage/write guard to direct create/edit/admin routes. | Hidden buttons are not enough; direct URLs must be protected. | 1-2 days |
+| [LFXV2-1659](https://linuxfoundation.atlassian.net/browse/LFXV2-1659) | P1 | Backlog | Gate Settings and permission-management admin actions by manage/write/admin. | These are high-impact admin operations and should not be visible or executable without authority. | 1 day |
+| [LFXV2-1660](https://linuxfoundation.atlassian.net/browse/LFXV2-1660) | P2 | Backlog | Document persona-to-sidebar and persona-to-page-content matrix. | Gives product, architecture, and engineering one shared contract for "what I see." | 0.5-1 day |
+| [LFXV2-1661](https://linuxfoundation.atlassian.net/browse/LFXV2-1661) | P2 | Backlog | Add persona/navigation regression tests for sidebar and key page content. | Prevents future accidental coupling between persona visibility and permission authority. | 1-2 days |
+| [LFXV2-1662](https://linuxfoundation.atlassian.net/browse/LFXV2-1662) | P2 | Backlog | Review backend write enforcement per managed domain. | Confirms UI guards are UX helpers, not the only security control. | 1 day |
 
 ## Known Follow-Up Areas
 
