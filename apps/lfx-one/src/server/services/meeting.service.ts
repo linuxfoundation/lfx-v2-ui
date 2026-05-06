@@ -641,9 +641,7 @@ export class MeetingService {
 
   /**
    * Fetches past meeting participants by past meeting UID.
-   * Deduplicates by email (case-insensitive), preferring the attended record when both exist.
-   * The query service can emit multiple records per person (e.g. one for the invitation and one
-   * for the Zoom join event), causing doubled rows on the past-meeting attendee list (LFXV2-1649).
+   * Deduplicates by email — the query service can emit multiple records per person.
    */
   public async getPastMeetingParticipants(req: Request, pastMeetingUid: string): Promise<PastMeetingParticipant[]> {
     logger.debug(req, 'get_past_meeting_participants', 'Fetching past meeting participants', {
