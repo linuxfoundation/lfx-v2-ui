@@ -28,7 +28,7 @@
               <i class="fa-light fa-ticket text-xl"></i>
             </div>
             <div class="flex flex-col gap-0.5">
-              @if (eventsList.eventsStatsLoading()) {
+              @if (eventsList.upcomingEventsLoading() || eventsList.pastEventsLoading()) {
                 <p class="text-xl font-medium text-gray-400">&mdash;</p>
               } @else {
                 <p class="text-xl font-medium text-gray-900">{{ eventsList.tabCounts().upcoming + eventsList.tabCounts().past }}</p>
@@ -41,7 +41,7 @@
               <i class="fa-light fa-calendar-plus text-xl"></i>
             </div>
             <div class="flex flex-col gap-0.5">
-              @if (eventsList.eventsStatsLoading()) {
+              @if (eventsList.upcomingEventsLoading()) {
                 <p class="text-xl font-medium text-gray-400">&mdash;</p>
               } @else {
                 <p class="text-xl font-medium text-gray-900">{{ eventsList.tabCounts().upcoming }}</p>
@@ -54,7 +54,7 @@
               <i class="fa-light fa-ticket text-xl"></i>
             </div>
             <div class="flex flex-col gap-0.5">
-              @if (eventsList.eventsStatsLoading()) {
+              @if (eventsList.registrationOpenEventsLoading()) {
                 <p class="text-xl font-medium text-gray-400">&mdash;</p>
               } @else {
                 <p class="text-xl font-medium text-gray-900">{{ eventsList.tabCounts().registrationOpen }}</p>
@@ -67,7 +67,7 @@
               <i class="fa-light fa-calendar-check text-xl"></i>
             </div>
             <div class="flex flex-col gap-0.5">
-              @if (eventsList.eventsStatsLoading()) {
+              @if (eventsList.pastEventsLoading()) {
                 <p class="text-xl font-medium text-gray-400">&mdash;</p>
               } @else {
                 <p class="text-xl font-medium text-gray-900">{{ eventsList.tabCounts().past }}</p>

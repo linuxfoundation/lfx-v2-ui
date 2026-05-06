@@ -15,7 +15,7 @@
         }"
         [attr.data-testid]="'foundation-events-tab-' + tab.id">
         {{ tab.label }}
-        @if (tab.countKey && !eventsStatsLoading()) {
+        @if (tab.countKey && !countLoading()[tab.countKey]) {
           <span>({{ tabCounts()[tab.countKey] }})</span>
         }
       </button>

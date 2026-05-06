@@ -57,7 +57,13 @@ export class EventsListComponent {
     past: this.pastEvents().total,
   }));
 
-  public readonly eventsStatsLoading = computed(() => this.upcomingEventsLoading() || this.registrationOpenEventsLoading() || this.pastEventsLoading());
+  // Per-count loading so each tab/stat reveals its number as soon as its own
+  // request finishes — a slow tab no longer blocks the others.
+  public readonly countLoading = computed(() => ({
+    upcoming: this.upcomingEventsLoading(),
+    registrationOpen: this.registrationOpenEventsLoading(),
+    past: this.pastEventsLoading(),
+  }));
 
   public constructor() {
     // Reset every tab to page 1 when foundation/search filters change.
