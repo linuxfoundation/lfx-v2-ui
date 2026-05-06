@@ -19,8 +19,6 @@ export interface LensItem {
 export interface LensItemsResponse {
   items: LensItem[];
   next_page_token: string | null;
-  bypass_active: boolean;
-  persona_fetch_failed: boolean;
   upstream_failed: boolean;
   lens: NavLens;
 }
@@ -29,8 +27,6 @@ export interface LensItemsResponse {
 export interface LensPage {
   items: LensItem[];
   nextPageToken: string | null;
-  bypassActive: boolean;
-  personaFetchFailed: boolean;
   upstreamFailed: boolean;
   reset: boolean;
 }
@@ -56,7 +52,8 @@ export interface LensItemsQuery {
   filters: string[];
   /** OR — at least one term must match (e.g. `['stage:Active', 'stage:Formation - Engaged']`). Combined with `filters` via AND. */
   filters_or?: string[];
-  sort: 'name_asc';
+  /** `best_match` opts into upstream `_score` (TF/IDF + bool_prefix) ordering — meaningful only with `name`. */
+  sort: 'name_asc' | 'best_match';
   page_token?: string;
   name?: string;
 }
@@ -69,8 +66,6 @@ export interface LensState {
   loaded: WritableSignal<boolean>;
   nextPageToken: WritableSignal<string | null>;
   hasMore: Signal<boolean>;
-  bypassActive: WritableSignal<boolean>;
-  personaFetchFailed: WritableSignal<boolean>;
   loadMore$: Subject<string>;
   reload$: Subject<void>;
   pendingDefaultSelection: WritableSignal<boolean>;
