@@ -11,6 +11,8 @@ import { AutoFocus } from 'primeng/autofocus';
 import { InputTextModule } from 'primeng/inputtext';
 import { Popover, PopoverModule } from 'primeng/popover';
 
+type DisplayGroup = { kind: 'flat'; account: Account } | { kind: 'conglomerate'; parent: Account; siblings: Account[] };
+
 @Component({
   selector: 'lfx-org-selector',
   imports: [ReactiveFormsModule, PopoverModule, InputTextModule, AutoFocus],
@@ -38,13 +40,38 @@ export class OrgSelectorComponent {
 
   protected readonly displayLogo: Signal<string> = computed(() => this.selectedAccount().logoUrl ?? '');
 
-  protected readonly filteredAccounts: Signal<Account[]> = computed(() => {
+  protected readonly displayGroups: Signal<DisplayGroup[]> = computed(() => {
     const term = this.searchTerm();
     const accounts = this.availableAccounts();
-    if (!term) {
-      return accounts;
+    const selectedId = this.selectedAccount().accountId;
+
+    if (term) {
+      return accounts.filter((account) => account.accountName.toLowerCase().includes(term)).map<DisplayGroup>((account) => ({ kind: 'flat', account }));
     }
-    return accounts.filter((account) => account.accountName.toLowerCase().includes(term));
+
+    const seen = new Set<string>();
+    const groups: DisplayGroup[] = [];
+
+    for (const account of accounts) {
+      if (seen.has(account.accountId)) {
+        continue;
+      }
+
+      const family = account.accountsRelated ?? [];
+      if (family.length > 0) {
+        const parent = family.find((member) => member.accountId === selectedId) ?? account;
+        const siblings = family.filter((member) => member.accountId !== parent.accountId);
+        groups.push({ kind: 'conglomerate', parent, siblings });
+        for (const member of family) {
+          seen.add(member.accountId);
+        }
+      } else {
+        groups.push({ kind: 'flat', account });
+        seen.add(account.accountId);
+      }
+    }
+
+    return groups;
   });
 
   protected selectItem(account: Account, popover: Popover): void {
@@ -67,9 +94,5 @@ export class OrgSelectorComponent {
 
   protected isSelected(account: Account): boolean {
     return account.accountId === this.selectedAccount().accountId;
-  }
-
-  protected trackByAccountId(_index: number, account: Account): string {
-    return account.accountId;
   }
 }
