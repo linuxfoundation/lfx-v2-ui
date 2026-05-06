@@ -109,12 +109,14 @@ All work below rolls up to epic LFXV2-1654.
 - Guard direct create/edit/admin routes with manage/write permission, not only hidden buttons.
 - Gate Permissions page admin actions such as Add User, role update, and removal by manage/write permission.
 
-## Meeting Ask
+## Meeting Agreement
 
-Can we agree on this contract?
+The team aligned on this contract in the meeting:
 
 ```text
 Context selector eligibility -> view permission
 Sidebar/page/content visibility -> persona/role
 Action authority -> manage/write permission
 ```
+
+The remaining work is tracked under epic [LFXV2-1654](https://linuxfoundation.atlassian.net/browse/LFXV2-1654) and the individual Jira items listed above.
