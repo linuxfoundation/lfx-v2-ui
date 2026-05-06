@@ -34,38 +34,17 @@ export class PendingActionsComponent {
   // Cookie-backed dismissals live outside the signal graph; bumping forces the computed to recompute.
   private readonly hiddenActionsVersion = signal(0);
   protected readonly expandedRsvpKey = signal<string | null>(null);
-  // Tracks the row currently in the 1.5s post-RSVP confirmation window so the row background can
-  // briefly tint green to acknowledge the response before the row visually collapses. Cleared
-  // inside the `timer(1500)` callback in `handleRsvpChanged`. Note: persistence (cookie write via
-  // `hideAction`) runs SYNCHRONOUSLY before that timer — only the visual cue lives on the timer,
-  // so a route change inside the window can't undo the dismissal. Independent from
-  // `expandedRsvpKey` because the row stays expanded (showing the selected response button) for
-  // the full 1.5s — the tint is an additive cue, not an exclusive state.
   protected readonly dismissingRowKey = signal<string | null>(null);
-
-  // Holds the uid of the in-flight meeting fetch (single slot — only one RSVP row can be loading
-  // at a time). Paired with the `loadingMeetingUid() === meetingUid` guards in
-  // `loadMeetingForRsvp`'s next/error callbacks so a late response from row A doesn't clear the
-  // loading state for row B after the user moved on.
   private readonly loadingMeetingUid = signal<string | null>(null);
   private readonly rsvpMeetingCache = signal<Record<string, Meeting>>({});
-
-  // Rowkeys "pinned" through their 1.5s post-RSVP cue window. `visibleActions` keeps a frozen row
-  // visible even after `hideAction` flips its cookie, so an unrelated `pendingActions` re-emit
-  // (route change, polling, sibling refresh) during the window can't filter the row out and rob
-  // the user of the emerald confirmation cue. Cleared in the `timer(1500)` callback. Independent
-  // from `dismissingRowKey` because the freeze must survive even if a newer dismiss overrides
-  // `dismissingRowKey` mid-window — each timer always unfreezes its own key.
+  // Pinned through the 1.5s post-RSVP cue window so a parent re-emit can't filter the row out
+  // before the confirmation tint renders.
   private readonly frozenDismissingKeys = signal<ReadonlySet<string>>(new Set());
 
   private readonly visibleActions: Signal<PendingActionItem[]> = computed(() => {
     this.hiddenActionsVersion();
     const frozen = this.frozenDismissingKeys();
-    // Frozen rows survive the cookie-hidden filter so the 1.5s emerald cue can render even if the
-    // parent re-emits `pendingActions` during the window.
-    const unhidden = this.pendingActions().filter(
-      (item) => frozen.has(this.getRowKey(item)) || !this.hiddenActionsService.isActionHidden(item)
-    );
+    const unhidden = this.pendingActions().filter((item) => frozen.has(this.getRowKey(item)) || !this.hiddenActionsService.isActionHidden(item));
     const limit = this.displayLimit();
     // `slice(0, -1)` would silently drop the last item, so clamp non-finite/negative limits.
     const safeLimit = Number.isFinite(limit) ? Math.max(0, limit) : 5;
@@ -86,25 +65,14 @@ export class PendingActionsComponent {
   }
 
   protected handleRsvpChanged(item: DecoratedPendingAction): void {
-    // Skip `actionClick` emit so the parent dashboard doesn't refresh and skeleton-flash sibling rows.
-    // Persist the dismissal SYNCHRONOUSLY (before the timer) so a route change / unmount within
-    // the 1.5s window can't cancel the cookie write via `takeUntilDestroyed` and cause the
-    // already-RSVPed row to reappear on the next visit. The timer below is purely the visual
-    // confirmation cue — it owns `dismissingRowKey` (emerald tint), `frozenDismissingKeys`
-    // (keeps the row visible against parent re-emits), the deferred collapse of `expandedRsvpKey`,
-    // and the `hiddenActionsVersion` bump that triggers the re-filter. All four are safe to drop
-    // on unmount because the row is gone anyway, and persistence has already happened via
-    // `hideAction` above.
+    // Skip `actionClick` so the parent dashboard doesn't refresh and skeleton-flash siblings.
+    // Persist SYNCHRONOUSLY (before the timer) so an unmount inside the 1.5s window can't
+    // cancel the cookie write via `takeUntilDestroyed` and resurrect the row on next visit.
     this.hiddenActionsService.hideAction(item);
 
-    // Pin this row through the cue window, then defer the visual cleanup so the chosen response
-    // and toast register before the row vanishes. The `hiddenActionsVersion` bump is intentionally
-    // deferred too: bumping it synchronously would re-run `visibleActions`, filter the just-RSVPed
-    // row out, and prevent the 1.5s emerald confirmation tint from ever rendering. The dismiss /
-    // version updates are guarded on rowKey so A's timer can't collapse / re-filter for B if the
-    // user RSVPed B during A's 1.5s window. The frozen-set delete intentionally does NOT use that
-    // guard — each timer always unfreezes its own key so rapid back-to-back RSVPs don't leak
-    // entries into `frozenDismissingKeys`.
+    // rowKey-guarded clears below stop A's timer from collapsing B if the user RSVPs B
+    // mid-window. The frozen-set delete intentionally skips that guard so each timer always
+    // unfreezes its own key.
     const rowKey = this.getRowKey(item);
     this.dismissingRowKey.set(rowKey);
     this.frozenDismissingKeys.update((keys) => new Set(keys).add(rowKey));
@@ -120,8 +88,6 @@ export class PendingActionsComponent {
           next.delete(rowKey);
           return next;
         });
-        // Same staleness guard as `expandedRsvpKey` — a deferred clear from row A must not wipe
-        // row B's confirmation tint if the user RSVPed B during A's 1.5s window.
         if (this.dismissingRowKey() === rowKey) {
           this.dismissingRowKey.set(null);
           this.hiddenActionsVersion.update((v) => v + 1);
@@ -133,7 +99,7 @@ export class PendingActionsComponent {
     return item.type === 'RSVP' && !!item.meetingUid;
   }
 
-  // Prefer intrinsic IDs; fall back to a composite for action types that don't carry IDs yet.
+  // Composite fallback for action types that don't carry intrinsic IDs yet.
   private getRowKey(item: PendingActionItem): string {
     if (item.meetingUid) {
       return `${item.type}-${item.meetingUid}-${item.occurrenceId ?? ''}`;
@@ -141,22 +107,6 @@ export class PendingActionsComponent {
     return `${item.type}-${item.text}-${item.buttonLink ?? ''}`;
   }
 
-  // Per-row background tint, baked into each `DecoratedPendingAction` alongside its other view state.
-  //  - Post-RSVP confirmation window wins (soft emerald) so the user gets a "registered" cue
-  //    during the 1.5s pre-dismiss timer, regardless of row position or type.
-  //  - RSVP rows otherwise carry a soft amber tint — they're the most common row type and the
-  //    warm tone reads as the card's primary "respond now" affordance.
-  //  - Other types zebra-stripe by `stableKeyParity(rowKey)` so a sibling dismissing doesn't flip
-  //    this row's stripe mid-`transition-colors`. `gray-50/60` is light enough to keep text
-  //    contrast comfortable.
-  // All states use solid `background-color` (not gradients) so the row's `transition-colors`
-  // can cross-fade between them — `transition-colors` doesn't animate `background-image`, so a
-  // gradient → emerald swap would snap rather than fade and defeat the confirmation cue.
-  // Tint colors only use keys present in `lfxColors` (`emerald`, `amber`, `gray`) — `extend.colors:
-  // lfxColors` in tailwind.config.js overrides Tailwind's defaults at those keys, so a future tone
-  // tweak only needs to land in colors.constants.ts. Avoid keys not present in `lfxColors` (e.g.,
-  // `yellow`, `slate`, `lime`) or you'll silently fall back to Tailwind defaults and bypass the
-  // design-token contract.
   private initDecoratedActions(): Signal<DecoratedPendingAction[]> {
     return computed(() => {
       const expandedKey = this.expandedRsvpKey();
@@ -174,8 +124,6 @@ export class PendingActionsComponent {
         } else if (item.type === 'RSVP') {
           rowClass = 'bg-amber-50/60';
         } else {
-          // Parity from `rowKey` (not visible-list index) so a sibling dismissing doesn't
-          // flip this row's stripe mid-`transition-colors` and produce a phantom cross-fade.
           rowClass = stableKeyParity(rowKey) === 0 ? 'bg-white' : 'bg-gray-50/60';
         }
         return {
@@ -207,7 +155,6 @@ export class PendingActionsComponent {
       .subscribe({
         next: (meeting) => {
           this.rsvpMeetingCache.update((cache) => ({ ...cache, [meetingUid]: meeting }));
-          // Only clear loading if this is still the in-flight request — guards against stale row swaps.
           if (this.loadingMeetingUid() === meetingUid) {
             this.loadingMeetingUid.set(null);
           }

@@ -470,10 +470,8 @@ export interface ProgressItemWithChart extends ProgressItem {
 }
 
 /**
- * Discriminator values for pending action rows.
- * Kept as a string union (rather than an enum) so it round-trips cleanly through JSON without a
- * value-vs-key reverse-mapping footgun. The set is closed today; if a new type is added, update
- * `PENDING_ACTION_SEVERITY` in the same change so the tag tone doesn't fall back to the default.
+ * Pending-action row discriminator. String union (not enum) so it round-trips through JSON
+ * without value-vs-key reverse-mapping footguns.
  */
 export type PendingActionType = 'RSVP' | 'Vote' | 'Survey' | 'Agenda';
 

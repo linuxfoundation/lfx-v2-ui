@@ -66,14 +66,9 @@ export function toTitleCase(value: string): string {
 }
 
 /**
- * Compute a stable 0/1 parity from a string key using a sum-of-charcodes hash.
- *
- * Use case: zebra-striping rows by stable identity instead of positional `index % 2`. Positional
- * parity flips every time a list filters or removes a row — combined with `transition-colors`,
- * that produces a visible cross-fade on rows the user did not interact with. Parity derived from
- * the row's stable key (e.g., a uid-based `rowKey`) survives those reshuffles, so each row keeps
- * its stripe across renders. Trade-off: adjacency is no longer guaranteed alternating, but
- * adjacent same-stripe rows stay visually separated by `divide-y` borders.
+ * Stable 0/1 parity for zebra-striping by row identity (not list position): positional
+ * `index % 2` flips when a list filters and produces a `transition-colors` cross-fade on rows
+ * the user didn't touch. Trade-off: adjacency isn't guaranteed alternating.
  */
 export function stableKeyParity(key: string): 0 | 1 {
   let sum = 0;
