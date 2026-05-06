@@ -6,6 +6,7 @@ import { NextFunction, Request, Response } from 'express';
 import { AuthenticationError, ServiceValidationError } from '../errors';
 import { assertHealthMetricsRange, getStringQueryParam, parseEntityType } from '../helpers/validation.helper';
 import { logger } from '../services/logger.service';
+import { OrgInvolvementService } from '../services/org-involvement.service';
 import { OrganizationService } from '../services/organization.service';
 import { ProjectService } from '../services/project.service';
 import { UserService } from '../services/user.service';
@@ -24,11 +25,13 @@ const NAME_MAX_LENGTH = 200;
 export class AnalyticsController {
   private readonly userService: UserService;
   private readonly organizationService: OrganizationService;
+  private readonly orgInvolvementService: OrgInvolvementService;
   private readonly projectService: ProjectService;
 
   public constructor() {
     this.userService = new UserService();
     this.organizationService = new OrganizationService();
+    this.orgInvolvementService = new OrgInvolvementService();
     this.projectService = new ProjectService();
   }
 
@@ -1743,6 +1746,196 @@ export class AnalyticsController {
         account_id: accountId,
         foundation_slug: foundationSlug,
         program_count: response.programs.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Organization Involvement Endpoints (cross-foundation, accountId only)
+
+  /**
+   * GET /api/analytics/org-foundation-coverage
+   * Get foundation coverage for an organization across all LF foundations
+   * Query params: accountId (required)
+   */
+  public async orgFoundationCoverage(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_org_foundation_coverage');
+
+    try {
+      const accountId = getStringQueryParam(req, 'accountId');
+
+      if (!accountId) {
+        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
+          operation: 'get_org_foundation_coverage',
+        });
+      }
+
+      const response = await this.orgInvolvementService.getFoundationCoverage(accountId);
+
+      logger.success(req, 'get_org_foundation_coverage', startTime, {
+        account_id: accountId,
+        foundation_count: response.foundationCount,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/org-involvement-contributors-monthly
+   * Get cross-foundation active contributors monthly for an organization
+   * Query params: accountId (required)
+   */
+  public async orgContributorsMonthly(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_org_involvement_contributors_monthly');
+
+    try {
+      const accountId = getStringQueryParam(req, 'accountId');
+
+      if (!accountId) {
+        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
+          operation: 'get_org_involvement_contributors_monthly',
+        });
+      }
+
+      const response = await this.orgInvolvementService.getContributorsMonthly(accountId);
+
+      logger.success(req, 'get_org_involvement_contributors_monthly', startTime, {
+        account_id: accountId,
+        total_active_contributors: response.totalActiveContributors,
+        monthly_data_points: response.monthlyData.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/org-involvement-maintainers-monthly
+   * Get cross-foundation maintainers monthly for an organization
+   * Query params: accountId (required)
+   */
+  public async orgMaintainersMonthly(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_org_involvement_maintainers_monthly');
+
+    try {
+      const accountId = getStringQueryParam(req, 'accountId');
+
+      if (!accountId) {
+        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
+          operation: 'get_org_involvement_maintainers_monthly',
+        });
+      }
+
+      const response = await this.orgInvolvementService.getMaintainersMonthly(accountId);
+
+      logger.success(req, 'get_org_involvement_maintainers_monthly', startTime, {
+        account_id: accountId,
+        total_maintainers: response.totalMaintainersYearly,
+        total_projects: response.totalProjectsYearly,
+        monthly_data_points: response.monthlyData.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/org-involvement-event-attendance-monthly
+   * Get cross-foundation event attendance monthly for an organization
+   * Query params: accountId (required)
+   */
+  public async orgEventAttendanceMonthly(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_org_involvement_event_attendance_monthly');
+
+    try {
+      const accountId = getStringQueryParam(req, 'accountId');
+
+      if (!accountId) {
+        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
+          operation: 'get_org_involvement_event_attendance_monthly',
+        });
+      }
+
+      const response = await this.orgInvolvementService.getEventAttendanceMonthly(accountId);
+
+      logger.success(req, 'get_org_involvement_event_attendance_monthly', startTime, {
+        account_id: accountId,
+        total_attended: response.totalAttended,
+        total_speakers: response.totalSpeakers,
+        monthly_data_points: response.monthlyLabels.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/org-involvement-certified-employees-monthly
+   * Get cross-foundation certified employees monthly for an organization
+   * Query params: accountId (required)
+   */
+  public async orgCertifiedEmployeesMonthly(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_org_involvement_certified_employees_monthly');
+
+    try {
+      const accountId = getStringQueryParam(req, 'accountId');
+
+      if (!accountId) {
+        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
+          operation: 'get_org_involvement_certified_employees_monthly',
+        });
+      }
+
+      const response = await this.orgInvolvementService.getCertifiedEmployeesMonthly(accountId);
+
+      logger.success(req, 'get_org_involvement_certified_employees_monthly', startTime, {
+        account_id: accountId,
+        total_certifications: response.totalCertifications,
+        total_certified_employees: response.totalCertifiedEmployees,
+        monthly_data_points: response.monthlyData.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/org-involvement-training-enrollments
+   * Get cross-foundation training enrollments YTD for an organization
+   * Query params: accountId (required)
+   */
+  public async orgTrainingEnrollments(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_org_involvement_training_enrollments');
+
+    try {
+      const accountId = getStringQueryParam(req, 'accountId');
+
+      if (!accountId) {
+        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
+          operation: 'get_org_involvement_training_enrollments',
+        });
+      }
+
+      const response = await this.orgInvolvementService.getTrainingEnrollments(accountId);
+
+      logger.success(req, 'get_org_involvement_training_enrollments', startTime, {
+        account_id: accountId,
+        total_enrollments: response.totalEnrollments,
+        daily_data_points: response.dailyData.length,
       });
 
       res.json(response);
