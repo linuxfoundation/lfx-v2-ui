@@ -2,9 +2,28 @@
 
 Meeting preread for aligning how LFX One decides where users can go, what they see, and what they can do.
 
+Tracking epic: LFXV2-1654 - https://linuxfoundation.atlassian.net/browse/LFXV2-1654
+
+## How to Read This
+
+This document is meant to drive one team conversation:
+
+1. Agree on the product/security contract.
+2. Confirm where the current code already follows that contract.
+3. Decide what work belongs under the epic.
+4. Sequence the remaining implementation work by risk and priority.
+
 ## Purpose
 
 This preread proposes a clear separation between access, experience, and authority. The goal is to make the product easier to reason about and to keep persona-driven UX from accidentally becoming authorization logic.
+
+The simplest way to state the model:
+
+```text
+View permission decides where the user can go.
+Persona/role decides what the user sees there.
+Manage/write permission decides what the user can do there.
+```
 
 ## Core Contract
 
