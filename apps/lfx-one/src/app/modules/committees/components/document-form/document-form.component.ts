@@ -89,6 +89,7 @@ export class DocumentFormComponent {
         .uploadCommitteeDocument(this.committeeId, file, {
           name: formValue.name,
           description: formValue.description || undefined,
+          folder_uid: this.defaultParentUid ?? undefined,
         })
         .subscribe({
           next: () => {

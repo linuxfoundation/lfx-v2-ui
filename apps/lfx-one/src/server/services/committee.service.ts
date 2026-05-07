@@ -891,7 +891,6 @@ export class CommitteeService {
     // file_size is intentionally omitted — upstream UploadCommitteeDocumentRequestBody
     // only declares name, file_name, content_type, file, description. Goa silently
     // drops unknown multipart fields.
-    // TODO: append folder_uid once upstream accepts it (LFXV2-1632).
     const formData = new FormData();
     formData.append('file', fileBuffer, {
       filename: uploadData.file_name,
@@ -902,6 +901,9 @@ export class CommitteeService {
     formData.append('content_type', uploadData.content_type);
     if (uploadData.description) {
       formData.append('description', uploadData.description);
+    }
+    if (uploadData.folder_uid) {
+      formData.append('folder_uid', uploadData.folder_uid);
     }
 
     const result = await this.microserviceProxy.proxyRequest<CommitteeDocumentUpstreamResponse>(

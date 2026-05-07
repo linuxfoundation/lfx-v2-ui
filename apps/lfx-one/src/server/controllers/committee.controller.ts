@@ -634,12 +634,14 @@ export class CommitteeController {
     const contentType = getStringQueryParam(req, 'content_type');
     const fileSize = getStringQueryParam(req, 'file_size');
     const description = getStringQueryParam(req, 'description');
+    const folderUid = getStringQueryParam(req, 'folder_uid');
 
     const startTime = logger.startOperation(req, 'upload_committee_document', {
       committee_id: id,
       file_name: fileName,
       file_size: fileSize,
       content_type: contentType,
+      folder_uid: folderUid,
     });
 
     try {
@@ -743,12 +745,28 @@ export class CommitteeController {
         return;
       }
 
+      // Validate folder_uid shape so upstream can't be sent a malformed identifier.
+      if (folderUid !== undefined) {
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidPattern.test(folderUid)) {
+          next(
+            ServiceValidationError.forField('folder_uid', 'folder_uid must be a valid UUID', {
+              operation: 'upload_committee_document',
+              service: 'committee_controller',
+              path: req.path,
+            })
+          );
+          return;
+        }
+      }
+
       const uploadData: UploadCommitteeDocumentRequest = {
         name: trimmedName!,
         file_name: trimmedFileName!,
         content_type: contentType!,
         file_size: fileSizeNum,
         ...(description && { description }),
+        ...(folderUid && { folder_uid: folderUid }),
       };
 
       const result = await this.committeeService.uploadCommitteeDocument(req, id, fileBuffer, uploadData);
