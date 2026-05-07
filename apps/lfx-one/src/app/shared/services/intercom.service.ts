@@ -4,18 +4,7 @@
 import { Injectable } from '@angular/core';
 import { IntercomBootOptions, IntercomFunction } from '@lfx-one/shared/interfaces';
 
-/**
- * Service that wraps the Intercom Messenger widget.
- *
- * The script tag injection, `window.intercomSettings`, and `boot()` calls only
- * run in the browser — every public method is a no-op during SSR. Loading is
- * deferred to the first `boot()` call so we never inject the widget for
- * unauthenticated visitors.
- *
- * Logout: there's no explicit `shutdown()` consumer in LFX One because
- * `/logout` is a full server redirect that tears down the SPA, which naturally
- * clears `window.Intercom`.
- */
+// Browser-only widget; every method is a no-op during SSR.
 @Injectable({
   providedIn: 'root',
 })
@@ -50,15 +39,25 @@ export class IntercomService {
       // Snapshot options immediately to prevent concurrent boot() calls from mixing profiles/JWTs
       const snapshot = { ...options };
 
+      // Declared with let so the onerror callback (via loadIntercomScript) can clear them
+      let checkLoaded: ReturnType<typeof setInterval>;
+      let timeoutHandle: ReturnType<typeof setTimeout>;
+
       // Load Intercom script on first boot (deferred to ensure authenticated users only)
       if (!this.isLoaded && !this.isLoading) {
         this.isLoading = true;
         this.scriptLoadError = null;
-        this.loadIntercomScript(snapshot.app_id, snapshot.api_base);
+        this.loadIntercomScript(snapshot.app_id, snapshot.api_base, () => {
+          clearInterval(checkLoaded);
+          clearTimeout(timeoutHandle);
+          const err = this.scriptLoadError ?? new Error('Intercom script failed to load');
+          this.scriptLoadError = null;
+          reject(err);
+        });
       }
 
       // Wait for script to load (poll isLoaded to ensure real script loaded, not just stub)
-      const checkLoaded = setInterval(() => {
+      checkLoaded = setInterval(() => {
         // Fail fast if the script failed to load
         if (this.scriptLoadError) {
           clearInterval(checkLoaded);
@@ -117,7 +116,7 @@ export class IntercomService {
       }, 100);
 
       // Timeout after 10 seconds
-      const timeoutHandle = setTimeout(() => {
+      timeoutHandle = setTimeout(() => {
         clearInterval(checkLoaded);
         if (!this.isBooted) {
           this.isLoading = false;
@@ -216,7 +215,7 @@ export class IntercomService {
   /**
    * Load the Intercom widget script dynamically.
    */
-  private loadIntercomScript(appId: string, apiBase?: string): void {
+  private loadIntercomScript(appId: string, apiBase?: string, onError?: () => void): void {
     if (this.isLoaded || typeof window === 'undefined') {
       return;
     }
@@ -244,6 +243,7 @@ export class IntercomService {
       this.isLoading = false;
       this.scriptLoadError = new Error('Intercom script failed to load (network error or CSP block)');
       console.error('IntercomService: Failed to load script', error);
+      onError?.();
     };
 
     const firstScript = document.getElementsByTagName('script')[0];

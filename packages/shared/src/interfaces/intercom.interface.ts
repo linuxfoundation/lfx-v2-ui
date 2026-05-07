@@ -1,13 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-/**
- * Intercom Messenger boot options.
- *
- * `app_id` is the public workspace ID (sourced from runtime config), and
- * `intercom_user_jwt` is the Auth0-minted identity-verification JWT that
- * Intercom uses to bind the session to the authenticated user.
- */
+/** Intercom Messenger boot options. `intercom_user_jwt` is the Auth0 JWT for identity verification. */
 export interface IntercomBootOptions {
   api_base?: string;
   app_id: string;
@@ -22,13 +16,7 @@ export interface IntercomBootOptions {
 /** Intercom settings stored on `window.intercomSettings`. */
 export type IntercomSettings = Partial<IntercomBootOptions>;
 
-/**
- * Intercom Messenger browser API — models both the fully-loaded SDK function
- * and the pre-load queue stub that buffers calls until the real script loads.
- *
- * Overloads cover the known command signatures; the catch-all allows
- * forward-compatible usage of new Intercom commands without casting.
- */
+/** Intercom API — models the loaded SDK function and the pre-load queue stub. */
 export interface IntercomFunction {
   (command: 'boot', options: Omit<IntercomBootOptions, 'intercom_user_jwt'> & { intercom_user_jwt?: never }): void;
   (command: 'update', data?: Partial<IntercomBootOptions>): void;

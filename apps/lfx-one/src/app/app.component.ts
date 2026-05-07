@@ -99,11 +99,7 @@ export class AppComponent {
     }
   }
 
-  /**
-   * Boot the Intercom Messenger when the `enable-intercom` LD flag is on and
-   * we have both an Intercom App ID (runtime config) and an Intercom user JWT
-   * (Auth0 namespaced claim). Fails closed: missing claim or App ID skips boot.
-   */
+  // Fails closed: missing JWT or App ID skips boot.
   private bootIntercomIfEnabled(user: User): void {
     if (!this.featureFlagService.getBooleanFlag('enable-intercom', false)()) {
       return;

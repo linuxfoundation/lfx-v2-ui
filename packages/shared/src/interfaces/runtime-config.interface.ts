@@ -32,12 +32,6 @@ export interface RuntimeConfig {
    */
   allowedTracingUrls: string[];
 
-  /**
-   * Intercom App ID for the Messenger / support bot.
-   * This is a publicly-publishable workspace ID (safe to expose in browser).
-   * Per-user identity verification is done via the namespaced
-   * `http://lfx.dev/claims/intercom` claim on the Auth0 id_token (passed to
-   * Intercom as `intercom_user_jwt`), not via this value.
-   */
+  /** Publicly-publishable Intercom workspace ID. Per-user identity uses the `intercom_user_jwt` Auth0 claim. */
   intercomAppId: string;
 }
