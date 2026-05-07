@@ -2,24 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Injectable } from '@angular/core';
-
-/**
- * Intercom Messenger boot options.
- *
- * `app_id` is the public workspace ID (sourced from runtime config), and
- * `intercom_user_jwt` is the Auth0-minted identity-verification JWT that
- * Intercom uses to bind the session to the authenticated user.
- */
-export interface IntercomBootOptions {
-  api_base?: string;
-  app_id: string;
-  user_id?: string;
-  name?: string;
-  email?: string;
-  created_at?: number;
-  intercom_user_jwt?: string;
-  [key: string]: any;
-}
+import { IntercomBootOptions, IntercomFunction } from '@lfx-one/shared/interfaces';
 
 /**
  * Service that wraps the Intercom Messenger widget.
@@ -197,7 +180,7 @@ export class IntercomService {
   /**
    * Track an event in Intercom
    */
-  public trackEvent(eventName: string, metadata?: Record<string, any>): void {
+  public trackEvent(eventName: string, metadata?: Record<string, unknown>): void {
     if (typeof window !== 'undefined' && window.Intercom && this.isBooted) {
       try {
         window.Intercom('trackEvent', eventName, metadata);
@@ -283,21 +266,19 @@ export class IntercomService {
       return;
     }
 
-    const w = window as any;
-    const ic = w.Intercom;
+    const ic = window.Intercom;
 
     if (typeof ic === 'function') {
       ic('reattach_activator');
-      ic('update', w.intercomSettings);
+      ic('update', window.intercomSettings);
     } else {
-      const i: any = function (...args: any[]) {
-        i.c(args);
-      };
-      i.q = [];
-      i.c = function (args: any) {
-        i.q.push(args);
-      };
-      w.Intercom = i;
+      const stub: IntercomFunction = Object.assign(
+        (...args: unknown[]) => {
+          stub.c?.(args);
+        },
+        { q: [] as unknown[][], c: (args: unknown[]) => stub.q!.push(args) },
+      );
+      window.Intercom = stub;
     }
   }
 }
