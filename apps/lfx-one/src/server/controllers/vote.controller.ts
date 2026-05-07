@@ -275,19 +275,11 @@ export class VoteController {
 
         for (const [index, answer] of payload.user_vote_content.entries()) {
           if (!answer || typeof answer !== 'object') {
-            throw ServiceValidationError.forField(
-              `user_vote_content[${index}]`,
-              'Each answer must be a non-null object',
-              validationContext
-            );
+            throw ServiceValidationError.forField(`user_vote_content[${index}]`, 'Each answer must be a non-null object', validationContext);
           }
 
           if (!answer.question_id || typeof answer.question_id !== 'string') {
-            throw ServiceValidationError.forField(
-              `user_vote_content[${index}].question_id`,
-              'question_id is required for each answer',
-              validationContext
-            );
+            throw ServiceValidationError.forField(`user_vote_content[${index}].question_id`, 'question_id is required for each answer', validationContext);
           }
 
           const hasChoiceIds = Array.isArray(answer.choice_ids) && answer.choice_ids.length > 0;
