@@ -77,6 +77,8 @@ export interface RuntimeConfig {
   launchDarklyClientId: string;
   dataDogRumClientId: string;
   dataDogRumApplicationId: string;
+  allowedTracingUrls: string[];
+  intercomAppId: string;
 }
 ```
 
@@ -92,6 +94,8 @@ const runtimeConfig: RuntimeConfig = {
   launchDarklyClientId: process.env['LD_CLIENT_ID'] || '',
   dataDogRumClientId: process.env['DD_RUM_CLIENT_ID'] || '',
   dataDogRumApplicationId: process.env['DD_RUM_APPLICATION_ID'] || '',
+  allowedTracingUrls: [process.env['LFX_V2_SERVICE'], process.env['PCC_BASE_URL']].filter(Boolean) as string[],
+  intercomAppId: process.env['INTERCOM_APP_ID'] || '',
 };
 
 angularApp.handle(req, {
@@ -157,6 +161,7 @@ async function initializeOpenFeature(): Promise<void> {
 | `LD_CLIENT_ID`          | LaunchDarkly client-side ID         | `691b727361cbf309e9d74468` |
 | `DD_RUM_CLIENT_ID`      | DataDog RUM client token (future)   | `pub123456789`             |
 | `DD_RUM_APPLICATION_ID` | DataDog RUM application ID (future) | `app-uuid-here`            |
+| `INTERCOM_APP_ID`       | Intercom Messenger workspace App ID | `mxl90k6y`                 |
 
 ### Local Development
 

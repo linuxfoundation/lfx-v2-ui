@@ -30,8 +30,9 @@ COPY . .
 RUN yarn workspace @lfx-one/shared build:${BUILD_ENV}
 
 # Build the Angular application
-# Note: Client IDs (LaunchDarkly, DataDog RUM) are now injected at runtime
-# via environment variables (LD_CLIENT_ID, DD_RUM_CLIENT_ID, DD_RUM_APPLICATION_ID)
+# Note: Client IDs (LaunchDarkly, DataDog RUM, Intercom) are now injected at runtime
+# via environment variables (LD_CLIENT_ID, DD_RUM_CLIENT_ID, DD_RUM_APPLICATION_ID,
+# INTERCOM_APP_ID)
 RUN yarn workspace lfx-one-ui build:${BUILD_ENV}
 
 # Expose port 4000

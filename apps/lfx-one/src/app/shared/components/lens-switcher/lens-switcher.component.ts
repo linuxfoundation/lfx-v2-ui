@@ -13,13 +13,14 @@ import { Lens } from '@lfx-one/shared/interfaces';
 import { buildInsightsUrl } from '@lfx-one/shared/utils';
 import { LensService } from '@services/lens.service';
 import { UserService } from '@services/user.service';
+import { OpenIntercomDirective } from '@shared/directives/open-intercom.directive';
 import { DialogService } from 'primeng/dynamicdialog';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'lfx-lens-switcher',
-  imports: [NgClass, RouterLink, TooltipModule, PopoverModule, AvatarComponent, ButtonComponent],
+  imports: [NgClass, RouterLink, TooltipModule, PopoverModule, AvatarComponent, ButtonComponent, OpenIntercomDirective],
   providers: [DialogService],
   templateUrl: './lens-switcher.component.html',
   styleUrl: './lens-switcher.component.scss',
