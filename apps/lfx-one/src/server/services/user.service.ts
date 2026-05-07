@@ -1103,13 +1103,13 @@ export class UserService {
       { failOnPartial: true }
     );
 
-    // `vote_uid` is the v2 parent poll UID (what `/votes/{uid}` expects); `poll_id` is the v1
-    // fallback per the upstream indexer contract. Neither is the individual-response id.
+    // `vote_uid` is the v2 parent poll UID (what `/votes/{uid}` expects); `vote_id` and `poll_id`
+    // are v1 fallbacks per the upstream indexer contract. None of these is the individual-response id.
     const pendingVoteUids = Array.from(
       new Set(
         responses
           .filter((r) => r.vote_status !== 'submitted' && !r.voter_removed)
-          .map((r) => r.vote_uid ?? r.poll_id)
+          .map((r) => r.vote_uid ?? r.vote_id ?? r.poll_id)
           .filter((uid): uid is string => !!uid)
       )
     );

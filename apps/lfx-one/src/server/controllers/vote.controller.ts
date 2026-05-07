@@ -266,8 +266,16 @@ export class VoteController {
         throw ServiceValidationError.forField('abstain', 'abstain is required and must be a boolean', validationContext);
       }
 
+      // Build the upstream payload immutably: when abstaining we drop user_vote_content entirely;
+      // when not abstaining we validate each answer and forward the original content.
+      let upstreamPayload: CreateVoteResponseRequest;
+
       if (payload.abstain) {
-        payload.user_vote_content = undefined;
+        upstreamPayload = {
+          vote_uid: payload.vote_uid,
+          vote_response_uid: payload.vote_response_uid,
+          abstain: true,
+        };
       } else {
         if (!Array.isArray(payload.user_vote_content) || payload.user_vote_content.length === 0) {
           throw ServiceValidationError.forField('user_vote_content', 'user_vote_content is required when not abstaining', validationContext);
@@ -293,14 +301,16 @@ export class VoteController {
             );
           }
         }
+
+        upstreamPayload = payload;
       }
 
-      await this.voteService.createVoteResponse(req, payload);
+      await this.voteService.createVoteResponse(req, upstreamPayload);
 
       logger.success(req, 'create_vote_response', startTime, {
-        vote_uid: payload.vote_uid,
-        vote_response_uid: payload.vote_response_uid,
-        abstain: payload.abstain,
+        vote_uid: upstreamPayload.vote_uid,
+        vote_response_uid: upstreamPayload.vote_response_uid,
+        abstain: upstreamPayload.abstain,
         status_code: 204,
       });
 

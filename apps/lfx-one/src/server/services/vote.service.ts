@@ -264,7 +264,7 @@ export class VoteService {
       ['X-Sync']: 'true',
     });
 
-    logger.info(req, 'create_vote_response', 'Ballot accepted by upstream voting service', {
+    logger.debug(req, 'create_vote_response', 'Ballot accepted by upstream voting service, polling query service', {
       vote_uid: payload.vote_uid,
       vote_response_uid: payload.vote_response_uid,
     });
