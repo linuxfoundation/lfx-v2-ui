@@ -284,18 +284,36 @@ export class VoteController {
         });
       }
 
-      if (!payload.abstain && (!Array.isArray(payload.user_vote_content) || payload.user_vote_content.length === 0)) {
-        throw ServiceValidationError.forField('user_vote_content', 'user_vote_content is required when not abstaining', {
-          operation: 'create_vote_response',
-          service: 'vote_controller',
-        });
-      }
+      if (payload.abstain) {
+        payload.user_vote_content = undefined;
+      } else {
+        if (!Array.isArray(payload.user_vote_content) || payload.user_vote_content.length === 0) {
+          throw ServiceValidationError.forField('user_vote_content', 'user_vote_content is required when not abstaining', {
+            operation: 'create_vote_response',
+            service: 'vote_controller',
+          });
+        }
 
-      if (payload.abstain && payload.user_vote_content !== undefined) {
-        throw ServiceValidationError.forField('user_vote_content', 'user_vote_content must not be provided when abstaining', {
-          operation: 'create_vote_response',
-          service: 'vote_controller',
-        });
+        for (const [index, answer] of payload.user_vote_content.entries()) {
+          if (!answer.question_id || typeof answer.question_id !== 'string') {
+            throw ServiceValidationError.forField(
+              `user_vote_content[${index}].question_id`,
+              'question_id is required for each answer',
+              { operation: 'create_vote_response', service: 'vote_controller' }
+            );
+          }
+
+          const hasChoiceIds = Array.isArray(answer.choice_ids) && answer.choice_ids.length > 0;
+          const hasRankedChoices = Array.isArray(answer.ranked_choices) && answer.ranked_choices.length > 0;
+
+          if (!hasChoiceIds && !hasRankedChoices) {
+            throw ServiceValidationError.forField(
+              `user_vote_content[${index}]`,
+              'Each answer must include either choice_ids or ranked_choices',
+              { operation: 'create_vote_response', service: 'vote_controller' }
+            );
+          }
+        }
       }
 
       await this.voteService.createVoteResponse(req, payload);
