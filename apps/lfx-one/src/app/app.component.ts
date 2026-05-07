@@ -110,6 +110,11 @@ export class AppComponent {
     const { intercomAppId } = getRuntimeConfig(this.transferState);
 
     if (!intercomAppId || !intercomJwt || !userId) {
+      console.warn('Intercom boot skipped: missing inputs', {
+        hasAppId: !!intercomAppId,
+        hasJwt: !!intercomJwt,
+        hasUserId: !!userId,
+      });
       return;
     }
 
