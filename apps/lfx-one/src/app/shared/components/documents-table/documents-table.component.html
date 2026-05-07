@@ -107,13 +107,15 @@
         <span class="text-xs text-gray-700">{{ doc.groupOrMeetingName || '—' }}</span>
       </td>
 
-      <!-- Source column -->
+      <!-- Source column — folders are containers, not content; suppress the tag. -->
       <td>
-        <lfx-tag
-          [value]="doc.source | myDocumentSourceTag: 'label'"
-          [severity]="doc.source | myDocumentSourceTag: 'severity'"
-          [attr.data-testid]="testIdPrefix() + '-source-tag-' + doc.id">
-        </lfx-tag>
+        @if (!doc.isFolder) {
+          <lfx-tag
+            [value]="doc.source | myDocumentSourceTag: 'label'"
+            [severity]="doc.source | myDocumentSourceTag: 'severity'"
+            [attr.data-testid]="testIdPrefix() + '-source-tag-' + doc.id">
+          </lfx-tag>
+        }
       </td>
 
       <!-- Date column -->
