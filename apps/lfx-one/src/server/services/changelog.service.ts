@@ -9,17 +9,13 @@ import { MicroserviceError } from '../errors';
 import { getEffectiveSub } from '../utils/auth-helper';
 import { logger } from './logger.service';
 
-/**
- * Service for the LFX Changelog "views" tracking API.
- * Authenticates server-to-server with an API key (changelogs:read scope) and identifies
- * the viewer via the Auth0 `sub` so unread counts and read-receipts are scoped per user.
- */
 export class ChangelogService {
-  // Resolved lazily on first access so dotenv has finished loading,
-  // then memoized — env is stable after startup.
+  // Resolved lazily on first access so dotenv has finished loading, then memoized.
   private _apiUrl: string | undefined;
   private _apiKey: string | undefined;
   private _productId: string | undefined;
+
+  private static readonly errorBodyPreviewLimit = 200;
 
   private get apiUrl(): string {
     return (this._apiUrl ??= (process.env['CHANGELOG_API_URL'] || CHANGELOG_CONFIG.DEFAULT_API_URL).replace(/\/+$/, ''));
@@ -33,10 +29,9 @@ export class ChangelogService {
     return (this._productId ??= process.env['CHANGELOG_PRODUCT_ID'] || '');
   }
 
-  /**
-   * Get unseen changelog count for the authenticated user against the configured product.
-   */
   public async getUnseenCount(req: Request): Promise<ChangelogViewUnseenResponse> {
+    this.assertConfigured('get_changelog_unseen');
+
     const viewerId = getEffectiveSub(req);
     if (!viewerId) {
       throw new MicroserviceError('User authentication required', 401, 'CHANGELOG_UNAUTHENTICATED', {
@@ -61,21 +56,19 @@ export class ChangelogService {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
       throw new MicroserviceError(`Changelog unseen request failed: ${response.statusText}`, response.status, 'CHANGELOG_UNSEEN_ERROR', {
         operation: 'get_changelog_unseen',
         service: 'changelog_service',
-        errorBody: errorText,
+        errorBody: await this.previewErrorBody(response),
       });
     }
 
     return this.parseJson<ChangelogViewUnseenResponse>(response, 'get_changelog_unseen', 'CHANGELOG_UNSEEN_ERROR');
   }
 
-  /**
-   * Mark the configured product's changelog as viewed for the authenticated user.
-   */
   public async markViewed(req: Request): Promise<ChangelogViewMarkViewedResponse> {
+    this.assertConfigured('mark_changelog_viewed');
+
     const viewerId = getEffectiveSub(req);
     if (!viewerId) {
       throw new MicroserviceError('User authentication required', 401, 'CHANGELOG_UNAUTHENTICATED', {
@@ -100,32 +93,44 @@ export class ChangelogService {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
       throw new MicroserviceError(`Changelog mark-viewed request failed: ${response.statusText}`, response.status, 'CHANGELOG_MARK_VIEWED_ERROR', {
         operation: 'mark_changelog_viewed',
         service: 'changelog_service',
-        errorBody: errorText,
+        errorBody: await this.previewErrorBody(response),
       });
     }
 
     return this.parseJson<ChangelogViewMarkViewedResponse>(response, 'mark_changelog_viewed', 'CHANGELOG_MARK_VIEWED_ERROR');
   }
 
-  /**
-   * Parse a fetch Response as JSON, but first verify the Content-Type is JSON.
-   * If the upstream returns HTML (e.g. an SPA fallback or an auth challenge page)
-   * we want a clear MicroserviceError instead of a cryptic JSON.parse failure.
-   */
+  // Short-circuit when env vars are missing so misconfigured deployments fail fast with a clear error
+  // instead of generating noisy 401/400 logs from upstream calls with empty bearer tokens.
+  private assertConfigured(operation: string): void {
+    const missing: string[] = [];
+    if (!this.apiKey) missing.push('CHANGELOG_API_KEY');
+    if (!this.productId) missing.push('CHANGELOG_PRODUCT_ID');
+    if (missing.length === 0) return;
+
+    throw new MicroserviceError(`Changelog API not configured (missing: ${missing.join(', ')})`, 503, 'CHANGELOG_NOT_CONFIGURED', {
+      operation,
+      service: 'changelog_service',
+    });
+  }
+
+  // Guard against HTML responses (SPA fallback, auth challenge) so callers see a clear error instead of a JSON.parse failure.
   private async parseJson<T>(response: Response, operation: string, code: string): Promise<T> {
     const contentType = response.headers.get('content-type') ?? '';
     if (!contentType.includes('application/json')) {
-      const bodyPreview = (await response.text()).slice(0, 200);
       throw new MicroserviceError(`Changelog API returned non-JSON response (content-type: ${contentType || 'unknown'})`, 502, code, {
         operation,
         service: 'changelog_service',
-        errorBody: bodyPreview,
+        errorBody: await this.previewErrorBody(response),
       });
     }
     return (await response.json()) as T;
+  }
+
+  private async previewErrorBody(response: Response): Promise<string> {
+    return (await response.text()).slice(0, ChangelogService.errorBodyPreviewLimit);
   }
 }

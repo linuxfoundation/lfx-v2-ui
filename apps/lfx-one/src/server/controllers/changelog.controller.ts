@@ -9,11 +9,6 @@ import { logger } from '../services/logger.service';
 export class ChangelogController {
   private readonly changelogService = new ChangelogService();
 
-  /**
-   * GET /api/changelog/unseen
-   * Returns the unseen changelog count for the authenticated user against the
-   * self-serve product.
-   */
   public async getUnseenCount(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_changelog_unseen');
 
@@ -30,10 +25,6 @@ export class ChangelogController {
     }
   }
 
-  /**
-   * POST /api/changelog/mark-viewed
-   * Marks the self-serve product's changelog as viewed for the authenticated user.
-   */
   public async markViewed(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'mark_changelog_viewed');
 

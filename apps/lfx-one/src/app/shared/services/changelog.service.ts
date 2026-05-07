@@ -14,16 +14,10 @@ export class ChangelogService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = '/api/changelog';
 
-  // Triggers — `next()` from public methods to drive the unified reactive pipeline below.
   private readonly loadTrigger$ = new Subject<void>();
   private readonly markViewedTrigger$ = new Subject<void>();
 
-  /**
-   * Unseen changelog count — derived from a merged stream of:
-   *   - load events (GET /unseen → unseenCount)
-   *   - mark-viewed events (optimistically 0, then fires POST /mark-viewed)
-   * Errors are swallowed so the badge keeps its last known value (best-effort UX hint).
-   */
+  // Errors swallowed so the badge keeps its last known value (best-effort UX hint).
   public readonly unseenChangelogCount: Signal<number> = toSignal(
     merge(
       this.loadTrigger$.pipe(
@@ -35,8 +29,7 @@ export class ChangelogService {
         )
       ),
       this.markViewedTrigger$.pipe(
-        // Emit 0 immediately for an optimistic badge clear, then fire the POST in
-        // the background and ignore its outcome (success → already 0; failure → keep 0).
+        // Optimistic 0 first, then the POST in the background.
         switchMap(() =>
           merge(
             of(0),

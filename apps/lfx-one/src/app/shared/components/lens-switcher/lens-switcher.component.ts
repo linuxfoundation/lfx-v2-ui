@@ -48,9 +48,7 @@ export class LensSwitcherComponent {
   protected readonly changelogDrawerVisible = signal(false);
 
   public constructor() {
-    // Fetch after first browser render so SSR doesn't issue an upstream call we
-    // can't display, and so input bindings have settled (the `[mobile]="true"`
-    // duplicate instance correctly skips the load).
+    // afterNextRender so input bindings have settled — the duplicate `[mobile]="true"` instance correctly skips.
     afterNextRender(() => {
       if (this.mobile()) {
         return;

@@ -1,55 +1,42 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-// Theme the embedded <lfx-changelog> web component to match the drawer.
-// The widget exposes CSS custom properties via :host AND ::part() selectors
-// (see @linuxfoundation/lfx-ui-core/dist/components/changelog/changelog.style.js).
-//
-// IMPORTANT: variables must be set on the host element itself (`lfx-changelog`)
-// rather than an ancestor, because the widget's internal `:host { --foo: ... }`
-// rule sets default values directly on the host and beats inherited values.
-// Targeting `lfx-changelog` from outside has equal specificity but wins via
-// document-cascade ordering.
+// Selectors target `lfx-changelog` directly so the variables override the widget's
+// internal `:host` defaults via document-cascade ordering (inheritance loses to `:host`).
 .changelog-host lfx-changelog {
-  // Brand + drawer typography
   --lfx-changelog-font-family: inherit;
-  --lfx-changelog-font-size-base: 0.8125rem; // 13px (down from 14px)
-  --lfx-changelog-font-size-sm: 0.6875rem; // 11px (down from 12px)
-  --lfx-changelog-font-size-lg: 0.875rem; // 14px (down from 16px) — entry titles
-  --lfx-changelog-font-size-xl: 1rem; // 16px (down from 20px) — section headings
+  --lfx-changelog-font-size-base: 0.8125rem;
+  --lfx-changelog-font-size-sm: 0.6875rem;
+  --lfx-changelog-font-size-lg: 0.875rem;
+  --lfx-changelog-font-size-xl: 1rem;
   --lfx-changelog-line-height: 1.5;
-  --lfx-changelog-text-primary: #0f172b; // gray-900
-  --lfx-changelog-text-secondary: #45556c; // gray-600
-  --lfx-changelog-text-muted: #62748e; // gray-500
-  --lfx-changelog-text-link: #0082d9; // blue-600
-  --lfx-changelog-text-link-hover: #0061a3; // blue-700
-  --lfx-changelog-accent: #0082d9; // blue-600
-  --lfx-changelog-accent-bg: #ecf4ff; // blue-100
+  --lfx-changelog-text-primary: #0f172b;
+  --lfx-changelog-text-secondary: #45556c;
+  --lfx-changelog-text-muted: #62748e;
+  --lfx-changelog-text-link: #0082d9;
+  --lfx-changelog-text-link-hover: #0061a3;
+  --lfx-changelog-accent: #0082d9;
+  --lfx-changelog-accent-bg: #ecf4ff;
 
-  // Flatten the widget's outer card chrome — the drawer body already provides
-  // surface and padding, so we don't want a card-in-card effect.
+  // Flatten the widget's outer card chrome so it doesn't double-card with the drawer body.
   --lfx-changelog-bg-surface: transparent;
   --lfx-changelog-bg-surface-alt: transparent;
   --lfx-changelog-border-color: transparent;
   --lfx-changelog-border-radius: 0;
   --lfx-changelog-card-padding: 0;
 
-  // Hide the widget's own header — the drawer's header already renders the title.
+  // Drawer header already renders the title.
   &::part(header) {
     display: none;
   }
 
-  // Re-introduce a subtle separator between entries (the shared border-color is
-  // transparent so the outer container border vanishes). Only takes effect when
-  // multiple entries render.
+  // Re-introduce entry separators (the shared border-color is now transparent).
   &::part(card) {
     padding-bottom: 1.25rem;
     margin-bottom: 1.25rem;
-    border-bottom: 1px solid #e2e8f0; // gray-200
+    border-bottom: 1px solid #e2e8f0;
   }
 
-  // Drop redundant footer chrome — keep the link itself (surface-alt and border
-  // are already transparent via the variables above).
   &::part(footer) {
     padding-top: 1rem;
   }
