@@ -30,7 +30,7 @@ export type IntercomSettings = Partial<IntercomBootOptions>;
  * forward-compatible usage of new Intercom commands without casting.
  */
 export interface IntercomFunction {
-  (command: 'boot', options: Omit<IntercomBootOptions, 'intercom_user_jwt'>): void;
+  (command: 'boot', options: Omit<IntercomBootOptions, 'intercom_user_jwt'> & { intercom_user_jwt?: never }): void;
   (command: 'update', data?: Partial<IntercomBootOptions>): void;
   (command: 'show'): void;
   (command: 'hide'): void;
