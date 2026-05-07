@@ -37,6 +37,8 @@ function contentDispositionAttachment(fileName: string): string {
   return `attachment; filename="${safeAscii}"; filename*=UTF-8''${encoded}`;
 }
 
+const FOLDER_UID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Controller for handling committee HTTP requests
  */
@@ -746,18 +748,16 @@ export class CommitteeController {
       }
 
       // Validate folder_uid shape so upstream can't be sent a malformed identifier.
-      if (folderUid !== undefined) {
-        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        if (!uuidPattern.test(folderUid)) {
-          next(
-            ServiceValidationError.forField('folder_uid', 'folder_uid must be a valid UUID', {
-              operation: 'upload_committee_document',
-              service: 'committee_controller',
-              path: req.path,
-            })
-          );
-          return;
-        }
+      const trimmedFolderUid = folderUid?.trim();
+      if (trimmedFolderUid && !FOLDER_UID_PATTERN.test(trimmedFolderUid)) {
+        next(
+          ServiceValidationError.forField('folder_uid', 'folder_uid must be a valid UUID', {
+            operation: 'upload_committee_document',
+            service: 'committee_controller',
+            path: req.path,
+          })
+        );
+        return;
       }
 
       const uploadData: UploadCommitteeDocumentRequest = {
@@ -766,7 +766,7 @@ export class CommitteeController {
         content_type: contentType!,
         file_size: fileSizeNum,
         ...(description && { description }),
-        ...(folderUid && { folder_uid: folderUid }),
+        ...(trimmedFolderUid && { folder_uid: trimmedFolderUid }),
       };
 
       const result = await this.committeeService.uploadCommitteeDocument(req, id, fileBuffer, uploadData);

@@ -891,9 +891,8 @@ export class CommitteeService {
       file_size: uploadData.file_size,
     });
 
-    // file_size is intentionally omitted — upstream UploadCommitteeDocumentRequestBody
-    // only declares name, file_name, content_type, file, description. Goa silently
-    // drops unknown multipart fields.
+    // file_size is intentionally omitted — upstream UploadCommitteeDocumentRequestBody declares
+    // name, file_name, content_type, file, description, folder_uid. Goa drops unknown fields.
     const formData = new FormData();
     formData.append('file', fileBuffer, {
       filename: uploadData.file_name,
@@ -909,8 +908,7 @@ export class CommitteeService {
       formData.append('folder_uid', uploadData.folder_uid);
     }
 
-    // X-Sync=true makes the upstream wait for the indexer-publish ACK so the freshly
-    // uploaded document is visible in the next /query/resources fetch without a race.
+    // X-Sync=true blocks until the upstream indexer ACKs the publish, preventing stale list reads.
     const result = await this.microserviceProxy.proxyRequest<CommitteeDocumentUpstreamResponse>(
       req,
       'LFX_V2_SERVICE',
@@ -928,8 +926,7 @@ export class CommitteeService {
       file_size: result.file_size,
     });
 
-    // Wait until the indexer has picked up the new doc so the next list-fetch sees it.
-    // Without this, the user has to manually refresh — indexer is async to upstream write.
+    // Poll until the query service sees the new doc — indexer is async to the upstream write.
     await pollEndpoint({
       req,
       operation: 'upload_committee_document_index_poll',
