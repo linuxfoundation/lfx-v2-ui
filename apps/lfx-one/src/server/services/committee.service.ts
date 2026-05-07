@@ -22,6 +22,7 @@ import { Request } from 'express';
 import FormData from 'form-data';
 
 import { ResourceNotFoundError } from '../errors';
+import { pollEndpoint } from '../helpers/poll-endpoint.helper';
 import { fetchAllQueryResources } from '../helpers/query-service.helper';
 import { logger } from '../services/logger.service';
 import { getUsernameFromAuth } from '../utils/auth-helper';
@@ -93,6 +94,7 @@ interface CommitteeDocumentQueryResult {
   content_type?: string;
   description?: string;
   committee_uid?: string;
+  folder_uid?: string;
   created_at?: string;
   updated_at?: string;
   uploaded_by_username?: string;
@@ -792,6 +794,7 @@ export class CommitteeService {
       created_at: f.created_at,
       updated_at: f.updated_at,
       uploaded_by: f.uploaded_by_username,
+      parent_uid: f.folder_uid,
       committee_uid: f.committee_uid,
     }));
 
@@ -906,13 +909,16 @@ export class CommitteeService {
       formData.append('folder_uid', uploadData.folder_uid);
     }
 
+    // X-Sync=true makes the upstream wait for the indexer-publish ACK so the freshly
+    // uploaded document is visible in the next /query/resources fetch without a race.
     const result = await this.microserviceProxy.proxyRequest<CommitteeDocumentUpstreamResponse>(
       req,
       'LFX_V2_SERVICE',
       `/committees/${committeeId}/documents`,
       'POST',
       undefined,
-      formData
+      formData,
+      { 'X-Sync': 'true' }
     );
 
     logger.info(req, 'upload_committee_document', 'Committee document uploaded successfully', {
@@ -920,6 +926,29 @@ export class CommitteeService {
       document_uid: result.uid,
       file_name: result.file_name,
       file_size: result.file_size,
+    });
+
+    // Wait until the indexer has picked up the new doc so the next list-fetch sees it.
+    // Without this, the user has to manually refresh — indexer is async to upstream write.
+    await pollEndpoint({
+      req,
+      operation: 'upload_committee_document_index_poll',
+      pollFn: async () => {
+        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<{ uid: string }>>(
+          req,
+          'LFX_V2_SERVICE',
+          '/query/resources',
+          'GET',
+          {
+            type: 'committee_document',
+            tags: `committee_document_uid:${result.uid}`,
+          }
+        );
+        return (resources?.length ?? 0) > 0;
+      },
+      maxRetries: 5,
+      retryDelayMs: 400,
+      metadata: { committee_uid: committeeId, document_uid: result.uid },
     });
 
     return {

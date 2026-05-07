@@ -133,6 +133,7 @@ export class CommitteeDocumentsComponent {
       data: {
         mode: 'file',
         committeeId: this.committee().uid,
+        folders: this.folderOptions(),
         defaultParentUid: this.currentFolderUid(),
       },
     });
