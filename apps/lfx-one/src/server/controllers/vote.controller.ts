@@ -291,6 +291,13 @@ export class VoteController {
         });
       }
 
+      if (payload.abstain && Array.isArray(payload.user_vote_content) && payload.user_vote_content.length > 0) {
+        throw ServiceValidationError.forField('user_vote_content', 'user_vote_content must not be provided when abstaining', {
+          operation: 'create_vote_response',
+          service: 'vote_controller',
+        });
+      }
+
       await this.voteService.createVoteResponse(req, payload);
 
       logger.success(req, 'create_vote_response', startTime, {
