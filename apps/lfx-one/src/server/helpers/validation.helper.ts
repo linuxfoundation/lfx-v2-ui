@@ -34,8 +34,8 @@ interface ValidationOptions {
  *   multiple UIDs in the same request to disambiguate the validation error)
  * @returns true if validation passes, false if validation fails (error sent to next)
  */
-export function validateUidParameter(uid: string | undefined, req: Request, next: NextFunction, options: ValidationOptions): uid is string {
-  if (!uid || uid.trim() === '') {
+export function validateUidParameter(uid: unknown, req: Request, next: NextFunction, options: ValidationOptions): uid is string {
+  if (typeof uid !== 'string' || uid.trim() === '') {
     const fieldName = options.fieldName ?? 'uid';
     const message = options.fieldName ? `${fieldName} is required` : 'UID is required';
     const validationError = ServiceValidationError.forField(fieldName, message, {
