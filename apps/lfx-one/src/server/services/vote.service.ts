@@ -260,7 +260,14 @@ export class VoteService {
       answer_count: payload.user_vote_content?.length ?? 0,
     });
 
-    await this.microserviceProxy.proxyRequest<void>(req, 'LFX_V2_SERVICE', '/vote_responses', 'POST', undefined, payload);
+    await this.microserviceProxy.proxyRequest<void>(req, 'LFX_V2_SERVICE', '/vote_responses', 'POST', undefined, payload, {
+      ['X-Sync']: 'true',
+    });
+
+    logger.info(req, 'create_vote_response', 'Ballot accepted by upstream voting service', {
+      vote_uid: payload.vote_uid,
+      vote_response_uid: payload.vote_response_uid,
+    });
 
     const resolved = await pollEndpoint({
       req,

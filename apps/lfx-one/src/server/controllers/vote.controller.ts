@@ -248,56 +248,45 @@ export class VoteController {
     });
 
     try {
-      if (
-        !validateRequestBody(payload, req, next, {
-          operation: 'create_vote_response',
-          service: 'vote_controller',
-        })
-      ) {
+      const validationContext = { operation: 'create_vote_response', service: 'vote_controller' } as const;
+
+      if (!validateRequestBody(payload, req, next, validationContext)) {
         return;
       }
 
-      if (
-        !validateRequiredParameter(payload.vote_uid, 'vote_uid', req, next, {
-          operation: 'create_vote_response',
-          service: 'vote_controller',
-        })
-      ) {
+      if (!validateRequiredParameter(payload.vote_uid, 'vote_uid', req, next, validationContext)) {
         return;
       }
 
-      if (
-        !validateRequiredParameter(payload.vote_response_uid, 'vote_response_uid', req, next, {
-          operation: 'create_vote_response',
-          service: 'vote_controller',
-        })
-      ) {
+      if (!validateRequiredParameter(payload.vote_response_uid, 'vote_response_uid', req, next, validationContext)) {
         return;
       }
 
       if (typeof payload.abstain !== 'boolean') {
-        throw ServiceValidationError.forField('abstain', 'abstain is required and must be a boolean', {
-          operation: 'create_vote_response',
-          service: 'vote_controller',
-        });
+        throw ServiceValidationError.forField('abstain', 'abstain is required and must be a boolean', validationContext);
       }
 
       if (payload.abstain) {
         payload.user_vote_content = undefined;
       } else {
         if (!Array.isArray(payload.user_vote_content) || payload.user_vote_content.length === 0) {
-          throw ServiceValidationError.forField('user_vote_content', 'user_vote_content is required when not abstaining', {
-            operation: 'create_vote_response',
-            service: 'vote_controller',
-          });
+          throw ServiceValidationError.forField('user_vote_content', 'user_vote_content is required when not abstaining', validationContext);
         }
 
         for (const [index, answer] of payload.user_vote_content.entries()) {
+          if (!answer || typeof answer !== 'object') {
+            throw ServiceValidationError.forField(
+              `user_vote_content[${index}]`,
+              'Each answer must be a non-null object',
+              validationContext
+            );
+          }
+
           if (!answer.question_id || typeof answer.question_id !== 'string') {
             throw ServiceValidationError.forField(
               `user_vote_content[${index}].question_id`,
               'question_id is required for each answer',
-              { operation: 'create_vote_response', service: 'vote_controller' }
+              validationContext
             );
           }
 
@@ -308,7 +297,7 @@ export class VoteController {
             throw ServiceValidationError.forField(
               `user_vote_content[${index}]`,
               'Each answer must include either choice_ids or ranked_choices',
-              { operation: 'create_vote_response', service: 'vote_controller' }
+              validationContext
             );
           }
         }
