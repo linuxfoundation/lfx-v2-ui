@@ -5,7 +5,7 @@ import { CreateVoteRequest, CreateVoteResponseRequest, UpdateVoteRequest } from 
 import { NextFunction, Request, Response } from 'express';
 
 import { ServiceValidationError } from '../errors';
-import { validateRequestBody, validateUidParameter } from '../helpers/validation.helper';
+import { validateRequestBody, validateRequiredParameter, validateUidParameter } from '../helpers/validation.helper';
 import { logger } from '../services/logger.service';
 import { VoteService } from '../services/vote.service';
 
@@ -258,20 +258,18 @@ export class VoteController {
       }
 
       if (
-        !validateUidParameter(payload.vote_uid, req, next, {
+        !validateRequiredParameter(payload.vote_uid, 'vote_uid', req, next, {
           operation: 'create_vote_response',
           service: 'vote_controller',
-          fieldName: 'vote_uid',
         })
       ) {
         return;
       }
 
       if (
-        !validateUidParameter(payload.vote_response_uid, req, next, {
+        !validateRequiredParameter(payload.vote_response_uid, 'vote_response_uid', req, next, {
           operation: 'create_vote_response',
           service: 'vote_controller',
-          fieldName: 'vote_response_uid',
         })
       ) {
         return;

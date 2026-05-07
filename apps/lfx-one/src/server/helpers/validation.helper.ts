@@ -21,24 +21,15 @@ import type { HealthMetricsRange } from '@lfx-one/shared/interfaces';
 interface ValidationOptions {
   operation: string;
   service?: string;
-  fieldName?: string;
 }
 
 /**
- * Validates that a UID parameter exists and is not empty
- * @param uid The UID value to validate
- * @param req Express request object
- * @param next Express next function for error handling
- * @param options Validation options including operation name and optional fieldName
- *   (defaults to 'uid'; pass a specific name like 'vote_uid' when validating
- *   multiple UIDs in the same request to disambiguate the validation error)
- * @returns true if validation passes, false if validation fails (error sent to next)
+ * Validates that a UID route parameter exists and is not empty.
+ * For validating named body/query fields, use validateRequiredParameter instead.
  */
 export function validateUidParameter(uid: unknown, req: Request, next: NextFunction, options: ValidationOptions): uid is string {
   if (typeof uid !== 'string' || uid.trim() === '') {
-    const fieldName = options.fieldName ?? 'uid';
-    const message = options.fieldName ? `${fieldName} is required` : 'UID is required';
-    const validationError = ServiceValidationError.forField(fieldName, message, {
+    const validationError = ServiceValidationError.forField('uid', 'UID is required', {
       operation: options.operation,
       service: options.service || 'controller',
       path: req.path,
