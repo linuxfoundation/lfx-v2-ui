@@ -23,6 +23,7 @@ export class IntercomService {
   private isLoaded = false;
   private isBooted = false;
   private isLoading = false;
+  private scriptLoadError: Error | null = null;
 
   /**
    * Boot Intercom with user data. Loads the widget script on first call.
@@ -46,20 +47,28 @@ export class IntercomService {
         return;
       }
 
+      // Snapshot options immediately to prevent concurrent boot() calls from mixing profiles/JWTs
+      const snapshot = { ...options };
+
       // Load Intercom script on first boot (deferred to ensure authenticated users only)
       if (!this.isLoaded && !this.isLoading) {
         this.isLoading = true;
-        this.loadIntercomScript(options.app_id, options.api_base);
-      }
-
-      // If JWT is provided, set it in window.intercomSettings before booting
-      if (options.intercom_user_jwt) {
-        window.intercomSettings = window.intercomSettings || {};
-        window.intercomSettings.intercom_user_jwt = options.intercom_user_jwt;
+        this.scriptLoadError = null;
+        this.loadIntercomScript(snapshot.app_id, snapshot.api_base);
       }
 
       // Wait for script to load (poll isLoaded to ensure real script loaded, not just stub)
       const checkLoaded = setInterval(() => {
+        // Fail fast if the script failed to load
+        if (this.scriptLoadError) {
+          clearInterval(checkLoaded);
+          clearTimeout(timeoutHandle);
+          const err = this.scriptLoadError;
+          this.scriptLoadError = null;
+          reject(err);
+          return;
+        }
+
         if (this.isLoaded && window.Intercom) {
           clearInterval(checkLoaded);
           clearTimeout(timeoutHandle);
@@ -67,7 +76,7 @@ export class IntercomService {
           // Another concurrent boot() call may have already booted Intercom
           if (this.isBooted) {
             console.info('IntercomService: Already booted by concurrent call, updating instead');
-            this.update(this.toUserAttributes(options));
+            this.update(this.toUserAttributes(snapshot));
             resolve();
             return;
           }
@@ -75,17 +84,24 @@ export class IntercomService {
           // Set isBooted before calling boot() to prevent other intervals from booting
           this.isBooted = true;
 
+          // Set JWT atomically with the boot call using the snapshot to prevent
+          // concurrent calls from mixing one user's JWT with another's profile
+          if (snapshot.intercom_user_jwt) {
+            window.intercomSettings = window.intercomSettings || {};
+            window.intercomSettings.intercom_user_jwt = snapshot.intercom_user_jwt;
+          }
+
           try {
             // JWT is already in intercomSettings; don't pass it in boot()
-            window.Intercom('boot', this.stripJwt(options));
+            window.Intercom('boot', this.stripJwt(snapshot));
 
             // Force update to ensure user attributes are set; don't reset
             // isBooted on update failure since boot itself succeeded.
             try {
               window.Intercom('update', {
-                user_id: options.user_id,
-                name: options.name,
-                email: options.email,
+                user_id: snapshot.user_id,
+                name: snapshot.name,
+                email: snapshot.email,
               });
             } catch (updateError) {
               console.warn('IntercomService: Update after boot failed', updateError);
@@ -226,6 +242,7 @@ export class IntercomService {
 
     script.onerror = (error) => {
       this.isLoading = false;
+      this.scriptLoadError = new Error('Intercom script failed to load (network error or CSP block)');
       console.error('IntercomService: Failed to load script', error);
     };
 

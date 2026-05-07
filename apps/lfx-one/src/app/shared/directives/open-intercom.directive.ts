@@ -24,11 +24,13 @@ export class OpenIntercomDirective {
 
   private readonly intercomService = inject(IntercomService);
 
-  @HostListener('click')
-  public onClick(): void {
+  @HostListener('click', ['$event'])
+  public onClick(event: MouseEvent): void {
+    event.preventDefault();
+
     if (this.intercomService.isIntercomBooted()) {
       this.intercomService.show();
-    } else {
+    } else if (typeof window !== 'undefined') {
       window.open(environment.urls.support, '_blank', 'noopener,noreferrer');
     }
   }

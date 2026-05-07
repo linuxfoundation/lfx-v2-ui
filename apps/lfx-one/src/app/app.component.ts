@@ -85,7 +85,11 @@ export class AppComponent {
       const authedUser = this.auth.user;
       this.featureFlagService
         .initialize(authedUser)
-        .then(() => this.bootIntercomIfEnabled(authedUser))
+        .then(() => {
+          if (!isImpersonating) {
+            this.bootIntercomIfEnabled(authedUser);
+          }
+        })
         .catch((error) => {
           console.error('Failed to initialize feature flags:', error);
         });
