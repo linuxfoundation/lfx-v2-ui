@@ -3,12 +3,14 @@
 
 import { Component, inject, makeStateKey, REQUEST_CONTEXT, TransferState } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { AuthContext } from '@lfx-one/shared/interfaces';
+import { AuthContext, User } from '@lfx-one/shared/interfaces';
 import { ToastModule } from 'primeng/toast';
 
+import { getRuntimeConfig } from './shared/providers/runtime-config.provider';
 import { AccountContextService } from './shared/services/account-context.service';
 import { DataDogRumService } from './shared/services/datadog-rum.service';
 import { FeatureFlagService } from './shared/services/feature-flag.service';
+import { IntercomService } from './shared/services/intercom.service';
 import { SegmentService } from './shared/services/segment.service';
 import { UserService } from './shared/services/user.service';
 
@@ -24,6 +26,7 @@ export class AppComponent {
   private readonly featureFlagService = inject(FeatureFlagService);
   private readonly dataDogRumService = inject(DataDogRumService);
   private readonly accountContextService = inject(AccountContextService);
+  private readonly intercomService = inject(IntercomService);
 
   public auth: AuthContext | undefined;
   public transferState = inject(TransferState);
@@ -65,10 +68,15 @@ export class AppComponent {
       // Identify user with Segment tracking (pass entire Auth0 user object)
       this.segmentService.identifyUser(this.auth.user);
 
-      // Initialize feature flags with user context
-      this.featureFlagService.initialize(this.auth.user).catch((error) => {
-        console.error('Failed to initialize feature flags:', error);
-      });
+      // Initialize feature flags with user context, then boot Intercom under the
+      // `enable-intercom` LD flag (skipped on SSR — IntercomService is a no-op there).
+      const authedUser = this.auth.user;
+      this.featureFlagService
+        .initialize(authedUser)
+        .then(() => this.bootIntercomIfEnabled(authedUser))
+        .catch((error) => {
+          console.error('Failed to initialize feature flags:', error);
+        });
 
       // Set DataDog RUM user context for session tracking
       this.dataDogRumService.setUser(this.auth.user);
@@ -84,5 +92,36 @@ export class AppComponent {
         this.userService.impersonator.set(this.auth.impersonator ?? null);
       }
     }
+  }
+
+  /**
+   * Boot the Intercom Messenger when the `enable-intercom` LD flag is on and
+   * we have both an Intercom App ID (runtime config) and an Intercom user JWT
+   * (Auth0 namespaced claim). Fails closed: missing claim or App ID skips boot.
+   */
+  private bootIntercomIfEnabled(user: User): void {
+    if (!this.featureFlagService.getBooleanFlag('enable-intercom', false)()) {
+      return;
+    }
+
+    const intercomJwt = user['http://lfx.dev/claims/intercom'];
+    const userId = user['https://sso.linuxfoundation.org/claims/username'] || user.sub;
+    const { intercomAppId } = getRuntimeConfig(this.transferState);
+
+    if (!intercomAppId || !intercomJwt || !userId) {
+      return;
+    }
+
+    this.intercomService
+      .boot({
+        app_id: intercomAppId,
+        intercom_user_jwt: intercomJwt,
+        user_id: userId,
+        name: user.name,
+        email: user.email,
+      })
+      .catch((error) => {
+        console.error('Intercom boot failed', error);
+      });
   }
 }

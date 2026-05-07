@@ -31,4 +31,12 @@ export interface RuntimeConfig {
    * Passed from server-side environment variables (e.g., LFX_V2_SERVICE).
    */
   allowedTracingUrls: string[];
+
+  /**
+   * Intercom App ID for the Messenger / support bot.
+   * This is a publicly-publishable workspace ID (safe to expose in browser).
+   * Per-user identity verification is done via the `intercom_user_jwt` claim
+   * on the Auth0 id_token, not via this value.
+   */
+  intercomAppId: string;
 }
