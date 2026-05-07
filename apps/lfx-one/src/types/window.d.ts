@@ -14,6 +14,8 @@ declare global {
   interface Window {
     LfxAnalytics?: { LfxSegmentsAnalytics: LfxSegmentAnalyticsClass };
     plausible?: PlausibleFunction;
+    Intercom?: any;
+    intercomSettings?: any;
   }
 }
 

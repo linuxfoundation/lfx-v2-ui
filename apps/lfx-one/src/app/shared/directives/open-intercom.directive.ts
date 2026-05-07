@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Directive, HostBinding, HostListener, inject } from '@angular/core';
+import { environment } from '@environments/environment';
 import { IntercomService } from '@services/intercom.service';
 
 /**
@@ -10,7 +11,9 @@ import { IntercomService } from '@services/intercom.service';
  * Usage: `<button type="button" lfxOpenIntercom>Support</button>`
  *
  * Adds the `open-intercom-bot` host class so global styles can target every
- * Intercom-launching element uniformly.
+ * Intercom-launching element uniformly. Falls back to the Jira service desk
+ * when Intercom is not yet booted (feature flag off, missing config, or
+ * user clicked before boot completed).
  */
 @Directive({
   selector: '[lfxOpenIntercom]',
@@ -23,6 +26,10 @@ export class OpenIntercomDirective {
 
   @HostListener('click')
   public onClick(): void {
-    this.intercomService.show();
+    if (this.intercomService.isIntercomBooted()) {
+      this.intercomService.show();
+    } else {
+      window.open(environment.urls.support, '_blank', 'noopener,noreferrer');
+    }
   }
 }

@@ -21,13 +21,6 @@ export interface IntercomBootOptions {
   [key: string]: any;
 }
 
-declare global {
-  interface Window {
-    Intercom?: any;
-    intercomSettings?: any;
-  }
-}
-
 /**
  * Service that wraps the Intercom Messenger widget.
  *
@@ -65,7 +58,7 @@ export class IntercomService {
 
       if (this.isBooted) {
         console.info('IntercomService: Already booted, updating instead');
-        this.update(options);
+        this.update(this.toUserAttributes(options));
         resolve();
         return;
       }
