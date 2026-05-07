@@ -5,16 +5,8 @@ import { afterNextRender, DestroyRef, inject, Injectable } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
 import { environment } from '@environments/environment';
-import { LfxSegmentAnalytics, LfxSegmentAnalyticsClass } from '@lfx-one/shared/interfaces';
+import { LfxSegmentAnalytics } from '@lfx-one/shared/interfaces';
 import { filter } from 'rxjs';
-
-declare global {
-  interface Window {
-    LfxAnalytics?: {
-      LfxSegmentsAnalytics: LfxSegmentAnalyticsClass;
-    };
-  }
-}
 
 /**
  * Segment tracking service for Segment integration
@@ -31,12 +23,16 @@ export class SegmentService {
   private analyticsReady = false;
   private analytics?: LfxSegmentAnalytics;
   private identifyQueue: { user: unknown }[] = [];
+  private impersonating = false;
+
+  public setImpersonating(isImpersonating: boolean): void {
+    this.impersonating = isImpersonating;
+  }
 
   /**
    * Initialize the analytics service - should be called from app component
    */
   public initialize(): void {
-    // SSR-safe initialization using afterNextRender
     afterNextRender(() => {
       this.loadSegmentScript();
       this.setupRouteTracking();
@@ -49,7 +45,7 @@ export class SegmentService {
    * @param properties Optional page properties
    */
   public trackPage(pageName: string, properties?: Record<string, unknown>): void {
-    if (!this.analyticsReady || !this.analytics) {
+    if (typeof window === 'undefined' || this.impersonating || !this.analyticsReady || !this.analytics) {
       return;
     }
 
@@ -66,7 +62,7 @@ export class SegmentService {
    * @param properties Event properties
    */
   public trackEvent(eventName: string, properties?: Record<string, unknown>): void {
-    if (!this.analyticsReady || !this.analytics) {
+    if (typeof window === 'undefined' || this.impersonating || !this.analyticsReady || !this.analytics) {
       return;
     }
 
@@ -82,7 +78,7 @@ export class SegmentService {
    * @param auth0User Auth0 user object
    */
   public identifyUser(auth0User: unknown): void {
-    if (!auth0User) {
+    if (typeof window === 'undefined' || !auth0User || this.impersonating) {
       return;
     }
 
@@ -181,6 +177,9 @@ export class SegmentService {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((event: NavigationEnd) => {
+        if (typeof window === 'undefined' || typeof document === 'undefined') {
+          return;
+        }
         const pageName = event.urlAfterRedirects.split('/').pop() || 'Home';
         this.trackPage(pageName, {
           path: event.urlAfterRedirects,

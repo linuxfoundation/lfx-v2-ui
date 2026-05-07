@@ -56,7 +56,11 @@ export class MainLayoutComponent {
       case 'foundation':
         return this.foundationLensItems();
       case 'project':
-        return this.personaService.isBoardScoped() ? this.projectLensItems : this.projectLensItemsWithGovernance;
+        // Governance (Votes / Surveys / Permissions) is always surfaced under Project lens —
+        // matching Foundation lens behavior. Authorization for write actions (add user,
+        // edit role, remove, etc.) is enforced server-side and by per-page UI gating where
+        // implemented; pre-existing gaps in those gates are tracked separately.
+        return this.projectLensItemsWithGovernance;
       case 'org':
         return this.orgLensItems;
       default:
@@ -210,27 +214,27 @@ export class MainLayoutComponent {
       {
         label: 'Meetings',
         icon: 'fa-light fa-calendar',
-        routerLink: '/meetings',
+        routerLink: '/foundation/meetings',
       },
       {
         label: 'Events',
         icon: 'fa-light fa-ticket',
-        routerLink: '/events',
+        routerLink: '/foundation/events',
       },
       {
         label: MAILING_LIST_LABEL.plural,
         icon: 'fa-light fa-envelope',
-        routerLink: '/mailing-lists',
+        routerLink: '/foundation/mailing-lists',
       },
       {
         label: COMMITTEE_LABEL.plural,
         icon: 'fa-light fa-users-rectangle',
-        routerLink: '/groups',
+        routerLink: '/foundation/groups',
       },
       {
         label: DOCUMENT_LABEL.plural,
         icon: 'fa-light fa-folder-open',
-        routerLink: '/documents',
+        routerLink: '/foundation/documents',
       },
       {
         label: 'Governance',
@@ -240,17 +244,17 @@ export class MainLayoutComponent {
           {
             label: VOTE_LABEL.plural,
             icon: 'fa-light fa-check-to-slot',
-            routerLink: '/votes',
+            routerLink: '/foundation/votes',
           },
           {
             label: SURVEY_LABEL.plural,
             icon: 'fa-light fa-clipboard-list',
-            routerLink: '/surveys',
+            routerLink: '/foundation/surveys',
           },
           {
             label: 'Permissions',
             icon: 'fa-light fa-shield',
-            routerLink: '/settings',
+            routerLink: '/foundation/settings',
           },
         ],
       }
@@ -285,22 +289,22 @@ export class MainLayoutComponent {
     {
       label: 'Meetings',
       icon: 'fa-light fa-calendar',
-      routerLink: '/meetings',
+      routerLink: '/project/meetings',
     },
     {
       label: MAILING_LIST_LABEL.plural,
       icon: 'fa-light fa-envelope',
-      routerLink: '/mailing-lists',
+      routerLink: '/project/mailing-lists',
     },
     {
       label: COMMITTEE_LABEL.plural,
       icon: 'fa-light fa-users-rectangle',
-      routerLink: '/groups',
+      routerLink: '/project/groups',
     },
     {
       label: DOCUMENT_LABEL.plural,
       icon: 'fa-light fa-folder-open',
-      routerLink: '/documents',
+      routerLink: '/project/documents',
     },
   ];
 
@@ -315,17 +319,17 @@ export class MainLayoutComponent {
         {
           label: VOTE_LABEL.plural,
           icon: 'fa-light fa-check-to-slot',
-          routerLink: '/votes',
+          routerLink: '/project/votes',
         },
         {
           label: SURVEY_LABEL.plural,
           icon: 'fa-light fa-clipboard-list',
-          routerLink: '/surveys',
+          routerLink: '/project/surveys',
         },
         {
           label: 'Permissions',
           icon: 'fa-light fa-shield',
-          routerLink: '/settings',
+          routerLink: '/project/settings',
         },
       ],
     },
@@ -440,12 +444,13 @@ export class MainLayoutComponent {
    */
   private syncLensFromRoute(): void {
     let currentRoute = this.route;
+    let lens: Lens | undefined = currentRoute.snapshot.data['lens'];
     while (currentRoute.firstChild) {
       currentRoute = currentRoute.firstChild;
+      lens = currentRoute.snapshot.data['lens'] ?? lens;
     }
-    const lens = currentRoute.snapshot.data['lens'];
     if (lens && lens in ALL_LENSES) {
-      this.lensService.setLens(lens as Lens);
+      this.lensService.setLens(lens);
     }
   }
 }

@@ -5,6 +5,7 @@ import {
   LATEST_PAST_MEETINGS_FETCH_SIZE,
   LATEST_PAST_MEETINGS_RETURN_LIMIT,
   NATS_CONFIG,
+  PENDING_ACTION_SEVERITY,
   QUERY_SERVICE_FILTERS_OR_BATCH_SIZE,
   TSHIRT_SIZES,
 } from '@lfx-one/shared/constants';
@@ -837,7 +838,6 @@ export class UserService {
     if (email) {
       const emailParticipants = await fetchAllQueryResources<PastMeetingParticipant>(req, (pageToken) =>
         this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipant>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-          v: '1',
           type: 'v1_past_meeting_participant',
           tags: `email:${email}`,
           ...(pageToken && { page_token: pageToken }),
@@ -850,7 +850,6 @@ export class UserService {
       const plainUsername = stripAuthPrefix(username);
       const usernameParticipants = await fetchAllQueryResources<PastMeetingParticipant>(req, (pageToken) =>
         this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipant>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-          v: '1',
           type: 'v1_past_meeting_participant',
           tags: `username:${plainUsername}`,
           ...(pageToken && { page_token: pageToken }),
@@ -1321,7 +1320,7 @@ export class UserService {
         badge,
         text: `Cast your vote on ${vote.name}`,
         icon: 'fa-regular fa-check-to-slot',
-        severity: 'warn',
+        severity: PENDING_ACTION_SEVERITY.Vote,
         buttonText: 'Cast Vote',
         buttonLink: '/votes',
         date: `Closes ${formattedEnd}`,
@@ -1359,7 +1358,7 @@ export class UserService {
       badge,
       text: `RSVP to ${meeting.title}`,
       icon: 'fa-regular fa-calendar-check',
-      severity: 'warn',
+      severity: PENDING_ACTION_SEVERITY.RSVP,
       buttonText: 'Set RSVP',
       buttonLink,
       date: formattedDate,
@@ -1443,7 +1442,7 @@ export class UserService {
       badge: dateStr,
       text: `Review ${title} Agenda and Materials`,
       icon: 'fa-light fa-calendar-check',
-      severity: 'warn',
+      severity: PENDING_ACTION_SEVERITY.Agenda,
       buttonText: 'Review Agenda',
       buttonLink,
       date: formattedDate,
