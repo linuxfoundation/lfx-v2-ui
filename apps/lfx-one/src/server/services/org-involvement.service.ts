@@ -23,19 +23,18 @@ interface FoundationCoverageRow {
 
 interface ContributorsMonthlyRow {
   ACCOUNT_ID: string;
+  ACCOUNT_NAME: string;
   MONTH_START_DATE: Date;
   UNIQUE_CONTRIBUTORS: number;
-  CUMULATIVE_CONTRIBUTORS: number;
   TOTAL_ACTIVE_CONTRIBUTORS: number;
 }
 
 interface MaintainersMonthlyRow {
   ACCOUNT_ID: string;
   ACCOUNT_NAME: string;
-  MONTH_START_DATE: Date;
+  METRIC_MONTH: Date;
   ACTIVE_MAINTAINERS: number;
   ACTIVE_PROJECTS: number;
-  CUMULATIVE_MAINTAINERS: number;
   TOTAL_MAINTAINERS_YEARLY: number;
   TOTAL_PROJECTS_YEARLY: number;
 }
@@ -44,10 +43,10 @@ interface EventAttendanceMonthlyRow {
   ACCOUNT_ID: string;
   ACCOUNT_NAME: string;
   MONTH_START_DATE: Date;
+  REGISTRATION_COUNT: number;
   ATTENDED_COUNT: number;
   SPEAKER_COUNT: number;
-  CUMULATIVE_ATTENDED: number;
-  CUMULATIVE_SPEAKERS: number;
+  TOTAL_REGISTRATIONS: number;
   TOTAL_ATTENDED: number;
   TOTAL_SPEAKERS: number;
 }
@@ -57,7 +56,6 @@ interface CertifiedEmployeesMonthlyRow {
   MONTH_START_DATE: Date;
   MONTHLY_CERTIFICATIONS: number;
   MONTHLY_CERTIFIED_EMPLOYEES: number;
-  CUMULATIVE_CERTIFICATIONS: number;
   TOTAL_CERTIFICATIONS: number;
   TOTAL_CERTIFIED_EMPLOYEES: number;
 }
@@ -119,7 +117,6 @@ export class OrgInvolvementService {
         ACCOUNT_ID,
         MONTH_START_DATE,
         UNIQUE_CONTRIBUTORS,
-        CUMULATIVE_CONTRIBUTORS,
         TOTAL_ACTIVE_CONTRIBUTORS
       FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_CONTRIBUTORS_MONTHLY
       WHERE ACCOUNT_ID = ?
@@ -149,15 +146,14 @@ export class OrgInvolvementService {
       SELECT
         ACCOUNT_ID,
         ACCOUNT_NAME,
-        MONTH_START_DATE,
+        METRIC_MONTH,
         ACTIVE_MAINTAINERS,
         ACTIVE_PROJECTS,
-        CUMULATIVE_MAINTAINERS,
         TOTAL_MAINTAINERS_YEARLY,
         TOTAL_PROJECTS_YEARLY
       FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_MAINTAINERS_MONTHLY
       WHERE ACCOUNT_ID = ?
-      ORDER BY MONTH_START_DATE ASC
+      ORDER BY METRIC_MONTH ASC
     `;
 
     const result = await this.snowflakeService.execute<MaintainersMonthlyRow>(query, [accountId]);
@@ -176,7 +172,7 @@ export class OrgInvolvementService {
       totalMaintainersYearly: firstRow.TOTAL_MAINTAINERS_YEARLY || 0,
       totalProjectsYearly: firstRow.TOTAL_PROJECTS_YEARLY || 0,
       monthlyData: result.rows.map((row) => row.ACTIVE_MAINTAINERS || 0),
-      monthlyLabels: result.rows.map((row) => row.MONTH_START_DATE.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })),
+      monthlyLabels: result.rows.map((row) => row.METRIC_MONTH.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })),
     };
   }
 
@@ -186,10 +182,10 @@ export class OrgInvolvementService {
         ACCOUNT_ID,
         ACCOUNT_NAME,
         MONTH_START_DATE,
+        REGISTRATION_COUNT,
         ATTENDED_COUNT,
         SPEAKER_COUNT,
-        CUMULATIVE_ATTENDED,
-        CUMULATIVE_SPEAKERS,
+        TOTAL_REGISTRATIONS,
         TOTAL_ATTENDED,
         TOTAL_SPEAKERS
       FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_EVENT_ATTENDANCE_MONTHLY
@@ -225,7 +221,6 @@ export class OrgInvolvementService {
         MONTH_START_DATE,
         MONTHLY_CERTIFICATIONS,
         MONTHLY_CERTIFIED_EMPLOYEES,
-        CUMULATIVE_CERTIFICATIONS,
         TOTAL_CERTIFICATIONS,
         TOTAL_CERTIFIED_EMPLOYEES
       FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_CERTIFIED_EMPLOYEES_MONTHLY
