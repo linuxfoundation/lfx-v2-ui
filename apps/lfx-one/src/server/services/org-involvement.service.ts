@@ -32,7 +32,7 @@ interface ContributorsMonthlyRow {
 interface MaintainersMonthlyRow {
   ACCOUNT_ID: string;
   ACCOUNT_NAME: string;
-  MONTH_START_DATE: Date;
+  METRIC_MONTH: Date;
   ACTIVE_MAINTAINERS: number;
   ACTIVE_PROJECTS: number;
   CUMULATIVE_MAINTAINERS: number;
@@ -149,7 +149,7 @@ export class OrgInvolvementService {
       SELECT
         ACCOUNT_ID,
         ACCOUNT_NAME,
-        MONTH_START_DATE,
+        METRIC_MONTH,
         ACTIVE_MAINTAINERS,
         ACTIVE_PROJECTS,
         CUMULATIVE_MAINTAINERS,
@@ -157,7 +157,7 @@ export class OrgInvolvementService {
         TOTAL_PROJECTS_YEARLY
       FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_MAINTAINERS_MONTHLY
       WHERE ACCOUNT_ID = ?
-      ORDER BY MONTH_START_DATE ASC
+      ORDER BY METRIC_MONTH ASC
     `;
 
     const result = await this.snowflakeService.execute<MaintainersMonthlyRow>(query, [accountId]);
@@ -176,7 +176,7 @@ export class OrgInvolvementService {
       totalMaintainersYearly: firstRow.TOTAL_MAINTAINERS_YEARLY || 0,
       totalProjectsYearly: firstRow.TOTAL_PROJECTS_YEARLY || 0,
       monthlyData: result.rows.map((row) => row.ACTIVE_MAINTAINERS || 0),
-      monthlyLabels: result.rows.map((row) => row.MONTH_START_DATE.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })),
+      monthlyLabels: result.rows.map((row) => row.METRIC_MONTH.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })),
     };
   }
 
