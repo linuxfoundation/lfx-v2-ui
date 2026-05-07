@@ -110,7 +110,7 @@
           <i class="fa-light fa-clock-rotate-left text-xl"></i>
           @if (unseenChangelogCount() > 0) {
             <lfx-badge
-              [value]="unseenChangelogCount().toString()"
+              [value]="unseenChangelogCount()"
               severity="danger"
               size="small"
               styleClass="!absolute -top-1 -right-1"
