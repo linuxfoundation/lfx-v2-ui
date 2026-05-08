@@ -525,9 +525,9 @@ export interface DecoratedPendingAction extends PendingActionItem {
   /** Lazily-loaded Meeting passed to RsvpButtonGroupComponent; null until fetched */
   meeting: Meeting | null;
   /** True when the action is a Vote that should expand inline (Vote type with voteUid + voteResponseUid) */
-  isVoteInline?: boolean;
+  isVoteInline: boolean;
   /** Lazily-loaded Vote passed to VoteBallotComponent; null until fetched */
-  vote?: Vote | null;
+  vote: Vote | null;
   /** Tailwind background class for the row — encodes zebra striping, RSVP amber tint, and post-RSVP emerald confirmation */
   rowClass: string;
 }

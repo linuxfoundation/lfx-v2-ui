@@ -29,11 +29,11 @@ export class VoteBallotComponent implements OnInit {
   public readonly form = new FormGroup<Record<string, AbstractControl>>({});
 
   // Simple signals
-  public abstain = signal(false);
+  protected abstain = signal(false);
 
   // Complex signals
-  public readonly visibleQuestions: Signal<PollQuestion[]> = this.initVisibleQuestions();
-  public readonly isSubmitDisabled: Signal<boolean> = this.initIsSubmitDisabled();
+  protected readonly visibleQuestions: Signal<PollQuestion[]> = this.initVisibleQuestions();
+  protected readonly isSubmitDisabled: Signal<boolean> = this.initIsSubmitDisabled();
 
   public ngOnInit(): void {
     // vote() is stable for the component's lifetime — set once when the row expands or drawer opens
@@ -47,7 +47,7 @@ export class VoteBallotComponent implements OnInit {
     }
   }
 
-  public onSubmit(): void {
+  protected onSubmit(): void {
     if (this.isSubmitDisabled()) return;
 
     if (this.abstain()) {
@@ -64,11 +64,11 @@ export class VoteBallotComponent implements OnInit {
     this.voteSubmitted.emit({ abstain: false, user_vote_content: userVoteContent });
   }
 
-  public onCancel(): void {
+  protected onCancel(): void {
     this.voteCancelled.emit();
   }
 
-  public onAbstainToggle(): void {
+  protected onAbstainToggle(): void {
     const next = !this.abstain();
     this.abstain.set(next);
     if (next) {
