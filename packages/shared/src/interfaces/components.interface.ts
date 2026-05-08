@@ -4,6 +4,7 @@
 import { ChartData, ChartOptions, ChartType } from 'chart.js';
 
 import type { Meeting } from './meeting.interface';
+import type { Vote } from './poll.interface';
 
 /**
  * Named entity interface for pipes
@@ -500,6 +501,10 @@ export interface PendingActionItem {
   meetingUid?: string;
   /** Occurrence ID for recurring meetings (set on RSVP action types today). Passed to RsvpButtonGroupComponent so the scope picker (single / this_and_following / all) can scope the response correctly. */
   occurrenceId?: string;
+  /** Vote UID (set on Vote action types). Used by the dashboard to lazy-load the Vote and render the inline ballot without leaving the page. */
+  voteUid?: string;
+  /** Pre-created vote_response UID required by the upstream POST /vote_responses payload. Returned by the query service alongside the pending vote. */
+  voteResponseUid?: string;
 }
 
 /**
@@ -519,6 +524,10 @@ export interface DecoratedPendingAction extends PendingActionItem {
   isLoading: boolean;
   /** Lazily-loaded Meeting passed to RsvpButtonGroupComponent; null until fetched */
   meeting: Meeting | null;
+  /** True when the action is a Vote that should expand inline (Vote type with voteUid + voteResponseUid) */
+  isVoteInline?: boolean;
+  /** Lazily-loaded Vote passed to VoteBallotComponent; null until fetched */
+  vote?: Vote | null;
   /** Tailwind background class for the row — encodes zebra striping, RSVP amber tint, and post-RSVP emerald confirmation */
   rowClass: string;
 }
