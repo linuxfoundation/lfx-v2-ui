@@ -80,19 +80,15 @@ export class AppComponent {
 
       this.segmentService.identifyUser(this.auth.user);
 
-      // Initialize feature flags with user context, then boot Intercom under the
-      // `enable-intercom` LD flag (skipped on SSR — IntercomService is a no-op there).
       const authedUser = this.auth.user;
-      this.featureFlagService
-        .initialize(authedUser)
-        .then(() => {
-          if (!isImpersonating) {
-            this.bootIntercomIfEnabled(authedUser);
-          }
-        })
-        .catch((error) => {
-          console.error('Failed to initialize feature flags:', error);
-        });
+
+      // Initialize feature flags with user context
+      this.featureFlagService.initialize(authedUser).catch((error) => {
+        console.error('Failed to initialize feature flags:', error);
+      });
+
+      // Boot Intercom (skipped on SSR — IntercomService is a no-op there)
+      this.bootIntercom(authedUser);
 
       // Set DataDog RUM user context for session tracking
       this.dataDogRumService.setUser(this.auth.user);
@@ -100,11 +96,7 @@ export class AppComponent {
   }
 
   // Fails closed: missing JWT or App ID skips boot.
-  private bootIntercomIfEnabled(user: User): void {
-    if (!this.featureFlagService.getBooleanFlag('enable-intercom', false)()) {
-      return;
-    }
-
+  private bootIntercom(user: User): void {
     const intercomJwt = user['http://lfx.dev/claims/intercom'];
     const userId = user['https://sso.linuxfoundation.org/claims/username'] || user.sub;
     const { intercomAppId } = getRuntimeConfig(this.transferState);

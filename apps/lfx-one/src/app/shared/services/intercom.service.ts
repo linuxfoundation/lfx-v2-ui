@@ -83,29 +83,9 @@ export class IntercomService {
           // Set isBooted before calling boot() to prevent other intervals from booting
           this.isBooted = true;
 
-          // Set JWT atomically with the boot call using the snapshot to prevent
-          // concurrent calls from mixing one user's JWT with another's profile
-          if (snapshot.intercom_user_jwt) {
-            window.intercomSettings = window.intercomSettings || {};
-            window.intercomSettings.intercom_user_jwt = snapshot.intercom_user_jwt;
-          }
-
           try {
-            // JWT is already in intercomSettings; don't pass it in boot()
-            window.Intercom('boot', this.stripJwt(snapshot));
-
-            // Force update to ensure user attributes are set; don't reset
-            // isBooted on update failure since boot itself succeeded.
-            try {
-              window.Intercom('update', {
-                user_id: snapshot.user_id,
-                name: snapshot.name,
-                email: snapshot.email,
-              });
-            } catch (updateError) {
-              console.warn('IntercomService: Update after boot failed', updateError);
-            }
-
+            // JWT is passed directly in the boot payload (Intercom SDK supports this)
+            window.Intercom('boot', snapshot);
             resolve();
           } catch (error) {
             this.isBooted = false;
@@ -177,11 +157,6 @@ export class IntercomService {
       return;
     }
 
-    // Clear the JWT before shutdown to prevent credential leakage across sessions.
-    if (window.intercomSettings?.intercom_user_jwt) {
-      delete window.intercomSettings.intercom_user_jwt;
-    }
-
     if (window.Intercom && this.isBooted) {
       try {
         window.Intercom('shutdown');
@@ -222,7 +197,6 @@ export class IntercomService {
 
     this.initializeIntercomFunction();
 
-    // Set global Intercom settings (without JWT - will be added in boot())
     window.intercomSettings = {
       api_base: apiBase || 'https://api-iam.intercom.io',
       app_id: appId,
@@ -252,16 +226,6 @@ export class IntercomService {
     } else {
       document.head.appendChild(script);
     }
-  }
-
-  /**
-   * Strip the JWT (already set on `window.intercomSettings`) and return the
-   * remaining boot payload.
-   */
-  private stripJwt(options: IntercomBootOptions): Omit<IntercomBootOptions, 'intercom_user_jwt'> {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { intercom_user_jwt: _jwt, ...rest } = options;
-    return rest;
   }
 
   /**

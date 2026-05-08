@@ -18,7 +18,7 @@ export type IntercomSettings = Partial<IntercomBootOptions>;
 
 /** Intercom API — models the loaded SDK function and the pre-load queue stub. */
 export interface IntercomFunction {
-  (command: 'boot', options: Omit<IntercomBootOptions, 'intercom_user_jwt'> & { intercom_user_jwt?: never }): void;
+  (command: 'boot', options: IntercomBootOptions): void;
   (command: 'update', data?: Partial<IntercomBootOptions>): void;
   (command: 'show'): void;
   (command: 'hide'): void;
