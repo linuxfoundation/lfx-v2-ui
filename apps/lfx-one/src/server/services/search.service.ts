@@ -84,6 +84,10 @@ export class SearchService {
     // or committee membership, so the same person can appear many times.
     // NOTE: r.uid is the per-row record ID (not a user ID), so it cannot be
     // used as a dedup key — two rows for the same person always have different uids.
+    // NOTE: searchUsers() issues a single upstream call, so `seen` correctly covers
+    // the full result set. If this endpoint ever walks multiple pages (page_token),
+    // `seen` must be hoisted to span all pages — otherwise duplicates can reappear
+    // at page boundaries.
     const seen = new Set<string>();
     const results = mapped.filter((r) => {
       const username = r.username?.trim().toLowerCase();
