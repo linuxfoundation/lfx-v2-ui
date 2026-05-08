@@ -1018,7 +1018,7 @@ export class UserService {
     const username = rawUsername ? stripAuthPrefix(rawUsername) : null;
 
     // Phase 1: surveys, meetings, and pending votes are independent — issue them in parallel.
-    const [surveys, meetings, pendingVotes] = await Promise.all([
+    const [surveys, meetings, { votes: pendingVotes, responseUidByVoteUid }] = await Promise.all([
       this.projectService.getPendingActionSurveys(email, projectSlug).catch((error) => {
         logger.warning(req, 'get_user_pending_actions', 'Failed to fetch surveys for pending actions', { err: error });
         return [];
@@ -1031,13 +1031,13 @@ export class UserService {
 
       this.fetchPendingVotes(req, projectUid).catch((error) => {
         logger.warning(req, 'get_user_pending_actions', 'Failed to fetch pending votes', { err: error });
-        return [] as Vote[];
+        return { votes: [] as Vote[], responseUidByVoteUid: new Map<string, string>() };
       }),
     ]);
 
     const inWindowMeetings = this.filterMeetingsInWindow(meetings);
     const meetingActions = this.transformMeetingsToActions(inWindowMeetings);
-    const voteActions = this.transformVotesToActions(pendingVotes);
+    const voteActions = this.transformVotesToActions(pendingVotes, responseUidByVoteUid);
 
     // Phase 2: RSVP + registrant lookups are only meaningful when there are in-window meetings
     // to evaluate. Skip them otherwise — avoids two full paginated per-user scans per request
@@ -1088,7 +1088,10 @@ export class UserService {
    * on each pending `vote_uid`) instead of per-vote REST. The indexed `vote` doc carries `name`,
    * `end_time`, and `status` — everything the `transformVotesToActions` consumer needs.
    */
-  private async fetchPendingVotes(req: Request, projectUid?: string): Promise<Vote[]> {
+  private async fetchPendingVotes(
+    req: Request,
+    projectUid?: string
+  ): Promise<{ votes: Vote[]; responseUidByVoteUid: Map<string, string> }> {
     // failOnPartial: completeness matters — a truncated response can silently miss a pending
     // invitation. The caller already catches and degrades, so fail closed here.
     const responses = await fetchAllQueryResources<IndexedVoteResponse>(
@@ -1105,15 +1108,20 @@ export class UserService {
 
     // `vote_uid` is the v2 parent poll UID (what `/votes/{uid}` expects); `vote_id` and `poll_id`
     // are v1 fallbacks per the upstream indexer contract. None of these is the individual-response id.
-    const pendingVoteUids = Array.from(
-      new Set(
-        responses
-          .filter((r) => r.vote_status !== 'submitted' && !r.voter_removed)
-          .map((r) => r.vote_uid ?? r.vote_id ?? r.poll_id)
-          .filter((uid): uid is string => !!uid)
-      )
+    const pendingResponses = responses.filter((r) => r.vote_status !== 'submitted' && !r.voter_removed);
+
+    // Build the response-uid lookup before deduplication so each vote's ballot draft uid is preserved.
+    const responseUidByVoteUid = new Map<string, string>(
+      pendingResponses
+        .filter((r): r is IndexedVoteResponse & { uid: string } => !!r.uid)
+        .map((r) => [r.vote_uid ?? r.vote_id ?? r.poll_id ?? '', r.uid] as [string, string])
+        .filter(([voteUid]) => !!voteUid)
     );
-    if (pendingVoteUids.length === 0) return [];
+
+    const pendingVoteUids = Array.from(
+      new Set(pendingResponses.map((r) => r.vote_uid ?? r.vote_id ?? r.poll_id).filter((uid): uid is string => !!uid))
+    );
+    if (pendingVoteUids.length === 0) return { votes: [], responseUidByVoteUid };
 
     // No `filter_grants` on the `vote` query — users have no direct FGA grant on the parent vote
     // doc; access is implied by their `vote_response` rows fetched above.
@@ -1153,7 +1161,8 @@ export class UserService {
       });
 
     const now = Date.now();
-    return votes.filter((v) => v.status === PollStatus.ACTIVE && !!v.end_time && new Date(v.end_time).getTime() > now);
+    const activeVotes = votes.filter((v) => v.status === PollStatus.ACTIVE && !!v.end_time && new Date(v.end_time).getTime() > now);
+    return { votes: activeVotes, responseUidByVoteUid };
   }
 
   /**
@@ -1298,7 +1307,7 @@ export class UserService {
    * /votes) — there's no standalone vote-detail route, so the user lands on the list and picks
    * the vote to cast.
    */
-  private transformVotesToActions(votes: Vote[]): PendingActionItem[] {
+  private transformVotesToActions(votes: Vote[], responseUidByVoteUid: Map<string, string>): PendingActionItem[] {
     return votes.map((vote) => {
       const endDate = new Date(vote.end_time);
       const badge = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -1316,6 +1325,8 @@ export class UserService {
         buttonText: 'Cast Vote',
         buttonLink: '/votes',
         date: `Closes ${formattedEnd}`,
+        voteUid: vote.uid,
+        voteResponseUid: responseUidByVoteUid.get(vote.uid),
       };
     });
   }
