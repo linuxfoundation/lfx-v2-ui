@@ -352,6 +352,7 @@ export class DocumentsDashboardComponent {
       parentUid: doc.parent_uid,
       isChild,
       downloadUrl: isFile && ownerProjectUid ? `/api/projects/${ownerProjectUid}/documents/${doc.uid}/download` : undefined,
+      uploadedBy: doc.uploaded_by,
     };
   }
 

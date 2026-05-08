@@ -285,6 +285,7 @@ export class CommitteeDocumentsComponent {
       parentUid: doc.parent_uid,
       isChild,
       downloadUrl: isFile && ownerCommitteeUid ? `/api/committees/${ownerCommitteeUid}/documents/${doc.uid}/download` : undefined,
+      uploadedBy: doc.uploaded_by,
     };
   }
 
