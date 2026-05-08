@@ -1,0 +1,101 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div
+  [class]="compact() ? 'p-3 gap-2' : 'p-4 gap-3'"
+  class="flex flex-col bg-violet-50 border border-violet-200 rounded-[6px] flex-1"
+  data-testid="vote-ballot">
+  <!-- Header -->
+  <div class="flex items-center gap-1.5 text-violet-600 text-[10.5px] tracking-[0.09px]">
+    @if (submitting()) {
+      <i class="fa-light fa-spinner-third fa-spin text-[10.5px]"></i>
+      <span>Submitting vote...</span>
+    } @else {
+      <i class="fa-light fa-check-to-slot text-[10.5px]"></i>
+      <span>Cast Your Vote</span>
+    }
+  </div>
+
+  <!-- Questions -->
+  <ng-container [formGroup]="form">
+    @for (question of visibleQuestions(); track question.question_id) {
+      <div [class]="compact() ? 'gap-1.5' : 'gap-2'" class="flex flex-col" [attr.data-testid]="'vote-ballot-question-' + question.question_id">
+        <!-- Question prompt -->
+        <p class="text-xs font-medium text-gray-700">{{ question.prompt }}</p>
+
+        <!-- Single-choice: radio buttons -->
+        @if (question.type !== 'multiple_choice') {
+          <div [class]="compact() ? 'flex flex-wrap gap-x-4 gap-y-1' : 'flex flex-col gap-1.5'">
+            @for (choice of question.choices; track choice.choice_id) {
+              <lfx-radio-button
+                [form]="form"
+                [control]="question.question_id"
+                [name]="question.question_id"
+                [value]="choice.choice_id"
+                [label]="choice.choice_text"
+                [inputId]="question.question_id + '_' + choice.choice_id"
+                [attr.data-testid]="'vote-ballot-choice-' + choice.choice_id" />
+            }
+          </div>
+
+          <!-- Multi-choice: checkboxes -->
+        } @else {
+          <div class="flex flex-col gap-1.5">
+            @for (choice of question.choices; track choice.choice_id) {
+              <div class="flex items-center gap-2" [attr.data-testid]="'vote-ballot-choice-' + choice.choice_id">
+                <p-checkbox [formControlName]="question.question_id" [value]="choice.choice_id" [inputId]="question.question_id + '_' + choice.choice_id" />
+                <label [for]="question.question_id + '_' + choice.choice_id" class="text-sm font-medium text-gray-700 cursor-pointer leading-3">
+                  {{ choice.choice_text }}
+                </label>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+  </ng-container>
+
+  <!-- Footer: abstain + cancel + submit -->
+  <div class="flex items-center justify-between gap-2 pt-1">
+    <!-- Abstain toggle -->
+    @if (vote().allow_abstain) {
+      <button
+        type="button"
+        [disabled]="submitting()"
+        [class]="abstain() ? 'bg-amber-100 border-amber-400 text-amber-700' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'"
+        class="inline-flex items-center gap-1 px-2 py-1 rounded border text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        (click)="onAbstainToggle()"
+        data-testid="vote-ballot-abstain">
+        <i class="fa-light fa-ban text-[10px]"></i>
+        {{ abstain() ? 'Undo Abstain' : 'Abstain' }}
+      </button>
+    } @else {
+      <span></span>
+    }
+
+    <!-- Action buttons -->
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        [disabled]="submitting()"
+        class="inline-flex items-center gap-1 px-2 py-1 rounded border border-gray-300 bg-white text-gray-600 text-xs hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        (click)="onCancel()"
+        data-testid="vote-ballot-cancel">
+        Cancel
+      </button>
+
+      <button
+        type="button"
+        [disabled]="isSubmitDisabled()"
+        [class]="isSubmitDisabled() ? 'bg-violet-200 border-violet-200 text-violet-400 cursor-not-allowed' : 'bg-violet-600 border-violet-600 text-white hover:bg-violet-700'"
+        class="inline-flex items-center gap-1 px-2 py-1 rounded border text-xs transition-colors disabled:cursor-not-allowed"
+        (click)="onSubmit()"
+        data-testid="vote-ballot-submit">
+        @if (submitting()) {
+          <i class="fa-light fa-spinner-third fa-spin text-[10px]"></i>
+        }
+        Submit Vote
+      </button>
+    </div>
+  </div>
+</div>
