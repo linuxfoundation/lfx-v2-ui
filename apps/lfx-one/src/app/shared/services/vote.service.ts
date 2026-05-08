@@ -3,7 +3,15 @@
 
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
-import { CreateVoteRequest, CreateVoteResponseRequest, PaginatedResponse, QueryServiceCountResponse, UpdateVoteRequest, Vote, VoteResultsResponse } from '@lfx-one/shared/interfaces';
+import {
+  CreateVoteRequest,
+  CreateVoteResponseRequest,
+  PaginatedResponse,
+  QueryServiceCountResponse,
+  UpdateVoteRequest,
+  Vote,
+  VoteResultsResponse,
+} from '@lfx-one/shared/interfaces';
 import { catchError, map, Observable, of, take, tap } from 'rxjs';
 
 @Injectable({

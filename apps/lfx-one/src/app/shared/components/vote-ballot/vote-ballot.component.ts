@@ -40,10 +40,7 @@ export class VoteBallotComponent implements OnInit {
     const questions = this.vote().poll_questions ?? [];
     for (const question of questions) {
       if (question.type === 'multiple_choice') {
-        this.form.addControl(
-          question.question_id,
-          new FormControl<string[]>([], (ctrl) => ((ctrl.value as string[]).length > 0 ? null : { required: true }))
-        );
+        this.form.addControl(question.question_id, new FormControl<string[]>([], (ctrl) => ((ctrl.value as string[]).length > 0 ? null : { required: true })));
       } else {
         this.form.addControl(question.question_id, new FormControl<string | null>(null, Validators.required));
       }

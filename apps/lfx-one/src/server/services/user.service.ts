@@ -1088,10 +1088,7 @@ export class UserService {
    * on each pending `vote_uid`) instead of per-vote REST. The indexed `vote` doc carries `name`,
    * `end_time`, and `status` — everything the `transformVotesToActions` consumer needs.
    */
-  private async fetchPendingVotes(
-    req: Request,
-    projectUid?: string
-  ): Promise<{ votes: Vote[]; responseUidByVoteUid: Map<string, string> }> {
+  private async fetchPendingVotes(req: Request, projectUid?: string): Promise<{ votes: Vote[]; responseUidByVoteUid: Map<string, string> }> {
     // failOnPartial: completeness matters — a truncated response can silently miss a pending
     // invitation. The caller already catches and degrades, so fail closed here.
     const responses = await fetchAllQueryResources<IndexedVoteResponse>(
@@ -1118,9 +1115,7 @@ export class UserService {
         .filter(([voteUid]) => !!voteUid)
     );
 
-    const pendingVoteUids = Array.from(
-      new Set(pendingResponses.map((r) => r.vote_uid ?? r.vote_id ?? r.poll_id).filter((uid): uid is string => !!uid))
-    );
+    const pendingVoteUids = Array.from(new Set(pendingResponses.map((r) => r.vote_uid ?? r.vote_id ?? r.poll_id).filter((uid): uid is string => !!uid)));
     if (pendingVoteUids.length === 0) return { votes: [], responseUidByVoteUid };
 
     // No `filter_grants` on the `vote` query — users have no direct FGA grant on the parent vote

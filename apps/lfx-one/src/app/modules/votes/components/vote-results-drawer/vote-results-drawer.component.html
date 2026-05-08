@@ -85,7 +85,11 @@
           <p class="text-sm text-slate-600">Could not load vote details. Please try again or check back later.</p>
           @if (pccVotingUrl()) {
             <a [href]="pccVotingUrl()" target="_blank" rel="noopener noreferrer" class="inline-block">
-              <lfx-button label="Open in Project Control Center" icon="fa-light fa-arrow-up-right-from-square" severity="secondary" data-testid="vote-results-pcc-error-link" />
+              <lfx-button
+                label="Open in Project Control Center"
+                icon="fa-light fa-arrow-up-right-from-square"
+                severity="secondary"
+                data-testid="vote-results-pcc-error-link" />
             </a>
           }
         </div>

@@ -9,7 +9,15 @@ import { TagComponent } from '@components/tag/tag.component';
 import { VoteBallotComponent } from '@components/vote-ballot/vote-ballot.component';
 import { environment } from '@environments/environment';
 import { PollStatus, PollType } from '@lfx-one/shared';
-import { PollCommentResult, Vote, VoteAnswerInput, VoteParticipationStats, VoteResultsOption, VoteResultsQuestion, VoteResultsResponse } from '@lfx-one/shared/interfaces';
+import {
+  PollCommentResult,
+  Vote,
+  VoteAnswerInput,
+  VoteParticipationStats,
+  VoteResultsOption,
+  VoteResultsQuestion,
+  VoteResultsResponse,
+} from '@lfx-one/shared/interfaces';
 import { PollStatusLabelPipe } from '@pipes/poll-status-label.pipe';
 import { PollStatusSeverityPipe } from '@pipes/poll-status-severity.pipe';
 import { VoteService } from '@services/vote.service';
