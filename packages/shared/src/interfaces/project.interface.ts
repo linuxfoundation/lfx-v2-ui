@@ -84,7 +84,12 @@ export interface ProjectDocument {
   uid: string;
   type: ProjectDocumentType;
   name: string;
-  /** URL for links; download URL for files */
+  /**
+   * URL for `link`-type documents only. Files are not downloaded via this field —
+   * use the BFF endpoint `/api/projects/:uid/documents/:documentId/download` (exposed
+   * to the UI as `MyDocumentItem.downloadUrl`) so the upstream-streamed
+   * `Content-Disposition` controls the filename.
+   */
   url?: string;
   /** Optional description */
   description?: string;

@@ -244,10 +244,10 @@ export class DocumentFormComponent {
       });
     }
 
-    // Folder form — just name + description
+    // Folder form — name only. Upstream Goa types (ProjectFolder / CommitteeFolder) have
+    // no description field, so collecting one would just be silently dropped at the BFF.
     return new FormGroup({
       name: new FormControl('', [Validators.required]),
-      description: new FormControl(''),
     });
   }
 

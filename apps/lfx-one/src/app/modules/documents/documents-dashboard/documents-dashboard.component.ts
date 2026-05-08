@@ -132,15 +132,21 @@ export class DocumentsDashboardComponent {
   /** The folder the user has drilled into (project mode), used by the breadcrumb. Null at root. */
   protected readonly currentFolder: Signal<ProjectDocument | null> = this.initCurrentFolder();
   /**
-   * Dynamic empty-state message for project mode — distinguishes "no documents at all"
-   * from "filtered to nothing" so the table doesn't read "No documents yet" while the
-   * user has an active search/source filter narrowing a non-empty list to zero rows.
+   * Dynamic empty-state message for project mode. Three states, in priority order:
+   *  - `documents()` is empty → either an empty folder ("This folder is empty") or
+   *    nothing in the project at all ("No documents yet"). `documents()` is the
+   *    post-drilldown view, so an empty folder reports correctly even when the
+   *    project has many other documents.
+   *  - `documents()` has rows but `filteredDocuments()` does not → user's
+   *    search/source filter narrowed a non-empty list to zero ("No results found").
+   *  - both have rows → message is unused (lfx-documents-table only renders the
+   *    empty-state slot when there's nothing to show).
    */
   protected readonly projectEmptyMessage = computed(() => {
-    if (this.filteredDocuments().length === 0 && this.rawProjectDocuments().length > 0) {
-      return 'No results found';
+    if (this.documents().length === 0) {
+      return this.currentFolder() ? 'This folder is empty' : 'No documents yet';
     }
-    return this.currentFolder() ? 'This folder is empty' : 'No documents yet';
+    return 'No results found';
   });
 
   // === Protected Methods ===

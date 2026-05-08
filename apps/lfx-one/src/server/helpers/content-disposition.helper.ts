@@ -13,6 +13,14 @@
  */
 export function contentDispositionAttachment(fileName: string): string {
   const safeAscii = fileName.replace(/[^\x20-\x7E]/g, '_').replace(/["\\]/g, '_');
-  const encoded = encodeURIComponent(fileName);
-  return `attachment; filename="${safeAscii}"; filename*=UTF-8''${encoded}`;
+  return `attachment; filename="${safeAscii}"; filename*=UTF-8''${encodeRfc5987ValueChars(fileName)}`;
+}
+
+/**
+ * Percent-encode a string for use in an RFC 5987 `value-chars` context. `encodeURIComponent`
+ * leaves `!`, `'`, `(`, `)`, and `*` unencoded — none of which are in the RFC 5987 `attr-char`
+ * grammar, so some user agents reject filenames containing them. We percent-encode them here.
+ */
+function encodeRfc5987ValueChars(value: string): string {
+  return encodeURIComponent(value).replace(/['()*!]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
 }

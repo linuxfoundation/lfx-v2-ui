@@ -518,6 +518,9 @@ export class ProjectController {
       if (trimmedParentUid && !FOLDER_UID_PATTERN.test(trimmedParentUid)) {
         fieldErrors['parent_uid'] = 'parent_uid must be a valid UUID';
       }
+      // Normalize back to the trimmed value so upstream receives the canonical UUID,
+      // not whitespace-padded input. Empty/undefined stays untouched.
+      data.parent_uid = trimmedParentUid || undefined;
 
       if (Object.keys(fieldErrors).length > 0) {
         next(
