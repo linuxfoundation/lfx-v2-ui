@@ -126,7 +126,8 @@ interface ProjectFolder {
   project_uid?: string;
   name: string;
   created_by_uid?: string;
-  created_by_name?: string;
+  /** LF username of the creator, auto-populated by upstream from the JWT. */
+  created_by_username?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -140,7 +141,8 @@ interface ProjectLink {
   description?: string;
   folder_uid?: string;
   created_by_uid?: string;
-  created_by_name?: string;
+  /** LF username of the creator, auto-populated by upstream from the JWT. */
+  created_by_username?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -155,7 +157,8 @@ interface ProjectFolderQueryResult {
   name: string;
   project_uid?: string;
   created_by_uid?: string;
-  created_by_name?: string;
+  /** LF username of the creator, indexed from the upstream domain model. */
+  created_by_username?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -172,7 +175,8 @@ interface ProjectLinkQueryResult {
   folder_uid?: string;
   project_uid?: string;
   created_by_uid?: string;
-  created_by_name?: string;
+  /** LF username of the creator, indexed from the upstream domain model. */
+  created_by_username?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -5339,7 +5343,7 @@ export class ProjectService {
       created_at: f.created_at,
       updated_at: f.updated_at,
       created_by: f.created_by_uid,
-      uploaded_by: cleanUserDisplayName(f.created_by_name),
+      uploaded_by: cleanUserDisplayName(f.created_by_username),
       project_uid: f.project_uid,
     }));
 
@@ -5352,7 +5356,7 @@ export class ProjectService {
       created_at: l.created_at,
       updated_at: l.updated_at,
       created_by: l.created_by_uid,
-      uploaded_by: cleanUserDisplayName(l.created_by_name),
+      uploaded_by: cleanUserDisplayName(l.created_by_username),
       parent_uid: l.folder_uid,
       project_uid: l.project_uid,
     }));
@@ -5436,7 +5440,7 @@ export class ProjectService {
         created_at: folder.created_at,
         updated_at: folder.updated_at,
         created_by: folder.created_by_uid,
-        uploaded_by: cleanUserDisplayName(folder.created_by_name),
+        uploaded_by: cleanUserDisplayName(folder.created_by_username),
         project_uid: folder.project_uid,
       };
     }
@@ -5493,7 +5497,7 @@ export class ProjectService {
       created_at: link.created_at,
       updated_at: link.updated_at,
       created_by: link.created_by_uid,
-      uploaded_by: cleanUserDisplayName(link.created_by_name),
+      uploaded_by: cleanUserDisplayName(link.created_by_username),
       parent_uid: link.folder_uid,
       project_uid: link.project_uid,
     };

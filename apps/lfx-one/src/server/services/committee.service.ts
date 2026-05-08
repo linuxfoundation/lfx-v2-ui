@@ -37,7 +37,8 @@ interface CommitteeFolder {
   committee_uid?: string;
   name: string;
   created_by_uid?: string;
-  created_by_name?: string;
+  /** LF username of the creator, auto-populated by upstream from the JWT. */
+  created_by_username?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -51,7 +52,8 @@ interface CommitteeLink {
   description?: string;
   folder_uid?: string;
   created_by_uid?: string;
-  created_by_name?: string;
+  /** LF username of the creator, auto-populated by upstream from the JWT. */
+  created_by_username?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -764,7 +766,7 @@ export class CommitteeService {
       created_at: f.created_at,
       updated_at: f.updated_at,
       created_by: f.created_by_uid,
-      uploaded_by: cleanUserDisplayName(f.created_by_name),
+      uploaded_by: cleanUserDisplayName(f.created_by_username),
       committee_uid: f.committee_uid,
     }));
 
@@ -778,7 +780,7 @@ export class CommitteeService {
       created_at: l.created_at,
       updated_at: l.updated_at,
       created_by: l.created_by_uid,
-      uploaded_by: cleanUserDisplayName(l.created_by_name),
+      uploaded_by: cleanUserDisplayName(l.created_by_username),
       parent_uid: l.folder_uid,
       committee_uid: l.committee_uid,
     }));
@@ -835,7 +837,7 @@ export class CommitteeService {
         created_at: folder.created_at,
         updated_at: folder.updated_at,
         created_by: folder.created_by_uid,
-        uploaded_by: cleanUserDisplayName(folder.created_by_name),
+        uploaded_by: cleanUserDisplayName(folder.created_by_username),
         committee_uid: folder.committee_uid,
       };
     }
@@ -870,7 +872,7 @@ export class CommitteeService {
       created_at: link.created_at,
       updated_at: link.updated_at,
       created_by: link.created_by_uid,
-      uploaded_by: cleanUserDisplayName(link.created_by_name),
+      uploaded_by: cleanUserDisplayName(link.created_by_username),
       parent_uid: link.folder_uid,
       committee_uid: link.committee_uid,
     };
