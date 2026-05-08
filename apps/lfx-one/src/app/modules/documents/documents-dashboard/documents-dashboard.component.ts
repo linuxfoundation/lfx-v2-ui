@@ -96,15 +96,14 @@ export class DocumentsDashboardComponent {
 
   // === Computed Signals ===
   protected readonly project = this.projectContextService.activeContext;
-  protected readonly canWrite = this.projectContextService.canWrite;
   protected readonly activeLens = this.lensService.activeLens;
   /**
-   * Upload affordances appear when the dashboard is project-scoped AND the caller has
-   * write access on the active context. Tied to useProjectSource so the toolbar can
-   * never appear while the data source is the legacy aggregator (which would make
-   * clicks no-op). canWrite is sourced from `/api/projects/:slug` (`writer === true`).
+   * Upload affordances appear whenever the dashboard is project-scoped. Any authenticated
+   * member can upload — accountability comes from the Shared By column on the table, not
+   * a UI gate. Tied to useProjectSource so the toolbar never appears under the legacy
+   * aggregator path (where clicks would no-op).
    */
-  protected readonly canUpload = computed(() => this.useProjectSource() && this.canWrite());
+  protected readonly canUpload = computed(() => this.useProjectSource());
   /** True when the dashboard is project-scoped (Project / Foundation lens with active context). */
   protected readonly useProjectSource = computed(() => {
     const lens = this.activeLens();
