@@ -101,7 +101,7 @@
             [showFoundation]="false"
             (folderOpen)="onFolderOpen($event)"
             testIdPrefix="documents-dashboard"
-            [emptyMessage]="currentFolder() ? 'This folder is empty' : 'No documents yet'">
+            [emptyMessage]="projectEmptyMessage()">
           </lfx-documents-table>
         </div>
       } @else {

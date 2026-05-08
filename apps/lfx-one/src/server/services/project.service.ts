@@ -5379,7 +5379,10 @@ export class ProjectService {
    */
   public async createProjectDocument(req: Request, projectId: string, data: CreateProjectDocumentRequest): Promise<ProjectDocument> {
     if (data.type !== 'folder' && data.type !== 'link') {
-      throw new Error(`Unsupported document type: ${data.type}. Only 'link' and 'folder' are supported.`);
+      throw ServiceValidationError.forField('type', `Unsupported document type: ${data.type}. Only 'link' and 'folder' are supported.`, {
+        operation: 'create_project_document',
+        service: 'project_service',
+      });
     }
 
     if (data.type === 'folder') {
@@ -5628,6 +5631,15 @@ export class ProjectService {
    * @param documentType 'folder' or 'link' — determines which upstream endpoint to call
    */
   public async deleteProjectDocument(req: Request, projectId: string, documentId: string, documentType: string): Promise<void> {
+    // Defense-in-depth: controller validates this too, but a typo like `type=file` should
+    // never silently fall through to the link path on a destructive route.
+    if (documentType !== 'folder' && documentType !== 'link') {
+      throw ServiceValidationError.forField('type', `Unsupported document type: ${documentType}. Only 'folder' and 'link' are supported.`, {
+        operation: 'delete_project_document',
+        service: 'project_service',
+      });
+    }
+
     const resourcePath = documentType === 'folder' ? `/projects/${projectId}/folders/${documentId}` : `/projects/${projectId}/links/${documentId}`;
 
     // Step 1: Fetch resource with ETag

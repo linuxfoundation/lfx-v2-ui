@@ -132,6 +132,17 @@ export class DocumentsDashboardComponent {
   protected readonly folderOptions: Signal<{ label: string; value: string }[]> = this.initFolderOptions();
   /** The folder the user has drilled into (project mode), used by the breadcrumb. Null at root. */
   protected readonly currentFolder: Signal<ProjectDocument | null> = this.initCurrentFolder();
+  /**
+   * Dynamic empty-state message for project mode — distinguishes "no documents at all"
+   * from "filtered to nothing" so the table doesn't read "No documents yet" while the
+   * user has an active search/source filter narrowing a non-empty list to zero rows.
+   */
+  protected readonly projectEmptyMessage = computed(() => {
+    if (this.filteredDocuments().length === 0 && this.rawProjectDocuments().length > 0) {
+      return 'No results found';
+    }
+    return this.currentFolder() ? 'This folder is empty' : 'No documents yet';
+  });
 
   // === Protected Methods ===
   protected onSourceTabChange(tab: string): void {
@@ -279,7 +290,10 @@ export class DocumentsDashboardComponent {
     const folderUids = new Set(folders.map((f) => f.uid));
 
     // Folder view — show only direct children of the selected folder.
-    if (currentFolderUid) {
+    // Guard against a stale UID: if the user drilled into a folder and then switched
+    // project/foundation context (or the folder was deleted), fall through to the root
+    // view instead of rendering an empty table that requires a manual breadcrumb click.
+    if (currentFolderUid && folderUids.has(currentFolderUid)) {
       return nonFolders
         .filter((d) => d.parent_uid === currentFolderUid)
         .sort((a, b) => a.name.localeCompare(b.name))

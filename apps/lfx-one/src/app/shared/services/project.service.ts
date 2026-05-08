@@ -3,7 +3,7 @@
 
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
-import { CreateProjectDocumentRequest, PendingActionItem, Project, ProjectDocument, ProjectDocumentType } from '@lfx-one/shared/interfaces';
+import { CreateProjectDocumentRequest, PendingActionItem, Project, ProjectDocument } from '@lfx-one/shared/interfaces';
 import { BehaviorSubject, catchError, Observable, of, shareReplay, take, tap } from 'rxjs';
 
 @Injectable({
@@ -139,7 +139,11 @@ export class ProjectService {
       .pipe(take(1));
   }
 
-  public deleteProjectDocument(projectUid: string, documentId: string, documentType: ProjectDocumentType): Observable<void> {
+  /**
+   * Deletes a project folder or link. Files are not deletable via this endpoint
+   * — the BFF only accepts `'folder'` and `'link'` for the `type` parameter.
+   */
+  public deleteProjectDocument(projectUid: string, documentId: string, documentType: 'folder' | 'link'): Observable<void> {
     const params = new HttpParams().set('type', documentType);
     return this.http.delete<void>(`/api/projects/${projectUid}/documents/${documentId}`, { params }).pipe(take(1));
   }

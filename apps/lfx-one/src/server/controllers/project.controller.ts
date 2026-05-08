@@ -490,10 +490,26 @@ export class ProjectController {
         return;
       }
 
-      const data: CreateProjectDocumentRequest = req.body;
+      // Reject null / array / primitive bodies before mutating — otherwise the
+      // `data.created_by_name = ...` assignment below would 500 instead of returning a
+      // typed validation error.
+      if (req.body === null || typeof req.body !== 'object' || Array.isArray(req.body)) {
+        next(
+          ServiceValidationError.forField('body', 'Request body must be a JSON object', {
+            operation: 'create_project_document',
+            service: 'project_controller',
+            path: req.path,
+          })
+        );
+        return;
+      }
 
-      // Always override created_by_name from OIDC session — never trust client-provided values
-      data.created_by_name = (req.oidc?.user?.['name'] as string) || (req.oidc?.user?.['nickname'] as string) || '';
+      // Build a fresh object so we don't mutate `req.body`. Always override
+      // `created_by_name` from the OIDC session — never trust client-provided values.
+      const data: CreateProjectDocumentRequest = {
+        ...(req.body as CreateProjectDocumentRequest),
+        created_by_name: (req.oidc?.user?.['name'] as string) || (req.oidc?.user?.['nickname'] as string) || '',
+      };
 
       const validDocTypes = ['link', 'folder'];
       const fieldErrors: Record<string, string> = {};
@@ -771,7 +787,9 @@ export class ProjectController {
    */
   public async deleteProjectDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { uid, documentId } = req.params;
-    const documentType = req.query['type'] as string;
+    // Use getStringQueryParam so repeated `?type=folder&type=link` keys can't slip through
+    // as an array and bypass the validation below.
+    const documentType = getStringQueryParam(req, 'type');
     const validDeleteTypes = ['link', 'folder'];
     const startTime = logger.startOperation(req, 'delete_project_document', {
       project_id: uid,
