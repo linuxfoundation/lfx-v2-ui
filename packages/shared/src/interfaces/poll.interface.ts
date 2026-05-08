@@ -215,6 +215,8 @@ export interface Vote {
   total_voting_request_invitations?: number;
   /** Number of responses received */
   num_response_received?: number;
+  /** The current user's vote_response UID for this poll (only present on getMyVotes results) */
+  my_vote_response_uid?: string;
 }
 
 /**

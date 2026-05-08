@@ -331,16 +331,21 @@ export class VoteService {
     }
 
     // Query vote_response records using filters_or (OR logic on data fields)
-    const responses = await fetchAllQueryResources<{ vote_uid: string }>(req, (pageToken) =>
-      this.microserviceProxy.proxyRequest<QueryServiceResponse<{ vote_uid: string }>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+    const responses = await fetchAllQueryResources<IndexedVoteResponse>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<IndexedVoteResponse>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'vote_response',
         filters_or: filtersOr,
         ...(pageToken && { page_token: pageToken }),
       })
     );
 
+    // Map vote_uid → the ballot's own uid so we can attach it to the fetched vote
+    const responseUidByVoteUid = new Map<string, string>(
+      responses.filter((r): r is IndexedVoteResponse & { vote_uid: string; uid: string } => !!(r.vote_uid && r.uid)).map((r) => [r.vote_uid, r.uid])
+    );
+
     // Extract unique vote UIDs
-    const voteUids = [...new Set(responses.filter((r) => r.vote_uid).map((r) => r.vote_uid))];
+    const voteUids = [...new Set(responses.filter((r) => r.vote_uid).map((r) => r.vote_uid!))];
 
     if (voteUids.length === 0) {
       return [];
@@ -355,7 +360,12 @@ export class VoteService {
     const votes = await Promise.all(
       voteUids.map(async (uid) => {
         try {
-          return await this.microserviceProxy.proxyRequest<Vote>(req, 'LFX_V2_SERVICE', `/votes/${uid}`, 'GET');
+          const vote = await this.microserviceProxy.proxyRequest<Vote>(req, 'LFX_V2_SERVICE', `/votes/${uid}`, 'GET');
+          const responseUid = responseUidByVoteUid.get(uid);
+          if (responseUid) {
+            vote.my_vote_response_uid = responseUid;
+          }
+          return vote;
         } catch (error) {
           logger.warning(req, 'get_my_votes', 'Failed to fetch vote details, skipping', {
             vote_uid: uid,
