@@ -172,6 +172,7 @@ Add to your `.env` file (already gitignored):
 LD_CLIENT_ID=your-launchdarkly-dev-client-id
 DD_RUM_CLIENT_ID=your-datadog-rum-client-token
 DD_RUM_APPLICATION_ID=your-datadog-rum-app-id
+INTERCOM_APP_ID=your-intercom-app-id
 ```
 
 The server reads these via `dotenv` in development mode:
@@ -191,6 +192,7 @@ docker run \
   -e LD_CLIENT_ID=prod-client-id \
   -e DD_RUM_CLIENT_ID=prod-rum-token \
   -e DD_RUM_APPLICATION_ID=prod-rum-app-id \
+  -e INTERCOM_APP_ID=your-intercom-app-id \
   ghcr.io/linuxfoundation/lfx-v2-ui:latest
 ```
 
@@ -210,6 +212,11 @@ env:
       secretKeyRef:
         name: lfx-one-secrets
         key: datadog-rum-client-id
+  - name: INTERCOM_APP_ID
+    valueFrom:
+      secretKeyRef:
+        name: lfx-one-secrets
+        key: intercom-app-id
 ```
 
 ## Benefits

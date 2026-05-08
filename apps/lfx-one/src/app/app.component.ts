@@ -87,8 +87,9 @@ export class AppComponent {
         console.error('Failed to initialize feature flags:', error);
       });
 
-      // Boot Intercom (skipped on SSR — IntercomService is a no-op there)
-      this.bootIntercom(authedUser);
+      if (!isImpersonating) {
+        this.bootIntercom(authedUser);
+      }
 
       // Set DataDog RUM user context for session tracking
       this.dataDogRumService.setUser(this.auth.user);

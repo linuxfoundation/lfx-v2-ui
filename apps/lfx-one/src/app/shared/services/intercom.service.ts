@@ -48,12 +48,12 @@ export class IntercomService {
       return;
     }
 
-    this.initializeIntercomFunction();
-
     window.intercomSettings = {
       api_base: apiBase || 'https://api-iam.intercom.io',
       app_id: appId,
     };
+
+    this.initializeIntercomFunction();
 
     const script = document.createElement('script');
     script.type = 'text/javascript';
@@ -65,6 +65,7 @@ export class IntercomService {
     };
 
     script.onerror = (error) => {
+      this.isBooted = false;
       console.error('IntercomService: Failed to load script', error);
     };
 
