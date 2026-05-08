@@ -15,6 +15,7 @@ import {
   CreateCommitteeDocumentType,
   CreateProjectDocumentRequest,
   CreateProjectDocumentType,
+  DocumentFormEntityType,
   DocumentFormMode,
 } from '@lfx-one/shared/interfaces';
 import { generateAcceptString, getAcceptedFileTypesDisplay, getMimeTypeDisplayName, isFileTypeAllowed } from '@lfx-one/shared/utils';
@@ -23,9 +24,6 @@ import { ProjectService } from '@services/project.service';
 import { Observable } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
-
-/** Which resource type the dialog operates against. Drives service dispatch + copy. */
-export type DocumentFormEntityType = 'committee' | 'project';
 
 @Component({
   selector: 'lfx-document-form',

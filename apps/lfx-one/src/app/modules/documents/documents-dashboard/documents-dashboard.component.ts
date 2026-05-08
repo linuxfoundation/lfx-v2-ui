@@ -97,12 +97,7 @@ export class DocumentsDashboardComponent {
   // === Computed Signals ===
   protected readonly project = this.projectContextService.activeContext;
   protected readonly activeLens = this.lensService.activeLens;
-  /**
-   * Upload affordances appear whenever the dashboard is project-scoped. Any authenticated
-   * member can upload — accountability comes from the Shared By column on the table, not
-   * a UI gate. Tied to useProjectSource so the toolbar never appears under the legacy
-   * aggregator path (where clicks would no-op).
-   */
+  // Toolbar gated only on project-scope so it can't render under the legacy aggregator (no-op clicks).
   protected readonly canUpload = computed(() => this.useProjectSource());
   /** True when the dashboard is project-scoped (Project / Foundation lens with active context). */
   protected readonly useProjectSource = computed(() => {
@@ -131,17 +126,7 @@ export class DocumentsDashboardComponent {
   protected readonly folderOptions: Signal<{ label: string; value: string }[]> = this.initFolderOptions();
   /** The folder the user has drilled into (project mode), used by the breadcrumb. Null at root. */
   protected readonly currentFolder: Signal<ProjectDocument | null> = this.initCurrentFolder();
-  /**
-   * Dynamic empty-state message for project mode. Three states, in priority order:
-   *  - `documents()` is empty → either an empty folder ("This folder is empty") or
-   *    nothing in the project at all ("No documents yet"). `documents()` is the
-   *    post-drilldown view, so an empty folder reports correctly even when the
-   *    project has many other documents.
-   *  - `documents()` has rows but `filteredDocuments()` does not → user's
-   *    search/source filter narrowed a non-empty list to zero ("No results found").
-   *  - both have rows → message is unused (lfx-documents-table only renders the
-   *    empty-state slot when there's nothing to show).
-   */
+  // Branch on documents() (post-drilldown) so an empty folder doesn't read "No results found" with no filter active.
   protected readonly projectEmptyMessage = computed(() => {
     if (this.documents().length === 0) {
       return this.currentFolder() ? 'This folder is empty' : 'No documents yet';
