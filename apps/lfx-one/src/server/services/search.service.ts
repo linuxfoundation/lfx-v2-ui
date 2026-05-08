@@ -85,8 +85,17 @@ export class SearchService {
     // committees. Keep the first occurrence of each distinct user.
     const seen = new Set<string>();
     const results = mapped.filter((r) => {
-      const key = r.uid ? r.uid.toLowerCase() : (r.email ?? '').toLowerCase();
-      if (!key || seen.has(key)) return false;
+      const uid = r.uid?.trim().toLowerCase();
+      const email = r.email?.trim().toLowerCase();
+      let key: string;
+      if (uid) {
+        key = `uid:${uid}`;
+      } else if (email) {
+        key = `email:${email}`;
+      } else {
+        return true; // no identifier to deduplicate on, keep the entry
+      }
+      if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
