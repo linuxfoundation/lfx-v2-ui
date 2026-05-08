@@ -22,7 +22,17 @@ import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'lfx-lens-switcher',
-  imports: [NgClass, RouterLink, TooltipModule, PopoverModule, AvatarComponent, BadgeComponent, ButtonComponent, ChangelogDrawerComponent, OpenIntercomDirective],
+  imports: [
+    NgClass,
+    RouterLink,
+    TooltipModule,
+    PopoverModule,
+    AvatarComponent,
+    BadgeComponent,
+    ButtonComponent,
+    ChangelogDrawerComponent,
+    OpenIntercomDirective,
+  ],
   providers: [DialogService],
   templateUrl: './lens-switcher.component.html',
   styleUrl: './lens-switcher.component.scss',

@@ -92,7 +92,7 @@ export class IntercomService {
         (...args: unknown[]) => {
           stub.c?.(args);
         },
-        { q: [] as unknown[][], c: (args: unknown[]) => stub.q!.push(args) },
+        { q: [] as unknown[][], c: (args: unknown[]) => stub.q!.push(args) }
       );
       window.Intercom = stub;
     }
