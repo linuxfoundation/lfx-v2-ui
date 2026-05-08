@@ -10,23 +10,11 @@ import { pipeline } from 'node:stream/promises';
 import { ReadableStream as NodeReadableStream } from 'node:stream/web';
 
 import { ServiceValidationError } from '../errors';
+import { contentDispositionAttachment } from '../helpers/content-disposition.helper';
 import { getStringQueryParam } from '../helpers/validation.helper';
 import { logger } from '../services/logger.service';
 import { ProjectService } from '../services/project.service';
 import { getEffectiveEmail } from '../utils/auth-helper';
-
-/**
- * Build an RFC 5987 compliant `Content-Disposition: attachment` header value
- * with both an ASCII fallback (`filename=`) and a UTF-8 encoded variant
- * (`filename*=UTF-8''...`). Mirrors the pattern in `committee.controller.ts` /
- * `document.controller.ts` — neutralizes non-ASCII chars, quotes, backslashes,
- * and control chars to prevent header injection (CR/LF) and broken responses.
- */
-function contentDispositionAttachment(fileName: string): string {
-  const safeAscii = fileName.replace(/[^\x20-\x7E]/g, '_').replace(/["\\]/g, '_');
-  const encoded = encodeURIComponent(fileName);
-  return `attachment; filename="${safeAscii}"; filename*=UTF-8''${encoded}`;
-}
 
 const FOLDER_UID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -523,6 +511,12 @@ export class ProjectController {
       }
       if (data.type === 'link' && !data.url?.trim()) {
         fieldErrors['url'] = 'URL is required for link documents';
+      }
+      // Validate parent_uid shape so upstream can't be sent a malformed identifier.
+      // Mirrors the check in uploadProjectDocument (folder_uid query param).
+      const trimmedParentUid = data.parent_uid?.trim();
+      if (trimmedParentUid && !FOLDER_UID_PATTERN.test(trimmedParentUid)) {
+        fieldErrors['parent_uid'] = 'parent_uid must be a valid UUID';
       }
 
       if (Object.keys(fieldErrors).length > 0) {
