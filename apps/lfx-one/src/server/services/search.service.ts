@@ -35,7 +35,7 @@ export class SearchService {
     );
 
     // Transform the resources to UserSearchResult format
-    const results: UserSearchResult[] = resources.map((resource) => {
+    const mapped: UserSearchResult[] = resources.map((resource) => {
       const data = resource.data;
 
       if (params.type === 'meeting_registrant') {
@@ -77,6 +77,18 @@ export class SearchService {
         type: 'committee_member',
         username: member.username || null,
       };
+    });
+
+    // Deduplicate by uid (primary) or email (fallback) — the upstream query service
+    // returns one row per registration/committee membership, so the same person can
+    // appear multiple times when they attended several meetings or belong to several
+    // committees. Keep the first occurrence of each distinct user.
+    const seen = new Set<string>();
+    const results = mapped.filter((r) => {
+      const key = r.uid ? r.uid.toLowerCase() : (r.email ?? '').toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
     });
 
     return {
