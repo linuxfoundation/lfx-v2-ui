@@ -14,12 +14,7 @@ export class IntercomService {
 
   private isLoaded = false;
 
-  /**
-   * Boot Intercom with user data. Loads the widget script on first call.
-   * Calls made before the script finishes loading are queued by the Intercom
-   * stub (see initializeIntercomFunction) and replayed once the real SDK
-   * loads — so this method is fire-and-forget.
-   */
+  // Fire-and-forget: stub queue absorbs calls before the script loads and replays them on load.
   public boot(options: IntercomBootOptions): void {
     if (typeof window === 'undefined' || !options.app_id || this.isBooted) {
       return;
@@ -30,10 +25,6 @@ export class IntercomService {
     this.isBooted = true;
   }
 
-  /**
-   * Show the Intercom messenger. No-op when not booted (the directive falls
-   * back to the JIRA support URL in that case).
-   */
   public show(): void {
     if (typeof window === 'undefined' || !window.Intercom || !this.isBooted) {
       return;
@@ -41,10 +32,7 @@ export class IntercomService {
     window.Intercom('show');
   }
 
-  /**
-   * Shutdown Intercom and clear identity.
-   * Call before re-booting with a different user (e.g. start/end impersonation).
-   */
+  // Call before re-booting with a different user (impersonation identity reset).
   public shutdown(): void {
     if (typeof window === 'undefined') {
       return;
