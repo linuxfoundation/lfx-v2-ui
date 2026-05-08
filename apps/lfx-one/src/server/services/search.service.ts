@@ -79,21 +79,22 @@ export class SearchService {
       };
     });
 
-    // Deduplicate by uid (primary) or email (fallback) — the upstream query service
-    // returns one row per registration/committee membership, so the same person can
-    // appear multiple times when they attended several meetings or belong to several
-    // committees. Keep the first occurrence of each distinct user.
+    // Deduplicate by username (LFID — stable across registrations) or email
+    // (fallback) — the upstream query service returns one row per registration
+    // or committee membership, so the same person can appear many times.
+    // NOTE: r.uid is the per-row record ID (not a user ID), so it cannot be
+    // used as a dedup key — two rows for the same person always have different uids.
     const seen = new Set<string>();
     const results = mapped.filter((r) => {
-      const uid = r.uid?.trim().toLowerCase();
+      const username = r.username?.trim().toLowerCase();
       const email = r.email?.trim().toLowerCase();
       let key: string;
-      if (uid) {
-        key = `uid:${uid}`;
+      if (username) {
+        key = `username:${username}`;
       } else if (email) {
         key = `email:${email}`;
       } else {
-        return true; // no identifier to deduplicate on, keep the entry
+        return true; // no stable identifier to deduplicate on, keep the entry
       }
       if (seen.has(key)) return false;
       seen.add(key);
