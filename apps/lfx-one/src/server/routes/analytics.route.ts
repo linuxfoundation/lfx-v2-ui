@@ -189,4 +189,7 @@ router.get('/marketing-attribution', (req, res, next) => analyticsController.get
 // Multi-foundation summary endpoint (multi-foundation dashboard)
 router.get('/multi-foundation-summary', (req, res, next) => analyticsController.getMultiFoundationSummary(req, res, next));
 
+// Org Lens — bootstrap account context (display attrs + cdev mapping + tier)
+router.get('/org-lens-account-context', (req, res, next) => analyticsController.getOrgLensAccountContext(req, res, next));
+
 export default router;

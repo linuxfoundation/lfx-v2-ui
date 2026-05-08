@@ -47,85 +47,31 @@
     </div>
 
     <div class="max-h-[400px] overflow-y-auto">
-      @for (group of displayGroups(); track $index) {
-        @if (group.kind === 'flat') {
-          <button
-            type="button"
-            class="flex items-center gap-3 p-2 w-full text-left hover:bg-gray-100 rounded-lg transition-colors"
-            [class.bg-blue-50]="isSelected(group.account)"
-            (click)="selectItem(group.account, popover)"
-            [attr.data-testid]="'org-selector-item-' + (group.account.accountSlug || group.account.accountId)">
-            <div class="bg-gray-100 overflow-clip rounded-lg shrink-0 size-9 border border-gray-200">
-              <div class="flex items-center justify-center size-full p-1.5">
-                @if (group.account.logoUrl) {
-                  <img [alt]="group.account.accountName" class="w-full h-full object-contain" [src]="group.account.logoUrl" />
-                } @else {
-                  <i class="fa-light fa-building text-gray-500" aria-hidden="true"></i>
-                }
-              </div>
-            </div>
-
-            <div class="flex-1 min-w-0">
-              <p class="font-medium text-sm text-gray-900 mb-0">{{ group.account.accountName }}</p>
-            </div>
-
-            @if (isSelected(group.account)) {
-              <i class="fa-solid fa-check text-blue-600 text-sm" aria-hidden="true"></i>
-            }
-          </button>
-        } @else {
-          <button
-            type="button"
-            class="flex items-center gap-3 p-2 w-full text-left hover:bg-gray-100 rounded-lg transition-colors"
-            [class.bg-blue-50]="isSelected(group.parent)"
-            (click)="selectItem(group.parent, popover)"
-            [attr.data-testid]="'org-selector-item-' + (group.parent.accountSlug || group.parent.accountId)">
-            <div class="bg-gray-100 overflow-clip rounded-lg shrink-0 size-9 border border-gray-200">
-              <div class="flex items-center justify-center size-full p-1.5">
-                @if (group.parent.logoUrl) {
-                  <img [alt]="group.parent.accountName" class="w-full h-full object-contain" [src]="group.parent.logoUrl" />
-                } @else {
-                  <i class="fa-light fa-building text-gray-500" aria-hidden="true"></i>
-                }
-              </div>
-            </div>
-
-            <div class="flex-1 min-w-0">
-              <p class="font-medium text-sm text-gray-900 mb-0">{{ group.parent.accountName }}</p>
-            </div>
-
-            @if (isSelected(group.parent)) {
-              <i class="fa-solid fa-check text-blue-600 text-sm" aria-hidden="true"></i>
-            }
-          </button>
-
-          @for (sibling of group.siblings; track sibling.accountId) {
-            <button
-              type="button"
-              class="flex items-center gap-3 p-2 pl-12 w-full text-left hover:bg-gray-100 rounded-lg transition-colors"
-              [class.bg-blue-50]="isSelected(sibling)"
-              (click)="selectItem(sibling, popover)"
-              [attr.data-testid]="'org-selector-item-' + (sibling.accountSlug || sibling.accountId)">
-              <div class="bg-gray-100 overflow-clip rounded-lg shrink-0 size-7 border border-gray-200">
-                <div class="flex items-center justify-center size-full p-1">
-                  @if (sibling.logoUrl) {
-                    <img [alt]="sibling.accountName" class="w-full h-full object-contain" [src]="sibling.logoUrl" />
-                  } @else {
-                    <i class="fa-light fa-building text-gray-500 text-xs" aria-hidden="true"></i>
-                  }
-                </div>
-              </div>
-
-              <div class="flex-1 min-w-0">
-                <p class="text-sm text-gray-700 mb-0">{{ sibling.accountName }}</p>
-              </div>
-
-              @if (isSelected(sibling)) {
-                <i class="fa-solid fa-check text-blue-600 text-sm" aria-hidden="true"></i>
+      @for (account of visibleAccounts(); track account.accountId) {
+        <button
+          type="button"
+          class="flex items-center gap-3 p-2 w-full text-left hover:bg-gray-100 rounded-lg transition-colors"
+          [class.bg-blue-50]="isSelected(account)"
+          (click)="selectItem(account, popover)"
+          [attr.data-testid]="'org-selector-item-' + (account.accountSlug || account.accountId)">
+          <div class="bg-gray-100 overflow-clip rounded-lg shrink-0 size-9 border border-gray-200">
+            <div class="flex items-center justify-center size-full p-1.5">
+              @if (account.logoUrl) {
+                <img [alt]="account.accountName" class="w-full h-full object-contain" [src]="account.logoUrl" />
+              } @else {
+                <i class="fa-light fa-building text-gray-500" aria-hidden="true"></i>
               }
-            </button>
+            </div>
+          </div>
+
+          <div class="flex-1 min-w-0">
+            <p class="font-medium text-sm text-gray-900 mb-0">{{ account.accountName }}</p>
+          </div>
+
+          @if (isSelected(account)) {
+            <i class="fa-solid fa-check text-blue-600 text-sm" aria-hidden="true"></i>
           }
-        }
+        </button>
       } @empty {
         <div class="text-center py-8 text-gray-500 text-sm">No organizations found</div>
       }

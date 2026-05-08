@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * Account entity representing an organization in the system
- * @description Maps account ID to organization name for board member dashboard
+ * Account entity representing an organization in the LFX One Org Lens.
+ * Used by the org-selector and any header/badge that needs the org's
+ * display attributes.
  */
 export interface Account {
-  /** Salesforce account_id (also known as b2b_account_id) — primary join key */
+  /** Salesforce account_id — primary join key */
   accountId: string;
   /** Organization display name */
   accountName: string;
@@ -16,8 +17,6 @@ export interface Account {
   accountSlug?: string;
   /** Logo URL for the organization */
   logoUrl?: string;
-  /** Highest membership tier across active memberships (e.g. "Platinum", "Gold") */
+  /** Highest active corporate membership tier display name (e.g. "Platinum Membership"). NULL/empty → no badge. */
   membershipTier?: string;
-  /** Related accounts in the same Salesforce hierarchy (conglomerate siblings) */
-  accountsRelated?: Account[];
 }

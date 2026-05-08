@@ -2796,6 +2796,31 @@ export class AnalyticsController {
   }
 
   /**
+   * GET /api/analytics/org-lens-account-context
+   * Resolve LFX One Org Lens display context for a set of Salesforce
+   * accounts — one denormalised row per account_id with cdev mapping
+   * and highest active corporate membership tier.
+   * Query params: accountIds (required) - Comma-separated Salesforce account IDs (max 50)
+   */
+  public async getOrgLensAccountContext(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_org_lens_account_context');
+
+    try {
+      const accountIds = this.parseAccountIdsParam(req, 'get_org_lens_account_context');
+      const response = await this.organizationService.getOrgLensAccountContext(accountIds);
+
+      logger.success(req, 'get_org_lens_account_context', startTime, {
+        requested_count: accountIds.length,
+        resolved_count: response.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Parse and validate a comma-separated slugs query parameter.
    * @throws ServiceValidationError if the parameter is missing, empty, exceeds max count, or has invalid format
    */
@@ -2838,5 +2863,44 @@ export class AnalyticsController {
     }
 
     return slugs;
+  }
+
+  /**
+   * Parse and validate the `accountIds` query parameter (comma-separated
+   * Salesforce account IDs). De-duplicates, enforces a 50-id ceiling, and
+   * checks each id matches the Salesforce 15/18-char alphanumeric format.
+   */
+  private parseAccountIdsParam(req: Request, operation: string): string[] {
+    const raw = getStringQueryParam(req, 'accountIds');
+    if (!raw) {
+      throw ServiceValidationError.forField('accountIds', 'accountIds query parameter is required', { operation });
+    }
+
+    const ids = [
+      ...new Set(
+        raw
+          .split(',')
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0)
+      ),
+    ];
+
+    if (ids.length === 0) {
+      throw ServiceValidationError.forField('accountIds', 'At least one accountId is required', { operation });
+    }
+
+    const MAX_ACCOUNT_IDS = 50;
+    if (ids.length > MAX_ACCOUNT_IDS) {
+      throw ServiceValidationError.forField('accountIds', `Maximum of ${MAX_ACCOUNT_IDS} accountIds allowed per request`, { operation });
+    }
+
+    const SALESFORCE_ID_PATTERN = /^[A-Za-z0-9]{15,18}$/;
+    for (const id of ids) {
+      if (!SALESFORCE_ID_PATTERN.test(id)) {
+        throw ServiceValidationError.forField('accountIds', `Invalid Salesforce accountId format: ${id}`, { operation });
+      }
+    }
+
+    return ids;
   }
 }
