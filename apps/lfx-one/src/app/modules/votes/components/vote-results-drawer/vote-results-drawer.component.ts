@@ -2,33 +2,39 @@
 // SPDX-License-Identifier: MIT
 
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, input, model, signal, Signal } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { Component, computed, DestroyRef, inject, input, model, signal, Signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
 import { TagComponent } from '@components/tag/tag.component';
+import { VoteBallotComponent } from '@components/vote-ballot/vote-ballot.component';
 import { environment } from '@environments/environment';
 import { PollStatus, PollType } from '@lfx-one/shared';
-import { PollCommentResult, Vote, VoteParticipationStats, VoteResultsOption, VoteResultsQuestion, VoteResultsResponse } from '@lfx-one/shared/interfaces';
+import { PollCommentResult, Vote, VoteAnswerInput, VoteParticipationStats, VoteResultsOption, VoteResultsQuestion, VoteResultsResponse } from '@lfx-one/shared/interfaces';
 import { PollStatusLabelPipe } from '@pipes/poll-status-label.pipe';
 import { PollStatusSeverityPipe } from '@pipes/poll-status-severity.pipe';
 import { VoteService } from '@services/vote.service';
+import { MessageService } from 'primeng/api';
 import { DrawerModule } from 'primeng/drawer';
 import { SkeletonModule } from 'primeng/skeleton';
-import { catchError, finalize, of, shareReplay, startWith, switchMap } from 'rxjs';
+import { catchError, combineLatest, finalize, of, shareReplay, startWith, Subject, switchMap, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-vote-results-drawer',
-  imports: [DrawerModule, TagComponent, ButtonComponent, DatePipe, PollStatusLabelPipe, PollStatusSeverityPipe, SkeletonModule],
+  imports: [DrawerModule, TagComponent, ButtonComponent, DatePipe, PollStatusLabelPipe, PollStatusSeverityPipe, SkeletonModule, VoteBallotComponent],
   templateUrl: './vote-results-drawer.component.html',
   styleUrl: './vote-results-drawer.component.scss',
 })
 export class VoteResultsDrawerComponent {
   // === Services ===
   private readonly voteService = inject(VoteService);
+  private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
 
   // === Inputs ===
   public readonly voteId = input<string | null>(null);
   public readonly listVote = input<Vote | null>(null);
+  /** Pre-created vote_response UID. When non-null and the vote is still active, the inline ballot is shown. */
+  public readonly userResponseUid = input<string | null>(null);
 
   // === Model Signals (two-way binding) ===
   public readonly visible = model<boolean>(false);
@@ -36,9 +42,14 @@ export class VoteResultsDrawerComponent {
   // === Writable Signals ===
   protected readonly loadingVoteDetails = signal<boolean>(false);
   protected readonly loadingVoteResults = signal<boolean>(false);
+  protected readonly submittingBallot = signal(false);
+  private readonly hasSubmittedBallot = signal(false);
+  protected readonly voteLoadError = signal(false);
 
   // === Shared Observables ===
   private readonly voteId$ = toObservable(this.voteId).pipe(shareReplay({ bufferSize: 1, refCount: true }));
+  // Imperative trigger: emitting refreshes vote results after a ballot is submitted.
+  private readonly resultsRefresh$ = new Subject<void>();
 
   // === Derived Signals (from API) ===
   protected readonly vote: Signal<Vote | null> = this.initVote();
@@ -53,16 +64,52 @@ export class VoteResultsDrawerComponent {
   protected readonly questionsWithResults: Signal<VoteResultsQuestion[]> = this.initQuestionsWithResults();
   protected readonly commentResults: Signal<PollCommentResult[]> = this.initCommentResults();
   protected readonly votingMethodText: Signal<string> = this.initVotingMethodText();
+  /** True when the vote is still active, the user has a pending response uid, and hasn't submitted yet this session. */
+  protected readonly canCastVote: Signal<boolean> = computed(() => !this.isVoteClosed() && !!this.userResponseUid() && !this.hasSubmittedBallot());
 
   // === Protected Methods ===
   protected onClose(): void {
     this.visible.set(false);
   }
 
+  protected handleBallotSubmitted(payload: { abstain: boolean; user_vote_content?: VoteAnswerInput[] }): void {
+    const voteUid = this.voteId();
+    const voteResponseUid = this.userResponseUid();
+    if (!voteUid || !voteResponseUid) return;
+
+    this.submittingBallot.set(true);
+    this.voteService
+      .submitVoteResponse({ vote_uid: voteUid, vote_response_uid: voteResponseUid, abstain: payload.abstain, user_vote_content: payload.user_vote_content })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.submittingBallot.set(false);
+          this.hasSubmittedBallot.set(true);
+          this.messageService.add({ severity: 'success', summary: 'Vote submitted', detail: 'Your ballot has been recorded.', life: 3000 });
+          this.resultsRefresh$.next();
+        },
+        error: () => {
+          this.submittingBallot.set(false);
+          const pccUrl = this.pccVotingUrl();
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Vote submission failed',
+            detail: pccUrl ? `Could not submit your vote. Open in PCC: ${pccUrl}` : 'Could not submit your vote. Please try again.',
+            life: 6000,
+          });
+        },
+      });
+  }
+
   // === Private Initializers ===
   private initVote(): Signal<Vote | null> {
     return toSignal(
       this.voteId$.pipe(
+        // Reset per-vote UI state whenever a new vote opens in the drawer.
+        tap(() => {
+          this.hasSubmittedBallot.set(false);
+          this.voteLoadError.set(false);
+        }),
         switchMap((id) => {
           if (!id) {
             this.loadingVoteDetails.set(false);
@@ -73,7 +120,10 @@ export class VoteResultsDrawerComponent {
           const listVote = this.listVote();
 
           return this.voteService.getVote(id).pipe(
-            catchError(() => of(listVote)),
+            catchError(() => {
+              if (!listVote) this.voteLoadError.set(true);
+              return of(listVote);
+            }),
             finalize(() => this.loadingVoteDetails.set(false)),
             startWith(listVote)
           );
@@ -85,8 +135,8 @@ export class VoteResultsDrawerComponent {
 
   private initVoteResults(): Signal<VoteResultsResponse | null> {
     return toSignal(
-      this.voteId$.pipe(
-        switchMap((id) => {
+      combineLatest([this.voteId$, this.resultsRefresh$.pipe(startWith(null))]).pipe(
+        switchMap(([id]) => {
           if (!id) {
             this.loadingVoteResults.set(false);
             return of(null);
