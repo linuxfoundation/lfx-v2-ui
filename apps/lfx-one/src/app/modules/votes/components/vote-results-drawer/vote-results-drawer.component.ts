@@ -12,7 +12,7 @@ import { PollStatus, PollType } from '@lfx-one/shared';
 import {
   PollCommentResult,
   Vote,
-  VoteAnswerInput,
+  VoteBallotPayload,
   VoteParticipationStats,
   VoteResultsOption,
   VoteResultsQuestion,
@@ -80,7 +80,7 @@ export class VoteResultsDrawerComponent {
     this.visible.set(false);
   }
 
-  protected handleBallotSubmitted(payload: { abstain: boolean; user_vote_content?: VoteAnswerInput[] }): void {
+  protected handleBallotSubmitted(payload: VoteBallotPayload): void {
     const voteUid = this.voteId();
     const voteResponseUid = this.userResponseUid();
     if (!voteUid || !voteResponseUid) return;

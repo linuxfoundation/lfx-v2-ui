@@ -15,7 +15,7 @@ import { HiddenActionsService } from '@shared/services/hidden-actions.service';
 import { MessageService } from 'primeng/api';
 import { timer } from 'rxjs';
 
-import type { DecoratedPendingAction, Meeting, PendingActionItem, Vote, VoteAnswerInput } from '@lfx-one/shared/interfaces';
+import type { DecoratedPendingAction, Meeting, PendingActionItem, Vote, VoteBallotPayload } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-pending-actions',
@@ -83,7 +83,7 @@ export class PendingActionsComponent {
     this.startRowDismissal(item);
   }
 
-  protected handleVoteSubmitted(item: DecoratedPendingAction, payload: { abstain: boolean; user_vote_content?: VoteAnswerInput[] }): void {
+  protected handleVoteSubmitted(item: DecoratedPendingAction, payload: VoteBallotPayload): void {
     const voteUid = item.voteUid;
     const voteResponseUid = item.voteResponseUid;
     if (!voteUid || !voteResponseUid) return;

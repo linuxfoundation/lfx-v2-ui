@@ -4,7 +4,7 @@
 import { Component, computed, input, OnInit, output, signal, Signal } from '@angular/core';
 import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { PollQuestion, Vote, VoteAnswerInput } from '@lfx-one/shared/interfaces';
+import { PollQuestion, Vote, VoteAnswerInput, VoteBallotPayload } from '@lfx-one/shared/interfaces';
 import { RadioButtonComponent } from '@components/radio-button/radio-button.component';
 import { CheckboxModule } from 'primeng/checkbox';
 
@@ -22,7 +22,7 @@ export class VoteBallotComponent implements OnInit {
   public readonly submitting = input(false);
 
   // Outputs
-  public readonly voteSubmitted = output<{ abstain: boolean; user_vote_content?: VoteAnswerInput[] }>();
+  public readonly voteSubmitted = output<VoteBallotPayload>();
   public readonly voteCancelled = output<void>();
 
   // Form — controls added/removed dynamically when vote() changes

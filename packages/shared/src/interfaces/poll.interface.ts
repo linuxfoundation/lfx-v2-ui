@@ -615,6 +615,17 @@ export interface VoteAnswerInput {
 }
 
 /**
+ * Payload emitted by VoteBallotComponent when the user submits their ballot.
+ * Contains only the voter's choices — consumer adds vote/response UIDs before sending to the API.
+ */
+export interface VoteBallotPayload {
+  /** Whether the voter is abstaining */
+  abstain: boolean;
+  /** Voter's answers — present when not abstaining */
+  user_vote_content?: VoteAnswerInput[];
+}
+
+/**
  * Request body for submitting a vote response (ballot)
  * @description Aligns with upstream POST /vote_responses
  * @see https://github.com/linuxfoundation/lfx-v2-voting-service
