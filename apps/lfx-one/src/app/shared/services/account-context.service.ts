@@ -92,7 +92,7 @@ export class AccountContextService {
       const stored = this.loadFromStorage();
       const matchedSeed = stored ? (seeds.find((seed) => seed.accountId === stored.accountId) ?? null) : null;
       if (matchedSeed) {
-        this.selectedAccount.set(matchedSeed);
+        this.setAccount(matchedSeed);
       } else {
         this.setAccount(seeds[0]);
       }
@@ -173,12 +173,23 @@ export class AccountContextService {
   private loadFromStorage(): Account | null {
     try {
       const stored = this.cookieService.get(this.storageKey);
-      if (stored) {
-        return JSON.parse(stored) as Account;
+      if (!stored) {
+        return null;
       }
+      const parsed = JSON.parse(stored) as Account;
+      if (!this.isValidAccountId(parsed?.accountId)) {
+        return null;
+      }
+      return parsed;
     } catch {
-      // Invalid data in cookie, ignore
+      return null;
     }
-    return null;
+  }
+
+  // Salesforce account ids are 15- or 18-char alphanumeric strings.
+  // Reject anything else so a tampered cookie can't seed selectedAccount with
+  // an invalid id before persona init reconciles.
+  private isValidAccountId(id: unknown): id is string {
+    return typeof id === 'string' && /^[a-zA-Z0-9]{15}([a-zA-Z0-9]{3})?$/.test(id);
   }
 }
