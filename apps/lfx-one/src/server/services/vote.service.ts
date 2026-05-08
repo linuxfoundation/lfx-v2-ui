@@ -339,13 +339,17 @@ export class VoteService {
       })
     );
 
-    // Map vote_uid → the ballot's own uid so we can attach it to the fetched vote
+    // Map vote_uid → the ballot's own uid so we can attach it to the fetched vote.
+    // Only include pending responses — submitted/removed ones shouldn't enable inline voting.
     const responseUidByVoteUid = new Map<string, string>(
-      responses.filter((r): r is IndexedVoteResponse & { vote_uid: string; uid: string } => !!(r.vote_uid && r.uid)).map((r) => [r.vote_uid, r.uid])
+      responses
+        .filter((r): r is IndexedVoteResponse & { uid: string } => !!r.uid && r.vote_status !== 'submitted' && !r.voter_removed)
+        .map((r) => [r.vote_uid ?? r.vote_id ?? r.poll_id ?? '', r.uid] as [string, string])
+        .filter(([voteKey]) => !!voteKey)
     );
 
-    // Extract unique vote UIDs
-    const voteUids = [...new Set(responses.filter((r) => r.vote_uid).map((r) => r.vote_uid!))];
+    // Extract unique vote UIDs (fall back to vote_id/poll_id for v1 rows)
+    const voteUids = [...new Set(responses.map((r) => r.vote_uid ?? r.vote_id ?? r.poll_id).filter((uid): uid is string => !!uid))];
 
     if (voteUids.length === 0) {
       return [];

@@ -185,9 +185,10 @@ export class VoteResultsDrawerComponent {
       const v = this.vote();
       if (v?.status === PollStatus.ENDED) return true;
 
-      // Treat 100% participation as finalized even if the vote hasn't formally ended
+      // Treat full participation as finalized even if the vote hasn't formally ended.
+      // Use raw counts to avoid rounding errors (e.g. 200/201 rounds to 100%).
       const stats = this.participationStats();
-      return stats.eligibleVoters > 0 && stats.participationRate >= 100;
+      return stats.eligibleVoters > 0 && stats.totalResponses >= stats.eligibleVoters;
     });
   }
 

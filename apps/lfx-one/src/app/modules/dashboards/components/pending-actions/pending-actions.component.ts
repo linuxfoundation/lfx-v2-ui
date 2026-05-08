@@ -8,6 +8,7 @@ import { ButtonComponent } from '@components/button/button.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { VoteBallotComponent } from '@components/vote-ballot/vote-ballot.component';
 import { environment } from '@environments/environment';
+import { PollType } from '@lfx-one/shared';
 import { stableKeyParity } from '@lfx-one/shared/utils';
 import { MeetingService } from '@services/meeting.service';
 import { VoteService } from '@services/vote.service';
@@ -129,8 +130,8 @@ export class PendingActionsComponent {
     return item.type === 'Vote' && !!item.voteUid && !!item.voteResponseUid;
   }
 
-  private isVoteSingleQuestion(vote: Vote): boolean {
-    return (vote.poll_questions?.length ?? 0) === 1;
+  private isVoteEligibleForInline(vote: Vote): boolean {
+    return vote.poll_type === PollType.GENERIC && (vote.poll_questions?.length ?? 0) === 1;
   }
 
   // Composite key for action types that carry intrinsic IDs; text+link fallback for others.
@@ -258,8 +259,8 @@ export class PendingActionsComponent {
 
     const cached = this.voteCache()[voteUid];
     if (cached) {
-      // Multi-question: open /votes in a new tab until drawer respond-mode lands (Step 6/7).
-      if (!this.isVoteSingleQuestion(cached)) {
+      // Non-generic or multi-question: open /votes in a new tab (inline only supports single-question generic polls).
+      if (!this.isVoteEligibleForInline(cached)) {
         this.expandedRowKey.set(null);
         window.open(item.buttonLink ?? '/votes', '_blank', 'noopener,noreferrer');
       }
@@ -276,8 +277,8 @@ export class PendingActionsComponent {
           if (this.loadingVoteUid() === voteUid) {
             this.loadingVoteUid.set(null);
           }
-          // Multi-question: open /votes in a new tab until drawer respond-mode lands (Step 6/7).
-          if (!this.isVoteSingleQuestion(vote)) {
+          // Non-generic or multi-question: open /votes in a new tab (inline only supports single-question generic polls).
+          if (!this.isVoteEligibleForInline(vote)) {
             this.expandedRowKey.set(null);
             window.open(item.buttonLink ?? '/votes', '_blank', 'noopener,noreferrer');
           }

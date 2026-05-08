@@ -31,7 +31,6 @@
             <div class="flex-1 sm:w-4/5 sm:pl-4" data-testid="dashboard-pending-actions-vote-ballot">
               <lfx-vote-ballot
                 [vote]="item.vote"
-                [voteResponseUid]="item.voteResponseUid!"
                 [compact]="true"
                 [submitting]="submittingVoteUid() === item.voteUid"
                 (voteSubmitted)="handleVoteSubmitted(item, $event)"

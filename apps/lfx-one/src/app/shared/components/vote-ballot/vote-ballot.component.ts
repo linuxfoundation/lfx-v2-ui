@@ -17,7 +17,6 @@ import { CheckboxModule } from 'primeng/checkbox';
 export class VoteBallotComponent implements OnInit {
   // Inputs
   public readonly vote = input.required<Vote>();
-  public readonly voteResponseUid = input.required<string>();
   public readonly compact = input(false);
   public readonly submitting = input(false);
 
@@ -25,7 +24,7 @@ export class VoteBallotComponent implements OnInit {
   public readonly voteSubmitted = output<VoteBallotPayload>();
   public readonly voteCancelled = output<void>();
 
-  // Form — controls added/removed dynamically when vote() changes
+  // Form — controls built once in ngOnInit; vote() is stable for the component's lifetime.
   public readonly form = new FormGroup<Record<string, AbstractControl>>({});
 
   // Simple signals
