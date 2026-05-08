@@ -19,11 +19,8 @@ export type IntercomSettings = Partial<IntercomBootOptions>;
 /** Intercom API — models the loaded SDK function and the pre-load queue stub. */
 export interface IntercomFunction {
   (command: 'boot', options: IntercomBootOptions): void;
-  (command: 'update', data?: Partial<IntercomBootOptions>): void;
   (command: 'show'): void;
-  (command: 'hide'): void;
   (command: 'shutdown'): void;
-  (command: 'trackEvent', eventName: string, metadata?: Record<string, unknown>): void;
   (command: 'reattach_activator'): void;
   (command: string, ...args: unknown[]): void;
   /** Queue of buffered calls (populated by the stub before the real script loads). */

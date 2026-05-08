@@ -110,16 +110,12 @@ export class AppComponent {
       return;
     }
 
-    this.intercomService
-      .boot({
-        app_id: intercomAppId,
-        intercom_user_jwt: intercomJwt,
-        user_id: userId,
-        name: user.name,
-        email: user.email,
-      })
-      .catch((error) => {
-        console.error('Intercom boot failed', error);
-      });
+    this.intercomService.boot({
+      app_id: intercomAppId,
+      intercom_user_jwt: intercomJwt,
+      user_id: userId,
+      name: user.name,
+      email: user.email,
+    });
   }
 }

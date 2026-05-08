@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Directive, HostBinding, HostListener, inject } from '@angular/core';
+import { Directive, HostListener, inject } from '@angular/core';
 import { environment } from '@environments/environment';
 import { IntercomService } from '@services/intercom.service';
 
@@ -10,16 +10,13 @@ import { IntercomService } from '@services/intercom.service';
   selector: '[lfxOpenIntercom]',
 })
 export class OpenIntercomDirective {
-  @HostBinding('class.open-intercom-bot')
-  public readonly intercomClass = true;
-
   private readonly intercomService = inject(IntercomService);
 
   @HostListener('click', ['$event'])
   public onClick(event: MouseEvent): void {
     event.preventDefault();
 
-    if (this.intercomService.isIntercomBooted()) {
+    if (this.intercomService.isBooted) {
       this.intercomService.show();
     } else if (typeof window !== 'undefined') {
       window.open(environment.urls.support, '_blank', 'noopener,noreferrer');
