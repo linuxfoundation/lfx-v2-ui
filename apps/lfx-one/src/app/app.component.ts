@@ -102,9 +102,12 @@ export class AppComponent {
     const userId = user['https://sso.linuxfoundation.org/claims/username'] || user.sub;
     const { intercomAppId } = getRuntimeConfig(this.transferState);
 
-    if (!intercomAppId || !intercomJwt || !userId) {
-      console.warn('Intercom boot skipped: missing inputs', {
-        hasAppId: !!intercomAppId,
+    if (!intercomAppId) {
+      return;
+    }
+
+    if (!intercomJwt || !userId) {
+      console.warn('Intercom boot skipped: App ID present but missing identity', {
         hasJwt: !!intercomJwt,
         hasUserId: !!userId,
       });
