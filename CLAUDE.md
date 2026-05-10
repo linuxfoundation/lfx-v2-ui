@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 > Auto-loaded by Claude Code at session start. Read this first.
 
 ## Project Overview
@@ -61,7 +63,7 @@ All commands run from the repo root via Turborepo:
 
 ```bash
 ng cache clean             # Angular CLI cache
-npx turbo clean            # Turborepo build cache
+yarn turbo clean           # Turborepo build cache (turbo is a local devDep)
 rm -rf node_modules && yarn install   # nuclear
 ```
 
@@ -183,9 +185,17 @@ Older commits, cherry-picks, rebases → invoke the `dco` skill. PR is blocked u
 - Use `flex + flex-col + gap-*`, not `space-y-*`, for vertical stacking.
 - All shared constants and interfaces live in `@lfx-one/shared` — no module-level consts or local `interface Foo {}` inside `apps/lfx-one/`.
 
-### DELETE → CREATE for component replacement
+### DELETE → CREATE for full component replacement
 
-When replacing a component or pattern, delete the old file and create a new one. Never modify in place. Git history captures the change; reviewers see a clean diff. Team convention.
+When _fully replacing_ a component (architectural rewrite, breaking API change, or change in core responsibilities), delete the old file and create the new one. The intent change is clearer in review than a sprawling in-place rewrite.
+
+Does **not** apply to:
+
+- Small tweaks, bug fixes, or cosmetic changes — edit in place
+- Refactors that preserve the public API — edit in place
+- Renames or moves — use `git mv` (preserves blame continuity), then edit
+
+For borderline cases, prefer in-place edits — they keep `git blame` and review history more useful.
 
 ### Architecture
 
@@ -220,7 +230,7 @@ Third-party libs that touch `window` → load lazily inside the guard.
 
 ## Brand colors
 
-Brand palette lives in `@linuxfoundation/lfx-ui-core`, exported via `packages/shared/src/constants/colors.constants.ts` as `lfxColors`. Tailwind picks scales up automatically via `tailwind.config.js`.
+Brand palette lives in `@linuxfoundation/lfx-ui-core`, exported via `packages/shared/src/constants/colors.constants.ts` as `lfxColors`. Tailwind picks scales up automatically via `apps/lfx-one/tailwind.config.js` (there is no root-level Tailwind config).
 
 Available scales:
 
