@@ -53,6 +53,12 @@ export class WebsiteVisitsDrawerComponent {
   protected readonly performingActions: Signal<MarketingRecommendedAction[]> = computed(() => this.split().performingActions);
 
   protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() => this.split().performingInsights);
+
+  protected readonly hasNoData: Signal<boolean> = computed(() => {
+    const { totalSessions, dailyData } = this.drawerData();
+    return totalSessions === 0 && dailyData.length === 0;
+  });
+
   protected readonly trendChartData: Signal<ChartData<'line'>> = this.initTrendChartData();
   protected readonly domainChartData: Signal<ChartData<'bar'>> = this.initDomainChartData();
 
@@ -226,12 +232,11 @@ export class WebsiteVisitsDrawerComponent {
         }
       }
 
-      if (actions.length === 0) {
+      if (actions.length === 0 && !this.hasNoData()) {
         actions.push({
           title: 'Continue current strategy',
           description: `${formatNumber(totalSessions)} sessions with healthy traffic distribution`,
           priority: 'low',
-
           actionType: 'growth',
         });
       }
