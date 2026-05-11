@@ -4,6 +4,7 @@
 import { CreateSurveyRequest } from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
+import { ResourceNotFoundError } from '../errors';
 import { validateRequiredParameter, validateUidParameter } from '../helpers/validation.helper';
 import { logger } from '../services/logger.service';
 import { SurveyService } from '../services/survey.service';
@@ -99,8 +100,16 @@ export class SurveyController {
       const response = await this.surveyService.getMyResponse(req, surveyUid);
 
       if (!response) {
-        res.status(404).json({ message: 'No response found for the current user.' });
-        return;
+        // Throw ResourceNotFoundError so apiErrorHandler emits a structured
+        // 404 with request_id correlation and consistent error logging,
+        // matching the pattern used elsewhere (e.g. public-meeting.controller).
+        return next(
+          new ResourceNotFoundError('Survey response', surveyUid, {
+            operation: 'get_my_response',
+            service: 'survey_controller',
+            path: `/surveys/${surveyUid}/my-response`,
+          })
+        );
       }
 
       logger.success(req, 'get_my_response', startTime, { survey_uid: surveyUid });
