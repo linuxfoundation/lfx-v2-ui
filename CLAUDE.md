@@ -10,15 +10,7 @@ LFX One is a Turborepo monorepo containing an Angular 20 SSR application with st
 
 ## Working mode
 
-You have full file-edit authority in this session — different from a Cowork session where you generate prompts for someone else to execute.
-
-Before every meaningful edit:
-
-1. Re-read the file with `view` — do not trust prior conversation history. Files change; context drifts.
-2. Run `yarn check-types` after multi-file changes to catch type drift early.
-3. Stop and ask if the request conflicts with the conventions in this file or in `.claude/rules/`.
-
-Default to small, atomic changes. If a request spans more than one module or touches both client and SSR server, surface that and ask whether to split.
+You have full file-edit authority in this session — different from a Cowork session where you generate prompts for someone else to execute. For pre-edit hygiene checks (re-read files, type-check after multi-file changes, etc.) invoke the `/develop` skill.
 
 ## Domain language
 
@@ -168,15 +160,7 @@ Utilities split into **generic** helpers (date/time, string, url, file, form, ht
 - Pre-commit runs `./check-headers.sh`, `npx lint-staged` (prettier + lint on staged files), then repo-wide `yarn format:check`, `yarn lint:check`, and `yarn check-types`. Only `lint-staged` is scoped to staged files — the rest run on the whole repo. You don't need to run `yarn format` manually; `lint-staged` already prettifies staged files. If a commit fails, fix the reported issue and retry.
 - See `.claude/rules/commit-workflow.md` for PR title / sizing / JIRA details.
 
-**Recovery for missing sign-off:**
-
-Last commit only:
-
-```bash
-git commit --amend --signoff -S --no-edit
-```
-
-Older commits, cherry-picks, rebases → invoke the `dco` skill. PR is blocked until every commit is signed.
+For missing sign-off recovery (single-commit amend, or older commits / cherry-picks / rebases), invoke the `dco` skill.
 
 ### Source hygiene
 
@@ -184,18 +168,6 @@ Older commits, cherry-picks, rebases → invoke the `dco` skill. PR is blocked u
 - Never nest ternary expressions.
 - Use `flex + flex-col + gap-*`, not `space-y-*`, for vertical stacking.
 - All shared constants and interfaces live in `@lfx-one/shared` — no module-level consts or local `interface Foo {}` inside `apps/lfx-one/`.
-
-### DELETE → CREATE for full component replacement
-
-When _fully replacing_ a component (architectural rewrite, breaking API change, or change in core responsibilities), delete the old file and create the new one. The intent change is clearer in review than a sprawling in-place rewrite.
-
-Does **not** apply to:
-
-- Small tweaks, bug fixes, or cosmetic changes — edit in place
-- Refactors that preserve the public API — edit in place
-- Renames or moves — use `git mv` (preserves blame continuity), then edit
-
-For borderline cases, prefer in-place edits — they keep `git blame` and review history more useful.
 
 ### Architecture
 
@@ -206,42 +178,6 @@ For borderline cases, prefer in-place edits — they keep `git blame` and review
 ### Dev server
 
 - Don't restart the dev server on code changes — hot reload handles it. Check logs instead.
-
-## SSR safety
-
-Angular 20 SSR is strict. Static HTML prototypes and dev-mode hot reload hide these — they only surface during `yarn build` or production runtime.
-
-Never reference `window`, `document`, `localStorage`, `navigator`, or `IntersectionObserver` outside an `isPlatformBrowser` guard:
-
-```typescript
-import { isPlatformBrowser } from '@angular/common';
-import { Inject, PLATFORM_ID } from '@angular/core';
-
-constructor(@Inject(PLATFORM_ID) private platformId: object) {}
-
-ngOnInit() {
-  if (isPlatformBrowser(this.platformId)) {
-    // browser-only code here
-  }
-}
-```
-
-Third-party libs that touch `window` → load lazily inside the guard.
-
-## Brand colors
-
-Brand palette lives in `@linuxfoundation/lfx-ui-core`, exported via `packages/shared/src/constants/colors.constants.ts` as `lfxColors`. Tailwind picks scales up automatically via `apps/lfx-one/tailwind.config.js` (there is no root-level Tailwind config).
-
-Available scales:
-
-- `blue` — primary
-- `gray` — neutral
-- `emerald` — success
-- `red` — error
-- `amber` — warning
-- `violet` — accent
-
-**Never hard-code hex values.** Reference scale names so brand updates propagate without code changes.
 
 ## Design source of truth
 
@@ -261,34 +197,7 @@ When implementing from a design:
 
 The HTML is the **visual** spec. Behavior needs explicit input.
 
-## Local auth gotchas
-
-- Local auth: **Authelia** at `https://auth.k8s.orb.local`
-- `NODE_TLS_REJECT_UNAUTHORIZED=0` required for local Authelia (see README)
-- Detection logic: server checks `issuerBaseUrl.includes('auth.k8s.orb.local')` in `m2m-token.util.ts`, `auth.middleware.ts`, `profile.controller.ts`
-- Login breaking? Clear cookies, re-fetch client secret:
-
-  ```bash
-  kubectl get secrets authelia-clients -n lfx -o jsonpath='{.data.lfx}' | base64 --decode
-  ```
-
-- Inspect session: `http://localhost:4200/api/auth/me`
-
-## Session hygiene
-
-### When context feels stale
-
-- Re-read files before editing — don't trust history
-- Run `git status` and `git diff` to ground in disk reality
-- If session has been running >30 min on one task, suggest `/compact` or fresh session
-
-### When delegating sub-investigations
-
-Use the Task tool for "find all usages of X" or "audit module Y for pattern Z" — fresh subagent context, main session stays focused.
-
-### When unsure
-
-Stop and ask. Convention: **clarify, then act.** One well-executed change beats three drifting ones.
+For local auth issues (Authelia at `auth.k8s.orb.local`, broken cookies, client-secret fetch, session inspection), invoke the `/setup` skill.
 
 ## Source of truth, in order
 
@@ -300,15 +209,17 @@ Stop and ask. Convention: **clarify, then act.** One well-executed change beats 
 
 ## Rule Files
 
-Detailed patterns are in `.claude/rules/` and loaded contextually based on file globs:
+Detailed patterns are in `.claude/rules/` and loaded contextually based on the `paths:` frontmatter in each file:
 
-| Rule File                   | Glob                | Topics                                                                      |
-| --------------------------- | ------------------- | --------------------------------------------------------------------------- |
-| `component-organization.md` | `**/*.component.ts` | Signal initialization, component structure order, model signals, interfaces |
-| `logging-patterns.md`       | `**/server/**`      | Logger service API, layer responsibilities, log levels, code examples       |
-| `development-rules.md`      | `*`                 | Shared package, license headers, testing, formatting, doc maintenance       |
-| `commit-workflow.md`        | `*`                 | Commit conventions, branch naming, PR format, PR sizing, JIRA tracking      |
-| `skill-guidance.md`         | `*`                 | Guides Claude to suggest `/setup`, `/develop`, `/preflight` skills          |
+| Rule File                   | Paths                                                                       | Topics                                                                                                |
+| --------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `component-organization.md` | `**/*.component.ts`                                                         | Signal initialization, component structure order, model signals, interfaces, DELETE → CREATE rule     |
+| `logging-patterns.md`       | `**/server/**`                                                              | Logger service API, layer responsibilities, log levels, code examples                                 |
+| `ssr-safety.md`             | `**/*.component.ts`, `**/*.service.ts`, `**/*.directive.ts`, `**/server/**` | `isPlatformBrowser` guard, browser-only API rules, lazy-loading third-party libs                      |
+| `styling.md`                | `**/*.html`, `**/*.scss`, `**/*.component.ts`                               | Brand color scales (`lfxColors`), Tailwind config, no hard-coded hex                                  |
+| `development-rules.md`      | `*`                                                                         | Shared package, license headers, testing, formatting, doc maintenance                                 |
+| `commit-workflow.md`        | `*`                                                                         | Commit conventions, branch naming, PR format, PR sizing, JIRA tracking, sign-off + GPG signing policy |
+| `skill-guidance.md`         | `*`                                                                         | Guides Claude to suggest `/setup`, `/develop`, `/preflight` skills                                    |
 
 ## Architecture Documentation
 
@@ -340,7 +251,7 @@ Detailed patterns are in `.claude/rules/` and loaded contextually based on file 
 ## What NOT to do
 
 - ❌ Edit a file without re-reading it if 5+ turns have passed
-- ❌ Modify components in place (use DELETE → CREATE)
+- ❌ Replace components in place — for full component replacements use DELETE → CREATE (in-place edits remain fine for non-breaking changes; see `.claude/rules/component-organization.md`)
 - ❌ Hard-code brand hex values (reference `lfxColors` scales)
 - ❌ Reference browser-only APIs without `isPlatformBrowser`
 - ❌ Mix module concerns in one change
@@ -349,17 +260,6 @@ Detailed patterns are in `.claude/rules/` and loaded contextually based on file 
 - ❌ Re-introduce Figma references — design source is HTML/GitHub
 - ❌ Edit `CLAUDE.md` or other `lfx-preflight` protected files without code-owner review
 
-## Quick checklist before saying "I'm done"
+## Pre-PR validation
 
-- [ ] All edited files re-read after changes, not assumed
-- [ ] `yarn check-types` clean
-- [ ] `yarn lint` clean (or `lint-staged` hook passed)
-- [ ] `yarn test` passing
-- [ ] `yarn build` passing (catches SSR-only breaks)
-- [ ] DCO sign-off + GPG on every commit (`--signoff -S`)
-- [ ] Commit message in Angular format, ≤72 chars, no `chore:`
-- [ ] No hard-coded brand hex
-- [ ] No browser-only APIs outside `isPlatformBrowser`
-- [ ] Module scope respected
-- [ ] PR description references LFXV2 ticket
-- [ ] Self-review done (CodeRabbit pre-push + Claude "be a senior reviewer" pass)
+Before saying "I'm done", invoke the `/preflight` skill — it runs lint, type-check, tests, build, DCO/GPG verification, and protected-file checks against this repo's specific rules.
