@@ -97,7 +97,10 @@ export class MarketingImpactComponent {
     return toSignal(
       foundation$.pipe(
         switchMap((slug) => {
-          if (!slug) return of(null);
+          if (!slug) {
+            this.loading.set(false);
+            return of(null);
+          }
           this.loading.set(true);
           return this.analyticsService.getRevenueImpact(slug).pipe(
             tap(() => this.loading.set(false)),
