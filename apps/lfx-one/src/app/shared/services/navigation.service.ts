@@ -291,10 +291,19 @@ export class NavigationService {
 
   private toLensPage(response: LensItemsResponse, reset: boolean): LensPage {
     return {
-      items: response.items,
+      items: this.applyVisibilityFilters(response.items, response.lens),
       nextPageToken: response.next_page_token,
       upstreamFailed: response.upstream_failed,
       reset,
     };
+  }
+
+  // Foundations have their own lens — drop them from the project dropdown for users
+  // who can switch to the foundation lens so the two dropdowns don't duplicate entries.
+  private applyVisibilityFilters(items: LensItem[], lens: NavLens): LensItem[] {
+    if (lens !== 'project') return items;
+    const foundationVisible = this.lensService.availableLenses().some((option) => option.id === 'foundation');
+    if (!foundationVisible) return items;
+    return items.filter((item) => !item.isFoundation);
   }
 }
