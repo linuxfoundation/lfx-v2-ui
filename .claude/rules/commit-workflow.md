@@ -15,6 +15,31 @@ globs: '*'
   - `feat(auth): add OAuth2 integration`
   - `fix(ui): resolve mobile button alignment`
 
+## Commit Signing
+
+All commits must be both DCO-signed and GPG-signed:
+
+- **DCO sign-off (`--signoff`)** — required by repo policy; validated by the Probot DCO check in CI. The `Signed-off-by: Name <email>` trailer is appended automatically when you pass `--signoff` (or `-s`).
+- **GPG signature (`-S`)** — required by repo policy; commits must have a valid GPG signature attached. Configure a signing key once and Git will pick it up for every commit:
+
+  ```bash
+  git config --global user.signingkey <KEY_ID>
+  git config --global commit.gpgsign true
+  ```
+
+Standard commit command:
+
+```bash
+git commit --signoff -S -m "<type>(<scope>): <subject>"
+```
+
+If signing fails, fix the underlying issue — do not push unsigned commits. To verify signature status on a branch's commits:
+
+```bash
+git log --format='%G? %h %s' origin/main..HEAD
+# Every line must start with G (good signature)
+```
+
 ## Branch Naming
 
 - Branch names follow commit types followed by the JIRA ticket number
