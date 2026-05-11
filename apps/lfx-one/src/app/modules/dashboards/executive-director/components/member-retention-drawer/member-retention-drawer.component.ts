@@ -44,6 +44,10 @@ export class MemberRetentionDrawerComponent {
   protected readonly performingActions: Signal<MarketingRecommendedAction[]> = computed(() => this.split().performingActions);
 
   protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() => this.split().performingInsights);
+  protected readonly hasNoData: Signal<boolean> = computed(() => {
+    const { renewalRate, monthlyData } = this.data();
+    return renewalRate === 0 && monthlyData.length === 0;
+  });
 
   // === Protected Methods ===
   protected onClose(): void {
@@ -90,7 +94,7 @@ export class MemberRetentionDrawerComponent {
         });
       }
 
-      if (actions.length === 0) {
+      if (actions.length === 0 && !this.hasNoData()) {
         actions.push({
           title: 'Maintain retention excellence',
           description: `${renewalRate}% renewal rate${netRevenueRetention > 100 ? ` with ${netRevenueRetention}% NRR` : ''}`,
