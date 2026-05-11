@@ -1,6 +1,6 @@
 ---
 description: Ship a PR for lfx-v2-ui — runs quality gates, signs commits (DCO sign-off + GPG), pushes branch, opens PR with LFXV2 linkage.
-argument-hint: [optional: any extra instructions — commit subject, target branch, draft mode, extra PR body context]
+argument-hint: [optional: any extra instructions — commit subject, target branch, extra PR body context]
 ---
 
 # /lfx-pr — Ship a PR for lfx-v2-ui
@@ -9,7 +9,7 @@ You are running in the lfx-v2-ui monorepo. The user is invoking this command to 
 
 User-provided argument (if any): $ARGUMENTS
 
-Interpret `$ARGUMENTS` as freeform user instructions. They may include any of: a commit subject (e.g., `feat(auth): add OAuth`), a target branch (e.g., `to feat/lfx-pr-v2`, `move commits to jme/branch-name`), a draft toggle (e.g., `as draft`), additional PR body context, or other adjustments to the default flow. Apply each instruction at the step that owns it (commit subject in Step 2, branch operations in Steps 1/5, draft flag in Step 6). If any directive is ambiguous, ask the user before acting on it.
+Interpret `$ARGUMENTS` as freeform user instructions. They may include any of: a commit subject (e.g., `feat(auth): add OAuth`), a target branch (e.g., `to feat/lfx-pr-v2`, `move commits to jme/branch-name`), additional PR body context, or other adjustments to the default flow. Apply each instruction at the step that owns it (commit subject in Step 2, branch operations in Steps 1/5). If any directive is ambiguous, ask the user before acting on it.
 
 ## Step 1: Pre-flight state checks
 
