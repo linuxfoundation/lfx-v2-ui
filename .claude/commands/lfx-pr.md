@@ -1,5 +1,5 @@
 ---
-description: Ship a PR for lfx-v2-ui — runs quality gates, signs commits (DCO+GPG), pushes branch, opens PR with LFXV2 linkage.
+description: Ship a PR for lfx-v2-ui — runs quality gates, signs commits (DCO sign-off; GPG optional), pushes branch, opens PR with LFXV2 linkage.
 argument-hint: [optional: "<commit subject>" — if working tree has uncommitted changes]
 ---
 
@@ -13,8 +13,9 @@ User-provided argument (if any): $ARGUMENTS
 
 Run these in order. If any fail, stop and report:
 
+- git fetch origin main → ensure `origin/main` is current (avoids stale-local-main drift)
 - git rev-parse --abbrev-ref HEAD → if "main", stop: "Refusing to PR from main."
-- git rev-list --count main..HEAD → if 0, stop: "No commits ahead of main."
+- git rev-list --count origin/main..HEAD → if 0, stop: "No commits ahead of origin/main."
 - git status --porcelain
 
 If git status --porcelain is non-empty:
@@ -32,31 +33,37 @@ Validate subject:
 - Allowed types: feat, fix, refactor, perf, test, docs, style, build, ci, revert
 - Banned: chore:
 - Length: ≤72 chars
-- Scope: lowercase module name or shared/bff/ssr
+- Scope: lowercase, describes the affected area (e.g., auth, ui, api, docs, ci, dx) — see `.claude/rules/commit-workflow.md`
+- When in doubt, let `yarn commitlint` (run by commit-msg hook) be the source of truth
 
 If invalid, stop and report. Otherwise:
+
+```bash
 git add -A
-
-# Note: -S (GPG signing) is recommended but not enforced by repo policy. Add it if you have GPG configured.
-
 git commit --signoff -m "<subject>"
+```
+
+> **Note:** `-S` (GPG signing) is recommended but not enforced by repo policy — add it if you have GPG configured
 
 --signoff is mandatory (DCO). -S adds GPG signing — recommended but not enforced by repo policy. If --signoff fails, stop.
 
 ## Step 3: Quality gates (fail-fast)
 
 Run sequentially, stop on first failure, surface output:
+
+```bash
 yarn check-types
-yarn lint
-yarn format
+yarn lint:check
+yarn format:check
 yarn test
 yarn build
+```
 
-Do not auto-fix beyond what --fix flags do. Do not skip yarn build (catches SSR breaks).
+Gates are read-only (`:check` variants) — they do not mutate the working tree. If lint or format reports issues, fix them, return to Step 2 to commit the fixes, then re-run gates. Do not skip `yarn build` (catches SSR breaks).
 
 ## Step 4: Self-review
 
-git diff main...HEAD — read it. Check against CLAUDE.md and .claude/rules/:
+git diff origin/main...HEAD — read it. Check against CLAUDE.md and .claude/rules/:
 
 - Consider: any browser-only APIs (window, document, etc.) — if found outside isPlatformBrowser guards, flag for the user to confirm (SSR risk)
 - Consider: hard-coded brand hex values — if found, suggest using lfxColors scales instead (avoids drift when LF brand updates)
