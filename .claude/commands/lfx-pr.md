@@ -63,6 +63,17 @@ Gates are read-only (`:check` variants) — they do not mutate the working tree.
 
 ## Step 4: Self-review
 
+Run these hard policy checks first (fail-fast):
+
+```bash
+./check-headers.sh
+yarn commitlint --from origin/main --to HEAD
+```
+
+Also verify every commit in `origin/main..HEAD` has a `Signed-off-by:` trailer. If any hard policy check fails, stop and report.
+
+Then run advisory review on:
+
 git diff origin/main...HEAD — read it. Check against CLAUDE.md and .claude/rules/:
 
 - Consider: any browser-only APIs (window, document, etc.) — if found outside isPlatformBrowser guards, flag for the user to confirm (SSR risk)
@@ -70,11 +81,8 @@ git diff origin/main...HEAD — read it. Check against CLAUDE.md and .claude/rul
 - Module scope respected
 - No nested ternaries
 - No interface Foo {} inside apps/
-- License headers on new files
-- Commit messages: Angular format, ≤72, no chore:
-- Every commit has Signed-off-by trailer
 
-These are advisory checks — surface findings to the user but do not block. The user decides whether to fix before pushing.
+Advisory findings are non-blocking — surface them to the user, who decides whether to fix before pushing.
 
 ## Step 5: Push
 
