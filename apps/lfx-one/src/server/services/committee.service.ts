@@ -220,8 +220,15 @@ export class CommitteeService {
    *   so default is `false`. Enable only on user-facing reads (e.g. the GET /committees/:id
    *   controller), not on internal validation reads (member CRUD, meeting fan-out) where
    *   the caller-membership fields are unused.
+   * @param options.enrichProject When true, enriches the response with `project_name`,
+   *   `project_slug`, `is_foundation`, and `parent_project_uid` via
+   *   `ProjectService.enrichWithProjectData`. Costs one extra upstream project fetch
+   *   (de-duplicated/batched), so default is `false`. Enable only on user-facing reads
+   *   that need slug-based navigation (e.g. the GET /committees/:id controller for the
+   *   detail page's Parent Project link). Internal callers (existence checks, meeting
+   *   fan-out, member CRUD) should leave this off — they don't use these fields.
    */
-  public async getCommitteeById(req: Request, committeeId: string, options: { includeMembership?: boolean } = {}): Promise<Committee> {
+  public async getCommitteeById(req: Request, committeeId: string, options: { includeMembership?: boolean; enrichProject?: boolean } = {}): Promise<Committee> {
     const committee = await this.microserviceProxy.proxyRequest<Committee>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}`, 'GET');
 
     if (!committee) {
@@ -244,6 +251,10 @@ export class CommitteeService {
       ...settings,
       ...(membership && { my_role: membership.role, my_member_uid: membership.member_uid }),
     };
+
+    if (!options.enrichProject) {
+      return merged;
+    }
 
     // Enrich with project metadata so the UI can resolve project_uid -> project_slug for navigation.
     const [enriched] = await this.projectService.enrichWithProjectData(req, [merged]);
