@@ -1,6 +1,6 @@
 ---
-description: Ship a PR for lfx-v2-ui — runs quality gates, signs commits (DCO sign-off; GPG optional), pushes branch, opens PR with LFXV2 linkage.
-argument-hint: [optional: "<commit subject>" — if working tree has uncommitted changes]
+description: Ship a PR for lfx-v2-ui — runs quality gates, signs commits (DCO sign-off + GPG), pushes branch, opens PR with LFXV2 linkage.
+argument-hint: [optional: any extra instructions — commit subject, target branch, draft mode, extra PR body context]
 ---
 
 # /lfx-pr — Ship a PR for lfx-v2-ui
@@ -8,6 +8,8 @@ argument-hint: [optional: "<commit subject>" — if working tree has uncommitted
 You are running in the lfx-v2-ui monorepo. The user is invoking this command to ship the current branch as a PR. Follow these steps in order. Fail fast — stop immediately if any step fails and surface the error.
 
 User-provided argument (if any): $ARGUMENTS
+
+Interpret `$ARGUMENTS` as freeform user instructions. They may include any of: a commit subject (e.g., `feat(auth): add OAuth`), a target branch (e.g., `to feat/lfx-pr-v2`, `move commits to jme/branch-name`), a draft toggle (e.g., `as draft`), additional PR body context, or other adjustments to the default flow. Apply each instruction at the step that owns it (commit subject in Step 2, branch operations in Steps 1/5, draft flag in Step 6). If any directive is ambiguous, ask the user before acting on it.
 
 ## Step 1: Pre-flight state checks
 
@@ -20,12 +22,12 @@ Run these in order. If any fail, stop and report:
 
 If git status --porcelain is non-empty:
 
-- If user passed an argument, treat it as commit subject and proceed to Step 2
-- If no argument, stop and ask for one
+- If `$ARGUMENTS` includes (or clearly implies) a commit subject — use it and proceed to Step 2.
+- Otherwise, propose a commit subject derived from the staged diff and ask the user to confirm or revise before committing.
 
 If working tree is clean, skip Step 2.
 
-## Step 2: Commit (only if dirty + subject provided)
+## Step 2: Commit (only if dirty)
 
 Validate subject:
 
@@ -40,12 +42,12 @@ If invalid, stop and report. Otherwise:
 
 ```bash
 git add -A
-git commit --signoff -m "<subject>"
+git commit --signoff -S -m "<subject>"
 ```
 
-> **Note:** `-S` (GPG signing) is recommended but not enforced by repo policy — add it if you have GPG configured
+> **Note:** Both `--signoff` (DCO) and `-S` (GPG signing) are required by repo policy. Configure GPG if you haven't already.
 
---signoff is mandatory (DCO). -S adds GPG signing — recommended but not enforced by repo policy. If --signoff fails, stop.
+Both `--signoff` (DCO) and `-S` (GPG signing) are mandatory per repo policy. If either fails, stop — do not push unsigned commits.
 
 ## Step 3: Quality gates (fail-fast)
 
@@ -70,7 +72,7 @@ Run these hard policy checks first (fail-fast):
 yarn commitlint --from origin/main --to HEAD
 ```
 
-Also verify every commit in `origin/main..HEAD` has a `Signed-off-by:` trailer. If any hard policy check fails, stop and report.
+Also verify every commit in `origin/main..HEAD` has a `Signed-off-by:` trailer **and** a valid GPG signature (`git log --format='%G?' origin/main..HEAD` — every line must be `G`). If any hard policy check fails, stop and report.
 
 Then run advisory review on:
 
@@ -110,7 +112,7 @@ PR body template:
   - [x] `yarn lint` clean
   - [x] `yarn test` passing
   - [x] `yarn build` passing (SSR safe)
-  - [x] DCO sign-off on every commit (`--signoff`)
+  - [x] DCO sign-off (`--signoff`) and GPG signed (`-S`) on every commit
   - [x] Self-reviewed against `CLAUDE.md` conventions
   - [ ] CodeRabbit review addressed
   - [ ] Code-owner review (required for `lfx-preflight` protected files)
@@ -139,7 +141,7 @@ Next:
 
 ## Failure handling
 
-Enforce discipline, don't bypass it. Auto-fix OK for lint --fix and prettier. Never auto-fix: types, tests, build, conventions, missing DCO, force-push.
+Enforce discipline, don't bypass it. Auto-fix OK for lint --fix and prettier. Never auto-fix: types, tests, build, conventions, missing DCO/GPG, force-push.
 
 ## When to use
 
