@@ -67,6 +67,12 @@ export class SocialMediaDrawerComponent {
   protected readonly performingActions: Signal<MarketingRecommendedAction[]> = computed(() => this.split().performingActions);
 
   protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() => this.split().performingInsights);
+
+  protected readonly hasNoData: Signal<boolean> = computed(() => {
+    const { platforms, totalFollowers } = this.drawerData();
+    return totalFollowers === 0 && !platforms.some((p) => p.postsLast30Days > 0 || p.engagementRate > 0);
+  });
+
   protected readonly followerTrendChartData: Signal<ChartData<'line'>> = this.initFollowerTrendChartData();
   protected readonly platformChartData: Signal<ChartData<'bar'>> = this.initPlatformChartData();
 
@@ -248,24 +254,13 @@ export class SocialMediaDrawerComponent {
         }
       }
 
-      if (actions.length === 0) {
-        const hasActivity = totalFollowers > 0 || platforms.some((p) => p.postsLast30Days > 0 || p.engagementRate > 0);
-
-        if (!hasActivity) {
-          actions.push({
-            title: 'No social media activity detected',
-            description: 'No follower or engagement data found for this foundation — engage with marketing ops to build social presence',
-            priority: 'medium',
-            actionType: 'investigate',
-          });
-        } else {
-          actions.push({
-            title: 'Continue growth strategy',
-            description: `${formatNumber(totalFollowers)} followers across ${platforms.length} platforms${changePercentage > 0 ? ` — growing ${changePercentage}%` : ''}`,
-            priority: 'low',
-            actionType: 'growth',
-          });
-        }
+      if (actions.length === 0 && !this.hasNoData()) {
+        actions.push({
+          title: 'Continue growth strategy',
+          description: `${formatNumber(totalFollowers)} followers across ${platforms.length} platforms${changePercentage > 0 ? ` — growing ${changePercentage}%` : ''}`,
+          priority: 'low',
+          actionType: 'growth',
+        });
       }
 
       return actions;
