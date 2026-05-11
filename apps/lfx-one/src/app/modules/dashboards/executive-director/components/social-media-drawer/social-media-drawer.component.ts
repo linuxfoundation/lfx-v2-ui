@@ -254,7 +254,7 @@ export class SocialMediaDrawerComponent {
         if (!hasActivity) {
           actions.push({
             title: 'No social media activity detected',
-            description: 'No follower or engagement data found for this foundation — reach out to marketing ops to set up social tracking',
+            description: 'No follower or engagement data found for this foundation — engage with marketing ops to build social presence',
             priority: 'medium',
             actionType: 'investigate',
           });
