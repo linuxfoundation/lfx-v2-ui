@@ -1,9 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-/**
- * Month option for the Marketing Impact page month picker.
- */
+/** Month option for the Marketing Impact page month picker. */
 export interface MarketingImpactMonthOption {
   /** Display label (e.g., "April 2026") */
   label: string;
@@ -11,8 +9,29 @@ export interface MarketingImpactMonthOption {
   value: string;
 }
 
+/** Tab option for the Marketing Impact section tabs. */
+export interface MarketingImpactTabOption {
+  id: MarketingImpactTab;
+  label: string;
+}
+
 /** Focus program identifiers for the Marketing Impact FOCUS filter bar. */
 export type MarketingImpactFocusProgram = 'all' | 'events' | 'newsletters' | 'surveys' | 'trainings';
 
 /** Tab identifiers for the Marketing Impact section tabs. */
 export type MarketingImpactTab = 'overview' | 'attribution' | 'performance-marketing' | 'email' | 'web-activity' | 'social-accounts' | 'social-listening';
+
+/**
+ * Pre-formatted KPI card data for the Marketing Impact performance summary.
+ * All display values are pre-formatted strings so the template has zero logic.
+ */
+export interface PerformanceSummaryKpi {
+  id: string;
+  label: string;
+  icon: string;
+  iconClass: string;
+  value: string;
+  momChange: string;
+  trend: 'up' | 'down' | 'neutral';
+  previousLabel: string;
+}

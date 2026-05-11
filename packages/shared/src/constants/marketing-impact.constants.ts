@@ -2,16 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 import { FilterPillOption } from '../interfaces/dashboard-metric.interface';
-import type { MarketingImpactMonthOption, MarketingImpactTab } from '../interfaces/marketing-impact.interface';
+import type { MarketingImpactMonthOption, MarketingImpactTabOption } from '../interfaces/marketing-impact.interface';
 
 /** Number of past months to show in the Marketing Impact month picker. */
 const MONTH_COUNT = 12;
 
-/**
- * Builds month options for the Marketing Impact page.
- * Returns the last 12 months in descending order (most recent first).
- * The current month is excluded because its data is incomplete.
- */
+/** Builds the last 12 month options in descending order for the month picker. */
 export function buildMarketingImpactMonthOptions(): MarketingImpactMonthOption[] {
   const now = new Date();
   const options: MarketingImpactMonthOption[] = [];
@@ -26,9 +22,7 @@ export function buildMarketingImpactMonthOptions(): MarketingImpactMonthOption[]
   return options;
 }
 
-/**
- * Returns the default month value (previous month) for the Marketing Impact page.
- */
+/** Returns the default reporting month (previous calendar month). */
 export function getDefaultMarketingImpactMonth(): string {
   const now = new Date();
   const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -45,7 +39,7 @@ export const MARKETING_IMPACT_FOCUS_OPTIONS: FilterPillOption[] = [
 ];
 
 /** Tab definitions for the Marketing Impact section tabs. */
-export const MARKETING_IMPACT_TABS: { id: MarketingImpactTab; label: string }[] = [
+export const MARKETING_IMPACT_TABS: MarketingImpactTabOption[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'attribution', label: 'Attribution' },
   { id: 'performance-marketing', label: 'Performance Marketing' },
