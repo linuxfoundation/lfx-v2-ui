@@ -94,7 +94,7 @@ export const CDP_TO_AUTH0_PROVIDER_MAP: Record<string, string> = Object.fromEntr
  * when CDP returns an identity without `type`, and (b) to derive `type` when
  * LFX One POSTs new identities to CDP from auth-service.
  */
-export const CDP_PLATFORM_TO_TYPE_MAP: Record<string, CdpIdentityType> = {
+export const CDP_PLATFORM_TO_TYPE_MAP: Readonly<Record<string, CdpIdentityType | undefined>> = {
   github: 'username',
   gitlab: 'username',
   lfid: 'username',

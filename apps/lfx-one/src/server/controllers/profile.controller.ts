@@ -1894,7 +1894,9 @@ export class ProfileController {
       case 'google-oauth2':
         return pd.email ?? null;
       case 'linkedin':
-        return pd.email ?? pd.name ?? null;
+        // No name fallback: with type='email' on POST, persisting pd.name (a display name,
+        // not an email) would corrupt CDP. Skip the identity if Auth0 didn't give us an email.
+        return pd.email ?? null;
       default:
         return null;
     }
