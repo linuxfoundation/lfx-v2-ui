@@ -10,17 +10,7 @@
  * Rank: Platinum(1) > Premier(2) > Steering(3) > Gold(4) > Silver(5) >
  *       General(6) > Sponsor(7) > Associate(8) > Academic(9) > Other(10)
  */
-export type MembershipTierClass =
-  | 'Platinum'
-  | 'Premier'
-  | 'Steering'
-  | 'Gold'
-  | 'Silver'
-  | 'General'
-  | 'Sponsor'
-  | 'Associate'
-  | 'Academic'
-  | 'Other';
+export type MembershipTierClass = 'Platinum' | 'Premier' | 'Steering' | 'Gold' | 'Silver' | 'General' | 'Sponsor' | 'Associate' | 'Academic' | 'Other';
 
 /**
  * Raw row from ANALYTICS.PLATINUM_LFX_ONE.ORG_LENS_ACCOUNT_CONTEXT — the

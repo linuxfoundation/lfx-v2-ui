@@ -25,11 +25,7 @@ import type { ChartOptions, ChartType } from 'chart.js';
 
 @Component({
   selector: 'lfx-org-overview-involvement',
-  imports: [
-    FilterPillsComponent,
-    MetricCardComponent,
-    ScrollShadowDirective,
-  ],
+  imports: [FilterPillsComponent, MetricCardComponent, ScrollShadowDirective],
   templateUrl: './org-overview-involvement.component.html',
   styleUrl: './org-overview-involvement.component.scss',
 })

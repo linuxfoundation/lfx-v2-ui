@@ -61,33 +61,37 @@ export class OrgInvolvementAnalyticsService {
   }
 
   public getEventAttendanceMonthly(accountId: string): Observable<OrgInvolvementEventAttendanceMonthlyResponse> {
-    return this.http.get<OrgInvolvementEventAttendanceMonthlyResponse>('/api/analytics/org-involvement-event-attendance-monthly', { params: { accountId } }).pipe(
-      catchError(() =>
-        of({
-          accountId: '',
-          accountName: '',
-          totalAttended: 0,
-          totalSpeakers: 0,
-          attendeesMonthlyData: [],
-          speakersMonthlyData: [],
-          monthlyLabels: [],
-        })
-      )
-    );
+    return this.http
+      .get<OrgInvolvementEventAttendanceMonthlyResponse>('/api/analytics/org-involvement-event-attendance-monthly', { params: { accountId } })
+      .pipe(
+        catchError(() =>
+          of({
+            accountId: '',
+            accountName: '',
+            totalAttended: 0,
+            totalSpeakers: 0,
+            attendeesMonthlyData: [],
+            speakersMonthlyData: [],
+            monthlyLabels: [],
+          })
+        )
+      );
   }
 
   public getCertifiedEmployeesMonthly(accountId: string): Observable<OrgInvolvementCertifiedEmployeesMonthlyResponse> {
-    return this.http.get<OrgInvolvementCertifiedEmployeesMonthlyResponse>('/api/analytics/org-involvement-certified-employees-monthly', { params: { accountId } }).pipe(
-      catchError(() =>
-        of({
-          accountId: '',
-          totalCertifications: 0,
-          totalCertifiedEmployees: 0,
-          monthlyData: [],
-          monthlyLabels: [],
-        })
-      )
-    );
+    return this.http
+      .get<OrgInvolvementCertifiedEmployeesMonthlyResponse>('/api/analytics/org-involvement-certified-employees-monthly', { params: { accountId } })
+      .pipe(
+        catchError(() =>
+          of({
+            accountId: '',
+            totalCertifications: 0,
+            totalCertifiedEmployees: 0,
+            monthlyData: [],
+            monthlyLabels: [],
+          })
+        )
+      );
   }
 
   public getTrainingEnrollments(accountId: string): Observable<OrgTrainingEnrollmentsResponse> {

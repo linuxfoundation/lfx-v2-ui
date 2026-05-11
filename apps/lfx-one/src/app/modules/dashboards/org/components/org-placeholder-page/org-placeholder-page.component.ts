@@ -23,8 +23,6 @@ export class OrgPlaceholderPageComponent {
   private readonly routeData: Signal<Data> = toSignal(this.route.data, { initialValue: {} as Data });
 
   protected readonly title = computed(() => (this.routeData() as OrgPlaceholderRouteData).title ?? 'Coming Soon');
-  protected readonly description = computed(
-    () => (this.routeData() as OrgPlaceholderRouteData).description ?? 'This view is in development.'
-  );
+  protected readonly description = computed(() => (this.routeData() as OrgPlaceholderRouteData).description ?? 'This view is in development.');
   protected readonly icon = computed(() => (this.routeData() as OrgPlaceholderRouteData).icon ?? 'fa-light fa-screwdriver-wrench');
 }
