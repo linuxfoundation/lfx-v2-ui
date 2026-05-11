@@ -393,12 +393,25 @@ export class EmailCtrDrawerComponent {
       const actions = [...attrActions.slice(0, 1), ...paidActions.slice(0, 1), ...emailActions.slice(0, 1)];
 
       if (actions.length === 0) {
-        actions.push({
-          title: 'Maintain current momentum',
-          description: 'All channels performing well — continue current strategy and monitor for shifts',
-          priority: 'low',
-          actionType: 'growth',
-        });
+        const hasEmailActivity = email.currentCtr > 0 || email.monthlySends.some((s) => s > 0);
+        const hasPaidActivity = paid.totalReach > 0 || paid.totalSpend > 0;
+        const hasAttributionActivity = attribution.channels.length > 0 && attribution.channels.some((c) => c.sessions > 0 || c.linearRevenue > 0);
+
+        if (!hasEmailActivity && !hasPaidActivity && !hasAttributionActivity) {
+          actions.push({
+            title: 'No active campaigns detected',
+            description: 'No email, paid, or attribution activity found for this foundation — data will appear once campaigns are running',
+            priority: 'medium',
+            actionType: 'investigate',
+          });
+        } else {
+          actions.push({
+            title: 'Maintain current momentum',
+            description: 'All channels performing well — continue current strategy and monitor for shifts',
+            priority: 'low',
+            actionType: 'growth',
+          });
+        }
       }
 
       return actions;
