@@ -1,7 +1,13 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { AUTH0_TO_CDP_PROVIDER_MAP, CDP_PLATFORM_ICONS, CDP_TO_AUTH0_PROVIDER_MAP, IDENTITY_DISPLAY_PLATFORMS } from '@lfx-one/shared/constants';
+import {
+  AUTH0_TO_CDP_PROVIDER_MAP,
+  CDP_DISPLAYABLE_IDENTITY_COMBOS,
+  CDP_PLATFORM_ICONS,
+  CDP_PLATFORM_TO_TYPE_MAP,
+  CDP_TO_AUTH0_PROVIDER_MAP,
+} from '@lfx-one/shared/constants';
 import {
   Auth0Identity,
   CdpIdentity,
@@ -673,9 +679,10 @@ export class ProfileController {
         auth_service_identities: auth0Identities,
       });
 
-      // Reconcile CDP identities with auth-service identities and filter to display platforms
+      // Reconcile CDP identities with auth-service identities and filter to the
+      // (platform, type) combos LFX One can surface for verification via Auth0.
       const { enriched, notInCdpCount } = this.reconcileIdentities(req, cdpIdentities, auth0Identities, lfid);
-      const displayIdentities = enriched.filter((id) => IDENTITY_DISPLAY_PLATFORMS.includes(id.platform));
+      const displayIdentities = enriched.filter((id) => CDP_DISPLAYABLE_IDENTITY_COMBOS.has(`${id.platform}+${id.type}`));
 
       logger.success(req, 'get_identities', startTime, {
         lfid,
@@ -1775,8 +1782,9 @@ export class ProfileController {
       const isCdpVerifiedWithOwner = cdp.verified && !!cdp.verifiedBy;
       let displayState: IdentityDisplayState;
 
-      if (cdp.platform === 'linkedin') {
-        // LinkedIn identities must be linked via auth-service — ignore CDP-only entries
+      if (!CDP_DISPLAYABLE_IDENTITY_COMBOS.has(`${cdp.platform}+${cdp.type}`)) {
+        // Combo not surfaceable via Auth0 (e.g. linkedin+username, gitlab+username) —
+        // we have no way to help the user verify it, so hide.
         displayState = 'hidden';
       } else if (isCdpVerifiedWithOwner && hasMultiLfid) {
         // Multi-LFID merged profile — hide identities verified by another LFID
@@ -1802,29 +1810,26 @@ export class ProfileController {
         continue;
       }
 
-      // Skip non-display platforms (e.g., lfid, gitlab)
-      if (!IDENTITY_DISPLAY_PLATFORMS.includes(cdpPlatform)) {
+      const type = CDP_PLATFORM_TO_TYPE_MAP[cdpPlatform] ?? 'username';
+
+      // Skip combos LFX One can't surface for verification (e.g. lfid, gitlab)
+      if (!CDP_DISPLAYABLE_IDENTITY_COMBOS.has(`${cdpPlatform}+${type}`)) {
         continue;
       }
-
-      notInCdpCount++;
 
       // Google uses email as its value — skip CDP create if the same email is already a verified email identity
       const isEmailAlreadyVerified = enriched.some((id) => id.platform === 'email' && id.value === value && id.verified && id.verifiedBy === lfid);
 
-      // Skip CDP create for LinkedIn — Auth0 returns the user's email as the identity value,
-      // but CDP expects a vanity username, so a synthetic POST would write bad data.
-      const skipCdpCreate = cdpPlatform === 'linkedin';
-
-      if (!isEmailAlreadyVerified && !skipCdpCreate) {
-        // Fire-and-forget: persist auth-service identity to CDP
-        const isEmailType = cdpPlatform === 'email' || cdpPlatform === 'google';
-        const cdpPostPlatform = isEmailType ? 'custom' : cdpPlatform;
+      if (!isEmailAlreadyVerified) {
+        notInCdpCount++;
+        // Email/google still POST as platform='custom' for back-compat with existing CDP rows.
+        // LinkedIn now posts as platform='linkedin' (with type='email') so CDP can categorize correctly.
+        const cdpPostPlatform = cdpPlatform === 'email' || cdpPlatform === 'google' ? 'custom' : cdpPlatform;
         this.cdpService
           .createIdentityForUser(req, [lfid], {
             value,
             platform: cdpPostPlatform,
-            type: isEmailType ? 'email' : 'username',
+            type,
             source: 'lfxOne',
             verified: true,
             verifiedBy: lfid,
@@ -1842,6 +1847,7 @@ export class ProfileController {
       enriched.push({
         id: `auth0:${authId.user_id}`,
         platform: cdpPlatform,
+        type,
         value,
         verified: true,
         verifiedBy: lfid,
