@@ -63,12 +63,24 @@ export class SurveyService {
       this.fetchRespondedSurveyUidsForUser(req),
     ]);
 
+    // Count the responded UIDs that intersect with this result set so the log
+    // metric is meaningful — respondedSurveyUids covers all of the user's
+    // responses (across committees/projects) and would otherwise be > final_count.
+    let respondedInResult = 0;
     const enriched =
-      respondedSurveyUids.size > 0 ? surveys.map((s) => (s.uid && respondedSurveyUids.has(s.uid) ? { ...s, response_status: 'responded' } : s)) : surveys;
+      respondedSurveyUids.size > 0
+        ? surveys.map((s) => {
+            if (s.uid && respondedSurveyUids.has(s.uid)) {
+              respondedInResult++;
+              return { ...s, response_status: 'responded' };
+            }
+            return s;
+          })
+        : surveys;
 
     logger.debug(req, 'get_surveys', 'Completed survey fetch', {
       final_count: enriched.length,
-      responded_count: respondedSurveyUids.size,
+      responded_in_result: respondedInResult,
     });
 
     return enriched;
@@ -278,7 +290,9 @@ export class SurveyService {
             uid,
             survey_title: 'Survey (details unavailable)',
             survey_status: 'closed',
-            survey_cutoff_date: '',
+            // null instead of '' so Angular's DatePipe doesn't choke on an
+            // invalid empty-string input when the table renders the Due column.
+            survey_cutoff_date: null,
             is_nps_survey: false,
             is_project_survey: false,
             committees: [],
@@ -303,7 +317,7 @@ export class SurveyService {
     const decorated = surveys
       .filter((s): s is Survey => s !== null)
       .map((survey) => {
-        const parsedCutoff = new Date(survey.survey_cutoff_date).getTime();
+        const parsedCutoff = survey.survey_cutoff_date ? new Date(survey.survey_cutoff_date).getTime() : NaN;
 
         return {
           survey,
@@ -340,10 +354,10 @@ export class SurveyService {
   /**
    * Returns the current user's submitted response for a survey, or null if no response exists.
    * Used by the Me lens "View My Response" drawer. Queries type=survey_response filtered by
-   * the user's email/username (via filters_or) and the survey_uid (client-side filter on the
-   * page since the index has no native survey_uid filter on this resource type). Only returns
-   * a record whose response_datetime is populated — invitation-only rows are treated as
-   * "not yet responded" and return null.
+   * the user's email/username (via filters_or) and matches survey_uid in-memory after the
+   * query returns, since the index has no native survey_uid filter on this resource type.
+   * Only returns a record whose response_datetime is populated — invitation-only rows are
+   * treated as "not yet responded" and return null.
    */
   public async getMyResponse(req: Request, surveyUid: string): Promise<MySurveyResponse | null> {
     const rawUsername = await getUsernameFromAuth(req);

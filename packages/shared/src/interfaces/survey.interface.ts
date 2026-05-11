@@ -85,8 +85,9 @@ export interface Survey {
   survey_title: string;
   /** Current status of the survey */
   survey_status: string;
-  /** Survey deadline/cutoff date */
-  survey_cutoff_date: string;
+  /** Survey deadline/cutoff date. May be null when the upstream detail fetch
+   * fails and the row is rendered from a stub (see getMySurveys fallback). */
+  survey_cutoff_date: string | null;
   /** Whether this is an NPS survey */
   is_nps_survey: boolean;
   /** Whether this is a project-level survey */

@@ -45,6 +45,19 @@ export class MyResponseDrawerComponent {
     return !!this.response()?.survey_link;
   });
 
+  // True when the drawer is opened for an open-but-unresponded survey. The empty-state
+  // copy needs to differ from the closed-survey case ("haven't responded yet" vs
+  // "didn't respond before the survey closed").
+  protected readonly isOpenUnresponded: Signal<boolean> = computed(() => {
+    const s = this.survey();
+    return !!s && getSurveyDisplayStatus(s) === SurveyStatus.OPEN;
+  });
+
+  // The personalized SurveyMonkey link on the parent Survey (Me-lens-only).
+  // Surfaced through a computed so the empty-state template can offer a "Take Survey"
+  // CTA when applicable without re-evaluating the access pattern inline.
+  protected readonly surveyLink: Signal<string | undefined> = computed(() => this.survey()?.survey_link);
+
   protected onClose(): void {
     this.visible.set(false);
   }
