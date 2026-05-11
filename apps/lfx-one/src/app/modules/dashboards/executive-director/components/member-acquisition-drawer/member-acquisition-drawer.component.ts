@@ -82,6 +82,11 @@ export class MemberAcquisitionDrawerComponent {
   protected readonly attentionInsights: Signal<MarketingKeyInsight[]> = computed(() => this.split().attentionInsights);
   protected readonly performingActions: Signal<MarketingRecommendedAction[]> = computed(() => this.split().performingActions);
   protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() => this.split().performingInsights);
+  protected readonly hasNoData: Signal<boolean> = computed(() => {
+    const { totalMembers, newMembersThisQuarter, quarterlyData } = this.data();
+    const { renewalRate, monthlyData } = this.retentionData();
+    return totalMembers === 0 && newMembersThisQuarter === 0 && quarterlyData.length === 0 && renewalRate === 0 && monthlyData.length === 0;
+  });
   protected readonly acquisitionChartData: Signal<ChartData<'bar'>> = this.initAcquisitionChartData();
 
   protected readonly acquisitionChartOptions: ChartOptions<'bar'> = createBarChartOptions({
@@ -358,7 +363,7 @@ export class MemberAcquisitionDrawerComponent {
         });
       }
 
-      if (actions.length === 0) {
+      if (actions.length === 0 && !this.hasNoData()) {
         actions.push({
           title: 'Maintain retention excellence',
           description: `${renewalRate}% renewal rate${netRevenueRetention > 100 ? ` with ${netRevenueRetention}% NRR` : ''}`,
