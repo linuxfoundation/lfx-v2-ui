@@ -239,11 +239,15 @@ export class CommitteeService {
       this.accessCheckService.addAccessToResource(req, committee, 'committee'),
     ]);
 
-    return {
+    const merged = {
       ...withAccess,
       ...settings,
       ...(membership && { my_role: membership.role, my_member_uid: membership.member_uid }),
     };
+
+    // Enrich with project metadata so the UI can resolve project_uid -> project_slug for navigation.
+    const [enriched] = await this.projectService.enrichWithProjectData(req, [merged]);
+    return enriched;
   }
 
   /**
