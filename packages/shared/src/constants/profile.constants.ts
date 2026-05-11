@@ -111,12 +111,7 @@ export const CDP_PLATFORM_TO_TYPE_MAP: Record<string, CdpIdentityType> = {
  * here as `email + email`. LFID is handled by a dedicated auto-verify branch
  * and intentionally excluded from this allowlist.
  */
-export const CDP_DISPLAYABLE_IDENTITY_COMBOS: ReadonlySet<string> = new Set([
-  'github+username',
-  'linkedin+email',
-  'email+email',
-  'google+email',
-]);
+export const CDP_DISPLAYABLE_IDENTITY_COMBOS: ReadonlySet<string> = new Set(['github+username', 'linkedin+email', 'email+email', 'google+email']);
 
 /**
  * CDP platform to icon class mapping
