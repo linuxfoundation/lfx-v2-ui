@@ -249,13 +249,23 @@ export class SocialMediaDrawerComponent {
       }
 
       if (actions.length === 0) {
-        actions.push({
-          title: 'Continue growth strategy',
-          description: `${formatNumber(totalFollowers)} followers across ${platforms.length} platforms${changePercentage > 0 ? ` — growing ${changePercentage}%` : ''}`,
-          priority: 'low',
+        const hasActivity = totalFollowers > 0 || platforms.some((p) => p.postsLast30Days > 0 || p.engagementRate > 0);
 
-          actionType: 'growth',
-        });
+        if (!hasActivity) {
+          actions.push({
+            title: 'No social media activity detected',
+            description: 'No follower or engagement data found for this foundation — reach out to marketing ops to set up social tracking',
+            priority: 'medium',
+            actionType: 'investigate',
+          });
+        } else {
+          actions.push({
+            title: 'Continue growth strategy',
+            description: `${formatNumber(totalFollowers)} followers across ${platforms.length} platforms${changePercentage > 0 ? ` — growing ${changePercentage}%` : ''}`,
+            priority: 'low',
+            actionType: 'growth',
+          });
+        }
       }
 
       return actions;
