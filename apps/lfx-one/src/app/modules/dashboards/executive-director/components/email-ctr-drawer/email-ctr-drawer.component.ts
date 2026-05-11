@@ -400,7 +400,7 @@ export class EmailCtrDrawerComponent {
         if (!hasEmailActivity && !hasPaidActivity && !hasAttributionActivity) {
           actions.push({
             title: 'No active campaigns detected',
-            description: 'No email, paid, or attribution activity found for this foundation — data will appear once campaigns are running',
+            description: 'No email, paid, or attribution activity found for this foundation — reach out to marketing ops to set up campaign tracking',
             priority: 'medium',
             actionType: 'investigate',
           });
