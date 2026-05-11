@@ -72,7 +72,13 @@ Run these hard policy checks first (fail-fast):
 yarn commitlint --from origin/main --to HEAD
 ```
 
-Also verify every commit in `origin/main..HEAD` has a `Signed-off-by:` trailer **and** a valid GPG signature (`git log --format='%G?' origin/main..HEAD` — every line must be `G`). If any hard policy check fails, stop and report.
+Also verify every commit in `origin/main..HEAD` has both a `Signed-off-by:` trailer and a valid GPG signature:
+
+```bash
+git log --format='%G? %(trailers:key=Signed-off-by,valueonly,separator=%x20) %h %s' origin/main..HEAD
+```
+
+Each line must start with `G` (good GPG signature) **and** have a non-empty `Signed-off-by` value before the SHA. If any commit fails either check, stop and report.
 
 Then run advisory review on:
 
@@ -109,7 +115,8 @@ PR body template:
 - Screenshots placeholder
 - Pre-merge checklist (rendered into the PR body):
   - [x] `yarn check-types` clean
-  - [x] `yarn lint` clean
+  - [x] `yarn lint:check` clean
+  - [x] `yarn format:check` clean
   - [x] `yarn test` passing
   - [x] `yarn build` passing (SSR safe)
   - [x] DCO sign-off (`--signoff`) and GPG signed (`-S`) on every commit
@@ -120,7 +127,11 @@ PR body template:
 
 - Footer: 🤖 Drafted via /lfx-pr — Claude Code
 
-gh pr create --base main --title "<first commit subject or branch name>" --body-file <body>
+Derive the PR title from the first commit subject. It must be a valid conventional-commit title: `type(scope): description`, all lowercase, no JIRA ticket. If the first commit subject doesn't satisfy that format (e.g., the branch only has merge commits, or the subject violates the rules), ask the user for a valid title before invoking `gh`.
+
+```bash
+gh pr create --base main --title "<conventional-commit title>" --body-file <body>
+```
 
 If gh unavailable, print branch URL + body for manual open.
 
