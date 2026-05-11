@@ -125,7 +125,7 @@ export class CommitteeController {
       // visitor / member / chair states without a second round-trip, and enrich with
       // project metadata so the detail page's Parent Project link can resolve project_uid
       // -> project_slug for navigation.
-      const committee = await this.committeeService.getCommitteeById(req, id, { includeMembership: true, enrichProject: true });
+      const committee = await this.committeeService.getCommitteeById(req, id, { includeMembership: true, includeProjectMetadata: true });
 
       // Log the success
       logger.success(req, 'get_committee_by_id', startTime, {

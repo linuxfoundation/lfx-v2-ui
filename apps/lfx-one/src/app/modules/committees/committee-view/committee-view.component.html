@@ -141,7 +141,7 @@
               </div>
               <div class="flex items-center gap-4 flex-wrap">
                 @if (committee()?.project_name || committee()?.foundation_name) {
-                  @if (committee()?.project_slug) {
+                  @if (committee()?.project_uid && committee()?.project_slug) {
                     <button
                       type="button"
                       class="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
