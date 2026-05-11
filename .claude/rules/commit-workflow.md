@@ -37,8 +37,9 @@ If signing fails, fix the underlying issue — do not push unsigned commits. To 
 
 ```bash
 git log --format='%G? %h %s' origin/main..HEAD
-# Every line must start with G (good signature)
 ```
+
+Acceptable `%G?` codes: `G` (good signature) or `U` (good signature, signing key isn't in your local trust db — fine for policy purposes). Codes `N` (no signature), `B` (bad signature), or `E` (cannot check — e.g., missing public key locally) need investigation. Note that the authoritative GPG check is GitHub's **Verified** badge on each commit after push — if your signing key isn't registered with GitHub, the local check can pass while GitHub still marks the commit as unverified.
 
 ## Branch Naming
 
