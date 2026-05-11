@@ -65,6 +65,24 @@ export class CommitteeMembersComponent implements OnInit {
   // Simple writable signals
   public selectedMember = signal<CommitteeMember | null>(null);
   public isDeleting = signal<boolean>(false);
+  public memberFilterChip = signal<'all' | 'voting' | 'observers' | 'chairs'>('all');
+  public votingRepCount: Signal<number> = computed(() => this.members().filter((m) => m.voting?.status === 'Voting Rep').length);
+  public chairCount: Signal<number> = computed(() => this.members().filter((m) => m.role?.name === 'Chair' || m.role?.name === 'Vice Chair').length);
+  public observerCount: Signal<number> = computed(() => this.members().filter((m) => m.voting?.status === 'Observer').length);
+  private chipFilteredMembers: Signal<CommitteeMember[]> = computed(() => {
+    const chip = this.memberFilterChip();
+    const members = this.members();
+    switch (chip) {
+      case 'voting':
+        return members.filter((m) => m.voting?.status === 'Voting Rep');
+      case 'observers':
+        return members.filter((m) => m.voting?.status === 'Observer');
+      case 'chairs':
+        return members.filter((m) => m.role?.name === 'Chair' || m.role?.name === 'Vice Chair');
+      default:
+        return members;
+    }
+  });
   public memberActionMenuItems: MenuItem[] = [];
   public committeeLabel = COMMITTEE_LABEL;
 
@@ -134,6 +152,11 @@ export class CommitteeMembersComponent implements OnInit {
     if (permission === 'manage') return 'Manage';
     if (permission === 'review') return 'Reviewer';
     return 'Member';
+  }
+
+  public selectChip(chip: 'all' | 'voting' | 'observers' | 'chairs'): void {
+    this.memberFilterChip.set(chip);
+    this.filterForm.patchValue({ role: null, votingStatus: null, organization: null });
   }
 
   public openAddMemberDialog(): void {
@@ -420,7 +443,7 @@ export class CommitteeMembersComponent implements OnInit {
 
   private initializeFilteredMembers(): Signal<CommitteeMember[]> {
     return computed(() => {
-      let filtered = this.members();
+      let filtered = this.chipFilteredMembers();
 
       // Apply search filter
       const searchTerm = this.searchTerm().toLowerCase();
