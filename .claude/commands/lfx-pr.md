@@ -78,7 +78,7 @@ Also verify every commit in `origin/main..HEAD` has both a `Signed-off-by:` trai
 git log --format='%G? %(trailers:key=Signed-off-by,valueonly,separator=%x20) %h %s' origin/main..HEAD
 ```
 
-Each line must start with `G` (good GPG signature) **and** have a non-empty `Signed-off-by` value before the SHA. If any commit fails either check, stop and report.
+Each line must start with `G` or `U` (good signature; `U` means the signing key isn't in the local trust db, which doesn't fail the policy) **and** have a non-empty `Signed-off-by` value before the SHA. Codes `N` (no signature), `B` (bad), or `E` (cannot check — e.g., missing public key locally) need investigation. The authoritative GPG check is GitHub's **Verified** badge after push — local `%G?` depends on which keys the user has imported, so a local pass can still show as unverified on GitHub if the signing key isn't registered there. If any commit fails either check, stop and report.
 
 Then run advisory review on:
 
