@@ -120,7 +120,7 @@ export class BrandHealthDrawerComponent {
       if (totalMentions === 0) {
         actions.push({
           title: 'No brand mention data available',
-          description: 'No brand mentions found for this foundation — reach out to marketing ops to set up brand monitoring',
+          description: 'No brand mentions found for this foundation — engage with marketing ops to build brand awareness and get momentum going',
           priority: 'medium',
           actionType: 'investigate',
         });
