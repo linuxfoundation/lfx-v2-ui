@@ -157,7 +157,12 @@ export class CommitteeOverviewComponent {
   });
 
   public pendingVotes: Signal<Vote[]> = computed(() => this.votes().filter((v) => v.status === PollStatus.ACTIVE));
-  public pendingSurveys: Signal<Survey[]> = computed(() => this.surveys().filter((s) => getSurveyDisplayStatus(s) === SurveyStatus.OPEN));
+  public pendingSurveys: Signal<Survey[]> = computed(() =>
+    this.surveys().filter((s) => getSurveyDisplayStatus(s) === SurveyStatus.OPEN && s.response_status !== 'responded')
+  );
+  public respondedSurveys: Signal<Survey[]> = computed(() =>
+    this.surveys().filter((s) => getSurveyDisplayStatus(s) === SurveyStatus.OPEN && s.response_status === 'responded')
+  );
   public hasPendingActions: Signal<boolean> = computed(() => this.pendingVotes().length > 0 || this.pendingSurveys().length > 0);
 
   public pendingActionItems: Signal<CommitteePendingActionRow[]> = this.initPendingActionItems();
@@ -360,18 +365,39 @@ export class CommitteeOverviewComponent {
           ? `Deadline: ${new Date(vote.end_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
           : undefined,
       }));
-      const surveyItems: PendingActionItem[] = this.pendingSurveys().map((survey) => ({
-        type: 'Survey',
+      const surveyItems: PendingActionItem[] = this.pendingSurveys().map((survey) => {
+        const sentDate = survey.created_at ? new Date(survey.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null;
+        const dueDate = survey.survey_cutoff_date
+          ? new Date(survey.survey_cutoff_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : null;
+        const dateParts: string[] = [];
+        if (sentDate) dateParts.push(`Sent: ${sentDate}`);
+        if (dueDate) dateParts.push(`Due: ${dueDate}`);
+
+        return {
+          type: 'Survey',
+          badge: this.committee().name,
+          text: survey.survey_title,
+          icon: 'fa-light fa-chart-simple',
+          severity: PENDING_ACTION_SEVERITY.Survey,
+          buttonText: 'Submit Survey',
+          date: dateParts.length > 0 ? dateParts.join(' · ') : undefined,
+        };
+      });
+      const respondedSurveyItems: PendingActionItem[] = this.respondedSurveys().map((survey) => ({
+        type: 'Submitted',
         badge: this.committee().name,
         text: survey.survey_title,
-        icon: 'fa-light fa-chart-simple',
-        severity: PENDING_ACTION_SEVERITY.Survey,
-        buttonText: 'Submit Survey',
-        date: survey.survey_cutoff_date
-          ? `Deadline: ${new Date(survey.survey_cutoff_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
-          : undefined,
+        icon: 'fa-light fa-circle-check',
+        severity: PENDING_ACTION_SEVERITY.Submitted,
+        // Survey is still open — the user may change their answer until it closes,
+        // so the action remains the survey link, not a results view. The 'Submitted'
+        // type + green check icon communicate that a response is already on file.
+        buttonText: 'Update',
+        buttonLink: survey.survey_link,
+        date: undefined,
       }));
-      return [...voteItems, ...surveyItems].map((item, index) => {
+      return [...voteItems, ...surveyItems, ...respondedSurveyItems].map((item, index) => {
         const rowKey = item.buttonLink ? `${item.type}-${item.buttonLink}` : `${item.type}-${item.text}-${index}`;
         // Parity from `rowKey` (not list index) so future row removals (e.g., a vote closing)
         // don't flip following rows' stripes mid-`transition-colors`.

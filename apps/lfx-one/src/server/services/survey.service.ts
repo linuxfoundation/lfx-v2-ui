@@ -3,7 +3,7 @@
 
 import { SURVEY_LINK_ALLOWLIST } from '@lfx-one/shared/constants';
 import { SurveyStatus } from '@lfx-one/shared/enums';
-import { CreateSurveyRequest, QueryServiceResponse, Survey } from '@lfx-one/shared/interfaces';
+import { CreateSurveyRequest, MySurveyResponse, QueryServiceResponse, Survey } from '@lfx-one/shared/interfaces';
 import { getSurveyDisplayStatus } from '@lfx-one/shared/utils';
 import { Request } from 'express';
 
@@ -49,18 +49,29 @@ export class SurveyService {
       type: 'survey',
     };
 
-    const surveys = await fetchAllQueryResources<Survey>(req, (pageToken) =>
-      this.microserviceProxy.proxyRequest<QueryServiceResponse<Survey>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-        ...params,
-        ...(pageToken && { page_token: pageToken }),
-      })
-    );
+    // Fetch surveys and the current user's survey_responses in parallel so the
+    // join (used to stamp response_status='responded') does not add a sequential
+    // round-trip. fetchRespondedSurveyUidsForUser returns an empty set when the
+    // user cannot be identified or the lookup fails, so callers degrade gracefully.
+    const [surveys, respondedSurveyUids] = await Promise.all([
+      fetchAllQueryResources<Survey>(req, (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<Survey>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+          ...params,
+          ...(pageToken && { page_token: pageToken }),
+        })
+      ),
+      this.fetchRespondedSurveyUidsForUser(req),
+    ]);
+
+    const enriched =
+      respondedSurveyUids.size > 0 ? surveys.map((s) => (s.uid && respondedSurveyUids.has(s.uid) ? { ...s, response_status: 'responded' } : s)) : surveys;
 
     logger.debug(req, 'get_surveys', 'Completed survey fetch', {
-      final_count: surveys.length,
+      final_count: enriched.length,
+      responded_count: respondedSurveyUids.size,
     });
 
-    return surveys;
+    return enriched;
   }
 
   /**
@@ -199,9 +210,10 @@ export class SurveyService {
       filtersOr.push(`username:${username}`);
     }
 
-    // Query survey_response records using filters_or (OR logic on data fields)
-    const responses = await fetchAllQueryResources<{ survey_uid: string; survey_link?: string }>(req, (pageToken) =>
-      this.microserviceProxy.proxyRequest<QueryServiceResponse<{ survey_uid: string; survey_link?: string }>>(
+    // Query survey_response records using filters_or (OR logic on data fields).
+    // response_datetime distinguishes invited-only (empty) from submitted (populated).
+    const responses = await fetchAllQueryResources<{ survey_uid: string; survey_link?: string; response_datetime?: string }>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<{ survey_uid: string; survey_link?: string; response_datetime?: string }>>(
         req,
         'LFX_V2_SERVICE',
         '/query/resources',
@@ -215,13 +227,17 @@ export class SurveyService {
     );
 
     const surveyLinkMap = new Map<string, string>();
+    const respondedSurveyUids = new Set<string>();
     for (const r of responses) {
-      if (!r.survey_uid || !r.survey_link || surveyLinkMap.has(r.survey_uid)) {
-        continue;
+      if (!r.survey_uid) continue;
+      if (r.response_datetime && r.response_datetime.trim() !== '') {
+        respondedSurveyUids.add(r.survey_uid);
       }
-      const validatedLink = validateAndSanitizeUrl(r.survey_link.trim(), SURVEY_LINK_ALLOWLIST);
-      if (validatedLink) {
-        surveyLinkMap.set(r.survey_uid, validatedLink);
+      if (r.survey_link && !surveyLinkMap.has(r.survey_uid)) {
+        const validatedLink = validateAndSanitizeUrl(r.survey_link.trim(), SURVEY_LINK_ALLOWLIST);
+        if (validatedLink) {
+          surveyLinkMap.set(r.survey_uid, validatedLink);
+        }
       }
     }
 
@@ -237,17 +253,42 @@ export class SurveyService {
       unique_survey_count: surveyUids.length,
     });
 
-    // Fetch survey details in parallel via the survey microservice
+    // Fetch survey details in parallel via the survey microservice, then stamp
+    // response_status based on whether the user's survey_response row has a populated
+    // response_datetime. The UI uses this to switch "Take Survey" to "Results".
+    // When the detail fetch fails (404 / transient upstream error), keep the row in
+    // the list with a stub Survey built from the response record so the user can still
+    // see they were invited — silently dropping invited surveys hides the user's history.
     const surveys = await Promise.all(
       surveyUids.map(async (uid) => {
         try {
-          return await this.microserviceProxy.proxyRequest<Survey>(req, 'LFX_V2_SERVICE', `/surveys/${uid}`, 'GET');
+          const survey = await this.microserviceProxy.proxyRequest<Survey>(req, 'LFX_V2_SERVICE', `/surveys/${uid}`, 'GET');
+          if (survey && respondedSurveyUids.has(uid)) {
+            return { ...survey, response_status: 'responded' };
+          }
+          return survey;
         } catch (error) {
-          logger.warning(req, 'get_my_surveys', 'Failed to fetch survey details, skipping', {
+          logger.warning(req, 'get_my_surveys', 'Survey detail unavailable — rendering stub', {
             survey_uid: uid,
             error: error instanceof Error ? error.message : 'Unknown error',
           });
-          return null;
+          const stub: Survey = {
+            uid,
+            survey_title: 'Survey (details unavailable)',
+            survey_status: 'closed',
+            survey_cutoff_date: '',
+            is_nps_survey: false,
+            is_project_survey: false,
+            committees: [],
+            committee_category: '',
+            total_responses: 0,
+            total_recipients: 0,
+            created_at: '',
+            last_modified_at: '',
+            creator_name: '',
+          };
+          if (respondedSurveyUids.has(uid)) stub.response_status = 'responded';
+          return stub;
         }
       })
     );
@@ -292,5 +333,88 @@ export class SurveyService {
     });
 
     return this.projectService.enrichWithProjectData(req, withProjectUid);
+  }
+
+  /**
+   * Returns the current user's submitted response for a survey, or null if no response exists.
+   * Used by the Me lens "View My Response" drawer. Queries type=survey_response filtered by
+   * the user's email/username (via filters_or) and the survey_uid (client-side filter on the
+   * page since the index has no native survey_uid filter on this resource type). Only returns
+   * a record whose response_datetime is populated — invitation-only rows are treated as
+   * "not yet responded" and return null.
+   */
+  public async getMyResponse(req: Request, surveyUid: string): Promise<MySurveyResponse | null> {
+    const rawUsername = await getUsernameFromAuth(req);
+    const username = rawUsername ? stripAuthPrefix(rawUsername) : null;
+    const email = getEffectiveEmail(req);
+
+    if (!username && !email) return null;
+
+    const filtersOr: string[] = [];
+    if (email) filtersOr.push(`email:${email}`);
+    if (username) filtersOr.push(`username:${username}`);
+
+    const responses = await fetchAllQueryResources<MySurveyResponse>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<MySurveyResponse>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        type: 'survey_response',
+        filters_or: filtersOr,
+        ...(pageToken && { page_token: pageToken }),
+      })
+    );
+
+    const match = responses.find((r) => r?.survey_uid === surveyUid && r.response_datetime && r.response_datetime.trim() !== '');
+    return match ?? null;
+  }
+
+  /**
+   * Returns the set of survey UIDs the current user has responded to. Queries
+   * type=survey_response by username/email via filters_or and dedupes to a Set
+   * of survey_uid values. Returns an empty Set when the user cannot be
+   * identified or the query fails — callers treat this as "no responses known"
+   * and surveys render as not-yet-responded (the safer default).
+   */
+  private async fetchRespondedSurveyUidsForUser(req: Request): Promise<Set<string>> {
+    const rawUsername = await getUsernameFromAuth(req);
+    const username = rawUsername ? stripAuthPrefix(rawUsername) : null;
+    const email = getEffectiveEmail(req);
+
+    if (!username && !email) {
+      return new Set<string>();
+    }
+
+    const filtersOr: string[] = [];
+    if (email) filtersOr.push(`email:${email}`);
+    if (username) filtersOr.push(`username:${username}`);
+
+    try {
+      const responses = await fetchAllQueryResources<{ survey_uid?: string; response_datetime?: string }>(req, (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<{ survey_uid?: string; response_datetime?: string }>>(
+          req,
+          'LFX_V2_SERVICE',
+          '/query/resources',
+          'GET',
+          {
+            type: 'survey_response',
+            filters_or: filtersOr,
+            ...(pageToken && { page_token: pageToken }),
+          }
+        )
+      );
+      // A survey_response row exists when the user is invited; response_datetime is only
+      // populated once they actually submit. Filter on the populated datetime so invitations
+      // don't get misreported as responded.
+      const uids = new Set<string>();
+      for (const r of responses) {
+        if (r.survey_uid && r.response_datetime && r.response_datetime.trim() !== '') {
+          uids.add(r.survey_uid);
+        }
+      }
+      return uids;
+    } catch (err) {
+      logger.warning(req, 'get_surveys', 'Failed to fetch user survey responses for response_status enrichment, returning empty set', {
+        err,
+      });
+      return new Set<string>();
+    }
   }
 }

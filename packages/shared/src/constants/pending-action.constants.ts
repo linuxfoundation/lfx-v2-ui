@@ -13,4 +13,5 @@ export const PENDING_ACTION_SEVERITY: Record<PendingActionType, TagSeverity> = {
   Vote: 'info', // blue
   Survey: 'success', // green
   Agenda: 'secondary', // gray — informational read-before-meeting cue
+  Submitted: 'success', // green — completed survey/feedback acknowledgement
 };

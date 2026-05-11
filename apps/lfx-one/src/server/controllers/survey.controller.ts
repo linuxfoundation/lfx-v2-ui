@@ -86,6 +86,31 @@ export class SurveyController {
   }
 
   /**
+   * GET /surveys/:uid/my-response — returns the current user's submitted response, or 404 if none.
+   */
+  public async getMyResponse(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const surveyUid = req.params['uid'];
+    const startTime = logger.startOperation(req, 'get_my_response', { survey_uid: surveyUid });
+
+    try {
+      const validationContext = { operation: 'get_my_response', service: 'survey_controller' };
+      if (!validateUidParameter(surveyUid, req, next, validationContext)) return;
+
+      const response = await this.surveyService.getMyResponse(req, surveyUid);
+
+      if (!response) {
+        res.status(404).json({ message: 'No response found for the current user.' });
+        return;
+      }
+
+      logger.success(req, 'get_my_response', startTime, { survey_uid: surveyUid });
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * GET /surveys/:uid
    */
   public async getSurveyById(req: Request, res: Response, next: NextFunction): Promise<void> {

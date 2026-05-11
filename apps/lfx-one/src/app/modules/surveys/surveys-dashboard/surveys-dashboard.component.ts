@@ -15,12 +15,13 @@ import { SurveyService } from '@services/survey.service';
 import { BehaviorSubject, catchError, combineLatest, finalize, of, switchMap } from 'rxjs';
 
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
+import { MyResponseDrawerComponent } from '../components/my-response-drawer/my-response-drawer.component';
 import { SurveyResultsDrawerComponent } from '../components/survey-results-drawer/survey-results-drawer.component';
 import { SurveysTableComponent } from '../components/surveys-table/surveys-table.component';
 
 @Component({
   selector: 'lfx-surveys-dashboard',
-  imports: [LowerCasePipe, ButtonComponent, SurveysTableComponent, RouterLink, SurveyResultsDrawerComponent, EmptyStateComponent],
+  imports: [LowerCasePipe, ButtonComponent, SurveysTableComponent, RouterLink, SurveyResultsDrawerComponent, MyResponseDrawerComponent, EmptyStateComponent],
   templateUrl: './surveys-dashboard.component.html',
   styleUrl: './surveys-dashboard.component.scss',
 })
@@ -42,6 +43,7 @@ export class SurveysDashboardComponent {
   protected readonly loading = signal<boolean>(true);
   protected readonly canWrite = this.projectContextService.canWrite;
   protected readonly resultsDrawerVisible = signal<boolean>(false);
+  protected readonly myResponseDrawerVisible = signal<boolean>(false);
   protected readonly selectedSurveyId = signal<string | null>(null);
   protected readonly mySurveysLoading = signal<boolean>(true);
   protected readonly foundationFilter = signal<string | null>(null);
@@ -63,7 +65,13 @@ export class SurveysDashboardComponent {
 
   protected onViewResults(surveyId: string): void {
     this.selectedSurveyId.set(surveyId);
-    this.resultsDrawerVisible.set(true);
+    // Me lens: open the per-user drawer (response data scoped to the current user).
+    // All other lenses: open the aggregate results drawer (gated by participant access upstream).
+    if (this.isMeLens()) {
+      this.myResponseDrawerVisible.set(true);
+    } else {
+      this.resultsDrawerVisible.set(true);
+    }
   }
 
   protected onRowClick(survey: Survey): void {
