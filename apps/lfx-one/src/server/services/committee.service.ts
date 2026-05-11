@@ -22,9 +22,10 @@ import { Request } from 'express';
 import FormData from 'form-data';
 
 import { ResourceNotFoundError } from '../errors';
+import { pollEndpoint } from '../helpers/poll-endpoint.helper';
 import { fetchAllQueryResources } from '../helpers/query-service.helper';
 import { logger } from '../services/logger.service';
-import { getUsernameFromAuth } from '../utils/auth-helper';
+import { cleanUserDisplayName, getUsernameFromAuth } from '../utils/auth-helper';
 import { AccessCheckService } from './access-check.service';
 import { ETagService } from './etag.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
@@ -36,7 +37,8 @@ interface CommitteeFolder {
   committee_uid?: string;
   name: string;
   created_by_uid?: string;
-  created_by_name?: string;
+  /** LF username of the creator, auto-populated by upstream from the JWT. */
+  created_by_username?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -50,7 +52,8 @@ interface CommitteeLink {
   description?: string;
   folder_uid?: string;
   created_by_uid?: string;
-  created_by_name?: string;
+  /** LF username of the creator, auto-populated by upstream from the JWT. */
+  created_by_username?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -93,6 +96,7 @@ interface CommitteeDocumentQueryResult {
   content_type?: string;
   description?: string;
   committee_uid?: string;
+  folder_uid?: string;
   created_at?: string;
   updated_at?: string;
   uploaded_by_username?: string;
@@ -762,7 +766,7 @@ export class CommitteeService {
       created_at: f.created_at,
       updated_at: f.updated_at,
       created_by: f.created_by_uid,
-      uploaded_by: f.created_by_name,
+      uploaded_by: cleanUserDisplayName(f.created_by_username),
       committee_uid: f.committee_uid,
     }));
 
@@ -776,7 +780,7 @@ export class CommitteeService {
       created_at: l.created_at,
       updated_at: l.updated_at,
       created_by: l.created_by_uid,
-      uploaded_by: l.created_by_name,
+      uploaded_by: cleanUserDisplayName(l.created_by_username),
       parent_uid: l.folder_uid,
       committee_uid: l.committee_uid,
     }));
@@ -791,7 +795,8 @@ export class CommitteeService {
       mime_type: f.content_type,
       created_at: f.created_at,
       updated_at: f.updated_at,
-      uploaded_by: f.uploaded_by_username,
+      uploaded_by: cleanUserDisplayName(f.uploaded_by_username),
+      parent_uid: f.folder_uid,
       committee_uid: f.committee_uid,
     }));
 
@@ -832,7 +837,7 @@ export class CommitteeService {
         created_at: folder.created_at,
         updated_at: folder.updated_at,
         created_by: folder.created_by_uid,
-        uploaded_by: folder.created_by_name,
+        uploaded_by: cleanUserDisplayName(folder.created_by_username),
         committee_uid: folder.committee_uid,
       };
     }
@@ -867,7 +872,7 @@ export class CommitteeService {
       created_at: link.created_at,
       updated_at: link.updated_at,
       created_by: link.created_by_uid,
-      uploaded_by: link.created_by_name,
+      uploaded_by: cleanUserDisplayName(link.created_by_username),
       parent_uid: link.folder_uid,
       committee_uid: link.committee_uid,
     };
@@ -888,10 +893,8 @@ export class CommitteeService {
       file_size: uploadData.file_size,
     });
 
-    // file_size is intentionally omitted — upstream UploadCommitteeDocumentRequestBody
-    // only declares name, file_name, content_type, file, description. Goa silently
-    // drops unknown multipart fields.
-    // TODO: append folder_uid once upstream accepts it (LFXV2-1632).
+    // file_size is intentionally omitted — upstream UploadCommitteeDocumentRequestBody declares
+    // name, file_name, content_type, file, description, folder_uid. Goa drops unknown fields.
     const formData = new FormData();
     formData.append('file', fileBuffer, {
       filename: uploadData.file_name,
@@ -903,14 +906,19 @@ export class CommitteeService {
     if (uploadData.description) {
       formData.append('description', uploadData.description);
     }
+    if (uploadData.folder_uid) {
+      formData.append('folder_uid', uploadData.folder_uid);
+    }
 
+    // X-Sync=true blocks until the upstream indexer ACKs the publish, preventing stale list reads.
     const result = await this.microserviceProxy.proxyRequest<CommitteeDocumentUpstreamResponse>(
       req,
       'LFX_V2_SERVICE',
       `/committees/${committeeId}/documents`,
       'POST',
       undefined,
-      formData
+      formData,
+      { 'X-Sync': 'true' }
     );
 
     logger.info(req, 'upload_committee_document', 'Committee document uploaded successfully', {
@@ -918,6 +926,28 @@ export class CommitteeService {
       document_uid: result.uid,
       file_name: result.file_name,
       file_size: result.file_size,
+    });
+
+    // Poll until the query service sees the new doc — indexer is async to the upstream write.
+    await pollEndpoint({
+      req,
+      operation: 'upload_committee_document_index_poll',
+      pollFn: async () => {
+        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<{ uid: string }>>(
+          req,
+          'LFX_V2_SERVICE',
+          '/query/resources',
+          'GET',
+          {
+            type: 'committee_document',
+            tags: `committee_document_uid:${result.uid}`,
+          }
+        );
+        return (resources?.length ?? 0) > 0;
+      },
+      maxRetries: 5,
+      retryDelayMs: 400,
+      metadata: { committee_uid: committeeId, document_uid: result.uid },
     });
 
     return {
@@ -929,7 +959,7 @@ export class CommitteeService {
       mime_type: result.content_type,
       created_at: result.created_at,
       updated_at: result.updated_at,
-      uploaded_by: result.uploaded_by_username,
+      uploaded_by: cleanUserDisplayName(result.uploaded_by_username),
       committee_uid: result.committee_uid,
     };
   }
