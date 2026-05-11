@@ -1,6 +1,6 @@
 ---
 description: Ship a PR for lfx-v2-ui — runs quality gates, signs commits (DCO sign-off + GPG), pushes branch, opens PR with LFXV2 linkage.
-argument-hint: [optional: any extra instructions — commit subject, target branch, extra PR body context]
+argument-hint: [optional: any extra instructions — commit subject, target branch, draft mode, extra PR body context]
 ---
 
 # /lfx-pr — Ship a PR for lfx-v2-ui
@@ -9,7 +9,7 @@ You are running in the lfx-v2-ui monorepo. The user is invoking this command to 
 
 User-provided argument (if any): $ARGUMENTS
 
-Interpret `$ARGUMENTS` as freeform user instructions. They may include any of: a commit subject (e.g., `feat(auth): add OAuth`), a target branch (e.g., `to feat/lfx-pr-v2`, `move commits to jme/branch-name`), additional PR body context, or other adjustments to the default flow. Apply each instruction at the step that owns it (commit subject in Step 2, branch operations in Steps 1/5). If any directive is ambiguous, ask the user before acting on it.
+Interpret `$ARGUMENTS` as freeform user instructions. They may include any of: a commit subject (e.g., `feat(auth): add OAuth`), a target branch (e.g., `to feat/lfx-pr-v2`, `move commits to jme/branch-name`), a draft toggle (e.g., `as draft`), additional PR body context, or other adjustments to the default flow. Apply each instruction at the step that owns it (commit subject in Step 2, branch operations in Steps 1/5, draft flag in Step 6). If any directive is ambiguous, ask the user before acting on it.
 
 ## Step 1: Pre-flight state checks
 
@@ -129,11 +129,13 @@ PR body template:
 
 Derive the PR title from the first commit subject. It must be a valid conventional-commit title: `type(scope): description`, all lowercase, no JIRA ticket. If the first commit subject doesn't satisfy that format (e.g., the branch only has merge commits, or the subject violates the rules), ask the user for a valid title before invoking `gh`.
 
+If `$ARGUMENTS` includes a draft directive (e.g., `as draft`, `draft`, `--draft`), append `--draft` to the `gh pr create` invocation.
+
 ```bash
-gh pr create --base main --title "<conventional-commit title>" --body-file <body>
+gh pr create --base main --title "<conventional-commit title>" --body-file <body> [--draft]
 ```
 
-If gh unavailable, print branch URL + body for manual open.
+If gh unavailable, print branch URL + body (and the draft flag, if requested) for manual open.
 
 ## Step 7: Output
 
@@ -159,7 +161,7 @@ Enforce discipline, don't bypass it. Auto-fix OK for lint --fix and prettier. Ne
 ✅ End of focused session, ready for review
 ✅ After CodeRabbit pre-review
 ✅ Branch represents one cohesive change
+✅ Drafts — opt in via a draft directive in `$ARGUMENTS` (e.g., `as draft`)
 
 ❌ Not for save-progress
-❌ Not for drafts (use gh pr create --draft)
 ❌ Not from main, no commits, broken build
