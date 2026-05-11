@@ -158,10 +158,10 @@ export class CommitteeOverviewComponent {
 
   public pendingVotes: Signal<Vote[]> = computed(() => this.votes().filter((v) => v.status === PollStatus.ACTIVE));
   public pendingSurveys: Signal<Survey[]> = computed(() =>
-    this.surveys().filter((s) => getSurveyDisplayStatus(s) === SurveyStatus.OPEN && s.response_status !== 'responded')
+    this.surveys().filter((s) => getSurveyDisplayStatus(s) === SurveyStatus.OPEN && s.response_status?.toLowerCase() !== 'responded')
   );
   public respondedSurveys: Signal<Survey[]> = computed(() =>
-    this.surveys().filter((s) => getSurveyDisplayStatus(s) === SurveyStatus.OPEN && s.response_status === 'responded')
+    this.surveys().filter((s) => getSurveyDisplayStatus(s) === SurveyStatus.OPEN && s.response_status?.toLowerCase() === 'responded')
   );
   public hasPendingActions: Signal<boolean> = computed(() => this.pendingVotes().length > 0 || this.pendingSurveys().length > 0);
 
@@ -390,11 +390,14 @@ export class CommitteeOverviewComponent {
         text: survey.survey_title,
         icon: 'fa-light fa-circle-check',
         severity: PENDING_ACTION_SEVERITY.Submitted,
-        // Survey is still open — the user may change their answer until it closes,
-        // so the action remains the survey link, not a results view. The 'Submitted'
-        // type + green check icon communicate that a response is already on file.
-        buttonText: 'Update',
-        buttonLink: survey.survey_link,
+        // No buttonLink: the committee surveys query does not populate the per-user
+        // SurveyMonkey link (survey_link is Me-lens-only data on /api/surveys/my-surveys),
+        // and handlePendingActionClick falls through to tabNavigated('surveys') for
+        // non-Vote items. The label reflects what actually happens on click — navigation
+        // to the surveys tab. To re-enable an in-place "Update" CTA, the committee
+        // surveys endpoint would need to enrich each row with the current user's
+        // survey_response.survey_link.
+        buttonText: 'View',
         date: undefined,
       }));
       return [...voteItems, ...surveyItems, ...respondedSurveyItems].map((item, index) => {

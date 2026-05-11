@@ -147,8 +147,9 @@
               </td>
 
               <td class="text-right">
-                @let openResponded = survey.displayStatus === SurveyStatus.OPEN && survey.response_status === 'responded';
-                @let openUnresponded = survey.displayStatus === SurveyStatus.OPEN && survey.response_status !== 'responded';
+                @let isResponded = survey.response_status?.toLowerCase() === 'responded';
+                @let openResponded = survey.displayStatus === SurveyStatus.OPEN && isResponded;
+                @let openUnresponded = survey.displayStatus === SurveyStatus.OPEN && !isResponded;
                 <lfx-tag
                   [value]="openResponded ? 'Submitted' : (survey | surveyStatusLabel)"
                   [severity]="openResponded ? 'success' : openUnresponded ? 'warn' : (survey | surveyStatusSeverity)"></lfx-tag>
@@ -170,15 +171,16 @@
                       [attr.data-testid]="'surveys-delete-' + survey.uid">
                     </lfx-button>
                   } @else if (!hasPMOAccess() && survey.displayStatus === SurveyStatus.OPEN && survey.survey_link) {
+                    @let actionIsResponded = survey.response_status?.toLowerCase() === 'responded';
                     <lfx-button
-                      [label]="survey.response_status === 'responded' ? 'Update' : 'Take Survey'"
-                      [severity]="survey.response_status === 'responded' ? 'secondary' : 'primary'"
+                      [label]="actionIsResponded ? 'Update' : 'Take Survey'"
+                      [severity]="actionIsResponded ? 'secondary' : 'primary'"
                       size="small"
                       [text]="true"
                       [href]="survey.survey_link"
                       target="_blank"
                       rel="noopener noreferrer"
-                      [attr.data-testid]="(survey.response_status === 'responded' ? 'surveys-update-' : 'surveys-take-') + survey.uid">
+                      [attr.data-testid]="(actionIsResponded ? 'surveys-update-' : 'surveys-take-') + survey.uid">
                     </lfx-button>
                   } @else if (isMeLens() && survey.displayStatus === SurveyStatus.CLOSED) {
                     <lfx-button

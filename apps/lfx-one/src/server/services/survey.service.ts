@@ -255,7 +255,9 @@ export class SurveyService {
 
     // Fetch survey details in parallel via the survey microservice, then stamp
     // response_status based on whether the user's survey_response row has a populated
-    // response_datetime. The UI uses this to switch "Take Survey" to "Results".
+    // response_datetime. The UI consumes response_status to open the per-user response
+    // drawer on the Me lens and switch the action button to 'Update' (vs 'Take Survey')
+    // while the survey is still open.
     // When the detail fetch fails (404 / transient upstream error), keep the row in
     // the list with a stub Survey built from the response record so the user can still
     // see they were invited — silently dropping invited surveys hides the user's history.
@@ -363,7 +365,13 @@ export class SurveyService {
     );
 
     const match = responses.find((r) => r?.survey_uid === surveyUid && r.response_datetime && r.response_datetime.trim() !== '');
-    return match ?? null;
+    if (!match) return null;
+
+    // Defense-in-depth: validate survey_link against the same allowlist getMySurveys uses
+    // before propagating the URL to the UI. Drops the field if validation fails — the rest
+    // of the payload (answers, nps_value, response_datetime) is still useful for the drawer.
+    const sanitizedLink = match.survey_link ? validateAndSanitizeUrl(match.survey_link.trim(), SURVEY_LINK_ALLOWLIST) : undefined;
+    return { ...match, survey_link: sanitizedLink ?? undefined };
   }
 
   /**

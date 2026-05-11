@@ -28,7 +28,11 @@ export class MyResponseDrawerComponent {
   protected readonly loading = signal<boolean>(false);
   protected readonly response: Signal<MySurveyResponse | null> = this.initResponse();
 
-  protected readonly isNps: Signal<boolean> = computed(() => this.survey()?.is_nps_survey ?? false);
+  // Prefer the survey's is_nps_survey flag, but fall back to inspecting the response
+  // payload. Stub survey rows (rendered when the upstream /surveys/{uid} detail fetch
+  // fails) default is_nps_survey to false even for genuinely NPS surveys; without this
+  // fallback the drawer would mis-render the NPS score as a "no answers" state.
+  protected readonly isNps: Signal<boolean> = computed(() => this.survey()?.is_nps_survey === true || this.response()?.nps_value != null);
   protected readonly hasQuestionAnswers: Signal<boolean> = computed(() => (this.response()?.survey_monkey_question_answers?.length ?? 0) > 0);
   protected readonly canUpdate: Signal<boolean> = computed(() => {
     // While the survey is still accepting responses the user may change their answer.

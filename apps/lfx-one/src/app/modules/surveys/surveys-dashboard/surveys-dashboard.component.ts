@@ -67,9 +67,13 @@ export class SurveysDashboardComponent {
     this.selectedSurveyId.set(surveyId);
     // Me lens: open the per-user drawer (response data scoped to the current user).
     // All other lenses: open the aggregate results drawer (gated by participant access upstream).
+    // Explicitly close the non-target drawer so a mid-session lens switch can't leave both
+    // visibility signals set to true at the same time.
     if (this.isMeLens()) {
+      this.resultsDrawerVisible.set(false);
       this.myResponseDrawerVisible.set(true);
     } else {
+      this.myResponseDrawerVisible.set(false);
       this.resultsDrawerVisible.set(true);
     }
   }
