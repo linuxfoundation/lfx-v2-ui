@@ -311,6 +311,12 @@ export interface CommitteeSettingsData {
 export type CommitteeVoteStatus = 'open' | 'closed' | 'cancelled';
 
 /**
+ * Quick-filter chip keys on the committee Members tab.
+ * Each value maps to a chip in the chip row; "all" is the default (no filter).
+ */
+export type CommitteeMemberFilterChip = 'all' | 'voting' | 'observers' | 'chairs';
+
+/**
  * An open or recent vote in a governing board or oversight committee.
  */
 export interface CommitteeVote {

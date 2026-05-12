@@ -16,7 +16,7 @@ import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
 import { CommitteeMemberRole, CommitteeMemberVotingStatus } from '@lfx-one/shared/enums';
-import { Committee, CommitteeMember, CommitteePermissionLevel, CommitteeUser, TagSeverity } from '@lfx-one/shared/interfaces';
+import { Committee, CommitteeMember, CommitteeMemberFilterChip, CommitteePermissionLevel, CommitteeUser, TagSeverity } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -66,12 +66,18 @@ export class CommitteeMembersComponent implements OnInit {
   // Simple writable signals
   public selectedMember = signal<CommitteeMember | null>(null);
   public isDeleting = signal<boolean>(false);
-  public memberFilterChip = signal<'all' | 'voting' | 'observers' | 'chairs'>('all');
+  public memberFilterChip = signal<CommitteeMemberFilterChip>('all');
   public votingRepCount: Signal<number> = computed(() => this.members().filter((m) => m.voting?.status === CommitteeMemberVotingStatus.VOTING_REP).length);
   public chairCount: Signal<number> = computed(
     () => this.members().filter((m) => m.role?.name === CommitteeMemberRole.CHAIR || m.role?.name === CommitteeMemberRole.VICE_CHAIR).length
   );
   public observerCount: Signal<number> = computed(() => this.members().filter((m) => m.voting?.status === CommitteeMemberVotingStatus.OBSERVER).length);
+  public chipConfig: Signal<{ key: CommitteeMemberFilterChip; label: string; count: number }[]> = computed(() => [
+    { key: 'all', label: 'All', count: this.members().length },
+    { key: 'voting', label: 'Voting Reps', count: this.votingRepCount() },
+    { key: 'observers', label: 'Observers', count: this.observerCount() },
+    { key: 'chairs', label: 'Chairs', count: this.chairCount() },
+  ]);
   private chipFilteredMembers: Signal<CommitteeMember[]> = computed(() => {
     const chip = this.memberFilterChip();
     const members = this.members();
@@ -157,7 +163,7 @@ export class CommitteeMembersComponent implements OnInit {
     return 'Member';
   }
 
-  public selectChip(chip: 'all' | 'voting' | 'observers' | 'chairs'): void {
+  public selectChip(chip: CommitteeMemberFilterChip): void {
     this.memberFilterChip.set(chip);
     this.filterForm.patchValue({ role: null, votingStatus: null, organization: null });
   }

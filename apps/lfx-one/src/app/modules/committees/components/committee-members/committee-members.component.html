@@ -9,42 +9,17 @@
     } @else {
       <!-- Quick Filter Chips -->
       <div class="flex items-center gap-2 mb-4" data-testid="members-filter-chips">
-        <button
-          type="button"
-          class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
-          [attr.aria-pressed]="memberFilterChip() === 'all'"
-          [class]="memberFilterChip() === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-          (click)="selectChip('all')"
-          data-testid="members-chip-all">
-          All ({{ members().length }})
-        </button>
-        <button
-          type="button"
-          class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
-          [attr.aria-pressed]="memberFilterChip() === 'voting'"
-          [class]="memberFilterChip() === 'voting' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-          (click)="selectChip('voting')"
-          data-testid="members-chip-voting">
-          Voting Reps ({{ votingRepCount() }})
-        </button>
-        <button
-          type="button"
-          class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
-          [attr.aria-pressed]="memberFilterChip() === 'observers'"
-          [class]="memberFilterChip() === 'observers' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-          (click)="selectChip('observers')"
-          data-testid="members-chip-observers">
-          Observers ({{ observerCount() }})
-        </button>
-        <button
-          type="button"
-          class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
-          [attr.aria-pressed]="memberFilterChip() === 'chairs'"
-          [class]="memberFilterChip() === 'chairs' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-          (click)="selectChip('chairs')"
-          data-testid="members-chip-chairs">
-          Chairs ({{ chairCount() }})
-        </button>
+        @for (chip of chipConfig(); track chip.key) {
+          <button
+            type="button"
+            class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+            [attr.aria-pressed]="memberFilterChip() === chip.key"
+            [class]="memberFilterChip() === chip.key ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+            (click)="selectChip(chip.key)"
+            [attr.data-testid]="'members-chip-' + chip.key">
+            {{ chip.label }} ({{ chip.count }})
+          </button>
+        }
       </div>
 
       <!-- Search, Filter Controls, and Add Member -->
