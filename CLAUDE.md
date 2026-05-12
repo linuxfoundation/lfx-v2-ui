@@ -160,7 +160,7 @@ Utilities split into **generic** helpers (date/time, string, url, file, form, ht
 - Pre-commit runs `./check-headers.sh`, `npx lint-staged` (prettier + lint on staged files), then repo-wide `yarn format:check`, `yarn lint:check`, and `yarn check-types`. Only `lint-staged` is scoped to staged files — the rest run on the whole repo. You don't need to run `yarn format` manually; `lint-staged` already prettifies staged files. If a commit fails, fix the reported issue and retry.
 - See `.claude/rules/commit-workflow.md` for PR title / sizing / JIRA details.
 
-For missing sign-off recovery (single-commit amend, or older commits / cherry-picks / rebases), invoke the `dco` skill.
+For missing sign-off recovery (single-commit amend, or older commits / cherry-picks / rebases), invoke the `/dco` skill.
 
 ### Source hygiene
 
@@ -193,7 +193,7 @@ When implementing from a design:
    - Signals / `@Input` / state
    - Interactive states: hover, active, loading, error, empty
    - Responsive breakpoints
-   - SSR safety (see above)
+   - SSR safety (see `.claude/rules/ssr-safety.md`)
 
 The HTML is the **visual** spec. Behavior needs explicit input.
 
@@ -262,4 +262,4 @@ Detailed patterns are in `.claude/rules/` and loaded contextually based on the `
 
 ## Pre-PR validation
 
-Before saying "I'm done", invoke the `/preflight` skill — it runs lint, type-check, tests, build, DCO/GPG verification, and protected-file checks against this repo's specific rules.
+Before saying "I'm done", invoke the `/preflight` skill — it runs license-header, format, lint, build, protected-file, and commit-signoff checks against this repo's specific rules.

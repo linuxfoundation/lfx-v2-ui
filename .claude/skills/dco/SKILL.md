@@ -38,8 +38,8 @@ Then interactively rebase from one commit _before_ that:
 
 ```bash
 git rebase -i <parent-of-unsigned-commit>
-# In the editor, change `pick` to `reword` for each unsigned commit
-# Save and exit; for each commit reword shown, just save (no message change)
+# In the editor, change `pick` to `edit` for each unsigned commit
+# Save and exit; the rebase stops at each `edit` line so you can amend
 ```
 
 For each commit in the rebase, replace it with a signed version:
