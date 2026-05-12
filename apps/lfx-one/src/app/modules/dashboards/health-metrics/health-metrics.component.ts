@@ -145,6 +145,10 @@ export class HealthMetricsComponent {
         tap(() => {
           this.loading.set(true);
           this.metricsData.set(DEFAULT_DATA);
+          // Reset per-card data states so stale values from a previous
+          // foundation don't incorrectly trigger the full-page empty state
+          // while child cards re-fetch and re-emit hasDataChange.
+          this.cardDataStates.set({});
         }),
         switchMap((slug) =>
           forkJoin({

@@ -35,9 +35,11 @@ export class MembershipChurnTierCardComponent {
   protected readonly loading = signal(true);
   protected readonly summaryData = signal<MembershipChurnPerTierSummaryResponse>(HEALTH_METRICS_MEMBERSHIP_CHURN_DEFAULT_SUMMARY);
 
-  protected readonly hasData = computed(
-    () => (this.summaryData().tiers ?? []).length > 0 || this.summaryData().currentPeriod.valueLost > 0
-  );
+  protected readonly hasData = computed(() => {
+    const data = this.summaryData();
+    const period = data.currentPeriod;
+    return (data.tiers ?? []).length > 0 || period.valueLost > 0 || period.membersLost > 0 || period.churnRatePct > 0;
+  });
 
   public readonly hasDataChange = output<boolean>();
 

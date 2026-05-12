@@ -8,6 +8,7 @@ import { ButtonComponent } from '@components/button/button.component';
 
 @Component({
   selector: 'lfx-health-metrics-card-empty-state',
+  standalone: true,
   imports: [ButtonComponent, RouterLink],
   templateUrl: './health-metrics-card-empty-state.component.html',
   host: { class: 'flex flex-1 flex-col' },

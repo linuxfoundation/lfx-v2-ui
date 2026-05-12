@@ -38,8 +38,12 @@ export class TrainingCertificationCardComponent {
   protected readonly activeMode = signal<CardMode>('enrollment');
 
   protected readonly hasData = computed(() => {
-    const e = this.summaryData().enrollment;
-    return e.instructorLed > 0 || e.eLearning > 0 || e.certExams > 0 || e.edx > 0;
+    const data = this.summaryData();
+    const e = data.enrollment;
+    const r = data.revenue;
+    const hasEnrollment = e.instructorLed > 0 || e.eLearning > 0 || e.certExams > 0 || e.edx > 0;
+    const hasRevenue = r.instructorLed > 0 || r.eLearning > 0 || r.certExams > 0;
+    return hasEnrollment || hasRevenue;
   });
 
   public readonly hasDataChange = output<boolean>();
