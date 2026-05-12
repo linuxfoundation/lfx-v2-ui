@@ -54,10 +54,7 @@ export class WebsiteVisitsDrawerComponent {
 
   protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() => this.split().performingInsights);
 
-  protected readonly hasNoData: Signal<boolean> = computed(() => {
-    const { totalSessions, dailyData } = this.drawerData();
-    return totalSessions === 0 && (dailyData.length === 0 || dailyData.every((v) => v === 0));
-  });
+  protected readonly hasNoData: Signal<boolean> = this.initHasNoData();
 
   protected readonly trendChartData: Signal<ChartData<'line'>> = this.initTrendChartData();
   protected readonly domainChartData: Signal<ChartData<'bar'>> = this.initDomainChartData();
@@ -140,6 +137,13 @@ export class WebsiteVisitsDrawerComponent {
   }
 
   // === Private Initializers ===
+  private initHasNoData(): Signal<boolean> {
+    return computed(() => {
+      const { totalSessions, dailyData } = this.drawerData();
+      return totalSessions === 0 && (dailyData.length === 0 || dailyData.every((v) => v === 0));
+    });
+  }
+
   private initDrawerData(): Signal<WebActivitiesSummaryResponse> {
     const defaultValue: WebActivitiesSummaryResponse = {
       totalSessions: 0,
