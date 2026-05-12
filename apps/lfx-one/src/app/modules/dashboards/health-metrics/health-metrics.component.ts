@@ -64,24 +64,28 @@ export class HealthMetricsComponent {
 
   protected readonly hasFoundation = computed(() => !!this.projectContextService.selectedFoundation());
 
-  private readonly cardNames = ['events', 'nps', 'outstanding-balance', 'membership-churn', 'participating-orgs', 'training', 'code-contribution', 'flywheel', 'board-meeting'];
+  private readonly cardNames = [
+    'events',
+    'nps',
+    'outstanding-balance',
+    'membership-churn',
+    'participating-orgs',
+    'training',
+    'code-contribution',
+    'flywheel',
+    'board-meeting',
+  ];
 
   protected readonly allCardsEmpty = computed(() => {
     if (this.loading()) return false;
 
-    // Foundation-level totals are filter-independent (cumulative). If any are
-    // present, the foundation has data somewhere in the year-filter range, so
-    // we must show the cards (with per-card empty states for the current
-    // filter) rather than the full-page empty state.
+    // Filter-independent totals: show cards even if the current period is empty.
     const data = this.metricsData();
     const hasFoundationTotals =
       (data.totalValue?.totalValue ?? 0) > 0 || (data.totalProjects?.totalProjects ?? 0) > 0 || (data.totalMembers?.totalMembers ?? 0) > 0;
     if (hasFoundationTotals) return false;
 
-    // Wait until every card has reported its hasData state before evaluating
-    // emptiness. Otherwise the page renders the cards first and then snaps
-    // to the full-page empty state once children emit hasDataChange, which
-    // causes a visible flicker dependent on per-card API latency.
+    // Wait for all cards to report before deciding the page is empty (avoids flicker).
     const states = this.cardDataStates();
     const allReported = this.cardNames.every((name) => name in states);
     if (!allReported) return false;
@@ -153,9 +157,7 @@ export class HealthMetricsComponent {
         tap(() => {
           this.loading.set(true);
           this.metricsData.set(DEFAULT_DATA);
-          // Reset per-card data states so stale values from a previous
-          // foundation don't incorrectly trigger the full-page empty state
-          // while child cards re-fetch and re-emit hasDataChange.
+          // Reset so stale per-card states don't trigger the full-page empty state while cards re-fetch.
           this.cardDataStates.set({});
         }),
         switchMap((slug) =>

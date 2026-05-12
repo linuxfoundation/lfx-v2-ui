@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, ElementRef, inject, input, output, PLATFORM_ID, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, inject, input, output, PLATFORM_ID, signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { filter, map } from 'rxjs';
 import { SkeletonModule } from 'primeng/skeleton';
 import { HealthMetricsCardEmptyStateComponent } from '../health-metrics-card-empty-state/health-metrics-card-empty-state.component';
 import { HEALTH_METRICS_MEMBERSHIP_CHURN_DEFAULT_SUMMARY } from '@lfx-one/shared/constants';
@@ -96,11 +98,13 @@ export class MembershipChurnTierCardComponent {
     if (isPlatformBrowser(this.platformId)) {
       this.initializeDataFetching();
     }
-    effect(() => {
-      if (!this.loading()) {
-        this.hasDataChange.emit(this.hasData());
-      }
-    });
+    toObservable(this.loading)
+      .pipe(
+        filter((loading) => !loading),
+        map(() => this.hasData()),
+        takeUntilDestroyed()
+      )
+      .subscribe((hasData) => this.hasDataChange.emit(hasData));
   }
 
   protected downloadCard(): void {

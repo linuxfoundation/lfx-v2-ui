@@ -14,7 +14,11 @@
       @if (hasFoundation()) {
         <div class="flex items-center gap-4">
           <span class="text-sm text-gray-500 whitespace-nowrap">{{ dateRangeLabel() }}</span>
-          <div class="flex items-center gap-0.5 rounded-lg bg-gray-100 p-1" role="group" aria-label="Year range filter" data-testid="health-metrics-year-filter">
+          <div
+            class="flex items-center gap-0.5 rounded-lg bg-gray-100 p-1"
+            role="group"
+            aria-label="Year range filter"
+            data-testid="health-metrics-year-filter">
             @for (option of yearOptions(); track option.range) {
               <button
                 class="px-3 py-1 text-sm rounded-md transition-colors"

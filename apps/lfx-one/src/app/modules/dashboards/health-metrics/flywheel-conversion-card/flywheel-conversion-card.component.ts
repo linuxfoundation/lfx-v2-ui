@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, input, output, PLATFORM_ID, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, input, output, PLATFORM_ID, signal } from '@angular/core';
 import type { Signal } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ChartComponent } from '@components/chart/chart.component';
 import {
   createHorizontalBarChartOptions,
@@ -154,11 +154,13 @@ export class FlywheelConversionCardComponent {
 
   // === Protected Methods ===
   public constructor() {
-    effect(() => {
-      if (!this.loading()) {
-        this.hasDataChange.emit(this.hasFlywheelData());
-      }
-    });
+    toObservable(this.loading)
+      .pipe(
+        filter((loading) => !loading),
+        map(() => this.hasFlywheelData()),
+        takeUntilDestroyed()
+      )
+      .subscribe((hasData) => this.hasDataChange.emit(hasData));
   }
 
   protected downloadCard(): void {

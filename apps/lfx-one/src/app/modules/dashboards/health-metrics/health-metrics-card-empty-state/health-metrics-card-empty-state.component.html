@@ -12,11 +12,7 @@
   @if (ctaLabel() && ctaRoute()) {
     <lfx-button [label]="ctaLabel()!" severity="secondary" size="small" [routerLink]="ctaRoute()!" />
   } @else if (ctaLabel() && ctaHref()) {
-    <a
-      [href]="ctaHref()!"
-      target="_blank"
-      rel="noopener noreferrer"
-      class="text-xs font-medium text-blue-600 hover:underline">
+    <a [href]="ctaHref()!" target="_blank" rel="noopener noreferrer" class="text-xs font-medium text-blue-600 hover:underline">
       {{ ctaLabel() }}
     </a>
   }
@@ -29,11 +25,7 @@
         <span>{{ action() }}</span>
       }
       @if (actionLinkLabel() && actionLinkHref()) {
-        <a
-          [href]="actionLinkHref()!"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="ml-1 font-medium text-gray-700 hover:text-gray-900 hover:underline">
+        <a [href]="actionLinkHref()!" target="_blank" rel="noopener noreferrer" class="ml-1 font-medium text-gray-700 hover:text-gray-900 hover:underline">
           {{ actionLinkLabel() }}
         </a>
       }
