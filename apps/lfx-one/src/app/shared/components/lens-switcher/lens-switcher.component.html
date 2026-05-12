@@ -60,7 +60,7 @@
     </button>
 
     <!-- Divider -->
-    <hr class="w-6 border-white/20 mb-3" />
+    <hr class="w-6 border-white/35 mb-3" />
 
     <!-- Lens Buttons -->
     <div class="flex flex-col items-center gap-3 flex-1">
@@ -73,11 +73,11 @@
           [pTooltip]="lens.label"
           tooltipPosition="right"
           class="group flex flex-col items-center gap-1 w-full transition-colors"
-          [ngClass]="activeLens() === lens.id ? 'text-blue-400' : 'text-blue-200/70 hover:text-white'">
+          [ngClass]="activeLens() === lens.id ? 'text-white' : 'text-blue-200/75 hover:text-white'">
           <div
             class="flex items-center justify-center w-10 h-10 rounded-xl transition-colors"
             [ngClass]="{
-              'bg-blue-500/20': activeLens() === lens.id,
+              'bg-blue-500': activeLens() === lens.id,
               'group-hover:bg-white/10': activeLens() !== lens.id,
             }">
             <i [ngClass]="activeLens() === lens.id ? lens.activeIcon : lens.icon" class="text-xl"></i>
@@ -105,16 +105,14 @@
         aria-label="What's New"
         pTooltip="What's New"
         tooltipPosition="right"
-        class="group flex flex-col items-center gap-1 w-full transition-colors text-blue-200/70 hover:text-white">
+        class="group flex flex-col items-center gap-1 w-full transition-colors text-blue-200/75 hover:text-white">
         <div class="relative flex items-center justify-center w-10 h-10 rounded-xl transition-colors group-hover:bg-white/10">
-          <i class="fa-light fa-clock-rotate-left text-xl"></i>
+          <i class="fa-light fa-bullhorn text-xl"></i>
           @if (unseenChangelogCount() > 0) {
-            <lfx-badge
-              [value]="unseenChangelogCount()"
-              severity="danger"
-              size="small"
-              styleClass="!absolute -top-1 -right-1"
-              data-testid="lens-changelog-badge" />
+            <span
+              class="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-blue-500"
+              data-testid="lens-changelog-badge">
+            </span>
           }
         </div>
       </button>
@@ -128,7 +126,7 @@
         aria-label="LFX Insights"
         [pTooltip]="insightsTooltip"
         tooltipPosition="right"
-        class="group flex flex-col items-center gap-1 w-full transition-colors text-blue-200/70 hover:text-white">
+        class="group flex flex-col items-center gap-1 w-full transition-colors text-blue-200/75 hover:text-white">
         <div class="flex items-center justify-center w-10 h-10 rounded-xl transition-colors group-hover:bg-white/10">
           <i class="fa-light fa-chart-simple text-xl"></i>
         </div>
@@ -143,7 +141,7 @@
           aria-label="Impersonate user"
           pTooltip="Impersonate User"
           tooltipPosition="right"
-          class="group flex flex-col items-center gap-1 w-full transition-colors text-blue-200/70 hover:text-white">
+          class="group flex flex-col items-center gap-1 w-full transition-colors text-blue-200/75 hover:text-white">
           <div class="flex items-center justify-center w-10 h-10 rounded-xl transition-colors group-hover:bg-white/10">
             <i class="fa-light fa-user-secret text-xl"></i>
           </div>
@@ -151,7 +149,7 @@
       }
 
       <!-- Divider -->
-      <hr class="w-6 border-white/20" />
+      <hr class="w-6 border-white/35" />
 
       <!-- User Avatar -->
       <button

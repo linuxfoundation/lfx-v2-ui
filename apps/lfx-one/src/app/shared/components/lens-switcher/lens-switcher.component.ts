@@ -5,7 +5,6 @@ import { NgClass } from '@angular/common';
 import { afterNextRender, Component, inject, input, signal, viewChild } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AvatarComponent } from '@components/avatar/avatar.component';
-import { BadgeComponent } from '@components/badge/badge.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { ChangelogDrawerComponent } from '@components/changelog-drawer/changelog-drawer.component';
 import { ImpersonationDialogComponent } from '@components/impersonation-dialog/impersonation-dialog.component';
@@ -21,7 +20,7 @@ import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'lfx-lens-switcher',
-  imports: [NgClass, RouterLink, TooltipModule, PopoverModule, AvatarComponent, BadgeComponent, ButtonComponent, ChangelogDrawerComponent],
+  imports: [NgClass, RouterLink, TooltipModule, PopoverModule, AvatarComponent, ButtonComponent, ChangelogDrawerComponent],
   providers: [DialogService],
   templateUrl: './lens-switcher.component.html',
   styleUrl: './lens-switcher.component.scss',
