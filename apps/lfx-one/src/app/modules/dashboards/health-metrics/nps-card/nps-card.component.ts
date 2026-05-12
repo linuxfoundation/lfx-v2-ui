@@ -32,13 +32,12 @@ export class NpsCardComponent {
   private readonly elementRef = inject(ElementRef);
 
   public readonly range = input<HealthMetricsRange>('YTD');
+  public readonly hasDataChange = output<boolean>();
 
   protected readonly loading = signal(true);
   protected readonly summaryData = signal<NpsSummaryResponse>(HEALTH_METRICS_NPS_DEFAULT_SUMMARY);
 
   protected readonly hasData = computed(() => this.summaryData().responses > 0);
-
-  public readonly hasDataChange = output<boolean>();
 
   private static readonly arcLength = Math.PI * 80;
 

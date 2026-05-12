@@ -44,6 +44,7 @@ export class BoardMeetingCardComponent {
   private readonly platformId = inject(PLATFORM_ID);
 
   public readonly range = input<HealthMetricsRange>('YTD');
+  public readonly hasDataChange = output<boolean>();
 
   protected readonly pccUrl = environment.urls.pcc;
 
@@ -56,8 +57,6 @@ export class BoardMeetingCardComponent {
   protected readonly projectId = computed(() => this.summaryData().projectId);
   protected readonly hasData = computed(() => this.summaryData().dataAvailable);
   protected readonly hasInvitees = computed(() => this.summaryData().invitees.length > 0);
-
-  public readonly hasDataChange = output<boolean>();
 
   protected readonly addPastMeetingUrl = computed(() => {
     const id = this.projectId();

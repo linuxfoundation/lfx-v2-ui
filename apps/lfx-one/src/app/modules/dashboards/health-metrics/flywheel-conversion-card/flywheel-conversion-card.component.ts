@@ -45,9 +45,10 @@ export class FlywheelConversionCardComponent {
   private readonly projectContextService = inject(ProjectContextService);
   private readonly platformId = inject(PLATFORM_ID);
 
-  // === Inputs ===
+  // === Inputs / Outputs ===
   // TODO: wire range through to server once dbt NORTH_STAR_FLYWHEEL_CONVERSION supports range columns
   public readonly range = input<HealthMetricsRange>('YTD');
+  public readonly hasDataChange = output<boolean>();
 
   // === Internal State ===
   protected readonly loading = signal(true);
@@ -59,8 +60,6 @@ export class FlywheelConversionCardComponent {
   protected readonly funnelStages: Signal<FlywheelHealthMetricsFunnelStage[]> = computed(() => buildFlywheelFunnelStages(this.data()));
 
   protected readonly banner: Signal<FlywheelHealthMetricsBannerView | null> = computed(() => selectFlywheelBannerView(this.data()));
-
-  public readonly hasDataChange = output<boolean>();
 
   protected readonly hasFlywheelData: Signal<boolean> = computed(() => {
     const payload = this.data();

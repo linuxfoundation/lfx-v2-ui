@@ -29,12 +29,12 @@ export class OutstandingBalanceCardComponent {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly elementRef = inject(ElementRef);
 
+  public readonly hasDataChange = output<boolean>();
+
   protected readonly loading = signal(true);
   protected readonly summaryData = signal<OutstandingBalanceSummaryResponse>(HEALTH_METRICS_OUTSTANDING_BALANCE_DEFAULT_SUMMARY);
 
   protected readonly hasData = computed(() => this.summaryData().totalOutstandingBalance > 0 || this.summaryData().totalMembersAtRisk > 0);
-
-  public readonly hasDataChange = output<boolean>();
 
   protected readonly formattedBalance = computed(() => {
     const value = this.summaryData().totalOutstandingBalance;

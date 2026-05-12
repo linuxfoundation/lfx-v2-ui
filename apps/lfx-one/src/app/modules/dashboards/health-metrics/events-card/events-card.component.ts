@@ -31,13 +31,12 @@ export class EventsCardComponent {
   private readonly elementRef = inject(ElementRef);
 
   public readonly range = input<HealthMetricsRange>('YTD');
+  public readonly hasDataChange = output<boolean>();
 
   protected readonly loading = signal(true);
   protected readonly summaryData = signal<EventsSummaryResponse>(HEALTH_METRICS_EVENTS_DEFAULT_SUMMARY);
 
   protected readonly hasData = computed(() => this.summaryData().totalEvents > 0 || this.summaryData().upcomingEvents > 0);
-
-  public readonly hasDataChange = output<boolean>();
 
   protected readonly formattedTotalEvents = computed(() => {
     return this.summaryData().totalEvents.toLocaleString();

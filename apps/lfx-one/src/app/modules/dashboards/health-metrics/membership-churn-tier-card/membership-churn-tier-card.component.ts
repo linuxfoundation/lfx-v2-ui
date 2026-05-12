@@ -33,6 +33,7 @@ export class MembershipChurnTierCardComponent {
   private readonly elementRef = inject(ElementRef);
 
   public readonly range = input<HealthMetricsRange>('YTD');
+  public readonly hasDataChange = output<boolean>();
 
   protected readonly loading = signal(true);
   protected readonly summaryData = signal<MembershipChurnPerTierSummaryResponse>(HEALTH_METRICS_MEMBERSHIP_CHURN_DEFAULT_SUMMARY);
@@ -42,8 +43,6 @@ export class MembershipChurnTierCardComponent {
     const period = data.currentPeriod;
     return (data.tiers ?? []).length > 0 || period.valueLost > 0 || period.membersLost > 0 || period.churnRatePct > 0;
   });
-
-  public readonly hasDataChange = output<boolean>();
 
   protected readonly currentPeriod = computed(() => this.summaryData().currentPeriod);
   protected readonly previousYear = computed(() => this.summaryData().previousYear);

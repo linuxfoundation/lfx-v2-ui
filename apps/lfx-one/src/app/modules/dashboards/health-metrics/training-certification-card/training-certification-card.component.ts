@@ -34,6 +34,7 @@ export class TrainingCertificationCardComponent {
   private readonly elementRef = inject(ElementRef);
 
   public readonly range = input<HealthMetricsRange>('YTD');
+  public readonly hasDataChange = output<boolean>();
 
   protected readonly loading = signal(true);
   protected readonly summaryData = signal<TrainingCertificationSummaryResponse>(HEALTH_METRICS_TRAINING_CERTIFICATION_DEFAULT_SUMMARY);
@@ -47,8 +48,6 @@ export class TrainingCertificationCardComponent {
     const hasRevenue = r.instructorLed > 0 || r.eLearning > 0 || r.certExams > 0;
     return hasEnrollment || hasRevenue;
   });
-
-  public readonly hasDataChange = output<boolean>();
 
   protected readonly activeMetrics = computed(() => {
     const mode = this.activeMode();

@@ -32,6 +32,7 @@ export class ParticipatingOrgsCardComponent {
   private readonly elementRef = inject(ElementRef);
 
   public readonly range = input<HealthMetricsRange>('YTD');
+  public readonly hasDataChange = output<boolean>();
 
   protected readonly loading = signal(true);
   protected readonly summaryData = signal<ParticipatingOrgsSummaryResponse>(HEALTH_METRICS_PARTICIPATING_ORGS_DEFAULT_SUMMARY);
@@ -42,8 +43,6 @@ export class ParticipatingOrgsCardComponent {
   });
 
   protected readonly hasData = computed(() => this.totalEngagement() > 0 || this.summaryData().totalActiveMembers > 0);
-
-  public readonly hasDataChange = output<boolean>();
 
   protected readonly segments = computed((): EngagementSegment[] => {
     const data = this.summaryData();

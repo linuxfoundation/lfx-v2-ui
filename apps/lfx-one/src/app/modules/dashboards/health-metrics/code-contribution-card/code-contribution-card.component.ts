@@ -32,14 +32,13 @@ export class CodeContributionCardComponent {
   private readonly elementRef = inject(ElementRef);
 
   public readonly range = input<HealthMetricsRange>('YTD');
+  public readonly hasDataChange = output<boolean>();
 
   protected readonly loading = signal(true);
   protected readonly summaryData = signal<CodeContributionSummaryResponse>(HEALTH_METRICS_CODE_CONTRIBUTION_DEFAULT_SUMMARY);
 
   protected readonly hasContributorData = computed(() => this.summaryData().dataAvailable);
   protected readonly hasData = this.hasContributorData;
-
-  public readonly hasDataChange = output<boolean>();
 
   protected readonly formattedTotalContributors = computed(() => {
     return this.abbreviateCount(this.summaryData().totalContributors);
