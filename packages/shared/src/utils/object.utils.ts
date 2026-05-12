@@ -16,8 +16,8 @@ import { NullifyEmptyStrings } from '../interfaces/object.interface';
 export function nullifyEmptyStrings<T>(value: T): NullifyEmptyStrings<T> {
   if (value === null || value === undefined) return value as NullifyEmptyStrings<T>;
   if (typeof value === 'string') {
-    const trimmed = value.trim() === '' ? null : value;
-    return trimmed as NullifyEmptyStrings<T>;
+    const nullIfBlank = value.trim() === '' ? null : value;
+    return nullIfBlank as NullifyEmptyStrings<T>;
   }
   if (Array.isArray(value)) {
     return value.map((item) => nullifyEmptyStrings(item)) as NullifyEmptyStrings<T>;
