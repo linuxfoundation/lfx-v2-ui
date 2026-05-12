@@ -55,8 +55,11 @@ export class EmailCtrDrawerComponent {
 
   protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() => this.split().performingInsights);
 
+  // True once all three data sources have resolved (not still loading)
+  private readonly dataResolved: Signal<boolean> = computed(() => !this.drawerLoading() && this.paidDataResolved() && this.attributionDataResolved());
+
   protected readonly hasNoData: Signal<boolean> = computed(() => {
-    if (this.drawerLoading() || !this.paidDataResolved() || !this.attributionDataResolved()) {
+    if (!this.dataResolved()) {
       return false;
     }
     const email = this.drawerData();
@@ -271,7 +274,7 @@ export class EmailCtrDrawerComponent {
     return computed(() => {
       // Gate on all three data sources having resolved — avoid misleading
       // "Maintain current momentum" while paid/attribution are still in-flight.
-      if (this.drawerLoading() || !this.paidDataResolved() || !this.attributionDataResolved()) {
+      if (!this.dataResolved()) {
         return [];
       }
 
@@ -424,7 +427,7 @@ export class EmailCtrDrawerComponent {
   private initKeyInsights(): Signal<MarketingKeyInsight[]> {
     return computed(() => {
       // Gate on all three data sources — same rationale as initRecommendedActions.
-      if (this.drawerLoading() || !this.paidDataResolved() || !this.attributionDataResolved()) {
+      if (!this.dataResolved()) {
         return [];
       }
 
