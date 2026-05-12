@@ -44,10 +44,7 @@ export class MemberRetentionDrawerComponent {
   protected readonly performingActions: Signal<MarketingRecommendedAction[]> = computed(() => this.split().performingActions);
 
   protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() => this.split().performingInsights);
-  protected readonly hasNoData: Signal<boolean> = computed(() => {
-    const { renewalRate, netRevenueRetention, monthlyData } = this.data();
-    return renewalRate === 0 && netRevenueRetention === 0 && (monthlyData.length === 0 || monthlyData.every((m) => m.value === 0));
-  });
+  protected readonly hasNoData: Signal<boolean> = this.initHasNoData();
 
   // === Protected Methods ===
   protected onClose(): void {
@@ -55,12 +52,19 @@ export class MemberRetentionDrawerComponent {
   }
 
   // === Private Initializers ===
+  private initHasNoData(): Signal<boolean> {
+    return computed(() => {
+      const { renewalRate, netRevenueRetention, monthlyData } = this.data();
+      return renewalRate === 0 && netRevenueRetention === 0 && (monthlyData.length === 0 || monthlyData.every((m) => m.value === 0));
+    });
+  }
+
   private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
     return computed(() => {
-      const { renewalRate, netRevenueRetention, changePercentage, monthlyData } = this.data();
+      const { renewalRate, netRevenueRetention, changePercentage } = this.data();
       const actions: MarketingRecommendedAction[] = [];
 
-      if (renewalRate === 0 && netRevenueRetention === 0 && !monthlyData.some((m) => m.value > 0)) {
+      if (this.hasNoData()) {
         return actions;
       }
 
@@ -110,10 +114,10 @@ export class MemberRetentionDrawerComponent {
 
   private initKeyInsights(): Signal<MarketingKeyInsight[]> {
     return computed(() => {
-      const { renewalRate, netRevenueRetention, monthlyData } = this.data();
+      const { netRevenueRetention, monthlyData } = this.data();
       const insights: MarketingKeyInsight[] = [];
 
-      if (renewalRate === 0 && netRevenueRetention === 0 && !monthlyData.some((m) => m.value > 0)) {
+      if (this.hasNoData()) {
         return insights;
       }
 
