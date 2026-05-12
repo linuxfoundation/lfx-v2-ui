@@ -16,7 +16,15 @@ import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
 import { CommitteeMemberRole, CommitteeMemberVotingStatus } from '@lfx-one/shared/enums';
-import { Committee, CommitteeMember, CommitteeMemberFilterChip, CommitteePermissionLevel, CommitteeUser, TagSeverity } from '@lfx-one/shared/interfaces';
+import {
+  Committee,
+  CommitteeMember,
+  CommitteeMemberFilterChip,
+  CommitteeMemberFilterChipConfig,
+  CommitteePermissionLevel,
+  CommitteeUser,
+  TagSeverity,
+} from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -67,31 +75,6 @@ export class CommitteeMembersComponent implements OnInit {
   public selectedMember = signal<CommitteeMember | null>(null);
   public isDeleting = signal<boolean>(false);
   public memberFilterChip = signal<CommitteeMemberFilterChip>('all');
-  public votingRepCount: Signal<number> = computed(() => this.members().filter((m) => m.voting?.status === CommitteeMemberVotingStatus.VOTING_REP).length);
-  public chairCount: Signal<number> = computed(
-    () => this.members().filter((m) => m.role?.name === CommitteeMemberRole.CHAIR || m.role?.name === CommitteeMemberRole.VICE_CHAIR).length
-  );
-  public observerCount: Signal<number> = computed(() => this.members().filter((m) => m.voting?.status === CommitteeMemberVotingStatus.OBSERVER).length);
-  public chipConfig: Signal<{ key: CommitteeMemberFilterChip; label: string; count: number }[]> = computed(() => [
-    { key: 'all', label: 'All', count: this.members().length },
-    { key: 'voting', label: 'Voting Reps', count: this.votingRepCount() },
-    { key: 'observers', label: 'Observers', count: this.observerCount() },
-    { key: 'chairs', label: 'Chairs', count: this.chairCount() },
-  ]);
-  private chipFilteredMembers: Signal<CommitteeMember[]> = computed(() => {
-    const chip = this.memberFilterChip();
-    const members = this.members();
-    switch (chip) {
-      case 'voting':
-        return members.filter((m) => m.voting?.status === CommitteeMemberVotingStatus.VOTING_REP);
-      case 'observers':
-        return members.filter((m) => m.voting?.status === CommitteeMemberVotingStatus.OBSERVER);
-      case 'chairs':
-        return members.filter((m) => m.role?.name === CommitteeMemberRole.CHAIR || m.role?.name === CommitteeMemberRole.VICE_CHAIR);
-      default:
-        return members;
-    }
-  });
   public memberActionMenuItems: MenuItem[] = [];
   public committeeLabel = COMMITTEE_LABEL;
 
@@ -104,6 +87,19 @@ export class CommitteeMembersComponent implements OnInit {
     if (!committee) return false;
     return committee.member_visibility !== 'hidden' || this.canManageMembers();
   });
+  public readonly votingRepCount: Signal<number> = computed(
+    () => this.members().filter((m) => m.voting?.status === CommitteeMemberVotingStatus.VOTING_REP).length
+  );
+  public readonly observerCount: Signal<number> = computed(
+    () => this.members().filter((m) => m.voting?.status === CommitteeMemberVotingStatus.OBSERVER).length
+  );
+  public readonly chairCount: Signal<number> = computed(
+    () => this.members().filter((m) => m.role?.name === CommitteeMemberRole.CHAIR || m.role?.name === CommitteeMemberRole.VICE_CHAIR).length
+  );
+
+  // Complex computed signals — use private init functions
+  public readonly chipConfig: Signal<CommitteeMemberFilterChipConfig[]> = this.initChipConfig();
+  private readonly chipFilteredMembers: Signal<CommitteeMember[]> = this.initChipFilteredMembers();
 
   // Filter-related variables
   public filterForm: FormGroup;
@@ -486,6 +482,32 @@ export class CommitteeMembersComponent implements OnInit {
       }
 
       return filtered;
+    });
+  }
+
+  private initChipConfig(): Signal<CommitteeMemberFilterChipConfig[]> {
+    return computed(() => [
+      { key: 'all', label: 'All', count: this.members().length },
+      { key: 'voting', label: 'Voting Reps', count: this.votingRepCount() },
+      { key: 'observers', label: 'Observers', count: this.observerCount() },
+      { key: 'chairs', label: 'Chairs', count: this.chairCount() },
+    ]);
+  }
+
+  private initChipFilteredMembers(): Signal<CommitteeMember[]> {
+    return computed(() => {
+      const chip = this.memberFilterChip();
+      const members = this.members();
+      switch (chip) {
+        case 'voting':
+          return members.filter((m) => m.voting?.status === CommitteeMemberVotingStatus.VOTING_REP);
+        case 'observers':
+          return members.filter((m) => m.voting?.status === CommitteeMemberVotingStatus.OBSERVER);
+        case 'chairs':
+          return members.filter((m) => m.role?.name === CommitteeMemberRole.CHAIR || m.role?.name === CommitteeMemberRole.VICE_CHAIR);
+        default:
+          return members;
+      }
     });
   }
 }
