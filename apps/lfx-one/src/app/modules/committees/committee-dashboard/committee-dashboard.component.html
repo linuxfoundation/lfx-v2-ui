@@ -47,11 +47,12 @@
     <!-- Behavioral Class Filter Chips -->
     @let totalForChips = isMeLens() ? myCommittees().length : committees().length;
     @if (totalForChips > 0) {
-      <div class="flex flex-wrap items-center gap-2" data-testid="groups-behavioral-class-chips">
+      <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Filter groups by behavioral class" data-testid="groups-behavioral-class-chips">
         <button
           type="button"
           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
           [class]="behavioralClassFilter() === null ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+          [attr.aria-pressed]="behavioralClassFilter() === null"
           (click)="selectBehavioralClass(null)"
           data-testid="groups-chip-all">
           All ({{ totalForChips }})
@@ -66,6 +67,7 @@
                   ? 'bg-blue-600 text-white'
                   : behavioralClassConfig[key].bgColor + ' ' + behavioralClassConfig[key].color + ' hover:opacity-80'
               "
+              [attr.aria-pressed]="behavioralClassFilter() === key"
               (click)="selectBehavioralClass(key)"
               [attr.data-testid]="'groups-chip-' + key">
               <i [class]="behavioralClassConfig[key].icon" aria-hidden="true"></i>
@@ -108,6 +110,7 @@
           [projectOptions]="projectOptions()"
           (foundationFilterChange)="onFoundationFilterChange($event)"
           (projectFilterChange)="onProjectFilterChange($event)"
+          (resetRequested)="selectBehavioralClass(null)"
           (refresh)="refreshCommittees()"
           (rowClick)="onCommitteeClick($event)"
           data-testid="committees-me-table">
@@ -151,6 +154,7 @@
               [myCommitteeUids]="myCommitteeUids()"
               [searchForm]="searchForm"
               [votingStatusOptions]="votingStatusOptions()"
+              (resetRequested)="selectBehavioralClass(null)"
               (refresh)="refreshCommittees()"
               (rowClick)="onCommitteeClick($event)">
             </lfx-committee-table>

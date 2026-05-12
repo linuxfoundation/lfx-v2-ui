@@ -63,6 +63,7 @@ export class CommitteeTableComponent {
   public readonly rowClick = output<Committee>();
   public readonly foundationFilterChange = output<string | null>();
   public readonly projectFilterChange = output<string | null>();
+  public readonly resetRequested = output<void>();
 
   // Behavioral class config + helper exposed to template
   protected readonly behavioralClassConfig = BEHAVIORAL_CLASS_CONFIG;
@@ -81,5 +82,6 @@ export class CommitteeTableComponent {
     this.searchForm().patchValue({ search: '', votingStatus: null, foundationFilter: null, projectFilter: null });
     this.foundationFilterChange.emit(null);
     this.projectFilterChange.emit(null);
+    this.resetRequested.emit();
   }
 }

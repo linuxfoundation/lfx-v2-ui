@@ -47,17 +47,12 @@ export class CommitteeDashboardComponent {
   public projectFilter = signal<string | null>(null);
   public behavioralClassFilter = signal<GroupBehavioralClass | null>(null);
 
-  // Behavioral class display config + helper exposed to template
+  // Behavioral class display config + helper exposed to template.
+  // Keys are derived from the config so the chip list stays in sync if the taxonomy changes.
+  // Object.keys preserves insertion order per ES2015+, which keeps the chip display order matching the config.
   protected readonly behavioralClassConfig = BEHAVIORAL_CLASS_CONFIG;
   protected readonly getGroupBehavioralClass = getGroupBehavioralClass;
-  protected readonly behavioralClassKeys: GroupBehavioralClass[] = [
-    'governing-board',
-    'oversight-committee',
-    'working-group',
-    'special-interest-group',
-    'ambassador-program',
-    'other',
-  ];
+  protected readonly behavioralClassKeys = Object.keys(BEHAVIORAL_CLASS_CONFIG) as GroupBehavioralClass[];
 
   // ── Forms ─────────────────────────────────────────────────────────────────
   public searchForm: FormGroup;
