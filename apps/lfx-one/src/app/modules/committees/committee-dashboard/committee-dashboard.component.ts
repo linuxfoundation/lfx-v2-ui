@@ -92,6 +92,10 @@ export class CommitteeDashboardComponent {
 
   private searchTerm: Signal<string>;
 
+  // Decorated source signals — depend only on the raw committees lists, so decoration runs once per source change rather than on every filter change.
+  private decoratedCommittees: Signal<Committee[]>;
+  private decoratedMyCommittees: Signal<MyCommittee[]>;
+
   public constructor() {
     // Initialize project context
     this.project = computed(() => this.projectContextService.activeContext());
@@ -100,6 +104,8 @@ export class CommitteeDashboardComponent {
     this.committees = this.initializeCommittees();
     this.myCommittees = this.initializeMyCommittees();
     this.myCommitteeUids = computed(() => new Set(this.myCommittees().map((c) => c.uid)));
+    this.decoratedCommittees = this.initializeDecoratedCommittees();
+    this.decoratedMyCommittees = this.initializeDecoratedMyCommittees();
 
     // Initialize search form
     this.searchForm = this.initializeSearchForm();
@@ -184,6 +190,7 @@ export class CommitteeDashboardComponent {
   private resetScopeFilters(): void {
     this.foundationFilter.set(null);
     this.projectFilter.set(null);
+    this.behavioralClassFilter.set(null);
     this.searchForm?.get('foundationFilter')?.setValue(null, { emitEvent: false });
     this.searchForm?.get('projectFilter')?.setValue(null, { emitEvent: false });
   }
@@ -321,10 +328,17 @@ export class CommitteeDashboardComponent {
     });
   }
 
+  private initializeDecoratedCommittees(): Signal<Committee[]> {
+    return computed(() => this.committees().map((c) => ({ ...c, behavioralClass: getGroupBehavioralClass(c.category) })));
+  }
+
+  private initializeDecoratedMyCommittees(): Signal<MyCommittee[]> {
+    return computed(() => this.myCommittees().map((c) => ({ ...c, behavioralClass: getGroupBehavioralClass(c.category) })));
+  }
+
   private initializeFilteredCommittees(): Signal<Committee[]> {
     return computed(() => {
-      // Decorate up-front so downstream filters and the table template can read committee.behavioralClass without per-row function calls.
-      let filtered: Committee[] = this.committees().map((c) => ({ ...c, behavioralClass: getGroupBehavioralClass(c.category) }));
+      let filtered: Committee[] = this.decoratedCommittees();
 
       const searchTerm = this.searchTerm()?.toLowerCase() || '';
       if (searchTerm) {
@@ -354,7 +368,7 @@ export class CommitteeDashboardComponent {
 
   private initializeFilteredMyCommittees(): Signal<MyCommittee[]> {
     return computed(() => {
-      let filtered: MyCommittee[] = this.myCommittees().map((c) => ({ ...c, behavioralClass: getGroupBehavioralClass(c.category) }));
+      let filtered: MyCommittee[] = this.decoratedMyCommittees();
 
       const project = this.projectFilter();
       const foundation = this.foundationFilter();
@@ -393,7 +407,7 @@ export class CommitteeDashboardComponent {
 
   private initializeBehavioralClassCounts(): Signal<Record<GroupBehavioralClass, number>> {
     return computed(() => {
-      const source = this.isMeLens() ? this.myCommittees() : this.committees();
+      const source = this.isMeLens() ? this.decoratedMyCommittees() : this.decoratedCommittees();
       const counts: Record<GroupBehavioralClass, number> = {
         'governing-board': 0,
         'oversight-committee': 0,
@@ -403,7 +417,7 @@ export class CommitteeDashboardComponent {
         other: 0,
       };
       source.forEach((c) => {
-        counts[getGroupBehavioralClass(c.category)]++;
+        counts[c.behavioralClass ?? 'other']++;
       });
       return counts;
     });
