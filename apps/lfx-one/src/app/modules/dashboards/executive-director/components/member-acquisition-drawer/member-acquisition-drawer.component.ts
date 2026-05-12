@@ -82,13 +82,7 @@ export class MemberAcquisitionDrawerComponent {
   protected readonly attentionInsights: Signal<MarketingKeyInsight[]> = computed(() => this.split().attentionInsights);
   protected readonly performingActions: Signal<MarketingRecommendedAction[]> = computed(() => this.split().performingActions);
   protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() => this.split().performingInsights);
-  protected readonly hasNoData: Signal<boolean> = computed(() => {
-    const { totalMembers, newMembersThisQuarter, quarterlyData } = this.data();
-    const { renewalRate, netRevenueRetention, monthlyData } = this.retentionData();
-    const hasQuarterlyActivity = quarterlyData.some((q) => q.newMembers > 0 || q.revenue > 0);
-    const hasMonthlyActivity = monthlyData.some((m) => m.value > 0);
-    return totalMembers === 0 && newMembersThisQuarter === 0 && !hasQuarterlyActivity && renewalRate === 0 && netRevenueRetention === 0 && !hasMonthlyActivity;
-  });
+  protected readonly hasNoData: Signal<boolean> = this.initHasNoData();
   protected readonly acquisitionChartData: Signal<ChartData<'bar'>> = this.initAcquisitionChartData();
 
   protected readonly acquisitionChartOptions: ChartOptions<'bar'> = createBarChartOptions({
@@ -141,6 +135,18 @@ export class MemberAcquisitionDrawerComponent {
   }
 
   // === Private Initializers ===
+  private initHasNoData(): Signal<boolean> {
+    return computed(() => {
+      const { totalMembers, newMembersThisQuarter, quarterlyData } = this.data();
+      const { renewalRate, netRevenueRetention, monthlyData } = this.retentionData();
+      const hasQuarterlyActivity = quarterlyData.some((q) => q.newMembers > 0 || q.revenue > 0);
+      const hasMonthlyActivity = monthlyData.some((m) => m.value > 0);
+      return (
+        totalMembers === 0 && newMembersThisQuarter === 0 && !hasQuarterlyActivity && renewalRate === 0 && netRevenueRetention === 0 && !hasMonthlyActivity
+      );
+    });
+  }
+
   private initTotalMembersChartData(): Signal<ChartData<'line'>> {
     return computed(() => {
       const { totalMembersMonthlyData, totalMembersMonthlyLabels } = this.data();
