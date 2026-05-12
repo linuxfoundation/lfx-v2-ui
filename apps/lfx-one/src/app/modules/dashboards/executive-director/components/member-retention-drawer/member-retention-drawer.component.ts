@@ -60,7 +60,7 @@ export class MemberRetentionDrawerComponent {
       const { renewalRate, netRevenueRetention, changePercentage, monthlyData } = this.data();
       const actions: MarketingRecommendedAction[] = [];
 
-      if (renewalRate === 0 && monthlyData.length === 0) {
+      if (renewalRate === 0 && netRevenueRetention === 0 && !monthlyData.some((m) => m.value > 0)) {
         return actions;
       }
 
@@ -113,7 +113,7 @@ export class MemberRetentionDrawerComponent {
       const { renewalRate, netRevenueRetention, monthlyData } = this.data();
       const insights: MarketingKeyInsight[] = [];
 
-      if (renewalRate === 0 && monthlyData.length === 0) {
+      if (renewalRate === 0 && netRevenueRetention === 0 && !monthlyData.some((m) => m.value > 0)) {
         return insights;
       }
 
