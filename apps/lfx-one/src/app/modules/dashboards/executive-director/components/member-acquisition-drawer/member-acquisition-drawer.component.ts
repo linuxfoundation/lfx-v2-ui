@@ -84,8 +84,10 @@ export class MemberAcquisitionDrawerComponent {
   protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() => this.split().performingInsights);
   protected readonly hasNoData: Signal<boolean> = computed(() => {
     const { totalMembers, newMembersThisQuarter, quarterlyData } = this.data();
-    const { renewalRate, monthlyData } = this.retentionData();
-    return totalMembers === 0 && newMembersThisQuarter === 0 && quarterlyData.length === 0 && renewalRate === 0 && monthlyData.length === 0;
+    const { renewalRate, netRevenueRetention, monthlyData } = this.retentionData();
+    const hasQuarterlyActivity = quarterlyData.some((q) => q.newMembers > 0 || q.revenue > 0);
+    const hasMonthlyActivity = monthlyData.some((m) => m.value > 0);
+    return totalMembers === 0 && newMembersThisQuarter === 0 && !hasQuarterlyActivity && renewalRate === 0 && netRevenueRetention === 0 && !hasMonthlyActivity;
   });
   protected readonly acquisitionChartData: Signal<ChartData<'bar'>> = this.initAcquisitionChartData();
 
@@ -165,7 +167,7 @@ export class MemberAcquisitionDrawerComponent {
       const { newMembersThisQuarter, changePercentage, quarterlyData } = this.data();
       const actions: MarketingRecommendedAction[] = [];
 
-      if (newMembersThisQuarter === 0 && quarterlyData.length === 0) {
+      if (newMembersThisQuarter === 0 && !quarterlyData.some((q) => q.newMembers > 0 || q.revenue > 0)) {
         return actions;
       }
 
@@ -225,7 +227,7 @@ export class MemberAcquisitionDrawerComponent {
       const { newMembersThisQuarter, newMemberRevenue, changePercentage, quarterlyData } = this.data();
       const insights: MarketingKeyInsight[] = [];
 
-      if (newMembersThisQuarter === 0 && quarterlyData.length === 0) {
+      if (newMembersThisQuarter === 0 && !quarterlyData.some((q) => q.newMembers > 0 || q.revenue > 0)) {
         return insights;
       }
 
@@ -299,7 +301,7 @@ export class MemberAcquisitionDrawerComponent {
       const { renewalRate, netRevenueRetention, monthlyData } = this.retentionData();
       const insights: MarketingKeyInsight[] = [];
 
-      if (renewalRate === 0 && monthlyData.length === 0) {
+      if (renewalRate === 0 && netRevenueRetention === 0 && !monthlyData.some((m) => m.value > 0)) {
         return insights;
       }
 
@@ -331,7 +333,7 @@ export class MemberAcquisitionDrawerComponent {
       const { renewalRate, netRevenueRetention, changePercentage, monthlyData } = this.retentionData();
       const actions: MarketingRecommendedAction[] = [];
 
-      if (renewalRate === 0 && monthlyData.length === 0) {
+      if (renewalRate === 0 && netRevenueRetention === 0 && !monthlyData.some((m) => m.value > 0)) {
         return actions;
       }
 
