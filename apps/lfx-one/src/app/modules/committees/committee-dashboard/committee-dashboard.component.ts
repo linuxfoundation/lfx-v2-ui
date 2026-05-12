@@ -8,8 +8,8 @@ import { Router } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { StatCardGridComponent } from '@components/stat-card-grid/stat-card-grid.component';
-import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
-import { Committee, MyCommittee, ProjectContext, StatCardItem } from '@lfx-one/shared/interfaces';
+import { BEHAVIORAL_CLASS_CONFIG, COMMITTEE_LABEL, getGroupBehavioralClass } from '@lfx-one/shared/constants';
+import { Committee, GroupBehavioralClass, MyCommittee, ProjectContext, StatCardItem } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { LensService } from '@services/lens.service';
 import { PersonaService } from '@services/persona.service';
@@ -45,6 +45,19 @@ export class CommitteeDashboardComponent {
   public refresh = signal(0);
   public foundationFilter = signal<string | null>(null);
   public projectFilter = signal<string | null>(null);
+  public behavioralClassFilter = signal<GroupBehavioralClass | null>(null);
+
+  // Behavioral class display config + helper exposed to template
+  protected readonly behavioralClassConfig = BEHAVIORAL_CLASS_CONFIG;
+  protected readonly getGroupBehavioralClass = getGroupBehavioralClass;
+  protected readonly behavioralClassKeys: GroupBehavioralClass[] = [
+    'governing-board',
+    'oversight-committee',
+    'working-group',
+    'special-interest-group',
+    'ambassador-program',
+    'other',
+  ];
 
   // ── Forms ─────────────────────────────────────────────────────────────────
   public searchForm: FormGroup;
@@ -54,10 +67,8 @@ export class CommitteeDashboardComponent {
   public myCommittees: Signal<MyCommittee[]>;
   public filteredMyCommittees: Signal<MyCommittee[]>;
   public myCommitteeUids: Signal<Set<string>>;
-  public categories: Signal<{ label: string; value: string | null }[]>;
   public votingStatusOptions: Signal<{ label: string; value: string | null }[]>;
   public filteredCommittees: Signal<Committee[]>;
-  public categoryFilter: Signal<string | null>;
   public votingStatusFilter: Signal<string | null>;
 
   // Foundation and project filter options (separate dropdowns)
@@ -82,6 +93,9 @@ export class CommitteeDashboardComponent {
   public myPublicGroups: Signal<number>;
   public myActiveVoting: Signal<number>;
 
+  // Behavioral class counts (per-class totals across the active lens)
+  public behavioralClassCounts!: Signal<Record<GroupBehavioralClass, number>>;
+
   // Stat card arrays for the shared <lfx-stat-card-grid> component
   public foundationStatCards: Signal<StatCardItem[]>;
   public myStatCards: Signal<StatCardItem[]>;
@@ -100,11 +114,9 @@ export class CommitteeDashboardComponent {
     // Initialize search form
     this.searchForm = this.initializeSearchForm();
     this.searchTerm = this.initializeSearchTerm();
-    this.categoryFilter = this.initializeCategoryFilter();
     this.votingStatusFilter = this.initializeVotingStatusFilter();
 
     // Initialize filters
-    this.categories = this.initializeCategories();
     this.votingStatusOptions = this.initializeVotingStatusOptions();
     this.filteredCommittees = this.initializeFilteredCommittees();
     this.filteredMyCommittees = this.initializeFilteredMyCommittees();
@@ -136,6 +148,23 @@ export class CommitteeDashboardComponent {
         iconContainerClass: 'bg-emerald-100 text-emerald-600',
       },
     ]);
+
+    // Behavioral class counts — lens-aware source so chips reflect the visible group set
+    this.behavioralClassCounts = computed(() => {
+      const source = this.isMeLens() ? this.myCommittees() : this.committees();
+      const counts: Record<GroupBehavioralClass, number> = {
+        'governing-board': 0,
+        'oversight-committee': 0,
+        'working-group': 0,
+        'special-interest-group': 0,
+        'ambassador-program': 0,
+        other: 0,
+      };
+      source.forEach((c) => {
+        counts[getGroupBehavioralClass(c.category)]++;
+      });
+      return counts;
+    });
   }
 
   public openCreateDialog(): void {
@@ -161,6 +190,10 @@ export class CommitteeDashboardComponent {
     this.router.navigate(['/groups', committee.uid], {
       state: { backLabel: this.isMeLens() ? 'My Groups' : 'Groups' },
     });
+  }
+
+  public selectBehavioralClass(cls: GroupBehavioralClass | null): void {
+    this.behavioralClassFilter.set(cls);
   }
 
   public onFoundationFilterChange(value: string | null): void {
@@ -224,7 +257,6 @@ export class CommitteeDashboardComponent {
   private initializeSearchForm(): FormGroup {
     return new FormGroup({
       search: new FormControl<string>(''),
-      category: new FormControl<string | null>(null),
       votingStatus: new FormControl<string | null>(null),
       foundationFilter: new FormControl<string | null>(null),
       projectFilter: new FormControl<string | null>(null),
@@ -233,10 +265,6 @@ export class CommitteeDashboardComponent {
 
   private initializeSearchTerm(): Signal<string> {
     return toSignal(this.searchForm.get('search')!.valueChanges.pipe(startWith(''), debounceTime(300), distinctUntilChanged()), { initialValue: '' });
-  }
-
-  private initializeCategoryFilter(): Signal<string | null> {
-    return toSignal(this.searchForm.get('category')!.valueChanges.pipe(startWith(null), distinctUntilChanged()), { initialValue: null });
   }
 
   private initializeVotingStatusFilter(): Signal<string | null> {
@@ -268,30 +296,6 @@ export class CommitteeDashboardComponent {
       ),
       { initialValue: [] }
     );
-  }
-
-  private initializeCategories(): Signal<{ label: string; value: string | null }[]> {
-    return computed(() => {
-      const committeesData = this.isMeLens() ? this.myCommittees() : this.committees();
-
-      // Count committees by category, falling back to 'Other' when category is absent
-      const categoryCounts = new Map<string, number>();
-      committeesData.forEach((committee) => {
-        const cat = committee.category || 'Other';
-        categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
-      });
-
-      // Get unique categories and sort them
-      const uniqueCategories = Array.from(categoryCounts.keys()).sort((a, b) => a.localeCompare(b));
-
-      // Create options with counts
-      const categoryOptions = uniqueCategories.map((cat) => ({
-        label: `${cat} (${categoryCounts.get(cat)})`,
-        value: cat,
-      }));
-
-      return [{ label: 'All', value: null }, ...categoryOptions];
-    });
   }
 
   private initializeVotingStatusOptions(): Signal<{ label: string; value: string | null }[]> {
@@ -357,10 +361,10 @@ export class CommitteeDashboardComponent {
         );
       }
 
-      // Apply category filter
-      const category = this.categoryFilter();
-      if (category) {
-        filtered = filtered.filter((committee) => (committee.category || 'Other') === category);
+      // Apply behavioral class filter
+      const behavioralClass = this.behavioralClassFilter();
+      if (behavioralClass) {
+        filtered = filtered.filter((committee) => getGroupBehavioralClass(committee.category) === behavioralClass);
       }
 
       // Apply voting status filter
@@ -402,10 +406,10 @@ export class CommitteeDashboardComponent {
         );
       }
 
-      // Apply category filter
-      const category = this.categoryFilter();
-      if (category) {
-        filtered = filtered.filter((c) => (c.category || 'Other') === category);
+      // Apply behavioral class filter
+      const behavioralClass = this.behavioralClassFilter();
+      if (behavioralClass) {
+        filtered = filtered.filter((c) => getGroupBehavioralClass(c.category) === behavioralClass);
       }
 
       // Apply voting status filter
