@@ -16,10 +16,10 @@ export class HealthMetricsCardEmptyStateComponent {
   public readonly icon = input.required<string>();
   public readonly title = input.required<string>();
   public readonly description = input.required<string>();
-  public readonly action = input<string | undefined>(undefined);
-  public readonly actionLinkLabel = input<string | undefined>(undefined);
-  public readonly actionLinkHref = input<string | undefined>(undefined);
-  public readonly ctaLabel = input<string | undefined>(undefined);
-  public readonly ctaRoute = input<string | string[] | undefined>(undefined);
-  public readonly ctaHref = input<string | undefined>(undefined);
+  public readonly action = input<string>();
+  public readonly actionLinkLabel = input<string>();
+  public readonly actionLinkHref = input<string | null>();
+  public readonly ctaLabel = input<string>();
+  public readonly ctaRoute = input<string | string[]>();
+  public readonly ctaHref = input<string>();
 }

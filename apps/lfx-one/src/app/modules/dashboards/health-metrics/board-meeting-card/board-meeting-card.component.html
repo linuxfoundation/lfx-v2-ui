@@ -44,7 +44,7 @@
       description="Board meeting participation appears here once meetings are recorded."
       action="Missing a meeting?"
       actionLinkLabel="Add past meeting"
-      [actionLinkHref]="addPastMeetingUrl() || undefined"
+      [actionLinkHref]="addPastMeetingUrl()"
       data-testid="board-meeting-card-empty-state" />
   } @else {
     <!-- Metrics Row -->

@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, input, output, PLATFORM_ID, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, inject, input, output, PLATFORM_ID, signal } from '@angular/core';
 import type { Signal } from '@angular/core';
-import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ChartComponent } from '@components/chart/chart.component';
 import {
   createHorizontalBarChartOptions,
@@ -16,6 +16,7 @@ import { buildFlywheelCardSummary, buildFlywheelFunnelStages, formatNumber, sele
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { downloadCardAsImage } from '@shared/utils/download-card.util';
+import { emitHasDataOnLoad } from '@shared/utils/health-metrics-data.util';
 import { catchError, filter, finalize, map, of, switchMap, tap } from 'rxjs';
 import { SkeletonModule } from 'primeng/skeleton';
 import { HealthMetricsCardEmptyStateComponent } from '../health-metrics-card-empty-state/health-metrics-card-empty-state.component';
@@ -43,6 +44,7 @@ export class FlywheelConversionCardComponent {
   private readonly elementRef = inject(ElementRef);
   private readonly analyticsService = inject(AnalyticsService);
   private readonly projectContextService = inject(ProjectContextService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
 
   // === Inputs / Outputs ===
@@ -153,13 +155,7 @@ export class FlywheelConversionCardComponent {
 
   // === Protected Methods ===
   public constructor() {
-    toObservable(this.loading)
-      .pipe(
-        filter((loading) => !loading),
-        map(() => this.hasFlywheelData()),
-        takeUntilDestroyed()
-      )
-      .subscribe((hasData) => this.hasDataChange.emit(hasData));
+    emitHasDataOnLoad(this.loading, this.hasFlywheelData, this.hasDataChange, this.destroyRef);
   }
 
   protected downloadCard(): void {

@@ -3,8 +3,6 @@
 
 import { isPlatformBrowser } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, inject, input, output, PLATFORM_ID, signal } from '@angular/core';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { filter, map } from 'rxjs';
 import { SkeletonModule } from 'primeng/skeleton';
 import { HealthMetricsCardEmptyStateComponent } from '../health-metrics-card-empty-state/health-metrics-card-empty-state.component';
 import { HEALTH_METRICS_MEMBERSHIP_CHURN_DEFAULT_SUMMARY } from '@lfx-one/shared/constants';
@@ -13,7 +11,7 @@ import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { environment } from '@environments/environment';
 import { downloadCardAsImage } from '@shared/utils/download-card.util';
-import { initializeRangeDataFetching } from '@shared/utils/health-metrics-data.util';
+import { emitHasDataOnLoad, initializeRangeDataFetching } from '@shared/utils/health-metrics-data.util';
 
 import type { HealthMetricsRange, MembershipChurnDisplayTierRow, MembershipChurnPerTierSummaryResponse } from '@lfx-one/shared/interfaces';
 
@@ -97,13 +95,7 @@ export class MembershipChurnTierCardComponent {
     if (isPlatformBrowser(this.platformId)) {
       this.initializeDataFetching();
     }
-    toObservable(this.loading)
-      .pipe(
-        filter((loading) => !loading),
-        map(() => this.hasData()),
-        takeUntilDestroyed()
-      )
-      .subscribe((hasData) => this.hasDataChange.emit(hasData));
+    emitHasDataOnLoad(this.loading, this.hasData, this.hasDataChange, this.destroyRef);
   }
 
   protected downloadCard(): void {

@@ -20,7 +20,7 @@ import { BoardMeetingCardComponent } from './board-meeting-card/board-meeting-ca
 import { FlywheelConversionCardComponent } from './flywheel-conversion-card/flywheel-conversion-card.component';
 import { HealthMetricsFullPageEmptyStateComponent } from './health-metrics-full-page-empty-state/health-metrics-full-page-empty-state.component';
 
-import type { HealthMetricsData, DisplayCard, HealthMetricsRange } from '@lfx-one/shared/interfaces';
+import type { DisplayCard, HealthMetricCardName, HealthMetricsData, HealthMetricsRange } from '@lfx-one/shared/interfaces';
 
 const DEFAULT_DATA: HealthMetricsData = {
   totalValue: null,
@@ -60,11 +60,11 @@ export class HealthMetricsComponent {
   protected readonly statusCount = HEALTH_METRICS_STATUS_COUNT;
   protected readonly selectedRange = signal<HealthMetricsRange>('YTD');
 
-  private readonly cardDataStates = signal<Record<string, boolean>>({});
+  private readonly cardDataStates = signal<Partial<Record<HealthMetricCardName, boolean>>>({});
 
   protected readonly hasFoundation = computed(() => !!this.projectContextService.selectedFoundation());
 
-  private readonly cardNames = [
+  private readonly cardNames: readonly HealthMetricCardName[] = [
     'events',
     'nps',
     'outstanding-balance',
@@ -145,7 +145,7 @@ export class HealthMetricsComponent {
     this.selectedRange.set(range);
   }
 
-  protected updateCardDataState(name: string, hasData: boolean): void {
+  protected updateCardDataState(name: HealthMetricCardName, hasData: boolean): void {
     this.cardDataStates.update((s) => ({ ...s, [name]: hasData }));
   }
 

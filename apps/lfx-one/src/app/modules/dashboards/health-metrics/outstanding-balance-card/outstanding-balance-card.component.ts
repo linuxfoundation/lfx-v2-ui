@@ -12,6 +12,7 @@ import { ProjectContextService } from '@services/project-context.service';
 import { catchError, filter, map, of, switchMap, tap } from 'rxjs';
 import { environment } from '@environments/environment';
 import { downloadCardAsImage } from '@shared/utils/download-card.util';
+import { emitHasDataOnLoad } from '@shared/utils/health-metrics-data.util';
 import type { OutstandingBalanceSummaryResponse } from '@lfx-one/shared/interfaces';
 
 @Component({
@@ -74,13 +75,7 @@ export class OutstandingBalanceCardComponent {
     if (isPlatformBrowser(this.platformId)) {
       this.initializeDataFetching();
     }
-    toObservable(this.loading)
-      .pipe(
-        filter((loading) => !loading),
-        map(() => this.hasData()),
-        takeUntilDestroyed()
-      )
-      .subscribe((hasData) => this.hasDataChange.emit(hasData));
+    emitHasDataOnLoad(this.loading, this.hasData, this.hasDataChange, this.destroyRef);
   }
 
   protected downloadCard(): void {
