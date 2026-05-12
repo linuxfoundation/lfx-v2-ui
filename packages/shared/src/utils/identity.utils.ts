@@ -8,8 +8,14 @@
  * default (e.g. CDP_PLATFORM_TO_TYPE_MAP) is intentionally not consulted
  * here — POST defaults reflect what Auth0 gives us, not a guarantee about
  * what is stored in any given row.
+ *
+ * The middle character class excludes `.` so the greedy `+` deterministically
+ * stops at the first dot in the host portion, eliminating the polynomial
+ * backtracking that would otherwise occur on pathological inputs like
+ * `x@x.x.x.x.…`. The trailing class still allows `.` so the TLD/subdomain
+ * tail (e.g. `co.uk`, `users.noreply.github.com`) can contain dots.
  */
-export const EMAIL_SHAPE_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const EMAIL_SHAPE_REGEX = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
 
 /**
  * Returns true if the value matches a strict `local@host.tld` email shape
