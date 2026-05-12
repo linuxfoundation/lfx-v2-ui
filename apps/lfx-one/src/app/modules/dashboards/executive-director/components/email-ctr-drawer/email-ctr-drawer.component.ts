@@ -64,7 +64,9 @@ export class EmailCtrDrawerComponent {
     const attribution = this.attributionData();
     const hasEmailActivity = email.currentCtr > 0 || email.monthlySends.some((s) => s > 0);
     const hasPaidActivity = paid.totalReach > 0 || paid.totalSpend > 0;
-    const hasAttributionActivity = attribution.channels.length > 0 && attribution.channels.some((c) => c.sessions > 0 || c.linearRevenue > 0);
+    const hasAttributionActivity =
+      attribution.channels.length > 0 &&
+      attribution.channels.some((c) => c.sessions > 0 || c.linearRevenue > 0 || c.firstTouchRevenue > 0 || c.lastTouchRevenue > 0 || c.timeDecayRevenue > 0);
     return !hasEmailActivity && !hasPaidActivity && !hasAttributionActivity;
   });
 
