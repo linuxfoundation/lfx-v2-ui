@@ -124,12 +124,11 @@
                 <lfx-tag [value]="category" styleClass="tag-neutral"></lfx-tag>
               </td>
               <td>
-                @let cls = readBehavioralClass(committee);
                 <span
                   class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
-                  [class]="behavioralClassConfig[cls].bgColor + ' ' + behavioralClassConfig[cls].color">
-                  <i [class]="behavioralClassConfig[cls].icon + ' text-[10px]'" aria-hidden="true"></i>
-                  {{ behavioralClassConfig[cls].label }}
+                  [class]="committee.classDisplay.bgColor + ' ' + committee.classDisplay.color">
+                  <i [class]="committee.classDisplay.icon + ' text-[10px]'" aria-hidden="true"></i>
+                  {{ committee.classDisplay.label }}
                 </span>
               </td>
               <td class="min-w-[200px]">

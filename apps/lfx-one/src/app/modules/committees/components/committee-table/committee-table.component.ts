@@ -13,8 +13,6 @@ import { SelectComponent } from '@components/select/select.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { Committee, COMMITTEE_LABEL } from '@lfx-one/shared';
-import { BEHAVIORAL_CLASS_CONFIG } from '@lfx-one/shared/constants';
-import { GroupBehavioralClass } from '@lfx-one/shared/interfaces';
 import { PlatformIconPipe } from '@app/shared/pipes/platform-icon.pipe';
 import { PlatformLabelPipe } from '@app/shared/pipes/platform-label.pipe';
 import { PersonaService } from '@services/persona.service';
@@ -66,13 +64,8 @@ export class CommitteeTableComponent {
   public readonly projectFilterChange = output<string | null>();
   public readonly resetRequested = output<void>();
 
-  protected readonly behavioralClassConfig = BEHAVIORAL_CLASS_CONFIG;
   protected readonly isBoardMember = computed(() => this.personaService.currentPersona() === 'board-member');
   protected readonly rppOptions = computed<number[] | undefined>(() => (this.committees().length > 10 ? [10, 25, 50] : undefined));
-
-  protected readBehavioralClass(committee: Committee): GroupBehavioralClass {
-    return committee.behavioralClass ?? 'other';
-  }
 
   protected onRowSelect(event: { data: Committee }): void {
     this.rowClick.emit(event.data);

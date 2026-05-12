@@ -329,11 +329,21 @@ export class CommitteeDashboardComponent {
   }
 
   private initializeDecoratedCommittees(): Signal<Committee[]> {
-    return computed(() => this.committees().map((c) => ({ ...c, behavioralClass: getGroupBehavioralClass(c.category) })));
+    return computed(() =>
+      this.committees().map((c) => {
+        const behavioralClass = getGroupBehavioralClass(c.category);
+        return { ...c, behavioralClass, classDisplay: BEHAVIORAL_CLASS_CONFIG[behavioralClass] };
+      })
+    );
   }
 
   private initializeDecoratedMyCommittees(): Signal<MyCommittee[]> {
-    return computed(() => this.myCommittees().map((c) => ({ ...c, behavioralClass: getGroupBehavioralClass(c.category) })));
+    return computed(() =>
+      this.myCommittees().map((c) => {
+        const behavioralClass = getGroupBehavioralClass(c.category);
+        return { ...c, behavioralClass, classDisplay: BEHAVIORAL_CLASS_CONFIG[behavioralClass] };
+      })
+    );
   }
 
   private initializeFilteredCommittees(): Signal<Committee[]> {

@@ -138,6 +138,8 @@ export interface Committee {
   category: string;
   /** Behavioral class derived from category — populated by the UI before binding to list views to avoid per-row function calls in templates. */
   behavioralClass?: GroupBehavioralClass;
+  /** Resolved display metadata for behavioralClass — populated by the UI alongside behavioralClass so templates read pure properties. */
+  classDisplay?: BehavioralClassDisplayConfig;
   /** Optional description of the committee's purpose */
   description?: string;
   /** UID of parent committee for hierarchical structures */
