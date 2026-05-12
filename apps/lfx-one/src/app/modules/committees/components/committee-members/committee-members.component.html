@@ -8,7 +8,7 @@
       <div class="text-sm text-gray-500 text-center py-6" data-testid="members-hidden-placeholder">Member list is not publicly visible for this group.</div>
     } @else {
       <!-- Quick Filter Chips -->
-      <div class="flex items-center gap-2 mb-4" data-testid="members-filter-chips">
+      <div class="flex flex-wrap items-center gap-2 mb-4" data-testid="members-filter-chips">
         @for (chip of chipConfig(); track chip.key) {
           <button
             type="button"
