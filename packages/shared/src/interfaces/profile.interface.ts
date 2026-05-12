@@ -466,7 +466,8 @@ export interface CdpIdentityRaw {
   value: string;
   platform: string;
   // Optional to tolerate legacy CDP rows that pre-date the field; backend
-  // derives a fallback via CDP_PLATFORM_TO_TYPE_MAP when absent.
+  // derives a fallback by inspecting the value's shape (email vs username)
+  // in cdp.service.ts when absent.
   type?: CdpIdentityType;
   verified: boolean;
   verifiedBy?: string | null;

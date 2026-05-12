@@ -90,9 +90,12 @@ export const CDP_TO_AUTH0_PROVIDER_MAP: Record<string, string> = Object.fromEntr
 );
 
 /**
- * Default mapping from CDP platform → identity type. Used (a) as a fallback
- * when CDP returns an identity without `type`, and (b) to derive `type` when
- * LFX One POSTs new identities to CDP from auth-service.
+ * Default mapping from CDP platform → identity type, used when LFX One POSTs
+ * new identities to CDP from auth-service (where the value's shape is known
+ * because we control it — Auth0 always gives us email for LinkedIn, nickname
+ * for GitHub, etc.). NOT used as a GET-side fallback for legacy CDP rows
+ * missing `type`; that path infers from the value's shape directly (see
+ * cdp.service.ts).
  */
 export const CDP_PLATFORM_TO_TYPE_MAP: Readonly<Record<string, CdpIdentityType | undefined>> = {
   github: 'username',
