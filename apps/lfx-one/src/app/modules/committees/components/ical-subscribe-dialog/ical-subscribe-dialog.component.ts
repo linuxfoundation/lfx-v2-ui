@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Clipboard } from '@angular/cdk/clipboard';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { ButtonComponent } from '@components/button/button.component';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogConfig } from 'primeng/dynamicdialog';
@@ -17,13 +17,24 @@ export class IcalSubscribeDialogComponent {
   private readonly clipboard = inject(Clipboard);
   private readonly messageService = inject(MessageService);
   private readonly dialogConfig = inject(DynamicDialogConfig);
+  private readonly destroyRef = inject(DestroyRef);
 
-  public readonly feedUrl = this.dialogConfig.data.feedUrl as string;
-  public readonly committeeName = this.dialogConfig.data.committeeName as string;
+  public readonly feedUrl = (this.dialogConfig.data?.feedUrl as string) ?? '';
+  public readonly committeeName = (this.dialogConfig.data?.committeeName as string) ?? 'Committee';
   public copied = signal(false);
 
+  private copiedResetTimer: ReturnType<typeof setTimeout> | null = null;
+
+  public constructor() {
+    this.destroyRef.onDestroy(() => {
+      if (this.copiedResetTimer !== null) {
+        clearTimeout(this.copiedResetTimer);
+      }
+    });
+  }
+
   public get googleCalendarUrl(): string {
-    return `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(this.feedUrl.replace('https://', 'webcal://'))}`;
+    return `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(this.toWebcal(this.feedUrl))}`;
   }
 
   public get outlookUrl(): string {
@@ -31,7 +42,7 @@ export class IcalSubscribeDialogComponent {
   }
 
   public get webcalUrl(): string {
-    return this.feedUrl.replace('https://', 'webcal://');
+    return this.toWebcal(this.feedUrl);
   }
 
   public copyFeedUrl(): void {
@@ -43,7 +54,13 @@ export class IcalSubscribeDialogComponent {
         summary: 'Copied',
         detail: 'Calendar feed URL copied to clipboard',
       });
-      setTimeout(() => this.copied.set(false), 2000);
+      if (this.copiedResetTimer !== null) {
+        clearTimeout(this.copiedResetTimer);
+      }
+      this.copiedResetTimer = setTimeout(() => {
+        this.copied.set(false);
+        this.copiedResetTimer = null;
+      }, 2000);
     } else {
       this.messageService.add({
         severity: 'error',
@@ -51,5 +68,9 @@ export class IcalSubscribeDialogComponent {
         detail: 'Failed to copy URL to clipboard',
       });
     }
+  }
+
+  private toWebcal(url: string): string {
+    return url.replace(/^https?:\/\//i, 'webcal://');
   }
 }
