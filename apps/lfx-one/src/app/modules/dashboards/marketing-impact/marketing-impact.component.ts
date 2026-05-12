@@ -16,7 +16,7 @@ import {
 import { formatCurrency } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
-import { catchError, map, of, startWith, switchMap, tap } from 'rxjs';
+import { map, of, startWith, switchMap, tap } from 'rxjs';
 
 import type {
   FilterPillOption,
@@ -67,7 +67,9 @@ export class MarketingImpactComponent {
   protected readonly performanceSummaryKpis: Signal<PerformanceSummaryKpi[]> = this.initPerformanceSummaryKpis();
 
   protected onFocusChange(focusId: string): void {
-    this.selectedFocus.set(focusId as MarketingImpactFocusProgram);
+    if (this.focusOptions.some((o) => o.id === focusId)) {
+      this.selectedFocus.set(focusId as MarketingImpactFocusProgram);
+    }
   }
 
   protected onTabChange(tabId: MarketingImpactTab): void {
@@ -102,13 +104,7 @@ export class MarketingImpactComponent {
             return of(null);
           }
           this.loading.set(true);
-          return this.analyticsService.getRevenueImpact(slug).pipe(
-            tap(() => this.loading.set(false)),
-            catchError(() => {
-              this.loading.set(false);
-              return of(null);
-            })
-          );
+          return this.analyticsService.getRevenueImpact(slug).pipe(tap(() => this.loading.set(false)));
         })
       ),
       { initialValue: null }
