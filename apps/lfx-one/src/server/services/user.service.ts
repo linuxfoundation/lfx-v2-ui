@@ -5,6 +5,7 @@ import {
   LATEST_PAST_MEETINGS_FETCH_SIZE,
   LATEST_PAST_MEETINGS_RETURN_LIMIT,
   NATS_CONFIG,
+  PENDING_ACTION_SEVERITY,
   QUERY_SERVICE_FILTERS_OR_BATCH_SIZE,
   TSHIRT_SIZES,
 } from '@lfx-one/shared/constants';
@@ -13,6 +14,7 @@ import {
   ActiveWeeksStreakResponse,
   ActiveWeeksStreakRow,
   ApiGatewayUserProfile,
+  IndexedVoteResponse,
   Meeting,
   MeetingOccurrence,
   MeetingRegistrant,
@@ -1087,21 +1089,12 @@ export class UserService {
    * `end_time`, and `status` — everything the `transformVotesToActions` consumer needs.
    */
   private async fetchPendingVotes(req: Request, projectUid?: string): Promise<Vote[]> {
-    interface VoteResponseRow {
-      vote_uid?: string;
-      vote_id?: string;
-      poll_id?: string;
-      project_uid?: string;
-      vote_status?: string;
-      voter_removed?: boolean;
-    }
-
     // failOnPartial: completeness matters — a truncated response can silently miss a pending
     // invitation. The caller already catches and degrades, so fail closed here.
-    const responses = await fetchAllQueryResources<VoteResponseRow>(
+    const responses = await fetchAllQueryResources<IndexedVoteResponse>(
       req,
       (pageToken) =>
-        this.microserviceProxy.proxyRequest<QueryServiceResponse<VoteResponseRow>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<IndexedVoteResponse>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
           type: 'vote_response',
           filter_grants: 'direct',
           ...(projectUid && { filters: [`project_uid:${projectUid}`] }),
@@ -1110,13 +1103,13 @@ export class UserService {
       { failOnPartial: true }
     );
 
-    // `vote_uid` is the v2 parent poll UID (what `/votes/{uid}` expects); `poll_id` is the v1
-    // fallback per the upstream indexer contract. Neither is the individual-response id.
+    // `vote_uid` is the v2 parent poll UID (what `/votes/{uid}` expects); `vote_id` and `poll_id`
+    // are v1 fallbacks per the upstream indexer contract. None of these is the individual-response id.
     const pendingVoteUids = Array.from(
       new Set(
         responses
           .filter((r) => r.vote_status !== 'submitted' && !r.voter_removed)
-          .map((r) => r.vote_uid ?? r.poll_id)
+          .map((r) => r.vote_uid ?? r.vote_id ?? r.poll_id)
           .filter((uid): uid is string => !!uid)
       )
     );
@@ -1319,7 +1312,7 @@ export class UserService {
         badge,
         text: `Cast your vote on ${vote.name}`,
         icon: 'fa-regular fa-check-to-slot',
-        severity: 'warn',
+        severity: PENDING_ACTION_SEVERITY.Vote,
         buttonText: 'Cast Vote',
         buttonLink: '/votes',
         date: `Closes ${formattedEnd}`,
@@ -1357,7 +1350,7 @@ export class UserService {
       badge,
       text: `RSVP to ${meeting.title}`,
       icon: 'fa-regular fa-calendar-check',
-      severity: 'warn',
+      severity: PENDING_ACTION_SEVERITY.RSVP,
       buttonText: 'Set RSVP',
       buttonLink,
       date: formattedDate,
@@ -1441,7 +1434,7 @@ export class UserService {
       badge: dateStr,
       text: `Review ${title} Agenda and Materials`,
       icon: 'fa-light fa-calendar-check',
-      severity: 'warn',
+      severity: PENDING_ACTION_SEVERITY.Agenda,
       buttonText: 'Review Agenda',
       buttonLink,
       date: formattedDate,

@@ -57,12 +57,13 @@ export class EventsCardComponent {
   });
 
   protected readonly formattedChange = computed(() => {
-    const diff = this.summaryData().eventCountDiff;
-    const abs = Math.abs(diff);
+    const { eventCountDiff, pastEvents, upcomingEvents } = this.summaryData();
+    const abs = Math.abs(eventCountDiff);
     let prefix = '';
-    if (diff > 0) prefix = '+';
-    else if (diff < 0) prefix = '-';
-    return `${prefix}${abs} vs prev period`;
+    if (eventCountDiff > 0) prefix = '+';
+    else if (eventCountDiff < 0) prefix = '-';
+    const breakdown = upcomingEvents > 0 ? ` (${pastEvents} past · ${upcomingEvents} upcoming)` : '';
+    return `${prefix}${abs} vs prev period${breakdown}`;
   });
 
   protected readonly showChangeIndicator = computed(() => {
@@ -76,7 +77,7 @@ export class EventsCardComponent {
 
   protected readonly formattedProgressLabel = computed(() => {
     const pct = Math.round(this.summaryData().sponsorshipProgressPct);
-    return `${pct}% of goal`;
+    return pct > 999 ? '>999% of goal' : `${pct}% of goal`;
   });
 
   protected readonly formattedRevenue = computed(() => {
