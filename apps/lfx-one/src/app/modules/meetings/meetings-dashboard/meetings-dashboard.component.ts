@@ -207,9 +207,21 @@ export class MeetingsDashboardComponent {
     // Sentinel is placed at 50% of the list to trigger auto-load as user scrolls
     this.autoLoadTriggerIndex = computed(() => Math.floor(this.filteredMeetings().length / 2));
 
-    // Calendar events: same data as filteredMeetings, projected to FullCalendar
-    // EventInput shape. Filters/lens/timeFilter all flow through naturally.
-    this.calendarEvents = computed(() => this.filteredMeetings().flatMap((m) => this.meetingToEvents(m)));
+    // Calendar events: source from the dashboard's NON-paginated raw signals
+    // (rawUserMeetings + rawUserPastMeetings for the Me lens;
+    // rawFpUpcomingMeetings + rawFpPastMeetings for foundation/project/org).
+    // This avoids the list-view pagination gap where the calendar would
+    // silently miss meetings the user hasn't scrolled to yet.
+    // Search and meeting-type filters are applied; foundation/project and
+    // pendingRsvp filters intentionally don't narrow the calendar in this
+    // iteration (FP raw signals are already scoped to the active context).
+    this.calendarEvents = computed(() => {
+      const lens = this.activeLens();
+      const meetings: (Meeting | PastMeeting)[] =
+        lens === 'me' ? [...this.rawUserMeetings(), ...this.rawUserPastMeetings()] : [...this.rawFpUpcomingMeetings(), ...this.rawFpPastMeetings()];
+      const filtered = this.filterBySearchAndType(meetings, this.debouncedSearchQuery(), this.meetingTypeFilter());
+      return filtered.flatMap((m) => this.meetingToEvents(m));
+    });
   }
 
   public refreshMeetings(): void {
@@ -249,7 +261,7 @@ export class MeetingsDashboardComponent {
       return;
     }
 
-    const feedUrl = `${environment.urls.home}/public/api/projects/${projectCtx.uid}/calendar.ics`;
+    const feedUrl = `${environment.urls.home}/public/api/projects/${encodeURIComponent(projectCtx.uid)}/calendar.ics`;
     const name = projectCtx.name ?? (lens === 'foundation' ? 'Foundation' : 'Project');
 
     this.dialogService.open(IcalSubscribeDialogComponent, {

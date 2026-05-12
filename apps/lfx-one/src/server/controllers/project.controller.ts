@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { ALLOWED_FILE_TYPES } from '@lfx-one/shared/constants';
+import { MeetingVisibility } from '@lfx-one/shared/enums';
 import { AddUserToProjectRequest, CreateProjectDocumentRequest, UpdateUserRoleRequest, UploadProjectDocumentRequest } from '@lfx-one/shared/interfaces';
 import { isFileTypeAllowed, isUuid } from '@lfx-one/shared/utils';
 import { NextFunction, Request, Response } from 'express';
@@ -853,10 +854,10 @@ export class ProjectController {
   // ── Calendar ICS Endpoint ────────────────────────────────────────────────
 
   /**
-   * GET /projects/:id/calendar.ics
-   * Returns an iCalendar (.ics) file containing all meetings for the project.
-   * Also serves foundation-lens subscriptions since foundations and projects
-   * share the same data model (a foundation IS a project with no parent).
+   * GET /public/api/projects/:id/calendar.ics
+   * Returns an iCalendar (.ics) file containing the project's PUBLIC, non-restricted
+   * meetings. Also serves foundation-lens subscriptions since foundations and
+   * projects share the same data model (a foundation IS a project with no parent).
    * MeetingService is injected at the controller to avoid the same circular
    * dependency CommitteeController works around.
    */
@@ -887,13 +888,17 @@ export class ProjectController {
         fetchAllMeetingPages((token) => this.meetingService.getMeetings(req, token ? { ...query, page_token: token } : query, 'v1_past_meeting', false)),
       ]);
 
-      const allMeetings = [...upcoming, ...past];
+      // Public endpoint — filter out PRIVATE / restricted meetings so the feed
+      // never exposes private metadata to anyone holding the project UID.
+      // Mirrors PublicMeetingController.getMeeting's visibility guard.
+      const allMeetings = [...upcoming, ...past].filter((m) => m.visibility === MeetingVisibility.PUBLIC && !m.restricted);
       const events = meetingsToVEvents(allMeetings);
       const ics = buildVCalendar(events);
 
       logger.success(req, 'get_project_calendar', startTime, {
         project_id: id,
         event_count: events.length,
+        filtered_out: upcoming.length + past.length - allMeetings.length,
       });
 
       res.setHeader('Content-Type', 'text/calendar; charset=utf-8');

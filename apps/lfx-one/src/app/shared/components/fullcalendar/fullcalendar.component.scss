@@ -91,6 +91,19 @@
           @apply -translate-y-0.5 shadow-md;
         }
 
+        // Inert events (cancelled occurrences, vote/survey markers) opt out of
+        // the pointer affordance and the hover lift. Higher specificity than
+        // the .fc-event selector above, so Tailwind's .cursor-default class
+        // alone wouldn't win — the explicit `cursor: default !important`
+        // guarantees the override regardless of source order.
+        &.cursor-default {
+          cursor: default !important;
+
+          &:hover {
+            @apply translate-y-0 shadow-none;
+          }
+        }
+
         &.meeting-event {
           .fc-event-title {
             @apply font-medium leading-tight overflow-hidden line-clamp-2 text-gray-400;

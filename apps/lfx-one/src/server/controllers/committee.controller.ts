@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { ALLOWED_FILE_TYPES } from '@lfx-one/shared/constants';
+import { MeetingVisibility } from '@lfx-one/shared/enums';
 import {
   CommitteeCreateData,
   CommitteeUpdateData,
@@ -1043,13 +1044,17 @@ export class CommitteeController {
         fetchAllMeetingPages((token) => this.meetingService.getMeetings(req, token ? { ...query, page_token: token } : query, 'v1_past_meeting', false)),
       ]);
 
-      const allMeetings = [...upcoming, ...past];
+      // Public endpoint — filter out PRIVATE / restricted meetings so the feed
+      // never exposes private metadata to anyone holding the committee UID.
+      // Mirrors PublicMeetingController.getMeeting's visibility guard.
+      const allMeetings = [...upcoming, ...past].filter((m) => m.visibility === MeetingVisibility.PUBLIC && !m.restricted);
       const events = meetingsToVEvents(allMeetings);
       const ics = buildVCalendar(events);
 
       logger.success(req, 'get_committee_calendar', startTime, {
         committee_id: id,
         event_count: events.length,
+        filtered_out: upcoming.length + past.length - allMeetings.length,
       });
 
       res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
