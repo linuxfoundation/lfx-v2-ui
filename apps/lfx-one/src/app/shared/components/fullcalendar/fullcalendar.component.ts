@@ -55,7 +55,9 @@ export class FullCalendarComponent {
       displayEventTime: true,
       eventOrder: 'start',
       nowIndicator: true,
-      scrollTime: new Date().getHours() + ':00:00',
+      // Week view scrolls to 6am on open — earlier hours rarely have meetings
+      // and scrolling to "now" overshoots past the morning when checking after lunch.
+      scrollTime: '06:00:00',
     };
   }
 

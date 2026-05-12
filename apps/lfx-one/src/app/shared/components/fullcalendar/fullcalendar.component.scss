@@ -21,8 +21,13 @@
       }
 
       .fc-timegrid {
+        // Past/future dimming for the legacy "meeting-event" classed entries only.
+        // Generic events keep their inline backgroundColor (set via EventInput.backgroundColor),
+        // so meeting-type colors stay visible in Week view. The original blanket override
+        // forced bg-gray-100/bg-blue-50 on ALL timegrid events with !important, which combined
+        // with inline textColor:'#fff' rendered events as invisible white-on-near-white.
         .fc-timegrid-col-events {
-          .fc-timegrid-event {
+          .fc-timegrid-event.meeting-event {
             &:not(.fc-event-future) {
               @apply bg-gray-100 #{!important};
             }

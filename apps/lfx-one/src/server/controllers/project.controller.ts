@@ -11,10 +11,13 @@ import { ReadableStream as NodeReadableStream } from 'node:stream/web';
 
 import { ServiceValidationError } from '../errors';
 import { contentDispositionAttachment } from '../helpers/content-disposition.helper';
+import { buildVCalendar, fetchAllMeetingPages, meetingsToVEvents } from '../helpers/ics.helper';
 import { getStringQueryParam } from '../helpers/validation.helper';
 import { logger } from '../services/logger.service';
+import { MeetingService } from '../services/meeting.service';
 import { ProjectService } from '../services/project.service';
 import { getEffectiveEmail } from '../utils/auth-helper';
+import { generateM2MToken } from '../utils/m2m-token.util';
 
 const FOLDER_UID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -23,6 +26,10 @@ const FOLDER_UID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-
  */
 export class ProjectController {
   private projectService: ProjectService = new ProjectService();
+  // Injected here (rather than on ProjectService) to keep the calendar endpoint's
+  // meeting access independent of ProjectService — mirrors the CommitteeController
+  // pattern that avoids a circular dependency with MeetingService.
+  private meetingService: MeetingService = new MeetingService();
 
   /**
    * GET /projects
@@ -838,6 +845,61 @@ export class ProjectController {
       });
 
       res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ── Calendar ICS Endpoint ────────────────────────────────────────────────
+
+  /**
+   * GET /projects/:id/calendar.ics
+   * Returns an iCalendar (.ics) file containing all meetings for the project.
+   * Also serves foundation-lens subscriptions since foundations and projects
+   * share the same data model (a foundation IS a project with no parent).
+   * MeetingService is injected at the controller to avoid the same circular
+   * dependency CommitteeController works around.
+   */
+  public async getProjectCalendar(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_project_calendar', { project_id: id });
+
+    // Validate UID before using in query tags and Content-Disposition header
+    if (!id || !/^[A-Za-z0-9_-]+$/.test(id)) {
+      next(ServiceValidationError.forField('id', 'Invalid project ID', { operation: 'get_project_calendar' }));
+      return;
+    }
+
+    try {
+      // When called from the public route there is no OIDC session, so use an
+      // M2M token. When called from the authenticated route the user's bearer
+      // token is already on req and no replacement is needed.
+      if (!req.bearerToken) {
+        req.bearerToken = await generateM2MToken(req);
+      }
+
+      const query = { tags: `project_uid:${id}` };
+
+      // Paginate both upcoming and past meetings — first page only would silently
+      // drop meetings once a project exceeds the default page size.
+      const [upcoming, past] = await Promise.all([
+        fetchAllMeetingPages((token) => this.meetingService.getMeetings(req, token ? { ...query, page_token: token } : query, 'v1_meeting', false)),
+        fetchAllMeetingPages((token) => this.meetingService.getMeetings(req, token ? { ...query, page_token: token } : query, 'v1_past_meeting', false)),
+      ]);
+
+      const allMeetings = [...upcoming, ...past];
+      const events = meetingsToVEvents(allMeetings);
+      const ics = buildVCalendar(events);
+
+      logger.success(req, 'get_project_calendar', startTime, {
+        project_id: id,
+        event_count: events.length,
+      });
+
+      res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="project-${id}.ics"`);
+      res.setHeader('Cache-Control', 'public, max-age=900'); // 15 minutes — reduces load from calendar clients polling every 15-60 minutes
+      res.send(ics);
     } catch (error) {
       next(error);
     }
