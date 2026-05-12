@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CDP_CONFIG, CDP_PLATFORM_TO_TYPE_MAP } from '@lfx-one/shared/constants';
+import { CDP_CONFIG } from '@lfx-one/shared/constants';
 import {
   CdpCreateIdentityRequest,
   CdpIdentity,
@@ -343,9 +343,15 @@ export class CdpService {
 
       const identities: CdpIdentity[] = rawIdentities.map((raw) => {
         const platform = raw.platform === 'custom' ? 'email' : raw.platform;
-        // CDP rows that pre-date the `type` field fall back to the platform
-        // default; new rows return `type` directly from the API.
-        const type = raw.type ?? CDP_PLATFORM_TO_TYPE_MAP[raw.platform] ?? 'username';
+        // CDP rows that pre-date the `type` field fall back to inferring from
+        // the value's shape: matches a local@host.tld pattern → email, else
+        // username. Inferring from platform alone would misclassify legacy
+        // LinkedIn vanity rows as email (since CDP_PLATFORM_TO_TYPE_MAP
+        // ['linkedin'] = 'email' is the POST default, reflecting that Auth0
+        // gives us emails — not a guarantee about what's stored in any given
+        // row).
+        const isEmailShape = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw.value.trim());
+        const type = raw.type ?? (isEmailShape ? 'email' : 'username');
         return {
           id: raw.id,
           platform,
