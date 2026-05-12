@@ -40,27 +40,22 @@ export class MarketingImpactComponent {
   private readonly fb = inject(FormBuilder);
   private readonly defaultMonth = getDefaultMarketingImpactMonth();
 
-  // Form
   protected readonly headerForm = this.fb.nonNullable.group({
     month: [this.defaultMonth],
   });
 
-  // Static data
   protected readonly monthOptions: MarketingImpactMonthOption[] = buildMarketingImpactMonthOptions();
   protected readonly focusOptions: FilterPillOption[] = MARKETING_IMPACT_FOCUS_OPTIONS;
   protected readonly tabs: MarketingImpactTabOption[] = MARKETING_IMPACT_TABS;
 
-  // WritableSignals
   protected readonly selectedFocus = signal<MarketingImpactFocusProgram>('all');
   protected readonly selectedTab = signal<MarketingImpactTab>('overview');
   protected readonly loading = signal(false);
 
-  // Computed signals
   protected readonly hasFoundation = computed(() => !!this.projectContextService.selectedFoundation());
   protected readonly foundationName = computed(() => this.projectContextService.selectedFoundation()?.name ?? '');
   protected readonly selectedTabLabel = computed(() => this.tabs.find((t) => t.id === this.selectedTab())?.label ?? '');
 
-  // Complex computed signals
   protected readonly selectedMonth: Signal<string> = this.initSelectedMonth();
   protected readonly contextLabel: Signal<string> = this.initContextLabel();
   protected readonly revenueImpactData: Signal<RevenueImpactResponse | null> = this.initRevenueImpactData();
@@ -118,8 +113,14 @@ export class MarketingImpactComponent {
 
       const change = data.changePercentage;
       let trend: PerformanceSummaryKpi['trend'] = 'neutral';
-      if (change > 0) trend = 'up';
-      else if (change < 0) trend = 'down';
+      let trendClass = 'text-gray-500';
+      if (change > 0) {
+        trend = 'up';
+        trendClass = 'text-green-600';
+      } else if (change < 0) {
+        trend = 'down';
+        trendClass = 'text-red-600';
+      }
 
       return [
         {
@@ -130,6 +131,7 @@ export class MarketingImpactComponent {
           value: formatCurrency(data.revenueAttributed),
           momChange: `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`,
           trend,
+          trendClass,
           previousLabel: 'vs prior period',
         },
       ];

@@ -21,10 +21,7 @@ export type MarketingImpactFocusProgram = 'all' | 'events' | 'newsletters' | 'su
 /** Tab identifiers for the Marketing Impact section tabs. */
 export type MarketingImpactTab = 'overview' | 'attribution' | 'performance-marketing' | 'email' | 'web-activity' | 'social-accounts' | 'social-listening';
 
-/**
- * Pre-formatted KPI card data for the Marketing Impact performance summary.
- * All display values are pre-formatted strings so the template has zero logic.
- */
+/** Pre-formatted KPI card data for the Marketing Impact performance summary. */
 export interface PerformanceSummaryKpi {
   id: string;
   label: string;
@@ -33,5 +30,6 @@ export interface PerformanceSummaryKpi {
   value: string;
   momChange: string;
   trend: 'up' | 'down' | 'neutral';
+  trendClass: string;
   previousLabel: string;
 }
