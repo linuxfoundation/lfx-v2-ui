@@ -133,19 +133,23 @@ export class CommitteeMeetingsComponent {
   /** Opens the iCal Subscribe modal — copy URL + Google/Outlook/Apple deep links. */
   public onSubscribe(): void {
     const committee = this.committee();
-    if (!committee?.uid) return;
+    if (!committee?.uid) {
+      console.warn('Subscribe clicked with no committee uid; aborting dialog open');
+      return;
+    }
 
     const feedUrl = `${environment.urls.home}/public/api/committees/${committee.uid}/calendar.ics`;
+    const committeeName = committee.name ?? 'Committee';
 
     this.dialogService.open(IcalSubscribeDialogComponent, {
-      header: 'Subscribe to Calendar',
+      header: `Subscribe — ${committeeName}`,
       width: '480px',
       modal: true,
       closable: true,
       dismissableMask: true,
       data: {
         feedUrl,
-        committeeName: committee.name ?? 'Committee',
+        committeeName,
       },
     });
   }

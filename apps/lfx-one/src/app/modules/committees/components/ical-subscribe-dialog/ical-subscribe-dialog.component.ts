@@ -4,8 +4,15 @@
 import { Clipboard } from '@angular/cdk/clipboard';
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { ButtonComponent } from '@components/button/button.component';
+import { IcalSubscribeDialogData } from '@lfx-one/shared/interfaces';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogConfig } from 'primeng/dynamicdialog';
+
+const COPIED_STATE_RESET_MS = 2000;
+
+function toWebcal(url: string): string {
+  return url.replace(/^https?:\/\//i, 'webcal://');
+}
 
 @Component({
   selector: 'lfx-ical-subscribe-dialog',
@@ -16,11 +23,21 @@ import { DynamicDialogConfig } from 'primeng/dynamicdialog';
 export class IcalSubscribeDialogComponent {
   private readonly clipboard = inject(Clipboard);
   private readonly messageService = inject(MessageService);
-  private readonly dialogConfig = inject(DynamicDialogConfig);
+  private readonly dialogConfig = inject<DynamicDialogConfig<IcalSubscribeDialogData>>(DynamicDialogConfig);
   private readonly destroyRef = inject(DestroyRef);
 
-  public readonly feedUrl = (this.dialogConfig.data?.feedUrl as string) ?? '';
-  public readonly committeeName = (this.dialogConfig.data?.committeeName as string) ?? 'Committee';
+  public readonly feedUrl = this.dialogConfig.data?.feedUrl ?? '';
+  public readonly committeeName = this.dialogConfig.data?.committeeName ?? 'Committee';
+
+  public readonly googleCalendarUrl = this.feedUrl ? `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(toWebcal(this.feedUrl))}` : '';
+  public readonly outlookLiveUrl = this.feedUrl
+    ? `https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(this.feedUrl)}&name=${encodeURIComponent(this.committeeName)}`
+    : '';
+  public readonly outlook365Url = this.feedUrl
+    ? `https://outlook.office.com/calendar/0/addfromweb?url=${encodeURIComponent(this.feedUrl)}&name=${encodeURIComponent(this.committeeName)}`
+    : '';
+  public readonly webcalUrl = this.feedUrl ? toWebcal(this.feedUrl) : '';
+
   public copied = signal(false);
 
   private copiedResetTimer: ReturnType<typeof setTimeout> | null = null;
@@ -31,22 +48,6 @@ export class IcalSubscribeDialogComponent {
         clearTimeout(this.copiedResetTimer);
       }
     });
-  }
-
-  public get googleCalendarUrl(): string {
-    return `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(this.toWebcal(this.feedUrl))}`;
-  }
-
-  public get outlookLiveUrl(): string {
-    return `https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(this.feedUrl)}&name=${encodeURIComponent(this.committeeName)}`;
-  }
-
-  public get outlook365Url(): string {
-    return `https://outlook.office.com/calendar/0/addfromweb?url=${encodeURIComponent(this.feedUrl)}&name=${encodeURIComponent(this.committeeName)}`;
-  }
-
-  public get webcalUrl(): string {
-    return this.toWebcal(this.feedUrl);
   }
 
   public copyFeedUrl(): void {
@@ -64,7 +65,7 @@ export class IcalSubscribeDialogComponent {
       this.copiedResetTimer = setTimeout(() => {
         this.copied.set(false);
         this.copiedResetTimer = null;
-      }, 2000);
+      }, COPIED_STATE_RESET_MS);
     } else {
       this.messageService.add({
         severity: 'error',
@@ -72,9 +73,5 @@ export class IcalSubscribeDialogComponent {
         detail: 'Failed to copy URL to clipboard',
       });
     }
-  }
-
-  private toWebcal(url: string): string {
-    return url.replace(/^https?:\/\//i, 'webcal://');
   }
 }
