@@ -68,10 +68,7 @@ export class SocialMediaDrawerComponent {
 
   protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() => this.split().performingInsights);
 
-  protected readonly hasNoData: Signal<boolean> = computed(() => {
-    const { platforms, totalFollowers } = this.drawerData();
-    return totalFollowers === 0 && !platforms.some((p) => p.followers > 0 || p.postsLast30Days > 0 || p.engagementRate > 0 || p.impressions > 0);
-  });
+  protected readonly hasNoData: Signal<boolean> = this.initHasNoData();
 
   protected readonly followerTrendChartData: Signal<ChartData<'line'>> = this.initFollowerTrendChartData();
   protected readonly platformChartData: Signal<ChartData<'bar'>> = this.initPlatformChartData();
@@ -164,6 +161,13 @@ export class SocialMediaDrawerComponent {
   }
 
   // === Private Initializers ===
+  private initHasNoData(): Signal<boolean> {
+    return computed(() => {
+      const { platforms, totalFollowers } = this.drawerData();
+      return totalFollowers === 0 && !platforms.some((p) => p.followers > 0 || p.postsLast30Days > 0 || p.engagementRate > 0 || p.impressions > 0);
+    });
+  }
+
   private initDrawerData(): Signal<SocialMediaResponse> {
     const defaultValue: SocialMediaResponse = {
       totalFollowers: 0,
