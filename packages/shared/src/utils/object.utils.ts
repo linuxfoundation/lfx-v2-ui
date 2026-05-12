@@ -29,7 +29,14 @@ export function nullifyEmptyStrings<T>(value: T): NullifyEmptyStrings<T> {
     }
     const result: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
-      result[key] = nullifyEmptyStrings(val);
+      // Use defineProperty to bypass setters (e.g. __proto__) and prevent prototype pollution
+      // when keys come from untrusted sources like JSON.parse.
+      Object.defineProperty(result, key, {
+        value: nullifyEmptyStrings(val),
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
     }
     return result as NullifyEmptyStrings<T>;
   }
