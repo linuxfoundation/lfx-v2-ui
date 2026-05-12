@@ -7,13 +7,8 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { SelectComponent } from '@components/select/select.component';
-import {
-  buildMarketingImpactMonthOptions,
-  getDefaultMarketingImpactMonth,
-  MARKETING_IMPACT_FOCUS_OPTIONS,
-  MARKETING_IMPACT_TABS,
-} from '@lfx-one/shared/constants';
-import { formatCurrency } from '@lfx-one/shared/utils';
+import { MARKETING_IMPACT_FOCUS_OPTIONS, MARKETING_IMPACT_TABS } from '@lfx-one/shared/constants';
+import { buildMarketingImpactMonthOptions, formatCurrency, getDefaultMarketingImpactMonth } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { map, of, startWith, switchMap, tap } from 'rxjs';
