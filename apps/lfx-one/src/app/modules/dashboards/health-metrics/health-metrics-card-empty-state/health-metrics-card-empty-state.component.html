@@ -21,10 +21,10 @@
     </a>
   }
 </div>
-@if (action() || actionLinkLabel()) {
-  <div class="-mx-5 -mb-5 mt-auto flex items-start justify-center gap-2 rounded-b-lg border-t border-blue-200 bg-blue-50 px-5 py-3">
-    <i class="fa-light fa-circle-info mt-0.5 text-sm text-blue-600" aria-hidden="true"></i>
-    <p class="text-xs text-blue-900">
+@if (action() || (actionLinkLabel() && actionLinkHref())) {
+  <div class="-mx-5 -mb-5 mt-auto flex items-start justify-center gap-2 rounded-b-lg border-t border-gray-200 bg-gray-50 px-5 py-3">
+    <i class="fa-light fa-circle-info mt-0.5 text-sm text-gray-500" aria-hidden="true"></i>
+    <p class="text-xs text-gray-700">
       @if (action()) {
         <span>{{ action() }}</span>
       }
@@ -33,7 +33,7 @@
           [href]="actionLinkHref()!"
           target="_blank"
           rel="noopener noreferrer"
-          class="ml-1 font-medium text-blue-600 hover:text-blue-800 hover:underline">
+          class="ml-1 font-medium text-gray-700 hover:text-gray-900 hover:underline">
           {{ actionLinkLabel() }}
         </a>
       }

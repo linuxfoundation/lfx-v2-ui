@@ -64,6 +64,8 @@ export class HealthMetricsComponent {
 
   protected readonly hasFoundation = computed(() => !!this.projectContextService.selectedFoundation());
 
+  private readonly cardNames = ['events', 'nps', 'outstanding-balance', 'membership-churn', 'participating-orgs', 'training', 'code-contribution', 'flywheel', 'board-meeting'];
+
   protected readonly allCardsEmpty = computed(() => {
     if (this.loading()) return false;
 
@@ -76,9 +78,15 @@ export class HealthMetricsComponent {
       (data.totalValue?.totalValue ?? 0) > 0 || (data.totalProjects?.totalProjects ?? 0) > 0 || (data.totalMembers?.totalMembers ?? 0) > 0;
     if (hasFoundationTotals) return false;
 
+    // Wait until every card has reported its hasData state before evaluating
+    // emptiness. Otherwise the page renders the cards first and then snaps
+    // to the full-page empty state once children emit hasDataChange, which
+    // causes a visible flicker dependent on per-card API latency.
     const states = this.cardDataStates();
-    const cards = ['events', 'nps', 'outstanding-balance', 'membership-churn', 'participating-orgs', 'training', 'code-contribution', 'flywheel', 'board-meeting'];
-    return cards.every((name) => states[name] === false);
+    const allReported = this.cardNames.every((name) => name in states);
+    if (!allReported) return false;
+
+    return this.cardNames.every((name) => states[name] === false);
   });
 
   protected readonly yearOptions = computed(() => buildHealthMetricsYearOptions());
