@@ -1817,10 +1817,16 @@ export class ProfileController {
         continue;
       }
 
-      // Google uses email as its value — skip CDP create if the same email is already a verified email identity
-      const isEmailAlreadyVerified = enriched.some((id) => id.platform === 'email' && id.value === value && id.verified && id.verifiedBy === lfid);
+      // Google/email POST to CDP as platform='custom' — suppress the create if
+      // the user already has a manually-verified custom-email row with the same
+      // value (would otherwise produce a duplicate CDP row). LinkedIn POSTs as
+      // platform='linkedin', which is a distinct row from an email identity
+      // with the same value, so don't suppress it.
+      const wouldDuplicateCustomEmail =
+        (cdpPlatform === 'email' || cdpPlatform === 'google') &&
+        enriched.some((id) => id.platform === 'email' && id.value === value && id.verified && id.verifiedBy === lfid);
 
-      if (!isEmailAlreadyVerified) {
+      if (!wouldDuplicateCustomEmail) {
         notInCdpCount++;
         // Email/google still POST as platform='custom' for back-compat with existing CDP rows.
         // LinkedIn now posts as platform='linkedin' (with type='email') so CDP can categorize correctly.
