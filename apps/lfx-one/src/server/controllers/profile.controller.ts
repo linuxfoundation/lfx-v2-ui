@@ -1699,7 +1699,9 @@ export class ProfileController {
    * Truth table:
    * 1. In auth-service AND CDP, verified=true & verifiedBy=lfid → VERIFIED (already reconciled)
    * 2. In auth-service AND CDP, verified=false OR verifiedBy≠lfid → VERIFIED (auto-verify via PATCH)
-   * 3. In auth-service but NOT in CDP → VERIFIED (synthetic entry, TODO: POST to CDP)
+   * 3. In auth-service but NOT in CDP → VERIFIED (synthetic entry + fire-and-forget POST to CDP,
+   *    skipping the POST when a `custom` row for the same email value has already been written
+   *    in this loop or already exists as a manually-verified custom-email row)
    * 4. In CDP but NOT in auth-service, multi-LFID + verifiedBy=lfxOne → HIDDEN
    * 5. In CDP but NOT in auth-service (all other) → UNVERIFIED
    */
@@ -1798,6 +1800,14 @@ export class ProfileController {
 
     // Process auth-service identities NOT in CDP — create synthetic entries
     let notInCdpCount = 0;
+    // Tracks values we've POSTed to CDP as platform='custom' within this loop.
+    // Google + email auth-service providers both POST as platform='custom' for
+    // back-compat, so a user with BOTH providers for the same email would
+    // otherwise generate two duplicate custom rows. Iteration order of
+    // authServiceMap is not guaranteed to put 'email' first, and synthetic
+    // entries pushed for the first iter use platform='google'|'email' (not
+    // 'custom'), so the enriched-array-only check below misses them.
+    const postedCustomEmails = new Set<string>();
     for (const [, authId] of authServiceMap) {
       const cdpPlatform = AUTH0_TO_CDP_PROVIDER_MAP[authId.provider];
       const value = this.getAuth0IdentityValue(authId);
@@ -1817,20 +1827,22 @@ export class ProfileController {
         continue;
       }
 
-      // Google/email POST to CDP as platform='custom' — suppress the create if
-      // the user already has a manually-verified custom-email row with the same
-      // value (would otherwise produce a duplicate CDP row). LinkedIn POSTs as
-      // platform='linkedin', which is a distinct row from an email identity
-      // with the same value, so don't suppress it.
+      // Google/email POST to CDP as platform='custom'. Suppress the create when
+      // it would duplicate an existing CDP custom-email row (either a manually-
+      // verified one already in `enriched`, or one we POSTed earlier in this
+      // same loop for the other provider). LinkedIn POSTs as platform='linkedin',
+      // a distinct row from an email identity with the same value — never
+      // suppressed by this guard.
+      const cdpPostPlatform = cdpPlatform === 'email' || cdpPlatform === 'google' ? 'custom' : cdpPlatform;
       const wouldDuplicateCustomEmail =
-        (cdpPlatform === 'email' || cdpPlatform === 'google') &&
-        enriched.some((id) => id.platform === 'email' && id.value === value && id.verified && id.verifiedBy === lfid);
+        cdpPostPlatform === 'custom' &&
+        (postedCustomEmails.has(value) || enriched.some((id) => id.platform === 'email' && id.value === value && id.verified && id.verifiedBy === lfid));
 
       if (!wouldDuplicateCustomEmail) {
         notInCdpCount++;
-        // Email/google still POST as platform='custom' for back-compat with existing CDP rows.
-        // LinkedIn now posts as platform='linkedin' (with type='email') so CDP can categorize correctly.
-        const cdpPostPlatform = cdpPlatform === 'email' || cdpPlatform === 'google' ? 'custom' : cdpPlatform;
+        if (cdpPostPlatform === 'custom') {
+          postedCustomEmails.add(value);
+        }
         this.cdpService
           .createIdentityForUser(req, [lfid], {
             value,
