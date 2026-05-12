@@ -70,7 +70,7 @@ export class SocialMediaDrawerComponent {
 
   protected readonly hasNoData: Signal<boolean> = computed(() => {
     const { platforms, totalFollowers } = this.drawerData();
-    return totalFollowers === 0 && !platforms.some((p) => p.postsLast30Days > 0 || p.engagementRate > 0);
+    return totalFollowers === 0 && !platforms.some((p) => p.followers > 0 || p.postsLast30Days > 0 || p.engagementRate > 0);
   });
 
   protected readonly followerTrendChartData: Signal<ChartData<'line'>> = this.initFollowerTrendChartData();
