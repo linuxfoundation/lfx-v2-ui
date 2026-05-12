@@ -56,7 +56,7 @@ export class WebsiteVisitsDrawerComponent {
 
   protected readonly hasNoData: Signal<boolean> = computed(() => {
     const { totalSessions, dailyData } = this.drawerData();
-    return totalSessions === 0 && dailyData.length === 0;
+    return totalSessions === 0 && (dailyData.length === 0 || dailyData.every((v) => v === 0));
   });
 
   protected readonly trendChartData: Signal<ChartData<'line'>> = this.initTrendChartData();
@@ -181,7 +181,7 @@ export class WebsiteVisitsDrawerComponent {
       const { totalSessions, totalPageViews, domainGroups, dailyData } = this.drawerData();
       const actions: MarketingRecommendedAction[] = [];
 
-      if (totalSessions === 0 && dailyData.length === 0) {
+      if (this.hasNoData()) {
         return actions;
       }
 
@@ -250,7 +250,7 @@ export class WebsiteVisitsDrawerComponent {
       const { totalSessions, totalPageViews, domainGroups, dailyData } = this.drawerData();
       const insights: MarketingKeyInsight[] = [];
 
-      if (totalSessions === 0 && dailyData.length === 0) {
+      if (this.hasNoData()) {
         return insights;
       }
 
