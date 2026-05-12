@@ -37,8 +37,12 @@ export class IcalSubscribeDialogComponent {
     return `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(this.toWebcal(this.feedUrl))}`;
   }
 
-  public get outlookUrl(): string {
+  public get outlookLiveUrl(): string {
     return `https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(this.feedUrl)}&name=${encodeURIComponent(this.committeeName)}`;
+  }
+
+  public get outlook365Url(): string {
+    return `https://outlook.office.com/calendar/0/addfromweb?url=${encodeURIComponent(this.feedUrl)}&name=${encodeURIComponent(this.committeeName)}`;
   }
 
   public get webcalUrl(): string {
