@@ -47,11 +47,7 @@ export class CommitteeDashboardComponent {
   public projectFilter = signal<string | null>(null);
   public behavioralClassFilter = signal<GroupBehavioralClass | null>(null);
 
-  // Behavioral class display config + helper exposed to template.
-  // Keys are derived from the config so the chip list stays in sync if the taxonomy changes.
-  // Object.keys preserves insertion order per ES2015+, which keeps the chip display order matching the config.
   protected readonly behavioralClassConfig = BEHAVIORAL_CLASS_CONFIG;
-  protected readonly getGroupBehavioralClass = getGroupBehavioralClass;
   protected readonly behavioralClassKeys = Object.keys(BEHAVIORAL_CLASS_CONFIG) as GroupBehavioralClass[];
 
   // ── Forms ─────────────────────────────────────────────────────────────────
@@ -88,8 +84,7 @@ export class CommitteeDashboardComponent {
   public myPublicGroups: Signal<number>;
   public myActiveVoting: Signal<number>;
 
-  // Behavioral class counts (per-class totals across the active lens)
-  public behavioralClassCounts!: Signal<Record<GroupBehavioralClass, number>>;
+  public behavioralClassCounts: Signal<Record<GroupBehavioralClass, number>>;
 
   // Stat card arrays for the shared <lfx-stat-card-grid> component
   public foundationStatCards: Signal<StatCardItem[]>;
@@ -144,22 +139,7 @@ export class CommitteeDashboardComponent {
       },
     ]);
 
-    // Behavioral class counts — lens-aware source so chips reflect the visible group set
-    this.behavioralClassCounts = computed(() => {
-      const source = this.isMeLens() ? this.myCommittees() : this.committees();
-      const counts: Record<GroupBehavioralClass, number> = {
-        'governing-board': 0,
-        'oversight-committee': 0,
-        'working-group': 0,
-        'special-interest-group': 0,
-        'ambassador-program': 0,
-        other: 0,
-      };
-      source.forEach((c) => {
-        counts[getGroupBehavioralClass(c.category)]++;
-      });
-      return counts;
-    });
+    this.behavioralClassCounts = this.initializeBehavioralClassCounts();
   }
 
   public openCreateDialog(): void {
@@ -343,9 +323,9 @@ export class CommitteeDashboardComponent {
 
   private initializeFilteredCommittees(): Signal<Committee[]> {
     return computed(() => {
-      let filtered = this.committees();
+      // Decorate up-front so downstream filters and the table template can read committee.behavioralClass without per-row function calls.
+      let filtered: Committee[] = this.committees().map((c) => ({ ...c, behavioralClass: getGroupBehavioralClass(c.category) }));
 
-      // Apply search filter
       const searchTerm = this.searchTerm()?.toLowerCase() || '';
       if (searchTerm) {
         filtered = filtered.filter(
@@ -356,20 +336,16 @@ export class CommitteeDashboardComponent {
         );
       }
 
-      // Apply behavioral class filter
       const behavioralClass = this.behavioralClassFilter();
       if (behavioralClass) {
-        filtered = filtered.filter((committee) => getGroupBehavioralClass(committee.category) === behavioralClass);
+        filtered = filtered.filter((committee) => committee.behavioralClass === behavioralClass);
       }
 
-      // Apply voting status filter
       const votingStatus = this.votingStatusFilter();
-      if (votingStatus) {
-        if (votingStatus === 'enabled') {
-          filtered = filtered.filter((committee) => committee.enable_voting === true);
-        } else if (votingStatus === 'disabled') {
-          filtered = filtered.filter((committee) => committee.enable_voting === false);
-        }
+      if (votingStatus === 'enabled') {
+        filtered = filtered.filter((committee) => committee.enable_voting === true);
+      } else if (votingStatus === 'disabled') {
+        filtered = filtered.filter((committee) => committee.enable_voting === false);
       }
 
       return filtered;
@@ -378,9 +354,8 @@ export class CommitteeDashboardComponent {
 
   private initializeFilteredMyCommittees(): Signal<MyCommittee[]> {
     return computed(() => {
-      let filtered: MyCommittee[] = this.myCommittees();
+      let filtered: MyCommittee[] = this.myCommittees().map((c) => ({ ...c, behavioralClass: getGroupBehavioralClass(c.category) }));
 
-      // Apply foundation/project filter (client-side)
       const project = this.projectFilter();
       const foundation = this.foundationFilter();
       if (project) {
@@ -389,7 +364,6 @@ export class CommitteeDashboardComponent {
         filtered = filtered.filter((c) => c.project_uid === foundation || (c.parent_project_uid === foundation && !c.is_foundation));
       }
 
-      // Apply search filter
       const searchTerm = this.searchTerm()?.toLowerCase() || '';
       if (searchTerm) {
         filtered = filtered.filter(
@@ -401,13 +375,11 @@ export class CommitteeDashboardComponent {
         );
       }
 
-      // Apply behavioral class filter
       const behavioralClass = this.behavioralClassFilter();
       if (behavioralClass) {
-        filtered = filtered.filter((c) => getGroupBehavioralClass(c.category) === behavioralClass);
+        filtered = filtered.filter((c) => c.behavioralClass === behavioralClass);
       }
 
-      // Apply voting status filter
       const votingStatus = this.votingStatusFilter();
       if (votingStatus === 'enabled') {
         filtered = filtered.filter((c) => c.enable_voting === true);
@@ -416,6 +388,24 @@ export class CommitteeDashboardComponent {
       }
 
       return filtered;
+    });
+  }
+
+  private initializeBehavioralClassCounts(): Signal<Record<GroupBehavioralClass, number>> {
+    return computed(() => {
+      const source = this.isMeLens() ? this.myCommittees() : this.committees();
+      const counts: Record<GroupBehavioralClass, number> = {
+        'governing-board': 0,
+        'oversight-committee': 0,
+        'working-group': 0,
+        'special-interest-group': 0,
+        'ambassador-program': 0,
+        other: 0,
+      };
+      source.forEach((c) => {
+        counts[getGroupBehavioralClass(c.category)]++;
+      });
+      return counts;
     });
   }
 }

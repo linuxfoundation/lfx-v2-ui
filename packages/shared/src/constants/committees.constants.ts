@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { CommitteeMemberAppointedBy, CommitteeMemberRole, CommitteeMemberVotingStatus } from '../enums/committee-member.enum';
-import { CommitteeTab, GroupBehavioralClass, JoinMode } from '../interfaces/committee.interface';
+import { BehavioralClassDisplayConfig, CommitteeTab, GroupBehavioralClass, JoinMode } from '../interfaces/committee.interface';
 import { lfxColors } from './colors.constants';
 
 // Re-export helper functions from utils for backward compatibility
@@ -554,11 +554,7 @@ export const CATEGORY_BEHAVIORAL_CLASS: Record<string, GroupBehavioralClass> = {
   Committee: 'other',
 };
 
-/**
- * Display configuration for behavioral classes.
- * Used by the Groups List page for filter chips and badges.
- */
-export const BEHAVIORAL_CLASS_CONFIG: Record<GroupBehavioralClass, { label: string; icon: string; color: string; bgColor: string }> = {
+export const BEHAVIORAL_CLASS_CONFIG: Record<GroupBehavioralClass, BehavioralClassDisplayConfig> = {
   'governing-board': {
     label: 'Boards',
     icon: 'fa-light fa-gavel',

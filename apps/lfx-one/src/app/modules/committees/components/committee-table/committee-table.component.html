@@ -124,7 +124,7 @@
                 <lfx-tag [value]="category" styleClass="tag-neutral"></lfx-tag>
               </td>
               <td>
-                @let cls = getGroupBehavioralClass(committee.category);
+                @let cls = readBehavioralClass(committee);
                 <span
                   class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
                   [class]="behavioralClassConfig[cls].bgColor + ' ' + behavioralClassConfig[cls].color">

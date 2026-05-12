@@ -44,7 +44,6 @@
       <lfx-stat-card-grid [cards]="myStatCards()" [loading]="myCommitteesLoading()" data-testid="committees-me-stats" />
     }
 
-    <!-- Behavioral Class Filter Chips -->
     @let totalForChips = isMeLens() ? myCommittees().length : committees().length;
     @if (totalForChips > 0) {
       <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Filter groups by behavioral class" data-testid="groups-behavioral-class-chips">
