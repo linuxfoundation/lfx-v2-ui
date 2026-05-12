@@ -64,7 +64,7 @@ Hot reload silent? Likely `inotify` watcher limit — `sudo sysctl fs.inotify.ma
 ## Monorepo Structure
 
 ```text
-lfx-v2-ui/
+lfx-self-serve/
 ├── apps/
 │   └── lfx-one/              # Angular 20 SSR application with stable zoneless change detection
 │       ├── src/app/
