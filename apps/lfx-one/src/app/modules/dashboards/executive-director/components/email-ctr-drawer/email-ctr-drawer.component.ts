@@ -58,20 +58,7 @@ export class EmailCtrDrawerComponent {
   // True once all three data sources have resolved (not still loading)
   private readonly dataResolved: Signal<boolean> = computed(() => !this.drawerLoading() && this.paidDataResolved() && this.attributionDataResolved());
 
-  protected readonly hasNoData: Signal<boolean> = computed(() => {
-    if (!this.dataResolved()) {
-      return false;
-    }
-    const email = this.drawerData();
-    const paid = this.paidData();
-    const attribution = this.attributionData();
-    const hasEmailActivity = email.currentCtr > 0 || email.monthlySends.some((s) => s > 0);
-    const hasPaidActivity = paid.totalReach > 0 || paid.totalSpend > 0;
-    const hasAttributionActivity =
-      attribution.channels.length > 0 &&
-      attribution.channels.some((c) => c.sessions > 0 || c.linearRevenue > 0 || c.firstTouchRevenue > 0 || c.lastTouchRevenue > 0 || c.timeDecayRevenue > 0);
-    return !hasEmailActivity && !hasPaidActivity && !hasAttributionActivity;
-  });
+  protected readonly hasNoData: Signal<boolean> = this.initHasNoData();
 
   protected readonly expandedTypes = signal<Set<string>>(new Set());
 
@@ -229,6 +216,23 @@ export class EmailCtrDrawerComponent {
 
   protected revPerSession(channel: MarketingAttributionChannel): string {
     return channel.sessions > 0 ? `$${(channel.linearRevenue / channel.sessions).toFixed(2)}` : '—';
+  }
+
+  private initHasNoData(): Signal<boolean> {
+    return computed(() => {
+      if (!this.dataResolved()) {
+        return false;
+      }
+      const email = this.drawerData();
+      const paid = this.paidData();
+      const attribution = this.attributionData();
+      const hasEmailActivity = email.currentCtr > 0 || email.monthlySends.some((s) => s > 0);
+      const hasPaidActivity = paid.totalReach > 0 || paid.totalSpend > 0;
+      const hasAttributionActivity =
+        attribution.channels.length > 0 &&
+        attribution.channels.some((c) => c.sessions > 0 || c.linearRevenue > 0 || c.firstTouchRevenue > 0 || c.lastTouchRevenue > 0 || c.timeDecayRevenue > 0);
+      return !hasEmailActivity && !hasPaidActivity && !hasAttributionActivity;
+    });
   }
 
   private initDrawerData(): Signal<EmailCtrResponse> {
