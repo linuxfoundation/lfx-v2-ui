@@ -45,8 +45,8 @@ export class MemberRetentionDrawerComponent {
 
   protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() => this.split().performingInsights);
   protected readonly hasNoData: Signal<boolean> = computed(() => {
-    const { renewalRate, monthlyData } = this.data();
-    return renewalRate === 0 && monthlyData.length === 0;
+    const { renewalRate, netRevenueRetention, monthlyData } = this.data();
+    return renewalRate === 0 && netRevenueRetention === 0 && (monthlyData.length === 0 || monthlyData.every((m) => m.value === 0));
   });
 
   // === Protected Methods ===
