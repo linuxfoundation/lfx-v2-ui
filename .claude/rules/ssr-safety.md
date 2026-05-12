@@ -17,9 +17,9 @@ Angular 20 SSR is strict. Static HTML prototypes and dev-mode hot reload hide SS
 
 ```typescript
 import { isPlatformBrowser } from '@angular/common';
-import { Inject, PLATFORM_ID } from '@angular/core';
+import { inject, PLATFORM_ID } from '@angular/core';
 
-constructor(@Inject(PLATFORM_ID) private platformId: object) {}
+private readonly platformId = inject(PLATFORM_ID);
 
 ngOnInit() {
   if (isPlatformBrowser(this.platformId)) {

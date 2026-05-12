@@ -54,7 +54,7 @@ All commands run from the repo root via Turborepo:
 ### Reset / cleanup
 
 ```bash
-ng cache clean             # Angular CLI cache
+yarn ng cache clean        # Angular CLI cache (uses the workspace-local ng)
 yarn turbo clean           # Turborepo build cache (turbo is a local devDep)
 rm -rf node_modules && yarn install   # nuclear
 ```

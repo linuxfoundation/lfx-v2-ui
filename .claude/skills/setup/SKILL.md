@@ -121,7 +121,7 @@ The local stack uses **Authelia** at `https://auth.k8s.orb.local` (not Auth0 —
     -o jsonpath='{.data.lfx}' | base64 --decode
   ```
 
-- **Inspect the current session** (after login): `http://localhost:4200/api/auth/me`
+- **Inspect the current session** (after login): `http://localhost:4200/api/profile` (the server-registered route backed by `profileController.getCurrentUserProfile` — there is no `/api/auth/me`)
 - If the `lfx` Authelia client doesn't exist in the cluster, the `authelia-clients` secret will be missing — the local k8s stack needs `helmfile sync` to recreate it.
 
 ## Done
