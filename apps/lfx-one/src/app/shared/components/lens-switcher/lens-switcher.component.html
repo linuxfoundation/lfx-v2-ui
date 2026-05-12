@@ -102,17 +102,14 @@
         type="button"
         (click)="openChangelogDrawer()"
         data-testid="lens-changelog-button"
-        aria-label="What's New"
+        [attr.aria-label]="unseenChangelogCount() > 0 ? 'What\'s New (' + unseenChangelogCount() + ' unseen updates)' : 'What\'s New'"
         pTooltip="What's New"
         tooltipPosition="right"
         class="group flex flex-col items-center gap-1 w-full transition-colors text-blue-200/75 hover:text-white">
         <div class="relative flex items-center justify-center w-10 h-10 rounded-xl transition-colors group-hover:bg-white/10">
           <i class="fa-light fa-bullhorn text-xl"></i>
           @if (unseenChangelogCount() > 0) {
-            <span
-              class="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-blue-500"
-              data-testid="lens-changelog-badge">
-            </span>
+            <span aria-hidden="true" class="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-blue-500" data-testid="lens-changelog-badge"> </span>
           }
         </div>
       </button>
