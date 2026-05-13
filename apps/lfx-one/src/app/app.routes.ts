@@ -42,12 +42,6 @@ export const routes: Routes = [
         canActivate: [projectQueryParamGuard],
         loadComponent: () => import('./modules/dashboards/foundation-projects/foundation-projects.component').then((m) => m.FoundationProjectsComponent),
       },
-      {
-        path: 'foundation/events',
-        data: { lens: 'foundation' },
-        canActivate: [projectQueryParamGuard],
-        loadChildren: () => import('./modules/events/events.routes').then((m) => m.EVENTS_ROUTES),
-      },
       // Project Lens dashboard (placeholder — reuses DashboardComponent for now)
       {
         path: 'project/overview',
