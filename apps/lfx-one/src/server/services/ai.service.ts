@@ -9,19 +9,23 @@ import { Request } from 'express';
 import { logger } from './logger.service';
 
 export class AiService {
-  private readonly aiProxyUrl: string;
   private readonly model = AI_MODEL;
-  private readonly aiKey = process.env['AI_API_KEY'] || 'sk-proj-1234567890';
 
-  public constructor() {
-    this.aiProxyUrl = process.env['AI_PROXY_URL'] || 'https://api.openai.com/v1/chat/completions';
-    if (!this.aiProxyUrl) {
-      throw new Error('AI_PROXY_URL environment variable is required');
-    }
+  // Resolved lazily on first access so dotenv has finished loading,
+  // then memoized — env is stable after startup.
+  private _aiProxyUrl: string | undefined;
+  private _aiKey: string | undefined;
 
-    if (!this.aiKey) {
-      throw new Error('AI_API_KEY environment variable is required');
-    }
+  private get aiProxyUrl(): string {
+    return (this._aiProxyUrl ??= process.env['AI_PROXY_URL'] || '');
+  }
+
+  private get aiKey(): string {
+    return (this._aiKey ??= process.env['AI_API_KEY'] || '');
+  }
+
+  public isAiConfigured(): boolean {
+    return !!this.aiProxyUrl && !!this.aiKey;
   }
 
   public async generateMeetingAgenda(req: Request, request: GenerateAgendaRequest): Promise<GenerateAgendaResponse> {
@@ -129,6 +133,10 @@ export class AiService {
   }
 
   private async makeAiRequest(request: OpenAIChatRequest): Promise<OpenAIChatResponse> {
+    if (!this.isAiConfigured()) {
+      throw new Error('AI service not configured: AI_PROXY_URL and AI_API_KEY environment variables are required');
+    }
+
     const response = await fetch(this.aiProxyUrl, {
       method: 'POST',
       headers: {
