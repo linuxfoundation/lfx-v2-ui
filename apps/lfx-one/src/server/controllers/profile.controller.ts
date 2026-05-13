@@ -681,7 +681,7 @@ export class ProfileController {
 
       // Reconcile CDP identities with auth-service identities and filter to the
       // (platform, type) combos LFX One can surface for verification via Auth0.
-      const { enriched, notInCdpCount } = this.reconcileIdentities(req, cdpIdentities, auth0Identities, lfid);
+      const { enriched, cdpPostsQueued } = this.reconcileIdentities(req, cdpIdentities, auth0Identities, lfid);
       const displayIdentities = enriched.filter((id) => CDP_DISPLAYABLE_IDENTITY_COMBOS.has(`${id.platform}+${id.type}`));
 
       logger.success(req, 'get_identities', startTime, {
@@ -690,7 +690,7 @@ export class ProfileController {
         auth_service_count: auth0Identities.length,
         display_count: displayIdentities.length,
         hidden_count: enriched.filter((i) => i.displayState === 'hidden').length,
-        not_in_cdp_count: notInCdpCount,
+        cdp_posts_queued: cdpPostsQueued,
       });
 
       res.json(displayIdentities);
@@ -1701,7 +1701,7 @@ export class ProfileController {
    * 2. In auth-service AND CDP, verified=false OR verifiedBy≠lfid → VERIFIED (auto-verify via PATCH)
    * 3. In auth-service but NOT in CDP → VERIFIED (synthetic entry + fire-and-forget POST to CDP,
    *    skipping the POST when a `custom` row for the same email value has already been written
-   *    in this loop or already exists as a manually-verified custom-email row)
+   *    in this loop or already exists as a CDP custom-email row owned by this user (verifiedBy=lfid))
    * 4. In CDP but NOT in auth-service, multi-LFID + verifiedBy=lfxOne → HIDDEN
    * 5. In CDP but NOT in auth-service (all other) → UNVERIFIED
    */
@@ -1710,7 +1710,7 @@ export class ProfileController {
     cdpIdentities: CdpIdentity[],
     authServiceIdentities: Auth0Identity[],
     lfid: string
-  ): { enriched: EnrichedIdentity[]; notInCdpCount: number } {
+  ): { enriched: EnrichedIdentity[]; cdpPostsQueued: number } {
     // Build a map of "platform:value" → Auth0Identity for matching
     const authServiceMap = new Map<string, Auth0Identity>();
     for (const authId of authServiceIdentities) {
@@ -1799,7 +1799,7 @@ export class ProfileController {
     });
 
     // Process auth-service identities NOT in CDP — create synthetic entries
-    let notInCdpCount = 0;
+    let cdpPostsQueued = 0;
     // Tracks values we've POSTed to CDP as platform='custom' within this loop.
     // Google + email auth-service providers both POST as platform='custom' for
     // back-compat, so a user with BOTH providers for the same email would
@@ -1839,7 +1839,7 @@ export class ProfileController {
         (postedCustomEmails.has(value) || enriched.some((id) => id.platform === 'email' && id.value === value && id.verified && id.verifiedBy === lfid));
 
       if (!wouldDuplicateCustomEmail) {
-        notInCdpCount++;
+        cdpPostsQueued++;
         if (cdpPostPlatform === 'custom') {
           postedCustomEmails.add(value);
         }
@@ -1879,7 +1879,7 @@ export class ProfileController {
       });
     }
 
-    return { enriched, notInCdpCount };
+    return { enriched, cdpPostsQueued };
   }
 
   private normalizeProfileReturnTo(raw: unknown): string {
