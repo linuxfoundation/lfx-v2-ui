@@ -53,6 +53,10 @@ export class EngagedCommunityDrawerComponent {
     weeklyTrend: [],
   });
   // === Computed Signals ===
+  protected readonly hasNoData: Signal<boolean> = computed(() => {
+    const { totalMembers, changePercentage, monthlyData } = this.data();
+    return totalMembers === 0 || (changePercentage === 0 && monthlyData.length === 0);
+  });
   protected readonly formattedTotalMembers: Signal<string> = computed(() => formatNumber(this.data().totalMembers));
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
