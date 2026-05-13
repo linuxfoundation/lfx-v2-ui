@@ -45,9 +45,7 @@ git add -A
 git commit --signoff -S -m "<subject>"
 ```
 
-> **Note:** Both `--signoff` (DCO) and `-S` (GPG signing) are required by repo policy. Configure GPG if you haven't already.
-
-Both `--signoff` (DCO) and `-S` (GPG signing) are mandatory per repo policy. If either fails, stop — do not push unsigned commits.
+> **Note:** Both `--signoff` (DCO) and `-S` (GPG signing) are required by repo policy — see `.claude/rules/commit-workflow.md` § Commit Signing for the authoritative rule and GPG setup. If either fails, stop — do not push unsigned commits.
 
 ## Step 3: Quality gates (fail-fast)
 
@@ -82,7 +80,11 @@ Each line must start with `G` or `U` (good signature; `U` means the signing key 
 
 Then run advisory review on:
 
-git diff origin/main...HEAD — read it. Check against CLAUDE.md and .claude/rules/:
+```bash
+git diff origin/main...HEAD
+```
+
+Read the diff and check against `CLAUDE.md` and `.claude/rules/`:
 
 - Consider: any browser-only APIs (window, document, etc.) — if found outside isPlatformBrowser guards, flag for the user to confirm (SSR risk)
 - Consider: hard-coded brand hex values — if found, suggest using lfxColors scales instead (avoids drift when LF brand updates)
@@ -94,9 +96,11 @@ Advisory findings are non-blocking — surface them to the user, who decides whe
 
 ## Step 5: Push
 
+```bash
 git push -u origin HEAD
+```
 
-If rejected, stop. Do not force-push. Suggest git pull --rebase origin main.
+If rejected, stop. Do not force-push. Suggest `git pull --rebase origin main`.
 
 ## Step 6: Open PR
 
@@ -122,7 +126,7 @@ PR body template:
   - [x] DCO sign-off (`--signoff`) and GPG signed (`-S`) on every commit
   - [x] Self-reviewed against `CLAUDE.md` conventions
   - [ ] CodeRabbit review addressed
-  - [ ] Code-owner review (required for `lfx-preflight` protected files)
+  - [ ] Code-owner review (required for files matched by `.claude/hooks/guard-protected-files.sh`)
   - [ ] e2e run if UI flow changed
 
 - Footer: 🤖 Drafted via /lfx-pr — Claude Code
