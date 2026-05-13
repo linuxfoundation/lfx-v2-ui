@@ -39,6 +39,7 @@ import {
   TagSeverity,
   User,
 } from '@lfx-one/shared';
+import { MeetingVisibility } from '@lfx-one/shared/enums';
 import { FileTypeDisplayPipe } from '@pipes/file-type-display.pipe';
 import { LinkifyPipe } from '@pipes/linkify.pipe';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
@@ -163,6 +164,12 @@ export class MeetingJoinComponent implements OnInit {
   // time-based fallback for non-hyphenated URLs where past-ness is only knowable from the clock.
   protected loadedViaPastMeetingId = signal(false);
   protected pastMeetingFullAccess = signal(false);
+  protected showPrivateDetails = computed(() => {
+    const m = this.meeting();
+    if (!m) return false;
+    if (m.visibility === MeetingVisibility.PUBLIC && !m.restricted) return true;
+    return this.authenticated() && (m.organizer === true || m.invited === true);
+  });
   private refreshTrigger$ = new BehaviorSubject<void>(undefined);
   public emailError: Signal<boolean>;
 
