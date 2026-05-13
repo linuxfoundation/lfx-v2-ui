@@ -169,6 +169,9 @@ export class MeetingJoinComponent implements OnInit {
   public meetingTitle: Signal<string>;
   public meetingDescription: Signal<string>;
   public hasAiCompanion: Signal<boolean>;
+  // True when the viewer is anonymous on a private meeting — drives the strict sign-in gate
+  // that hides all sensitive content (title, agenda, materials, join info) on the page.
+  public restrictedView: Signal<boolean>;
   protected isPastMeeting: Signal<boolean>;
   protected pastMeetingSummary: Signal<PastMeetingSummary | null>;
   private pastMeetingRecording: Signal<PastMeetingRecording | null>;
@@ -265,6 +268,7 @@ export class MeetingJoinComponent implements OnInit {
     this.meetingTitle = this.initializeMeetingTitle();
     this.meetingDescription = this.initializeMeetingDescription();
     this.hasAiCompanion = this.initializeHasAiCompanion();
+    this.restrictedView = computed(() => this.meeting()?.visibility === 'private' && !this.authenticated());
     this.isPastMeeting = this.initializeIsPastMeeting();
     this.pastMeetingSummary = this.initializePastMeetingSummary();
     this.pastMeetingRecording = this.initializePastMeetingRecording();

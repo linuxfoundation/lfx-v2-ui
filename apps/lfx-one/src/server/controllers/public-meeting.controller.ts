@@ -101,6 +101,22 @@ export class PublicMeetingController {
         meeting.organizer = false;
       }
 
+      // Strict private gate: anonymous viewers of a private meeting get only the minimum needed to
+      // render the sign-in gate. Password-on-URL is intentionally NOT sufficient — LFX login is
+      // required to view a private meeting's details (agenda, materials, join info, etc.).
+      if (meeting.visibility === MeetingVisibility.PRIVATE && !isAuthenticated) {
+        logger.success(req, 'get_public_meeting_by_id', startTime, {
+          meeting_id: id,
+          project_uid: meeting.project_uid,
+          redacted: true,
+        });
+        res.json({
+          meeting: { id: meeting.id, visibility: meeting.visibility },
+          project: null,
+        });
+        return;
+      }
+
       // Fetch registrant counts for organizers, otherwise default to 0
       if (meeting.organizer) {
         try {
@@ -215,32 +231,42 @@ export class PublicMeetingController {
         meeting.organizer = isOrganizer;
       }
 
-      // For non-full-access users, return only the fields needed for the basic UI
-      const meetingResponse = fullAccess
-        ? meeting
-        : {
-            id: meeting.id,
-            title: meeting.title,
-            visibility: meeting.visibility,
-            meeting_type: meeting.meeting_type,
-            restricted: meeting.restricted,
-            start_time: meeting.start_time,
-            scheduled_start_time: meeting.scheduled_start_time,
-            scheduled_end_time: meeting.scheduled_end_time,
-            duration: meeting.duration,
-            recurrence: meeting.recurrence,
-            recording_enabled: meeting.recording_enabled,
-            transcript_enabled: meeting.transcript_enabled,
-            youtube_upload_enabled: meeting.youtube_upload_enabled,
-            show_meeting_attendees: meeting.show_meeting_attendees,
-            zoom_config: meeting.zoom_config ? { ai_companion_enabled: meeting.zoom_config.ai_companion_enabled } : undefined,
-            project_uid: meeting.project_uid,
-            meeting_id: meeting.meeting_id,
-          };
+      // Three-way response shape:
+      //   - fullAccess: return the full meeting record (organizers / members).
+      //   - private + anonymous: strict gate — even title/date are withheld.
+      //   - otherwise: a minimal field set so the basic UI can render with a sign-in prompt.
+      const isPrivateAnonymous = meeting.visibility === MeetingVisibility.PRIVATE && !isAuthenticated;
+      const meetingResponse = (() => {
+        if (fullAccess) return meeting;
+        if (isPrivateAnonymous) return { id: meeting.id, visibility: meeting.visibility };
+        return {
+          id: meeting.id,
+          title: meeting.title,
+          visibility: meeting.visibility,
+          meeting_type: meeting.meeting_type,
+          restricted: meeting.restricted,
+          start_time: meeting.start_time,
+          scheduled_start_time: meeting.scheduled_start_time,
+          scheduled_end_time: meeting.scheduled_end_time,
+          duration: meeting.duration,
+          recurrence: meeting.recurrence,
+          recording_enabled: meeting.recording_enabled,
+          transcript_enabled: meeting.transcript_enabled,
+          youtube_upload_enabled: meeting.youtube_upload_enabled,
+          show_meeting_attendees: meeting.show_meeting_attendees,
+          zoom_config: meeting.zoom_config ? { ai_companion_enabled: meeting.zoom_config.ai_companion_enabled } : undefined,
+          project_uid: meeting.project_uid,
+          meeting_id: meeting.meeting_id,
+        };
+      })();
+
+      const projectResponse = isPrivateAnonymous
+        ? null
+        : { name: project.name, slug: project.slug, logo_url: project.logo_url, uid: project.uid, parent_uid: project.parent_uid };
 
       res.json({
         meeting: meetingResponse,
-        project: { name: project.name, slug: project.slug, logo_url: project.logo_url, uid: project.uid, parent_uid: project.parent_uid },
+        project: projectResponse,
         full_access: fullAccess,
       });
     } catch (error) {
@@ -271,6 +297,16 @@ export class PublicMeetingController {
           operation: 'post_meeting_link',
           service: 'public_meeting_controller',
           path: `/itx/meetings/${id}`,
+        });
+      }
+
+      // Anonymous viewers cannot fetch a join URL for a private meeting, even with a valid
+      // password URL. LFX login is required to join.
+      if (meeting.visibility === MeetingVisibility.PRIVATE && !req.oidc?.isAuthenticated()) {
+        throw new AuthorizationError('Sign in is required to join a private meeting', {
+          operation: 'post_meeting_link',
+          service: 'public_meeting_controller',
+          path: req.path,
         });
       }
 
