@@ -11,6 +11,7 @@ import { catchError, map, of, switchMap } from 'rxjs';
 import { LensService } from './lens.service';
 import { PersonaService } from './persona.service';
 import { ProjectService } from './project.service';
+import { Router } from '@angular/router';
 
 @Injectable({
   providedIn: 'root',
@@ -20,6 +21,7 @@ export class ProjectContextService {
   private readonly lensService = inject(LensService);
   private readonly personaService = inject(PersonaService);
   private readonly projectService = inject(ProjectService);
+  private readonly router = inject(Router);
 
   private readonly foundationStorageKey = 'lfx-selected-foundation';
   private readonly projectStorageKey = 'lfx-selected-project';
@@ -48,6 +50,7 @@ export class ProjectContextService {
       return;
     }
     this.foundationSelection.set(foundation);
+    void this.router.navigate([], { queryParams: { project: foundation.slug }, queryParamsHandling: 'merge', replaceUrl: true });
   }
 
   public setProject(project: ProjectContext): void {
@@ -55,14 +58,17 @@ export class ProjectContextService {
       return;
     }
     this.projectSelection.set(project);
+    void this.router.navigate([], { queryParams: { project: project.slug }, queryParamsHandling: 'merge', replaceUrl: true });
   }
 
   public clearFoundation(): void {
     this.foundationSelection.set(null);
+    void this.router.navigate([], { queryParams: { project: null }, queryParamsHandling: 'merge', replaceUrl: true });
   }
 
   public clearProject(): void {
     this.projectSelection.set(null);
+    void this.router.navigate([], { queryParams: { project: null }, queryParamsHandling: 'merge', replaceUrl: true });
   }
 
   private initActiveContext(): Signal<ProjectContext | null> {
