@@ -59,8 +59,27 @@ export class PublicMeetingController {
         });
       }
 
-      // Fetch project and invited status in parallel (both depend only on meeting data)
       const isAuthenticated = req.oidc?.isAuthenticated();
+
+      // Strict private gate: anonymous viewers of a private meeting get only the minimum needed to
+      // render the sign-in gate. Password-on-URL is intentionally NOT sufficient — LFX login is
+      // required. Run BEFORE the project / invited / organizer lookups so a transient project
+      // upstream failure doesn't convert a valid private meeting into a 404 for the anonymous
+      // viewer; they still get the sign-in CTA.
+      if (meeting.visibility === MeetingVisibility.PRIVATE && !isAuthenticated) {
+        logger.success(req, 'get_public_meeting_by_id', startTime, {
+          meeting_id: id,
+          project_uid: meeting.project_uid,
+          redacted: true,
+        });
+        res.json({
+          meeting: { id: meeting.id, visibility: meeting.visibility },
+          project: null,
+        });
+        return;
+      }
+
+      // Fetch project and invited status in parallel (both depend only on meeting data)
       const [project, meetingWithInvited] = await Promise.all([
         this.projectService.getProjectById(req, meeting.project_uid, false),
         isAuthenticated
@@ -99,22 +118,6 @@ export class PublicMeetingController {
         req.bearerToken = m2mToken;
       } else {
         meeting.organizer = false;
-      }
-
-      // Strict private gate: anonymous viewers of a private meeting get only the minimum needed to
-      // render the sign-in gate. Password-on-URL is intentionally NOT sufficient — LFX login is
-      // required to view a private meeting's details (agenda, materials, join info, etc.).
-      if (meeting.visibility === MeetingVisibility.PRIVATE && !isAuthenticated) {
-        logger.success(req, 'get_public_meeting_by_id', startTime, {
-          meeting_id: id,
-          project_uid: meeting.project_uid,
-          redacted: true,
-        });
-        res.json({
-          meeting: { id: meeting.id, visibility: meeting.visibility },
-          project: null,
-        });
-        return;
       }
 
       // Fetch registrant counts for organizers, otherwise default to 0
@@ -187,6 +190,26 @@ export class PublicMeetingController {
       // Fetch past meeting (throws ResourceNotFoundError if not found)
       const meeting = await this.meetingService.getPastMeetingById(req, id);
 
+      const isAuthenticated = req.oidc?.isAuthenticated();
+
+      // Strict private gate: anonymous viewers of a private past meeting get only the minimum
+      // needed to render the sign-in gate. Run BEFORE the project / organizer / fullAccess
+      // lookups so a transient project upstream failure doesn't convert a valid private meeting
+      // into a 404 for the anonymous viewer; they still get the sign-in CTA.
+      if (meeting.visibility === MeetingVisibility.PRIVATE && !isAuthenticated) {
+        logger.success(req, 'get_public_past_meeting_by_id', startTime, {
+          past_meeting_id: id,
+          project_uid: meeting.project_uid,
+          redacted: true,
+        });
+        res.json({
+          meeting: { id: meeting.id, visibility: meeting.visibility },
+          project: null,
+          full_access: false,
+        });
+        return;
+      }
+
       // Fetch project
       const project = await this.projectService.getProjectById(req, meeting.project_uid, false);
       if (!project) {
@@ -199,7 +222,6 @@ export class PublicMeetingController {
 
       // Check organizer status for authenticated users using user token
       let isOrganizer = false;
-      const isAuthenticated = req.oidc?.isAuthenticated();
       if (isAuthenticated && originalToken !== undefined) {
         req.bearerToken = originalToken;
         try {
@@ -231,42 +253,34 @@ export class PublicMeetingController {
         meeting.organizer = isOrganizer;
       }
 
-      // Three-way response shape:
-      //   - fullAccess: return the full meeting record (organizers / members).
-      //   - private + anonymous: strict gate — even title/date are withheld.
-      //   - otherwise: a minimal field set so the basic UI can render with a sign-in prompt.
-      const isPrivateAnonymous = meeting.visibility === MeetingVisibility.PRIVATE && !isAuthenticated;
-      const meetingResponse = (() => {
-        if (fullAccess) return meeting;
-        if (isPrivateAnonymous) return { id: meeting.id, visibility: meeting.visibility };
-        return {
-          id: meeting.id,
-          title: meeting.title,
-          visibility: meeting.visibility,
-          meeting_type: meeting.meeting_type,
-          restricted: meeting.restricted,
-          start_time: meeting.start_time,
-          scheduled_start_time: meeting.scheduled_start_time,
-          scheduled_end_time: meeting.scheduled_end_time,
-          duration: meeting.duration,
-          recurrence: meeting.recurrence,
-          recording_enabled: meeting.recording_enabled,
-          transcript_enabled: meeting.transcript_enabled,
-          youtube_upload_enabled: meeting.youtube_upload_enabled,
-          show_meeting_attendees: meeting.show_meeting_attendees,
-          zoom_config: meeting.zoom_config ? { ai_companion_enabled: meeting.zoom_config.ai_companion_enabled } : undefined,
-          project_uid: meeting.project_uid,
-          meeting_id: meeting.meeting_id,
-        };
-      })();
-
-      const projectResponse = isPrivateAnonymous
-        ? null
-        : { name: project.name, slug: project.slug, logo_url: project.logo_url, uid: project.uid, parent_uid: project.parent_uid };
+      // For non-full-access users, return only the fields needed for the basic UI. The
+      // private + anonymous case has already been redacted-and-returned above, so this
+      // branch only handles authenticated non-members on a private/restricted past meeting.
+      const meetingResponse = fullAccess
+        ? meeting
+        : {
+            id: meeting.id,
+            title: meeting.title,
+            visibility: meeting.visibility,
+            meeting_type: meeting.meeting_type,
+            restricted: meeting.restricted,
+            start_time: meeting.start_time,
+            scheduled_start_time: meeting.scheduled_start_time,
+            scheduled_end_time: meeting.scheduled_end_time,
+            duration: meeting.duration,
+            recurrence: meeting.recurrence,
+            recording_enabled: meeting.recording_enabled,
+            transcript_enabled: meeting.transcript_enabled,
+            youtube_upload_enabled: meeting.youtube_upload_enabled,
+            show_meeting_attendees: meeting.show_meeting_attendees,
+            zoom_config: meeting.zoom_config ? { ai_companion_enabled: meeting.zoom_config.ai_companion_enabled } : undefined,
+            project_uid: meeting.project_uid,
+            meeting_id: meeting.meeting_id,
+          };
 
       res.json({
         meeting: meetingResponse,
-        project: projectResponse,
+        project: { name: project.name, slug: project.slug, logo_url: project.logo_url, uid: project.uid, parent_uid: project.parent_uid },
         full_access: fullAccess,
       });
     } catch (error) {

@@ -82,17 +82,21 @@
               }
             </div>
 
-            <!-- Right: Copy Link Button -->
-            <lfx-button
-              [icon]="'fa-light fa-copy'"
-              [rounded]="true"
-              size="small"
-              severity="secondary"
-              [text]="true"
-              (onClick)="handleCopyLink()"
-              [attr.data-testid]="'meeting-copy-link-button'"
-              [pTooltip]="'Copy meeting link'">
-            </lfx-button>
+            <!-- Right: Copy Link Button — hidden in restrictedView since the copied URL
+                 wouldn't carry a password (redacted payload omits it) and the share doesn't
+                 grant anonymous access anyway. -->
+            @if (!restrictedView()) {
+              <lfx-button
+                [icon]="'fa-light fa-copy'"
+                [rounded]="true"
+                size="small"
+                severity="secondary"
+                [text]="true"
+                (onClick)="handleCopyLink()"
+                [attr.data-testid]="'meeting-copy-link-button'"
+                [pTooltip]="'Copy meeting link'">
+              </lfx-button>
+            }
           </div>
 
           @if (!restrictedView()) {
@@ -706,7 +710,11 @@
                 </lfx-button>
               </div>
 
-              @if (!isPastMeeting()) {
+              <!-- Guest join form for anonymous viewers of public/non-restricted meetings.
+                   Skipped in restrictedView (private + anonymous) because the join-URL endpoint
+                   rejects anonymous requests for private meetings — showing the form would
+                   imply a path that the server will refuse. -->
+              @if (!isPastMeeting() && !restrictedView()) {
                 <!-- OR Divider -->
                 <div class="relative h-px bg-gray-200">
                   <span class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-3 text-xs text-gray-600">OR</span>
