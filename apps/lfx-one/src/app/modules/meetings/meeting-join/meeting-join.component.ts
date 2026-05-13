@@ -268,7 +268,7 @@ export class MeetingJoinComponent implements OnInit {
     this.meetingTitle = this.initializeMeetingTitle();
     this.meetingDescription = this.initializeMeetingDescription();
     this.hasAiCompanion = this.initializeHasAiCompanion();
-    this.restrictedView = computed(() => this.meeting()?.visibility === 'private' && !this.authenticated());
+    this.restrictedView = this.initializeRestrictedView();
     this.isPastMeeting = this.initializeIsPastMeeting();
     this.pastMeetingSummary = this.initializePastMeetingSummary();
     this.pastMeetingRecording = this.initializePastMeetingRecording();
@@ -901,6 +901,10 @@ export class MeetingJoinComponent implements OnInit {
 
   private initializeHasAiCompanion(): Signal<boolean> {
     return computed(() => this.meeting()?.zoom_config?.ai_companion_enabled || false);
+  }
+
+  private initializeRestrictedView(): Signal<boolean> {
+    return computed(() => this.meeting()?.visibility === 'private' && !this.authenticated());
   }
 
   private initializeIsInvited(): Signal<boolean> {
