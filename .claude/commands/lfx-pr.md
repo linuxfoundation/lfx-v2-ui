@@ -45,7 +45,7 @@ git add -A
 git commit --signoff -S -m "<subject>"
 ```
 
-> **Note:** Both `--signoff` (DCO) and `-S` (GPG signing) are required by repo policy — see `.claude/rules/commit-workflow.md` § Commit Signing for the authoritative rule and GPG setup. If either fails, stop — do not push unsigned commits.
+> **Note:** Both `--signoff` (DCO) and `-S` (GPG signing) are required by repo policy — see `.claude/rules/commit-workflow.md` § Commit Signing for the authoritative rule and GPG setup. See also PR #674 (`https://github.com/linuxfoundation/lfx-self-serve/pull/674`) for the companion docs update context. If either fails, stop — do not push unsigned commits.
 
 ## Step 3: Quality gates (fail-fast)
 
