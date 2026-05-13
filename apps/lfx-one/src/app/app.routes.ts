@@ -39,7 +39,7 @@ export const routes: Routes = [
       {
         path: 'foundation/marketing-impact',
         data: { lens: 'foundation' },
-        canActivate: [executiveDirectorGuard],
+        canActivate: [projectQueryParamGuard, executiveDirectorGuard],
         loadComponent: () => import('./modules/dashboards/marketing-impact/marketing-impact.component').then((m) => m.MarketingImpactComponent),
       },
       // Foundation Lens — Projects page
