@@ -4,9 +4,9 @@
 import { Location } from '@angular/common';
 import { computed, inject, Injectable, Signal, signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { Router } from '@angular/router';
 import { isBoardScopedPersona, ProjectContext } from '@lfx-one/shared/interfaces';
 import { isSameProjectContext } from '@lfx-one/shared/utils';
-import { Router } from '@angular/router';
 import { SsrCookieService } from 'ngx-cookie-service-ssr';
 import { catchError, map, of, switchMap } from 'rxjs';
 

@@ -3,6 +3,7 @@
 
 import { inject } from '@angular/core';
 import { CanActivateFn } from '@angular/router';
+import { ProjectContext } from '@lfx-one/shared/interfaces';
 import { catchError, map, of } from 'rxjs';
 
 import { ProjectContextService } from '../services/project-context.service';
@@ -24,14 +25,14 @@ export const projectQueryParamGuard: CanActivateFn = (route) => {
   return projectService.getProject(slug, false).pipe(
     map((project) => {
       if (!project) return true;
-      const context = {
+      const context: ProjectContext = {
         uid: project.uid,
         name: project.name,
         slug: project.slug,
         parent_uid: project.parent_uid,
         logoUrl: project.logo_url,
       };
-      if (route.data?.['lens'] === 'foundation') {
+      if (route.data['lens'] === 'foundation') {
         projectContextService.setFoundation(context);
       } else {
         projectContextService.setProject(context);
