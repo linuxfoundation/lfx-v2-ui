@@ -32,14 +32,14 @@ export const routes: Routes = [
       {
         path: 'foundation/health-metrics',
         data: { lens: 'foundation' },
-        canActivate: [projectQueryParamGuard, executiveDirectorGuard],
+        canActivate: [executiveDirectorGuard, projectQueryParamGuard],
         loadComponent: () => import('./modules/dashboards/health-metrics/health-metrics.component').then((m) => m.HealthMetricsComponent),
       },
       // Foundation Lens — Marketing Impact page (ED-only)
       {
         path: 'foundation/marketing-impact',
         data: { lens: 'foundation' },
-        canActivate: [projectQueryParamGuard, executiveDirectorGuard],
+        canActivate: [executiveDirectorGuard, projectQueryParamGuard],
         loadComponent: () => import('./modules/dashboards/marketing-impact/marketing-impact.component').then((m) => m.MarketingImpactComponent),
       },
       // Foundation Lens — Projects page
