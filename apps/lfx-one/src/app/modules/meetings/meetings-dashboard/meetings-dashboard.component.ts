@@ -67,7 +67,13 @@ export class MeetingsDashboardComponent {
 
   public viewMode = signal<ViewMode>('list');
   public isListView = computed(() => this.viewMode() === 'list');
-  public isCalendarView = computed(() => this.viewMode() === 'calendar');
+  // Calendar view is only supported on foundation/project lenses (matches the Subscribe button gate).
+  // The Me lens skips the project/foundation raw fetch, so its meetings/pastMeetings loading flags
+  // never settle — switching to calendar there would show the spinner indefinitely. Gating on lens
+  // here keeps `viewMode` user-state intact across lens switches (no forced reset) while making the
+  // calendar surface a no-op outside its supported context.
+  public canShowCalendarView = computed(() => this.activeLens() === 'foundation' || this.activeLens() === 'project');
+  public isCalendarView = computed(() => this.viewMode() === 'calendar' && this.canShowCalendarView());
   public calendarEvents: Signal<EventInput[]>;
   public calendarLoading: Signal<boolean>;
 

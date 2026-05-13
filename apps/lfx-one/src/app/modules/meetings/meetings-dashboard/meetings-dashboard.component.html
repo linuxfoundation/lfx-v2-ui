@@ -197,17 +197,19 @@
         [ariaLabel]="'List view' + (isListView() ? ' (active)' : '')"
         (onClick)="viewMode.set('list')"
         data-testid="meetings-list-btn"></lfx-button>
-      <lfx-button
-        label="Calendar"
-        icon="fa-light fa-calendar-days"
-        size="small"
-        [severity]="isCalendarView() ? 'info' : 'secondary'"
-        [outlined]="!isCalendarView()"
-        [ariaLabel]="'Calendar view' + (isCalendarView() ? ' (active)' : '')"
-        (onClick)="viewMode.set('calendar')"
-        data-testid="meetings-calendar-btn"></lfx-button>
+      @if (canShowCalendarView()) {
+        <lfx-button
+          label="Calendar"
+          icon="fa-light fa-calendar-days"
+          size="small"
+          [severity]="isCalendarView() ? 'info' : 'secondary'"
+          [outlined]="!isCalendarView()"
+          [ariaLabel]="'Calendar view' + (isCalendarView() ? ' (active)' : '')"
+          (onClick)="viewMode.set('calendar')"
+          data-testid="meetings-calendar-btn"></lfx-button>
+      }
     </div>
-    @if (activeLens() === 'foundation' || activeLens() === 'project') {
+    @if (canShowCalendarView()) {
       <lfx-button
         label="Subscribe"
         icon="fa-light fa-calendar-arrow-down"
