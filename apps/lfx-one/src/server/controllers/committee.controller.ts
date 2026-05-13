@@ -1047,7 +1047,7 @@ export class CommitteeController {
       // Filter PRIVATE/restricted meetings from the public feed (mirrors PublicMeetingController visibility guard).
       const allMeetings = [...upcoming, ...past].filter((m) => m.visibility === MeetingVisibility.PUBLIC && !m.restricted);
       const events = meetingsToVEvents(allMeetings);
-      const ics = buildVCalendar(events);
+      const ics = buildVCalendar(events, '-//LFX//Committee Calendar//EN');
 
       logger.success(req, 'get_committee_calendar', startTime, {
         committee_id: id,

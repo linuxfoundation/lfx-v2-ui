@@ -877,7 +877,7 @@ export class ProjectController {
       // Filter PRIVATE/restricted meetings from the public feed (mirrors PublicMeetingController visibility guard).
       const allMeetings = [...upcoming, ...past].filter((m) => m.visibility === MeetingVisibility.PUBLIC && !m.restricted);
       const events = meetingsToVEvents(allMeetings);
-      const ics = buildVCalendar(events);
+      const ics = buildVCalendar(events, '-//LFX//Project Calendar//EN');
 
       logger.success(req, 'get_project_calendar', startTime, {
         project_id: id,

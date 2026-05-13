@@ -272,8 +272,8 @@ export class CommitteeMeetingsComponent {
           borderColor: c.border,
           textColor: '#ffffff',
           display: 'block',
-          // cursor-default for cancelled occurrences; onCalendarEventClick also guards via extendedProps.cancelled.
-          classNames: isCancelled ? ['cursor-default'] : [],
+          // meeting-event scopes the shared dimming/future-event styles; cursor-default disables the click affordance on cancelled occurrences.
+          classNames: isCancelled ? ['meeting-event', 'cursor-default'] : ['meeting-event'],
           extendedProps: { type: 'meeting', meetingId: meeting.id, cancelled: isCancelled },
         };
       });
@@ -290,6 +290,7 @@ export class CommitteeMeetingsComponent {
         borderColor: colors.border,
         textColor: '#ffffff',
         display: 'block',
+        classNames: ['meeting-event'],
         extendedProps: { type: 'meeting', meetingId: meeting.id },
       },
     ];

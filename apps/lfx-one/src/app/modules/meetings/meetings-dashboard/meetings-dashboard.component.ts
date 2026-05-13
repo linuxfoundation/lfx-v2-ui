@@ -69,6 +69,7 @@ export class MeetingsDashboardComponent {
   public isListView = computed(() => this.viewMode() === 'list');
   public isCalendarView = computed(() => this.viewMode() === 'calendar');
   public calendarEvents: Signal<EventInput[]>;
+  public calendarLoading: Signal<boolean>;
 
   public meetingsLoading: WritableSignal<boolean>;
   public pastMeetingsLoading: WritableSignal<boolean>;
@@ -206,6 +207,10 @@ export class MeetingsDashboardComponent {
 
     // Sourced from non-paginated raw signals so the calendar doesn't silently miss meetings the user hasn't scrolled to yet.
     this.calendarEvents = this.initCalendarEvents();
+    // Mirrors whichever raw source backs calendarEvents (FP signals on FP lens, user signals on Me) so the spinner reflects the calendar's real loading state.
+    this.calendarLoading = computed(() =>
+      this.activeLens() === 'me' ? this.meetingsLoading() || this.pastMeetingsLoading() : this.fpUpcomingLoading() || this.fpPastLoading()
+    );
   }
 
   public refreshMeetings(): void {
@@ -766,9 +771,20 @@ export class MeetingsDashboardComponent {
   private initCalendarEvents(): Signal<EventInput[]> {
     return computed(() => {
       const lens = this.activeLens();
-      const meetings: (Meeting | PastMeeting)[] =
-        lens === 'me' ? [...this.rawUserMeetings(), ...this.rawUserPastMeetings()] : [...this.rawFpUpcomingMeetings(), ...this.rawFpPastMeetings()];
-      const filtered = this.filterBySearchAndType(meetings, this.debouncedSearchQuery(), this.meetingTypeFilter());
+      const search = this.debouncedSearchQuery();
+      const meetingType = this.meetingTypeFilter();
+      // Me lens: apply the same filters as the list view (foundation/project/pendingRsvp); FP lens raw signals are already scoped, only search+type apply.
+      const filtered =
+        lens === 'me'
+          ? this.filterMeLensMeetings(
+              [...this.rawUserMeetings(), ...this.rawUserPastMeetings()],
+              search,
+              meetingType,
+              this.foundationFilter(),
+              this.projectFilter(),
+              this.pendingRsvpOnly()
+            )
+          : this.filterBySearchAndType([...this.rawFpUpcomingMeetings(), ...this.rawFpPastMeetings()], search, meetingType);
       return filtered.flatMap((m) => this.meetingToEvents(m));
     });
   }
@@ -790,8 +806,8 @@ export class MeetingsDashboardComponent {
           borderColor: c.border,
           textColor: '#ffffff',
           display: 'block',
-          // cursor-default for cancelled occurrences; onCalendarEventClick also guards via extendedProps.cancelled.
-          classNames: isCancelled ? ['cursor-default'] : [],
+          // meeting-event scopes the shared dimming/future-event styles; cursor-default disables the click affordance on cancelled occurrences.
+          classNames: isCancelled ? ['meeting-event', 'cursor-default'] : ['meeting-event'],
           extendedProps: { type: 'meeting', meetingId: meeting.id, cancelled: isCancelled },
         };
       });
@@ -807,6 +823,7 @@ export class MeetingsDashboardComponent {
         borderColor: colors.border,
         textColor: '#ffffff',
         display: 'block',
+        classNames: ['meeting-event'],
         extendedProps: { type: 'meeting', meetingId: meeting.id },
       },
     ];
