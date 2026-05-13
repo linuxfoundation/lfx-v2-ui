@@ -27,9 +27,7 @@ const FOLDER_UID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-
  */
 export class ProjectController {
   private projectService: ProjectService = new ProjectService();
-  // Injected here (rather than on ProjectService) to keep the calendar endpoint's
-  // meeting access independent of ProjectService — mirrors the CommitteeController
-  // pattern that avoids a circular dependency with MeetingService.
+  // Injected here (not on ProjectService) to avoid circular dependency — mirrors CommitteeController.
   private meetingService: MeetingService = new MeetingService();
 
   /**
@@ -851,16 +849,7 @@ export class ProjectController {
     }
   }
 
-  // ── Calendar ICS Endpoint ────────────────────────────────────────────────
-
-  /**
-   * GET /public/api/projects/:id/calendar.ics
-   * Returns an iCalendar (.ics) file containing the project's PUBLIC, non-restricted
-   * meetings. Also serves foundation-lens subscriptions since foundations and
-   * projects share the same data model (a foundation IS a project with no parent).
-   * MeetingService is injected at the controller to avoid the same circular
-   * dependency CommitteeController works around.
-   */
+  /** GET /public/api/projects/:id/calendar.ics — PUBLIC non-restricted meetings; serves both foundation and project lenses. */
   public async getProjectCalendar(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { id } = req.params;
     const startTime = logger.startOperation(req, 'get_project_calendar', { project_id: id });
@@ -872,25 +861,20 @@ export class ProjectController {
     }
 
     try {
-      // When called from the public route there is no OIDC session, so use an
-      // M2M token. When called from the authenticated route the user's bearer
-      // token is already on req and no replacement is needed.
+      // Public route has no session — obtain M2M token so meeting service calls succeed.
       if (!req.bearerToken) {
         req.bearerToken = await generateM2MToken(req);
       }
 
       const query = { tags: `project_uid:${id}` };
 
-      // Paginate both upcoming and past meetings — first page only would silently
-      // drop meetings once a project exceeds the default page size.
+      // Fetch all pages — first-page-only would silently drop meetings beyond the default page size.
       const [upcoming, past] = await Promise.all([
         fetchAllMeetingPages((token) => this.meetingService.getMeetings(req, token ? { ...query, page_token: token } : query, 'v1_meeting', false)),
         fetchAllMeetingPages((token) => this.meetingService.getMeetings(req, token ? { ...query, page_token: token } : query, 'v1_past_meeting', false)),
       ]);
 
-      // Public endpoint — filter out PRIVATE / restricted meetings so the feed
-      // never exposes private metadata to anyone holding the project UID.
-      // Mirrors PublicMeetingController.getMeeting's visibility guard.
+      // Filter PRIVATE/restricted meetings from the public feed (mirrors PublicMeetingController visibility guard).
       const allMeetings = [...upcoming, ...past].filter((m) => m.visibility === MeetingVisibility.PUBLIC && !m.restricted);
       const events = meetingsToVEvents(allMeetings);
       const ics = buildVCalendar(events);

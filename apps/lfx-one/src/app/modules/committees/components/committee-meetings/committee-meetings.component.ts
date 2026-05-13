@@ -272,8 +272,7 @@ export class CommitteeMeetingsComponent {
           borderColor: c.border,
           textColor: '#ffffff',
           display: 'block',
-          // cursor-default on cancelled occurrences removes the pointer affordance;
-          // onCalendarEventClick also short-circuits when extendedProps.cancelled is true.
+          // cursor-default for cancelled occurrences; onCalendarEventClick also guards via extendedProps.cancelled.
           classNames: isCancelled ? ['cursor-default'] : [],
           extendedProps: { type: 'meeting', meetingId: meeting.id, cancelled: isCancelled },
         };

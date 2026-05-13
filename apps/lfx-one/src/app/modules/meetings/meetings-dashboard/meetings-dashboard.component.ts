@@ -65,9 +65,6 @@ export class MeetingsDashboardComponent {
 
   public readonly activeLens: Signal<Lens> = this.lensService.activeLens;
 
-  // View mode: list (default) or calendar. Calendar renders meetings as
-  // FullCalendar events; the existing filter pipeline (lens/foundation/project/
-  // search/meetingType/timeFilter) applies to both views.
   public viewMode = signal<ViewMode>('list');
   public isListView = computed(() => this.viewMode() === 'list');
   public isCalendarView = computed(() => this.viewMode() === 'calendar');
@@ -207,21 +204,8 @@ export class MeetingsDashboardComponent {
     // Sentinel is placed at 50% of the list to trigger auto-load as user scrolls
     this.autoLoadTriggerIndex = computed(() => Math.floor(this.filteredMeetings().length / 2));
 
-    // Calendar events: source from the dashboard's NON-paginated raw signals
-    // (rawUserMeetings + rawUserPastMeetings for the Me lens;
-    // rawFpUpcomingMeetings + rawFpPastMeetings for foundation/project/org).
-    // This avoids the list-view pagination gap where the calendar would
-    // silently miss meetings the user hasn't scrolled to yet.
-    // Search and meeting-type filters are applied; foundation/project and
-    // pendingRsvp filters intentionally don't narrow the calendar in this
-    // iteration (FP raw signals are already scoped to the active context).
-    this.calendarEvents = computed(() => {
-      const lens = this.activeLens();
-      const meetings: (Meeting | PastMeeting)[] =
-        lens === 'me' ? [...this.rawUserMeetings(), ...this.rawUserPastMeetings()] : [...this.rawFpUpcomingMeetings(), ...this.rawFpPastMeetings()];
-      const filtered = this.filterBySearchAndType(meetings, this.debouncedSearchQuery(), this.meetingTypeFilter());
-      return filtered.flatMap((m) => this.meetingToEvents(m));
-    });
+    // Sourced from non-paginated raw signals so the calendar doesn't silently miss meetings the user hasn't scrolled to yet.
+    this.calendarEvents = this.initCalendarEvents();
   }
 
   public refreshMeetings(): void {
@@ -239,15 +223,7 @@ export class MeetingsDashboardComponent {
     }
   }
 
-  /**
-   * Opens the iCal Subscribe modal for foundation / project lenses.
-   *
-   * Foundations and projects share the same upstream data model (a foundation
-   * IS a project at the data layer), so both lenses use the same backend route.
-   * The "me" lens is descoped — a personal feed requires a token-based public
-   * URL (calendar clients can't carry session cookies); tracked in LFXV2-1772.
-   * The "org" lens is tracked in LFXV2-1770.
-   */
+  /** Opens iCal Subscribe modal — foundation/project lenses only; me/org lenses tracked separately. */
   public onSubscribe(): void {
     const lens = this.activeLens();
     const projectCtx = this.project();
@@ -787,11 +763,16 @@ export class MeetingsDashboardComponent {
     );
   }
 
-  /**
-   * Convert one Meeting (or PastMeeting) into FullCalendar EventInput entries.
-   * Recurring meetings expand to one event per occurrence; non-recurring
-   * meetings render as a single event. Mirrors CommitteeMeetingsComponent.meetingToEvents.
-   */
+  private initCalendarEvents(): Signal<EventInput[]> {
+    return computed(() => {
+      const lens = this.activeLens();
+      const meetings: (Meeting | PastMeeting)[] =
+        lens === 'me' ? [...this.rawUserMeetings(), ...this.rawUserPastMeetings()] : [...this.rawFpUpcomingMeetings(), ...this.rawFpPastMeetings()];
+      const filtered = this.filterBySearchAndType(meetings, this.debouncedSearchQuery(), this.meetingTypeFilter());
+      return filtered.flatMap((m) => this.meetingToEvents(m));
+    });
+  }
+
   private meetingToEvents(meeting: Meeting | PastMeeting): EventInput[] {
     const typeKey = (meeting.meeting_type ?? 'default').toLowerCase();
     const colors = MEETING_TYPE_COLORS[typeKey] ?? MEETING_TYPE_COLORS['default'];
@@ -809,8 +790,7 @@ export class MeetingsDashboardComponent {
           borderColor: c.border,
           textColor: '#ffffff',
           display: 'block',
-          // cursor-default on cancelled occurrences removes the pointer affordance;
-          // onCalendarEventClick also short-circuits when extendedProps.cancelled is true.
+          // cursor-default for cancelled occurrences; onCalendarEventClick also guards via extendedProps.cancelled.
           classNames: isCancelled ? ['cursor-default'] : [],
           extendedProps: { type: 'meeting', meetingId: meeting.id, cancelled: isCancelled },
         };

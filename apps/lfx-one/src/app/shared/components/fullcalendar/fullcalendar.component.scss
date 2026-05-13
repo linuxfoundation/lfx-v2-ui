@@ -21,11 +21,7 @@
       }
 
       .fc-timegrid {
-        // Past/future dimming for the legacy "meeting-event" classed entries only.
-        // Generic events keep their inline backgroundColor (set via EventInput.backgroundColor),
-        // so meeting-type colors stay visible in Week view. The original blanket override
-        // forced bg-gray-100/bg-blue-50 on ALL timegrid events with !important, which combined
-        // with inline textColor:'#fff' rendered events as invisible white-on-near-white.
+        // Scope dimming to .meeting-event only — generic events use inline backgroundColor; !important override would hide their text.
         .fc-timegrid-col-events {
           .fc-timegrid-event.meeting-event {
             &:not(.fc-event-future) {
@@ -91,11 +87,7 @@
           @apply -translate-y-0.5 shadow-md;
         }
 
-        // Inert events (cancelled occurrences, vote/survey markers) opt out of
-        // the pointer affordance and the hover lift. Higher specificity than
-        // the .fc-event selector above, so Tailwind's .cursor-default class
-        // alone wouldn't win — the explicit `cursor: default !important`
-        // guarantees the override regardless of source order.
+        // Explicit !important needed — .fc-event specificity beats Tailwind's .cursor-default alone.
         &.cursor-default {
           cursor: default !important;
 

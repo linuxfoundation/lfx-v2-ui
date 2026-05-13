@@ -1044,9 +1044,7 @@ export class CommitteeController {
         fetchAllMeetingPages((token) => this.meetingService.getMeetings(req, token ? { ...query, page_token: token } : query, 'v1_past_meeting', false)),
       ]);
 
-      // Public endpoint — filter out PRIVATE / restricted meetings so the feed
-      // never exposes private metadata to anyone holding the committee UID.
-      // Mirrors PublicMeetingController.getMeeting's visibility guard.
+      // Filter PRIVATE/restricted meetings from the public feed (mirrors PublicMeetingController visibility guard).
       const allMeetings = [...upcoming, ...past].filter((m) => m.visibility === MeetingVisibility.PUBLIC && !m.restricted);
       const events = meetingsToVEvents(allMeetings);
       const ics = buildVCalendar(events);
