@@ -50,7 +50,7 @@ export class ProjectContextService {
       return;
     }
     this.foundationSelection.set(foundation);
-    void this.router.navigate([], { queryParams: { project: foundation.slug }, queryParamsHandling: 'merge', replaceUrl: true });
+    this.syncProjectQueryParam(foundation.slug);
   }
 
   public setProject(project: ProjectContext): void {
@@ -58,17 +58,29 @@ export class ProjectContextService {
       return;
     }
     this.projectSelection.set(project);
-    void this.router.navigate([], { queryParams: { project: project.slug }, queryParamsHandling: 'merge', replaceUrl: true });
+    this.syncProjectQueryParam(project.slug);
   }
 
   public clearFoundation(): void {
     this.foundationSelection.set(null);
-    void this.router.navigate([], { queryParams: { project: null }, queryParamsHandling: 'merge', replaceUrl: true });
+    this.syncProjectQueryParam(null);
   }
 
   public clearProject(): void {
     this.projectSelection.set(null);
-    void this.router.navigate([], { queryParams: { project: null }, queryParamsHandling: 'merge', replaceUrl: true });
+    this.syncProjectQueryParam(null);
+  }
+
+  /**
+   * Updates the ?project= query param in the current URL without triggering a new navigation.
+   * Skipped when a navigation is already in flight — the URL already carries the correct param
+   * (deep-link case) or the caller's own navigation will set the destination URL (openRow case).
+   */
+  private syncProjectQueryParam(slug: string | null): void {
+    if (this.router.getCurrentNavigation()) {
+      return;
+    }
+    void this.router.navigate([], { queryParams: { project: slug }, queryParamsHandling: 'merge', replaceUrl: true });
   }
 
   private initActiveContext(): Signal<ProjectContext | null> {
