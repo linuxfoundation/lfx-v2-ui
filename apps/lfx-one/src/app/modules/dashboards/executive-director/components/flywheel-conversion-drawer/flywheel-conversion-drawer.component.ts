@@ -66,7 +66,7 @@ export class FlywheelConversionDrawerComponent {
   protected readonly reengagement: Signal<NonNullable<FlywheelConversionResponse['reengagement']>> = computed(() => getFlywheelReengagement(this.data()));
   protected readonly hasNoData: Signal<boolean> = computed(() => {
     const { conversionRate, funnel, monthlyData } = this.data();
-    return conversionRate === 0 && funnel.eventAttendees === 0 && this.reengagement().reengagementRate === 0 && monthlyData.length === 0;
+    return conversionRate === 0 && funnel.eventAttendees === 0 && monthlyData.length === 0;
   });
   protected readonly reengagementRate: Signal<string> = computed(() => `${this.reengagement().reengagementRate.toFixed(1)}%`);
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = computed(() => buildFlywheelRecommendedActions(this.data()));
