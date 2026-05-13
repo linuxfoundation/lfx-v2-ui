@@ -192,8 +192,8 @@ export class EngagedCommunityDrawerComponent {
   // === Private Initializers ===
   private initHasNoData(): Signal<boolean> {
     return computed(() => {
-      const { totalMembers, changePercentage, monthlyData } = this.data();
-      return (totalMembers === 0 && monthlyData.length === 0) || (changePercentage === 0 && monthlyData.length === 0);
+      const { totalMembers, monthlyData } = this.data();
+      return totalMembers === 0 && monthlyData.length === 0;
     });
   }
 
