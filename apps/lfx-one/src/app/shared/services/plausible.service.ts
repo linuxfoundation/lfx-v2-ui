@@ -6,8 +6,11 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
 import { environment } from '@environments/environment';
 import { PLAUSIBLE_DOMAIN, PLAUSIBLE_SRC } from '@lfx-one/shared/constants';
-import { PlausibleCall } from '@lfx-one/shared/interfaces';
+import { PlausibleCall, PlausiblePageviewContext } from '@lfx-one/shared/interfaces';
 import { filter } from 'rxjs';
+
+import { LensService } from './lens.service';
+import { ProjectContextService } from './project-context.service';
 
 /**
  * Plausible analytics service for privacy-friendly page and event tracking.
@@ -19,6 +22,14 @@ import { filter } from 'rxjs';
 export class PlausibleService {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly projectContextService = inject(ProjectContextService);
+  private readonly lensService = inject(LensService);
+
+  // Paths where context resolves asynchronously (public meeting page loads
+  // project data from the API after navigation). The auto-pageview is skipped
+  // for these and the owning component fires `trackPage()` once data settles,
+  // so we record one enriched event per visit instead of a context-free hit.
+  private static readonly deferredPageviewPattern = /^\/meetings\/\d+$/;
 
   private scriptLoaded = false;
   private analyticsReady = false;
@@ -117,7 +128,13 @@ export class PlausibleService {
       // only after the bundle has executed and replaced the queue stub.
       script.onload = () => {
         this.analyticsReady = true;
-        this.trackPage();
+        // Skip the initial pageview on deferred paths so a refresh on a
+        // public meeting URL doesn't leak a context-free hit before the
+        // component fires its enriched pageview.
+        if (PlausibleService.deferredPageviewPattern.test(window.location.pathname)) {
+          return;
+        }
+        this.trackPage(this.buildContextProps());
       };
 
       script.onerror = (error) => {
@@ -149,12 +166,49 @@ export class PlausibleService {
         if (typeof document === 'undefined') {
           return;
         }
+        const path = this.getSanitizedPath(event.urlAfterRedirects);
+        if (PlausibleService.deferredPageviewPattern.test(path)) {
+          return;
+        }
         this.trackPage({
-          path: this.getSanitizedPath(event.urlAfterRedirects),
+          path,
           url: this.getSanitizedUrl(),
           title: document.title,
+          ...this.buildContextProps(),
         });
       });
+  }
+
+  /**
+   * Build the foundation / project / lens custom-props for the current
+   * pageview from the active app state. Keys with empty values are omitted
+   * so Plausible doesn't store empty strings as a distinct dimension value.
+   * Returned as a Record so callers can spread into the broader pageview
+   * props payload that `trackPage` forwards to Plausible.
+   */
+  private buildContextProps(): Record<string, unknown> {
+    const context: PlausiblePageviewContext = {};
+    // Read foundation and project independently so the project lens emits
+    // both keys — letting the dashboard filter by either dimension.
+    const foundation = this.projectContextService.selectedFoundation();
+    if (foundation?.slug) {
+      context.foundation = foundation.slug;
+    }
+    if (foundation?.name) {
+      context.foundation_name = foundation.name;
+    }
+    const project = this.projectContextService.selectedProject();
+    if (project?.slug) {
+      context.project = project.slug;
+    }
+    if (project?.name) {
+      context.project_name = project.name;
+    }
+    const lens = this.lensService.activeLens();
+    if (lens) {
+      context.lens = lens;
+    }
+    return { ...context };
   }
 
   /**

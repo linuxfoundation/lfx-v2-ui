@@ -33,6 +33,7 @@ import {
   PastMeetingParticipant,
   PastMeetingRecording,
   PastMeetingSummary,
+  PlausiblePageviewContext,
   Project,
   PublicPastMeetingResponse,
   ROOT_PROJECT_SLUG,
@@ -44,6 +45,7 @@ import { LinkifyPipe } from '@pipes/linkify.pipe';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { RecurrenceSummaryPipe } from '@pipes/recurrence-summary.pipe';
 import { MeetingService } from '@services/meeting.service';
+import { PlausibleService } from '@services/plausible.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ProjectService } from '@services/project.service';
 import { UserService } from '@services/user.service';
@@ -115,6 +117,7 @@ export class MeetingJoinComponent implements OnInit {
   private readonly userService = inject(UserService);
   private readonly clipboard = inject(Clipboard);
   private readonly projectContextService = inject(ProjectContextService);
+  private readonly plausibleService = inject(PlausibleService);
   private readonly dialogService = inject(DialogService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
@@ -297,6 +300,7 @@ export class MeetingJoinComponent implements OnInit {
     this.registrants = this.initializeRegistrants();
     this.parentProject = this.initializeParentProject();
     this.initializeAutoJoin();
+    this.initializePublicMeetingPageviewTracking();
   }
 
   public ngOnInit(): void {
@@ -1126,6 +1130,70 @@ export class MeetingJoinComponent implements OnInit {
       ),
       { initialValue: null }
     );
+  }
+
+  /**
+   * Fire one enriched Plausible pageview for this public meeting page once
+   * the project (and parent foundation, when relevant) have resolved. The
+   * PlausibleService skips the auto NavigationEnd pageview for /meetings/:id
+   * paths so we land exactly one event per visit carrying foundation/project
+   * custom props. Anonymous viewers of private meetings receive a redacted
+   * `project: null` payload and intentionally fall through without firing.
+   */
+  private initializePublicMeetingPageviewTracking(): void {
+    if (isPlatformServer(this.platformId)) {
+      return;
+    }
+    toObservable(this.project)
+      .pipe(
+        filter((p): p is Partial<Project> => !!p?.slug),
+        switchMap((project) => {
+          // No parent_uid → project is itself a top-level foundation; fire immediately.
+          if (!project.parent_uid) {
+            return of({ project, parent: null as Project | null });
+          }
+          // Wait for the parent foundation lookup; race a 2s fallback so a slow
+          // upstream (or a parent that resolves to ROOT and is mapped to null)
+          // never blocks the pageview indefinitely.
+          return merge(
+            toObservable(this.parentProject).pipe(
+              filter((parent): parent is Project => !!parent),
+              map((parent) => ({ project, parent: parent as Project | null }))
+            ),
+            timer(2000).pipe(map(() => ({ project, parent: null as Project | null })))
+          );
+        }),
+        take(1),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(({ project, parent }) => {
+        this.plausibleService.trackPage(this.buildMeetingPageviewProps(project, parent));
+      });
+  }
+
+  /**
+   * Build the Plausible pageview props payload for a public meeting page.
+   * When the meeting's project has a parent, that parent IS the foundation
+   * and the meeting's project is the sub-project. Otherwise the project is
+   * itself a foundation and only the foundation_* keys are populated.
+   */
+  private buildMeetingPageviewProps(project: Partial<Project>, parent: Project | null): Record<string, unknown> {
+    const context: PlausiblePageviewContext = {};
+    if (parent) {
+      if (parent.slug) context.foundation = parent.slug;
+      if (parent.name) context.foundation_name = parent.name;
+      if (project.slug) context.project = project.slug;
+      if (project.name) context.project_name = project.name;
+    } else {
+      if (project.slug) context.foundation = project.slug;
+      if (project.name) context.foundation_name = project.name;
+    }
+    return {
+      path: window.location.pathname,
+      url: `${window.location.origin}${window.location.pathname}`,
+      title: document.title,
+      ...context,
+    };
   }
 
   private initializeRegistrants(): Signal<MeetingRegistrant[]> {

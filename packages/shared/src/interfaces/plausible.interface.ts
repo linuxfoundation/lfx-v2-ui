@@ -14,6 +14,20 @@ export interface PlausibleConfig {
 }
 
 /**
+ * Custom-property context attached to Plausible pageviews so the dashboard
+ * can be sliced by foundation / project / lens. Stays well under Plausible's
+ * 30-keys-per-site limit. Keys are omitted when their value isn't known so
+ * Plausible doesn't store empty strings as a distinct dimension value.
+ */
+export interface PlausiblePageviewContext {
+  foundation?: string;
+  foundation_name?: string;
+  project?: string;
+  project_name?: string;
+  lens?: string;
+}
+
+/**
  * One queued Plausible call captured by the upstream snippet's queue stub
  * before the real script loads. Each entry is the full argument tuple the
  * caller invoked `window.plausible(...)` with.
