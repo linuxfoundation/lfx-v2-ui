@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { NgClass } from '@angular/common';
 import { Component, computed, inject, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
@@ -33,7 +34,7 @@ interface AttributionData {
 
 @Component({
   selector: 'lfx-marketing-impact',
-  imports: [ReactiveFormsModule, SelectComponent, ButtonComponent, FilterPillsComponent],
+  imports: [NgClass, ReactiveFormsModule, SelectComponent, ButtonComponent, FilterPillsComponent],
   templateUrl: './marketing-impact.component.html',
   styleUrl: './marketing-impact.component.scss',
 })
