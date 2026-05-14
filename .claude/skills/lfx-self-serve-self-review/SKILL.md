@@ -251,26 +251,33 @@ Assemble a single report printed to the terminal in this exact structure:
 **Verdict:** NOT READY | READY WITH CHANGES | READY
 
 ## 1. Local PR-shape sanity
+
 <table from Phase 3>
 
 ## 2. Protected files touched
+
 <list with hook reasons, or "None modified">
 
 ## 3. Upstream API validation
+
 <results from Phase 6, or "Skipped — no backend changes">
 
 ## 4. Findings
 
 ### 🔴 Critical (N)
+
 - `<file>:<line>` — <message>. Source: `<rule>`. Fix: <suggestion>.
 
 ### 🟡 Should fix (N)
+
 - ...
 
 ### 🔵 Nit (N)
+
 - ...
 
 ## 5. Verdict reasoning
+
 - <one line per CRITICAL plus a roll-up>
 ```
 
