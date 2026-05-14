@@ -67,9 +67,13 @@ export class ProjectSelectorComponent {
 
   protected readonly foundationItems: Signal<LensItem[]> = computed(() => (this.hybridMode() ? this.navigationService.items('foundation')() : []));
 
-  protected readonly rawProjectItems: Signal<LensItem[]> = computed(() =>
-    this.hybridMode() ? this.navigationService.items('project')() : this.navigationService.items(this.lens())()
-  );
+  // The project-lens API can include foundations the user has access to. Those belong in the
+  // foundation lens (or the Foundations tab in hybrid mode), never in the projects list.
+  protected readonly rawProjectItems: Signal<LensItem[]> = computed(() => {
+    const lens: NavLens = this.hybridMode() ? 'project' : this.lens();
+    const items = this.navigationService.items(lens)();
+    return lens === 'project' ? items.filter((item) => !item.isFoundation) : items;
+  });
 
   // Kept for template backward-compat (auto-load sentinel uses items() in non-hybrid path)
   protected readonly items: Signal<LensItem[]> = computed(() => this.rawProjectItems());
