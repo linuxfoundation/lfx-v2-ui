@@ -1173,18 +1173,24 @@ export class MeetingJoinComponent implements OnInit {
 
   /**
    * Build the Plausible pageview props payload for a public meeting page.
-   * When the meeting's project has a parent, that parent IS the foundation
-   * and the meeting's project is the sub-project. Otherwise the project is
-   * itself a foundation and only the foundation_* keys are populated.
+   *
+   * Branches on `project.parent_uid` rather than on whether `parent` resolved,
+   * so a slow parent fetch (or an ROOT_PROJECT_SLUG mapping that resolves to
+   * null) does not roll a sub-project up into the `foundation_*` keys. When
+   * the parent is expected but unresolved we leave foundation empty — honest
+   * gap vs. misattribution of the dashboard dimensions this is enriching.
    */
   private buildMeetingPageviewProps(project: Partial<Project>, parent: Project | null): Record<string, unknown> {
     const context: PlausiblePageviewContext = {};
-    if (parent) {
-      if (parent.slug) context.foundation = parent.slug;
-      if (parent.name) context.foundation_name = parent.name;
+    if (project.parent_uid) {
+      // Sub-project under a foundation. Attribute the project correctly even
+      // if the parent fetch hasn't (or won't) resolve.
       if (project.slug) context.project = project.slug;
       if (project.name) context.project_name = project.name;
+      if (parent?.slug) context.foundation = parent.slug;
+      if (parent?.name) context.foundation_name = parent.name;
     } else {
+      // Top-level project IS the foundation — only foundation_* keys populated.
       if (project.slug) context.foundation = project.slug;
       if (project.name) context.foundation_name = project.name;
     }

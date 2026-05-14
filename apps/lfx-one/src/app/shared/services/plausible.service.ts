@@ -29,7 +29,10 @@ export class PlausibleService {
   // project data from the API after navigation). The auto-pageview is skipped
   // for these and the owning component fires `trackPage()` once data settles,
   // so we record one enriched event per visit instead of a context-free hit.
-  private static readonly deferredPageviewPattern = /^\/meetings\/\d+$/;
+  // Matches both upcoming-meeting URLs (`/meetings/<id>`) and past-meeting
+  // occurrence URLs (`/meetings/<id>-<13-digit-timestamp>`); both forms route
+  // to MeetingJoinComponent — see isPastMeetingOccurrenceId in that file.
+  private static readonly deferredPageviewPattern = /^\/meetings\/\d+(-\d{13})?$/;
 
   private scriptLoaded = false;
   private analyticsReady = false;
