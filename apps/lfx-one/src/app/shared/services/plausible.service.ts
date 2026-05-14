@@ -25,13 +25,7 @@ export class PlausibleService {
   private readonly projectContextService = inject(ProjectContextService);
   private readonly lensService = inject(LensService);
 
-  // Paths where context resolves asynchronously (public meeting page loads
-  // project data from the API after navigation). The auto-pageview is skipped
-  // for these and the owning component fires `trackPage()` once data settles,
-  // so we record one enriched event per visit instead of a context-free hit.
-  // Matches both upcoming-meeting URLs (`/meetings/<id>`) and past-meeting
-  // occurrence URLs (`/meetings/<id>-<13-digit-timestamp>`); both forms route
-  // to MeetingJoinComponent — see isPastMeetingOccurrenceId in that file.
+  // Routes whose owning component fires `trackPage()` itself once async context resolves.
   private static readonly deferredPageviewPattern = /^\/meetings\/\d+(-\d{13})?$/;
 
   private scriptLoaded = false;
@@ -61,20 +55,41 @@ export class PlausibleService {
     });
   }
 
-  /**
-   * Track a page view
-   * @param properties Optional page properties
-   */
-  public trackPage(properties?: Record<string, unknown>): void {
+  // Auto-prepends sanitized path/url/title — callers only supply context.
+  public trackPage(context?: PlausiblePageviewContext): void {
     if (typeof window === 'undefined' || this.impersonating || !this.analyticsReady || !window.plausible) {
       return;
     }
 
     try {
-      window.plausible('pageview', { u: this.getSanitizedUrl(), props: properties });
+      const url = this.getSanitizedUrl();
+      const props: Record<string, unknown> = {
+        path: this.getSanitizedPath(window.location.pathname),
+        url,
+        title: typeof document !== 'undefined' ? document.title : undefined,
+        ...(context as Record<string, unknown> | undefined),
+      };
+      window.plausible('pageview', { u: url, props });
     } catch (error) {
       console.error('Error tracking page with Plausible:', error);
     }
+  }
+
+  // Single owner of the pageview custom-prop schema — keep new dimensions here, not at callsites.
+  public static buildPageviewContext(input: {
+    foundationSlug?: string | null;
+    foundationName?: string | null;
+    projectSlug?: string | null;
+    projectName?: string | null;
+    lens?: string | null;
+  }): PlausiblePageviewContext {
+    const context: PlausiblePageviewContext = {};
+    if (input.foundationSlug) context.foundation = input.foundationSlug;
+    if (input.foundationName) context.foundation_name = input.foundationName;
+    if (input.projectSlug) context.project = input.projectSlug;
+    if (input.projectName) context.project_name = input.projectName;
+    if (input.lens) context.lens = input.lens;
+    return context;
   }
 
   /**
@@ -131,9 +146,6 @@ export class PlausibleService {
       // only after the bundle has executed and replaced the queue stub.
       script.onload = () => {
         this.analyticsReady = true;
-        // Skip the initial pageview on deferred paths so a refresh on a
-        // public meeting URL doesn't leak a context-free hit before the
-        // component fires its enriched pageview.
         if (PlausibleService.deferredPageviewPattern.test(window.location.pathname)) {
           return;
         }
@@ -173,45 +185,21 @@ export class PlausibleService {
         if (PlausibleService.deferredPageviewPattern.test(path)) {
           return;
         }
-        this.trackPage({
-          path,
-          url: this.getSanitizedUrl(),
-          title: document.title,
-          ...this.buildContextProps(),
-        });
+        this.trackPage(this.buildContextProps());
       });
   }
 
-  /**
-   * Build the foundation / project / lens custom-props for the current
-   * pageview from the active app state. Keys with empty values are omitted
-   * so Plausible doesn't store empty strings as a distinct dimension value.
-   * Returned as a Record so callers can spread into the broader pageview
-   * props payload that `trackPage` forwards to Plausible.
-   */
-  private buildContextProps(): Record<string, unknown> {
-    const context: PlausiblePageviewContext = {};
-    // Read foundation and project independently so the project lens emits
-    // both keys — letting the dashboard filter by either dimension.
+  // Foundation/project read independently (not via activeContext) so the project lens emits both.
+  private buildContextProps(): PlausiblePageviewContext {
     const foundation = this.projectContextService.selectedFoundation();
-    if (foundation?.slug) {
-      context.foundation = foundation.slug;
-    }
-    if (foundation?.name) {
-      context.foundation_name = foundation.name;
-    }
     const project = this.projectContextService.selectedProject();
-    if (project?.slug) {
-      context.project = project.slug;
-    }
-    if (project?.name) {
-      context.project_name = project.name;
-    }
-    const lens = this.lensService.activeLens();
-    if (lens) {
-      context.lens = lens;
-    }
-    return { ...context };
+    return PlausibleService.buildPageviewContext({
+      foundationSlug: foundation?.slug,
+      foundationName: foundation?.name,
+      projectSlug: project?.slug,
+      projectName: project?.name,
+      lens: this.lensService.activeLens(),
+    });
   }
 
   /**

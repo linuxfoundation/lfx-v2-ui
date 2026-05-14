@@ -13,12 +13,7 @@ export interface PlausibleConfig {
   enabled: boolean;
 }
 
-/**
- * Custom-property context attached to Plausible pageviews so the dashboard
- * can be sliced by foundation / project / lens. Stays well under Plausible's
- * 30-keys-per-site limit. Keys are omitted when their value isn't known so
- * Plausible doesn't store empty strings as a distinct dimension value.
- */
+// Custom-prop schema attached to Plausible pageviews — keys omitted when unknown.
 export interface PlausiblePageviewContext {
   foundation?: string;
   foundation_name?: string;

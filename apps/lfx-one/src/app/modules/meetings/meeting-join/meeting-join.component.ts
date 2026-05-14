@@ -33,7 +33,6 @@ import {
   PastMeetingParticipant,
   PastMeetingRecording,
   PastMeetingSummary,
-  PlausiblePageviewContext,
   Project,
   PublicPastMeetingResponse,
   ROOT_PROJECT_SLUG,
@@ -1132,74 +1131,44 @@ export class MeetingJoinComponent implements OnInit {
     );
   }
 
-  /**
-   * Fire one enriched Plausible pageview for this public meeting page once
-   * the project (and parent foundation, when relevant) have resolved. The
-   * PlausibleService skips the auto NavigationEnd pageview for /meetings/:id
-   * paths so we land exactly one event per visit carrying foundation/project
-   * custom props. Anonymous viewers of private meetings receive a redacted
-   * `project: null` payload and intentionally fall through without firing.
-   */
+  // PlausibleService defers the auto-pageview for /meetings/:id — fire it here once context lands.
   private initializePublicMeetingPageviewTracking(): void {
     if (isPlatformServer(this.platformId)) {
       return;
     }
+    // Caps the parent foundation fetch so ROOT_PROJECT_SLUG → null (mapped in initializeParentProject)
+    // doesn't block the pageview forever. Sub-projects whose parent doesn't land in time record
+    // project_* correctly and leave foundation_* empty (see buildPageviewContext callsite below).
+    const PARENT_FETCH_TIMEOUT_MS = 2000;
     toObservable(this.project)
       .pipe(
         filter((p): p is Partial<Project> => !!p?.slug),
         switchMap((project) => {
-          // No parent_uid → project is itself a top-level foundation; fire immediately.
           if (!project.parent_uid) {
             return of({ project, parent: null as Project | null });
           }
-          // Wait for the parent foundation lookup; race a 2s fallback so a slow
-          // upstream (or a parent that resolves to ROOT and is mapped to null)
-          // never blocks the pageview indefinitely.
           return merge(
             toObservable(this.parentProject).pipe(
               filter((parent): parent is Project => !!parent),
               map((parent) => ({ project, parent: parent as Project | null }))
             ),
-            timer(2000).pipe(map(() => ({ project, parent: null as Project | null })))
+            timer(PARENT_FETCH_TIMEOUT_MS).pipe(map(() => ({ project, parent: null as Project | null })))
           );
         }),
         take(1),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(({ project, parent }) => {
-        this.plausibleService.trackPage(this.buildMeetingPageviewProps(project, parent));
+        const isTopLevel = !project.parent_uid;
+        this.plausibleService.trackPage(
+          PlausibleService.buildPageviewContext({
+            foundationSlug: isTopLevel ? project.slug : parent?.slug,
+            foundationName: isTopLevel ? project.name : parent?.name,
+            projectSlug: isTopLevel ? undefined : project.slug,
+            projectName: isTopLevel ? undefined : project.name,
+          })
+        );
       });
-  }
-
-  /**
-   * Build the Plausible pageview props payload for a public meeting page.
-   *
-   * Branches on `project.parent_uid` rather than on whether `parent` resolved,
-   * so a slow parent fetch (or an ROOT_PROJECT_SLUG mapping that resolves to
-   * null) does not roll a sub-project up into the `foundation_*` keys. When
-   * the parent is expected but unresolved we leave foundation empty — honest
-   * gap vs. misattribution of the dashboard dimensions this is enriching.
-   */
-  private buildMeetingPageviewProps(project: Partial<Project>, parent: Project | null): Record<string, unknown> {
-    const context: PlausiblePageviewContext = {};
-    if (project.parent_uid) {
-      // Sub-project under a foundation. Attribute the project correctly even
-      // if the parent fetch hasn't (or won't) resolve.
-      if (project.slug) context.project = project.slug;
-      if (project.name) context.project_name = project.name;
-      if (parent?.slug) context.foundation = parent.slug;
-      if (parent?.name) context.foundation_name = parent.name;
-    } else {
-      // Top-level project IS the foundation — only foundation_* keys populated.
-      if (project.slug) context.foundation = project.slug;
-      if (project.name) context.foundation_name = project.name;
-    }
-    return {
-      path: window.location.pathname,
-      url: `${window.location.origin}${window.location.pathname}`,
-      title: document.title,
-      ...context,
-    };
   }
 
   private initializeRegistrants(): Signal<MeetingRegistrant[]> {
