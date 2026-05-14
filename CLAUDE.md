@@ -255,11 +255,20 @@ Detailed patterns are in `.claude/rules/` and loaded contextually based on the `
 - ❌ Hard-code brand hex values (reference `lfxColors` scales)
 - ❌ Reference browser-only APIs without `isPlatformBrowser`
 - ❌ Mix module concerns in one change
+- ❌ Open a PR without first running `/lfx-self-serve-self-review` to a clean verdict — this is non-negotiable
 - ❌ Open a PR without DCO sign-off + GPG (`--signoff -S`)
 - ❌ Commit and claim "done" before `yarn build` passes
 - ❌ Re-introduce Figma references — design source is HTML/GitHub
 - ❌ Edit `CLAUDE.md` or other `lfx-preflight` protected files without code-owner review
 
-## Pre-PR validation
+## Work cycle — mandatory before opening a PR
 
-Before saying "I'm done", invoke the `/preflight` skill — it runs license-header, format, lint, build, protected-file, and commit-signoff checks against this repo's specific rules.
+> **CRITICAL: `/lfx-self-serve-self-review` is not optional.** Every PR opened from this repo must be preceded by a self-review run against the target base branch. The reviewers' time is the most expensive resource in this workflow — landing a PR without a self-review pass wastes it and is the single biggest contributor to slow review cycles. Do not skip this step, do not save it for later, do not assume your changes are "small enough" to bypass it.
+
+1. **Run `/lfx-self-serve-self-review` against the target base branch.** The skill runs in a forked context using the `code-standards-enforcer` subagent type, so the diff is evaluated independently of the implementation thread. If you just finished coding in this same session, this is the only way to get an unbiased audit of your own work.
+2. Address every CRITICAL finding. Address every reasonable SHOULD_FIX finding.
+3. Rerun the skill until it returns `READY` (or remaining findings are explicitly documented in the PR description with a stated trade-off).
+4. Run `/preflight` for license / format / lint / build / protected-file mechanical checks.
+5. Only then push and open the PR. (Reviewers run `/lfx-review-pr` against the open PR — they should not be your first standards check.)
+
+After `/compact`, re-invoke `/develop` or the relevant convention skill if continuing work that depends on it.

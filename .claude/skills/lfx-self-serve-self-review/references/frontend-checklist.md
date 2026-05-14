@@ -1,0 +1,1 @@
+../../lfx-review-pr/references/frontend-checklist.md
