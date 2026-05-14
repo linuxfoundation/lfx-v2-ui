@@ -245,7 +245,7 @@ export class MarketingImpactComponent {
   }
 
   private formatChangePct(pct: number, suffix: string): string {
-    const sign = pct >= 0 ? '+' : '';
+    const sign = pct > 0 ? '+' : '';
     return `${sign}${pct.toFixed(1)}% ${suffix}`;
   }
 }
