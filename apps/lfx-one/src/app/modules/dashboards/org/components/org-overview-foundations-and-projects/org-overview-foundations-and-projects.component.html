@@ -36,9 +36,7 @@
     </div>
   } @else if (error()) {
     <!-- Retry affordance -->
-    <div
-      class="flex flex-col items-start gap-3 p-4 bg-white border border-gray-200 rounded-lg"
-      data-testid="org-overview-foundations-and-projects-error">
+    <div class="flex flex-col items-start gap-3 p-4 bg-white border border-gray-200 rounded-lg" data-testid="org-overview-foundations-and-projects-error">
       <p class="text-sm text-gray-700">Couldn't load Foundations and Projects.</p>
       <button
         type="button"
@@ -77,9 +75,7 @@
                 (rowClick)="onRowClick($event)"
                 (caretToggle)="onCaretToggle($event)" />
               @if (isExpanded(row.foundationId)) {
-                <tr
-                  class="bg-gray-50"
-                  [attr.data-testid]="'org-overview-foundations-and-projects-row-' + (row.foundationSlug || row.foundationId) + '-detail'">
+                <tr class="bg-gray-50" [attr.data-testid]="'org-overview-foundations-and-projects-row-' + (row.foundationSlug || row.foundationId) + '-detail'">
                   <td colspan="4" class="px-12 py-4">
                     @if (row.projects.length === 0) {
                       <p class="italic text-gray-500 text-sm">No projects from this foundation are currently active for your org.</p>
