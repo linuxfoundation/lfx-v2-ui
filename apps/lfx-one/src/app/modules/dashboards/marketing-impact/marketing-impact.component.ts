@@ -96,9 +96,9 @@ export class MarketingImpactComponent {
   private initSummaryTitle(): Signal<string> {
     return computed(() => {
       const monthValue = this.selectedMonth();
-      const option = this.monthOptions.find((o) => o.value === monthValue);
-      if (!option) return 'Performance summary';
-      const monthName = option.label.split(' ')[0];
+      const [year, month] = monthValue.split('-').map(Number);
+      if (!year || !month) return 'Performance summary';
+      const monthName = new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
       return `${monthName} performance summary`;
     });
   }
@@ -106,12 +106,13 @@ export class MarketingImpactComponent {
   private initSummarySubtitle(): Signal<string> {
     return computed(() => {
       const monthValue = this.selectedMonth();
-      const date = new Date(`${monthValue}-01T00:00:00`);
-      const priorMonth = new Date(date.getFullYear(), date.getMonth() - 1, 1);
-      const priorYear = new Date(date.getFullYear() - 1, date.getMonth(), 1);
+      const [year, month] = monthValue.split('-').map(Number);
+      const date = new Date(Date.UTC(year, month - 1, 1));
+      const priorMonth = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - 1, 1));
+      const priorYear = new Date(Date.UTC(date.getUTCFullYear() - 1, date.getUTCMonth(), 1));
 
-      const momLabel = priorMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-      const yoyLabel = priorYear.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      const momLabel = priorMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+      const yoyLabel = priorYear.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 
       const name = this.foundationName();
       const foundation = name ? name : 'all LF projects';
@@ -131,7 +132,7 @@ export class MarketingImpactComponent {
           }
           this.loading.set(true);
           return forkJoin({
-            revenueImpact: this.analyticsService.getRevenueImpact(slug),
+            revenueImpact: this.analyticsService.getRevenueImpact(slug).pipe(catchError(() => of(null as RevenueImpactResponse | null))),
             brandReach: this.analyticsService.getBrandReach(slug).pipe(catchError(() => of(null as BrandReachResponse | null))),
             emailCtr: this.analyticsService.getEmailCtr(slug).pipe(catchError(() => of(null as EmailCtrResponse | null))),
           }).pipe(tap(() => this.loading.set(false)));
