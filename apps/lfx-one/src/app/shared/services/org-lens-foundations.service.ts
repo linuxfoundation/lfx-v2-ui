@@ -18,8 +18,6 @@ export class OrgLensFoundationsService {
   private readonly http = inject(HttpClient);
 
   public getFoundationsAndProjects(accountId: string): Observable<OrgLensFoundationsAndProjectsResponse> {
-    return this.http.get<OrgLensFoundationsAndProjectsResponse>(
-      `/api/orgs/${encodeURIComponent(accountId)}/lens/foundations-and-projects`
-    );
+    return this.http.get<OrgLensFoundationsAndProjectsResponse>(`/api/orgs/${encodeURIComponent(accountId)}/lens/foundations-and-projects`);
   }
 }

@@ -46,14 +46,7 @@
             class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
             [class]="ribbonClasses()"
             [attr.data-testid]="'org-overview-foundations-and-projects-row-' + testIdSlug() + '-tier-ribbon'">
-            <svg
-              class="h-3 w-3"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2"
-              aria-hidden="true">
+            <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 21l-3-6h6l-3 6zM7 3h10v9H7z" />
             </svg>
             {{ subtitleText() }}
@@ -77,7 +70,9 @@
       <span
         class="text-sm"
         [class]="votingStatusBadgeClasses(row().badges.votingStatus)"
-        [attr.data-testid]="'org-overview-foundations-and-projects-row-' + testIdSlug() + '-badge-votingStatus'">—</span>
+        [attr.data-testid]="'org-overview-foundations-and-projects-row-' + testIdSlug() + '-badge-votingStatus'"
+        >—</span
+      >
     } @else {
       <span
         class="inline-flex items-center px-2 py-0.5 rounded-full border text-xs font-medium"
@@ -93,7 +88,9 @@
       <span
         class="text-sm"
         [class]="governanceBadgeClasses(row().badges.governanceParticipation)"
-        [attr.data-testid]="'org-overview-foundations-and-projects-row-' + testIdSlug() + '-badge-governanceParticipation'">—</span>
+        [attr.data-testid]="'org-overview-foundations-and-projects-row-' + testIdSlug() + '-badge-governanceParticipation'"
+        >—</span
+      >
     } @else {
       <span
         class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"

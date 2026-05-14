@@ -187,8 +187,7 @@ export class OrgLensFoundationsService {
         // regardless of what dbt sends — the sentinel is an internal
         // implementation detail and MUST NOT leak into testids, telemetry
         // payloads, or future routing keys.
-        const foundationSlug =
-          raw.ROW_KIND === 'outside_lf' ? 'outside-lf' : (raw.FOUNDATION_SLUG ?? raw.FOUNDATION_ID);
+        const foundationSlug = raw.ROW_KIND === 'outside_lf' ? 'outside-lf' : (raw.FOUNDATION_SLUG ?? raw.FOUNDATION_ID);
         row = {
           foundationId: raw.FOUNDATION_ID,
           foundationSlug,

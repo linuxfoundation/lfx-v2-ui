@@ -10,8 +10,6 @@ const router = Router();
 const orgLensFoundationsController = new OrgLensFoundationsController();
 
 // GET /api/orgs/:accountId/lens/foundations-and-projects
-router.get('/:accountId/lens/foundations-and-projects', (req, res, next) =>
-  orgLensFoundationsController.getFoundationsAndProjects(req, res, next)
-);
+router.get('/:accountId/lens/foundations-and-projects', (req, res, next) => orgLensFoundationsController.getFoundationsAndProjects(req, res, next));
 
 export default router;
