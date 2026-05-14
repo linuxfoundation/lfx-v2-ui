@@ -72,63 +72,96 @@
 
     <!-- Tab content -->
     <div class="flex flex-col gap-6" role="tabpanel" [attr.id]="'mi-panel-' + selectedTab()" [attr.aria-labelledby]="'mi-tab-' + selectedTab()">
-      @if (selectedTab() === 'overview') {
+      @if (selectedTab() === 'attribution') {
         <!-- Performance summary header -->
-        <div class="flex flex-col gap-1 md:flex-row md:items-center md:justify-between" data-testid="marketing-impact-summary-header">
-          <div class="flex flex-col gap-0.5">
-            <h3 class="text-base font-semibold text-gray-900">Performance summary</h3>
-            <p class="text-xs text-gray-500">Linear attribution · {{ foundationName() }}</p>
-          </div>
-          <lfx-button
-            label="View executive summary"
-            icon="fa-light fa-file-lines"
-            severity="secondary"
-            [outlined]="true"
-            [disabled]="true"
-            ariaLabel="View executive summary (coming soon)"
-            data-testid="marketing-impact-exec-summary-btn" />
-        </div>
-
-        <!-- KPI cards grid -->
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" data-testid="marketing-impact-kpi-grid">
-          @if (loading()) {
-            <div class="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-5" data-testid="marketing-impact-kpi-skeleton">
-              <div class="h-4 w-24 animate-pulse rounded bg-gray-200"></div>
-              <div class="h-8 w-32 animate-pulse rounded bg-gray-200"></div>
-              <div class="h-3 w-20 animate-pulse rounded bg-gray-200"></div>
+        <div class="flex flex-col gap-2 rounded-lg border border-gray-200 bg-white p-5" data-testid="marketing-impact-summary-header">
+          <div class="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+            <div class="flex flex-col gap-0.5">
+              <h3 class="text-base font-semibold text-gray-900">{{ summaryTitle() }}</h3>
+              <p class="text-xs text-gray-500">{{ summarySubtitle() }}</p>
             </div>
-          } @else {
-            @for (kpi of performanceSummaryKpis(); track kpi.id) {
-              <div class="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-5" [attr.data-testid]="'marketing-impact-kpi-' + kpi.id">
-                <!-- Label row -->
-                <div class="flex items-center gap-2">
-                  <div class="flex h-7 w-7 items-center justify-center rounded-full" [class]="kpi.iconClass">
-                    <i [class]="kpi.icon + ' text-sm'" aria-hidden="true"></i>
+            <div class="flex items-center gap-4">
+              <lfx-button
+                label="View executive summary"
+                icon="fa-light fa-arrow-up-right-from-square"
+                severity="secondary"
+                [outlined]="true"
+                [disabled]="true"
+                ariaLabel="View executive summary (coming soon)"
+                data-testid="marketing-impact-exec-summary-btn" />
+            </div>
+          </div>
+
+          <!-- KPI cards grid -->
+          <div class="grid grid-cols-1 gap-4 pt-3 sm:grid-cols-2 lg:grid-cols-4" data-testid="marketing-impact-kpi-grid">
+            @if (loading()) {
+              @for (i of [1, 2, 3, 4]; track i) {
+                <div class="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4" data-testid="marketing-impact-kpi-skeleton">
+                  <div class="h-4 w-24 animate-pulse rounded bg-gray-200"></div>
+                  <div class="h-8 w-32 animate-pulse rounded bg-gray-200"></div>
+                  <div class="h-3 w-40 animate-pulse rounded bg-gray-200"></div>
+                  <div class="h-3 w-36 animate-pulse rounded bg-gray-200"></div>
+                </div>
+              }
+            } @else {
+              @for (kpi of performanceSummaryKpis(); track kpi.id) {
+                <div class="flex flex-col gap-2 border-l border-gray-200 pl-4" [attr.data-testid]="'marketing-impact-kpi-' + kpi.id">
+                  <!-- Label row -->
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-1.5">
+                      <i [class]="kpi.icon + ' text-xs text-gray-400'" aria-hidden="true"></i>
+                      <span class="text-xs font-medium text-gray-500">{{ kpi.label }}</span>
+                    </div>
+                    @if (kpi.badge) {
+                      <span
+                        class="rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-600"
+                        [attr.data-testid]="'marketing-impact-badge-' + kpi.id">
+                        {{ kpi.badge }}
+                      </span>
+                    }
                   </div>
-                  <span class="text-sm font-medium text-gray-600">{{ kpi.label }}</span>
-                </div>
-                <!-- Value -->
-                <span class="text-2xl font-semibold text-gray-900">{{ kpi.value }}</span>
-                <!-- MoM change -->
-                <div class="flex items-center gap-1.5">
-                  @if (kpi.trend === 'up') {
-                    <i class="fa-solid fa-arrow-up text-xs text-green-600" aria-hidden="true"></i>
-                  } @else if (kpi.trend === 'down') {
-                    <i class="fa-solid fa-arrow-down text-xs text-red-600" aria-hidden="true"></i>
-                  } @else {
-                    <i class="fa-solid fa-minus text-xs text-gray-500" aria-hidden="true"></i>
+
+                  <!-- Value -->
+                  <span class="text-2xl font-semibold text-gray-900">{{ kpi.value }}</span>
+
+                  <!-- MoM + YoY change row -->
+                  <div class="flex items-center gap-3">
+                    <!-- MoM -->
+                    @if (kpi.momChange !== '\u2014') {
+                      <div class="flex items-center gap-1">
+                        @if (kpi.momTrend === 'up') {
+                          <i class="fa-solid fa-arrow-up text-[10px] text-green-600" aria-hidden="true"></i>
+                        } @else if (kpi.momTrend === 'down') {
+                          <i class="fa-solid fa-arrow-down text-[10px] text-red-600" aria-hidden="true"></i>
+                        }
+                        <span class="text-xs font-medium" [class]="kpi.momTrendClass">{{ kpi.momChange }}</span>
+                      </div>
+                    }
+
+                    <!-- YoY -->
+                    @if (kpi.yoyChange !== '\u2014') {
+                      <div class="flex items-center gap-1">
+                        @if (kpi.yoyTrend === 'up') {
+                          <i class="fa-solid fa-arrow-up text-[10px] text-green-600" aria-hidden="true"></i>
+                        } @else if (kpi.yoyTrend === 'down') {
+                          <i class="fa-solid fa-arrow-down text-[10px] text-red-600" aria-hidden="true"></i>
+                        }
+                        <span class="text-xs font-medium" [class]="kpi.yoyTrendClass">{{ kpi.yoyChange }}</span>
+                      </div>
+                    }
+                  </div>
+
+                  <!-- Comparison line -->
+                  @if (kpi.comparisonLine) {
+                    <span class="text-[11px] text-gray-400">{{ kpi.comparisonLine }}</span>
                   }
-                  <span class="text-xs font-medium" [class]="kpi.trendClass">
-                    {{ kpi.momChange }}
-                  </span>
-                  <span class="text-xs text-gray-400">{{ kpi.previousLabel }}</span>
                 </div>
-              </div>
+              }
             }
-          }
+          </div>
         </div>
       } @else {
-        <!-- Non-overview tab placeholder -->
+        <!-- Placeholder for tabs not yet implemented -->
         <div
           class="flex items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 p-16"
           data-testid="marketing-impact-tab-placeholder">

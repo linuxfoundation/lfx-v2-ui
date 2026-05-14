@@ -8,12 +8,14 @@ import { ButtonComponent } from '@components/button/button.component';
 import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { SelectComponent } from '@components/select/select.component';
 import { MARKETING_IMPACT_FOCUS_OPTIONS, MARKETING_IMPACT_TABS } from '@lfx-one/shared/constants';
-import { buildMarketingImpactMonthOptions, formatCurrency, getDefaultMarketingImpactMonth } from '@lfx-one/shared/utils';
+import { buildMarketingImpactMonthOptions, formatCurrency, formatNumber, getDefaultMarketingImpactMonth } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
-import { map, of, startWith, switchMap, tap } from 'rxjs';
+import { catchError, forkJoin, map, of, startWith, switchMap, tap } from 'rxjs';
 
 import type {
+  BrandReachResponse,
+  EmailCtrResponse,
   FilterPillOption,
   MarketingImpactFocusProgram,
   MarketingImpactMonthOption,
@@ -22,6 +24,12 @@ import type {
   PerformanceSummaryKpi,
   RevenueImpactResponse,
 } from '@lfx-one/shared/interfaces';
+
+interface AttributionData {
+  revenueImpact: RevenueImpactResponse | null;
+  brandReach: BrandReachResponse | null;
+  emailCtr: EmailCtrResponse | null;
+}
 
 @Component({
   selector: 'lfx-marketing-impact',
@@ -53,8 +61,10 @@ export class MarketingImpactComponent {
 
   protected readonly selectedMonth: Signal<string> = this.initSelectedMonth();
   protected readonly contextLabel: Signal<string> = this.initContextLabel();
-  protected readonly revenueImpactData: Signal<RevenueImpactResponse | null> = this.initRevenueImpactData();
+  protected readonly attributionData: Signal<AttributionData> = this.initAttributionData();
   protected readonly performanceSummaryKpis: Signal<PerformanceSummaryKpi[]> = this.initPerformanceSummaryKpis();
+  protected readonly summaryTitle: Signal<string> = this.initSummaryTitle();
+  protected readonly summarySubtitle: Signal<string> = this.initSummarySubtitle();
 
   protected onFocusChange(focusId: string): void {
     if (this.focusOptions.some((o) => o.id === focusId)) {
@@ -83,7 +93,33 @@ export class MarketingImpactComponent {
     });
   }
 
-  private initRevenueImpactData(): Signal<RevenueImpactResponse | null> {
+  private initSummaryTitle(): Signal<string> {
+    return computed(() => {
+      const monthValue = this.selectedMonth();
+      const option = this.monthOptions.find((o) => o.value === monthValue);
+      if (!option) return 'Performance summary';
+      const monthName = option.label.split(' ')[0];
+      return `${monthName} performance summary`;
+    });
+  }
+
+  private initSummarySubtitle(): Signal<string> {
+    return computed(() => {
+      const monthValue = this.selectedMonth();
+      const date = new Date(`${monthValue}-01T00:00:00`);
+      const priorMonth = new Date(date.getFullYear(), date.getMonth() - 1, 1);
+      const priorYear = new Date(date.getFullYear() - 1, date.getMonth(), 1);
+
+      const momLabel = priorMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      const yoyLabel = priorYear.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+      const name = this.foundationName();
+      const foundation = name ? name : 'all LF projects';
+      return `vs ${momLabel} (MoM) and ${yoyLabel} (YoY) \u00B7 Linear attribution \u00B7 ${foundation}`;
+    });
+  }
+
+  private initAttributionData(): Signal<AttributionData> {
     const foundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((f) => f?.slug));
 
     return toSignal(
@@ -91,45 +127,123 @@ export class MarketingImpactComponent {
         switchMap((slug) => {
           if (!slug) {
             this.loading.set(false);
-            return of(null);
+            return of({ revenueImpact: null, brandReach: null, emailCtr: null });
           }
           this.loading.set(true);
-          return this.analyticsService.getRevenueImpact(slug).pipe(tap(() => this.loading.set(false)));
+          return forkJoin({
+            revenueImpact: this.analyticsService.getRevenueImpact(slug),
+            brandReach: this.analyticsService.getBrandReach(slug).pipe(catchError(() => of(null as BrandReachResponse | null))),
+            emailCtr: this.analyticsService.getEmailCtr(slug).pipe(catchError(() => of(null as EmailCtrResponse | null))),
+          }).pipe(tap(() => this.loading.set(false)));
         })
       ),
-      { initialValue: null }
+      { initialValue: { revenueImpact: null, brandReach: null, emailCtr: null } }
     );
   }
 
   private initPerformanceSummaryKpis(): Signal<PerformanceSummaryKpi[]> {
     return computed(() => {
-      const data = this.revenueImpactData();
-      if (!data) return [];
+      const data = this.attributionData();
+      const cards: PerformanceSummaryKpi[] = [];
 
-      const change = data.changePercentage;
-      let trend: PerformanceSummaryKpi['trend'] = 'neutral';
-      let trendClass = 'text-gray-500';
-      if (change > 0) {
-        trend = 'up';
-        trendClass = 'text-green-600';
-      } else if (change < 0) {
-        trend = 'down';
-        trendClass = 'text-red-600';
-      }
-
-      return [
-        {
+      // Card 1: Attributed Revenue
+      if (data.revenueImpact) {
+        const ri = data.revenueImpact;
+        const yoyPct = ri.changePercentage;
+        cards.push({
           id: 'attributed-revenue',
           label: 'Attributed Revenue',
           icon: 'fa-light fa-dollar-sign',
           iconClass: 'bg-green-100 text-green-600',
-          value: formatCurrency(data.revenueAttributed),
-          momChange: `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`,
-          trend,
-          trendClass,
-          previousLabel: 'vs prior period',
-        },
-      ];
+          value: formatCurrency(ri.revenueAttributed),
+          momChange: '\u2014',
+          momTrend: 'neutral',
+          momTrendClass: 'text-gray-500',
+          yoyChange: this.formatChangePct(yoyPct, 'YoY'),
+          yoyTrend: this.trendDirection(yoyPct),
+          yoyTrendClass: this.trendColorClass(yoyPct),
+          comparisonLine: '',
+        });
+      }
+
+      // Card 2: Return on Ad Spend
+      if (data.revenueImpact) {
+        const roas = data.revenueImpact.paidMedia.roas;
+        cards.push({
+          id: 'roas',
+          label: 'Return on Ad Spend',
+          icon: 'fa-light fa-chart-line-up',
+          iconClass: 'bg-blue-100 text-blue-600',
+          value: `${roas.toFixed(2)}x`,
+          momChange: '\u2014',
+          momTrend: 'neutral',
+          momTrendClass: 'text-gray-500',
+          yoyChange: '\u2014',
+          yoyTrend: 'neutral',
+          yoyTrendClass: 'text-gray-500',
+          comparisonLine: '',
+        });
+      }
+
+      // Card 3: Total Web Sessions
+      if (data.brandReach) {
+        const br = data.brandReach;
+        const momPct = br.sessionMomChangePct;
+        cards.push({
+          id: 'web-sessions',
+          label: 'Total Web Sessions',
+          icon: 'fa-light fa-globe',
+          iconClass: 'bg-violet-100 text-violet-600',
+          value: formatNumber(br.totalMonthlySessions),
+          momChange: this.formatChangePct(momPct, 'MoM'),
+          momTrend: this.trendDirection(momPct),
+          momTrendClass: this.trendColorClass(momPct),
+          yoyChange: '\u2014',
+          yoyTrend: 'neutral',
+          yoyTrendClass: 'text-gray-500',
+          comparisonLine: '',
+        });
+      }
+
+      // Card 4: Email Open Rate
+      if (data.emailCtr) {
+        const ec = data.emailCtr;
+        const momPct = ec.changePercentage;
+        cards.push({
+          id: 'email-open-rate',
+          label: 'Email Open Rate',
+          icon: 'fa-light fa-envelope-open',
+          iconClass: 'bg-amber-100 text-amber-600',
+          value: `${ec.currentCtr.toFixed(2)}%`,
+          momChange: this.formatChangePct(momPct, 'MoM'),
+          momTrend: this.trendDirection(momPct),
+          momTrendClass: this.trendColorClass(momPct),
+          yoyChange: '\u2014',
+          yoyTrend: 'neutral',
+          yoyTrendClass: 'text-gray-500',
+          comparisonLine: '',
+          badge: momPct < 0 ? 'Needs review' : undefined,
+        });
+      }
+
+      return cards;
     });
+  }
+
+  private trendDirection(pct: number): 'up' | 'down' | 'neutral' {
+    if (pct > 0) return 'up';
+    if (pct < 0) return 'down';
+    return 'neutral';
+  }
+
+  private trendColorClass(pct: number): string {
+    if (pct > 0) return 'text-green-600';
+    if (pct < 0) return 'text-red-600';
+    return 'text-gray-500';
+  }
+
+  private formatChangePct(pct: number, suffix: string): string {
+    const sign = pct >= 0 ? '+' : '';
+    return `${sign}${pct.toFixed(1)}% ${suffix}`;
   }
 }

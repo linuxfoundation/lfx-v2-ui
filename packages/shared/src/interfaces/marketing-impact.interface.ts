@@ -29,7 +29,12 @@ export interface PerformanceSummaryKpi {
   iconClass: string;
   value: string;
   momChange: string;
-  trend: 'up' | 'down' | 'neutral';
-  trendClass: string;
-  previousLabel: string;
+  momTrend: 'up' | 'down' | 'neutral';
+  momTrendClass: string;
+  yoyChange: string;
+  yoyTrend: 'up' | 'down' | 'neutral';
+  yoyTrendClass: string;
+  comparisonLine: string;
+  /** Optional badge text (e.g., "Needs review") shown when metric requires attention. */
+  badge?: string;
 }
