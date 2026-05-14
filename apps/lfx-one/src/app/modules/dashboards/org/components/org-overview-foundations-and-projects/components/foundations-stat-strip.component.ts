@@ -50,7 +50,7 @@ export class FoundationsStatStripComponent {
    * of the tile is zero — collapses to a single em-dash so the tile
    * never renders a list of zeros.
    */
-  private static readonly EMPTY_DETAIL = '—';
+  private static readonly emptyDetail = '—';
 
   /**
    * Foundations tile — ordered by the canonical 13-class ladder, zero
@@ -65,7 +65,7 @@ export class FoundationsStatStripComponent {
         parts.push(`${tier} (${count})`);
       }
     }
-    return parts.length > 0 ? parts.join(', ') : FoundationsStatStripComponent.EMPTY_DETAIL;
+    return parts.length > 0 ? parts.join(', ') : FoundationsStatStripComponent.emptyDetail;
   });
 
   /**
@@ -79,7 +79,7 @@ export class FoundationsStatStripComponent {
     if (p.contributing > 0) parts.push(`Contributing (${p.contributing})`);
     if (p.participating > 0) parts.push(`Participating (${p.participating})`);
     if (p.silent > 0) parts.push(`Silent (${p.silent})`);
-    return parts.length > 0 ? parts.join(', ') : FoundationsStatStripComponent.EMPTY_DETAIL;
+    return parts.length > 0 ? parts.join(', ') : FoundationsStatStripComponent.emptyDetail;
   });
 
   /**
@@ -92,7 +92,7 @@ export class FoundationsStatStripComponent {
     const parts: string[] = [];
     if (g.boardMembers > 0) parts.push(`Board members (${g.boardMembers})`);
     if (g.committeeMembers > 0) parts.push(`Committee members (${g.committeeMembers})`);
-    return parts.length > 0 ? parts.join('\u00A0\u00A0\u00A0') : FoundationsStatStripComponent.EMPTY_DETAIL;
+    return parts.length > 0 ? parts.join('\u00A0\u00A0\u00A0') : FoundationsStatStripComponent.emptyDetail;
   });
 
   /**
@@ -107,7 +107,7 @@ export class FoundationsStatStripComponent {
     if (m.marketing > 0) parts.push(`Marketing (${m.marketing})`);
     if (m.workingGroup > 0) parts.push(`Working Group (${m.workingGroup})`);
     if (m.other > 0) parts.push(`Other (${m.other})`);
-    return parts.length > 0 ? parts.join(', ') : FoundationsStatStripComponent.EMPTY_DETAIL;
+    return parts.length > 0 ? parts.join(', ') : FoundationsStatStripComponent.emptyDetail;
   });
 
   protected readonly foundationsTotal = computed(() => this.strip().foundations.total);
