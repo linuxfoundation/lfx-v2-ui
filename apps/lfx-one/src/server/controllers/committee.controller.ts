@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { ALLOWED_FILE_TYPES } from '@lfx-one/shared/constants';
+import { MeetingVisibility } from '@lfx-one/shared/enums';
 import {
   CommitteeCreateData,
   CommitteeUpdateData,
@@ -122,8 +123,10 @@ export class CommitteeController {
       }
 
       // Get the committee by ID — include caller membership so the UI can render
-      // visitor / member / chair states without a second round-trip.
-      const committee = await this.committeeService.getCommitteeById(req, id, { includeMembership: true });
+      // visitor / member / chair states without a second round-trip, and enrich with
+      // project metadata so the detail page's Parent Project link can resolve project_uid
+      // -> project_slug for navigation.
+      const committee = await this.committeeService.getCommitteeById(req, id, { includeMembership: true, includeProjectMetadata: true });
 
       // Log the success
       logger.success(req, 'get_committee_by_id', startTime, {
@@ -1041,13 +1044,15 @@ export class CommitteeController {
         fetchAllMeetingPages((token) => this.meetingService.getMeetings(req, token ? { ...query, page_token: token } : query, 'v1_past_meeting', false)),
       ]);
 
-      const allMeetings = [...upcoming, ...past];
+      // Filter PRIVATE/restricted meetings from the public feed (mirrors PublicMeetingController visibility guard).
+      const allMeetings = [...upcoming, ...past].filter((m) => m.visibility === MeetingVisibility.PUBLIC && !m.restricted);
       const events = meetingsToVEvents(allMeetings);
-      const ics = buildVCalendar(events);
+      const ics = buildVCalendar(events, '-//LFX//Committee Calendar//EN');
 
       logger.success(req, 'get_committee_calendar', startTime, {
         committee_id: id,
         event_count: events.length,
+        filtered_out: upcoming.length + past.length - allMeetings.length,
       });
 
       res.setHeader('Content-Type', 'text/calendar; charset=utf-8');

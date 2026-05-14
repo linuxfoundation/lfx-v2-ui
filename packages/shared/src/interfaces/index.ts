@@ -153,3 +153,9 @@ export * from './org-involvement.interface';
 
 // Changelog interfaces
 export * from './changelog.interface';
+
+// Object utility types
+export * from './object.interface';
+
+// Marketing Impact interfaces
+export * from './marketing-impact.interface';
