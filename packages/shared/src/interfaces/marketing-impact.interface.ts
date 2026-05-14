@@ -28,10 +28,10 @@ export interface PerformanceSummaryKpi {
   icon: string;
   iconClass: string;
   value: string;
-  momChange: string;
+  momChange: string | null;
   momTrend: 'up' | 'down' | 'neutral';
   momTrendClass: string;
-  yoyChange: string;
+  yoyChange: string | null;
   yoyTrend: 'up' | 'down' | 'neutral';
   yoyTrendClass: string;
   comparisonLine: string;

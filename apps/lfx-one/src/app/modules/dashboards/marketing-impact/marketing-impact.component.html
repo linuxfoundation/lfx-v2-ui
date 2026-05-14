@@ -127,7 +127,7 @@
                   <!-- MoM + YoY change row -->
                   <div class="flex items-center gap-3">
                     <!-- MoM -->
-                    @if (kpi.momChange !== '\u2014') {
+                    @if (kpi.momChange) {
                       <div class="flex items-center gap-1">
                         @if (kpi.momTrend === 'up') {
                           <i class="fa-solid fa-arrow-up text-[10px] text-green-600" aria-hidden="true"></i>
@@ -139,7 +139,7 @@
                     }
 
                     <!-- YoY -->
-                    @if (kpi.yoyChange !== '\u2014') {
+                    @if (kpi.yoyChange) {
                       <div class="flex items-center gap-1">
                         @if (kpi.yoyTrend === 'up') {
                           <i class="fa-solid fa-arrow-up text-[10px] text-green-600" aria-hidden="true"></i>
