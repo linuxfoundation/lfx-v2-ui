@@ -36,7 +36,16 @@ export class NavigationService {
       map((lens): NavLens | null => (lens === 'foundation' || lens === 'project' ? lens : null)),
       distinctUntilChanged(),
       filter((lens): lens is NavLens => lens !== null),
-      tap((lens) => this.resetAndReload(lens))
+      tap((lens) => {
+        this.resetAndReload(lens);
+        // For hybrid personas, preload the sibling lens so the merged dropdown has both sets ready.
+        if (this.lensService.isHybridPersona()) {
+          const sibling: NavLens = lens === 'foundation' ? 'project' : 'foundation';
+          if (!this.getState(sibling).loaded()) {
+            this.resetAndReload(sibling);
+          }
+        }
+      })
     ),
     { initialValue: null }
   );

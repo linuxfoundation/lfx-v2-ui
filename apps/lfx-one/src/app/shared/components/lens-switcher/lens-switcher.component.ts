@@ -36,6 +36,7 @@ export class LensSwitcherComponent {
 
   protected readonly activeLens = this.lensService.activeLens;
   protected readonly lenses = this.lensService.availableLenses;
+  protected readonly isHybrid = this.lensService.isHybridPersona;
   protected readonly user = this.userService.user;
   protected readonly insightsUrl = buildInsightsUrl();
   protected readonly userMenu = viewChild<Popover>('userMenu');
@@ -59,6 +60,16 @@ export class LensSwitcherComponent {
       }
       this.changelogService.loadUnseenCount();
     });
+  }
+
+  protected isLensActive(lensId: Lens): boolean {
+    const active = this.activeLens();
+    if (active === lensId) return true;
+    // For hybrid personas the merged 'project' button covers both foundation and project states.
+    if (this.isHybrid() && lensId === 'project') {
+      return active === 'foundation' || active === 'project';
+    }
+    return false;
   }
 
   protected setLens(lens: Lens): void {

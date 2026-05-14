@@ -34,21 +34,42 @@
   (onHide)="onPopoverHide()"
   data-testid="project-selector-panel">
   <div class="p-1">
+    <!-- Search input — no background or border -->
     <div class="relative mb-2">
-      <i class="fa-light fa-search absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+      <i class="fa-light fa-search absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
       <input
         [pAutoFocus]="true"
         pInputText
         type="text"
         [formControl]="searchControl"
         [placeholder]="searchPlaceholder()"
-        class="pl-10 h-9 w-full text-sm bg-gray-50"
+        class="pl-10 h-9 w-full text-sm !border-0 !bg-transparent !shadow-none focus:!ring-0"
         data-testid="project-search-input" />
     </div>
 
+    <!-- Tab switcher — hybrid mode only -->
+    @if (hybridMode()) {
+      <div class="flex gap-1 mb-2 bg-gray-100 rounded-lg p-1" role="tablist">
+        @for (tab of selectorTabs; track tab) {
+          <button
+            type="button"
+            role="tab"
+            [attr.aria-selected]="activeTab() === tab"
+            (click)="activeTab.set(tab)"
+            class="flex-1 text-xs font-medium py-1.5 px-2 rounded-md transition-colors capitalize"
+            [class.bg-white]="activeTab() === tab"
+            [class.shadow-sm]="activeTab() === tab"
+            [class.text-gray-900]="activeTab() === tab"
+            [class.text-gray-500]="activeTab() !== tab">
+            {{ tab === 'all' ? 'All' : tab === 'foundations' ? 'Foundations' : 'Projects' }}
+          </button>
+        }
+      </div>
+    }
+
     <div class="max-h-[400px] overflow-y-auto">
-      @for (item of items(); track item.uid; let i = $index) {
-        <!-- Auto-load sentinel 8 items from the end — shifts each page so lfxOnRender re-fires. -->
+      @for (displayItem of displayedItems(); track displayItem.item.uid; let i = $index) {
+        <!-- Auto-load sentinel 8 items from the end -->
         @if (i === autoLoadTriggerIndex() && hasMore()) {
           @defer (on viewport) {
             <div lfxOnRender (rendered)="loadMore()" class="h-0 w-full" aria-hidden="true"></div>
@@ -57,28 +78,44 @@
           }
         }
 
-        <button
-          type="button"
-          class="flex items-center gap-3 p-2 w-full text-left hover:bg-gray-100 rounded-lg transition-colors"
-          (click)="selectItem(item, popover)"
-          [attr.data-testid]="'lens-item-' + item.slug">
-          <div class="bg-gray-100 overflow-clip rounded-lg shrink-0 size-9 border border-gray-200">
-            <div class="flex items-center justify-center size-full p-1.5">
-              @if (item.logoUrl) {
-                <img [alt]="item.name" class="w-full h-full object-contain" [src]="item.logoUrl" />
-              } @else {
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M3.96369 15.9789V7.98987H0V19.9504H11.9372V15.9789H3.96369Z" fill="#0094FF" />
-                  <path d="M19.8645 0H0V6.00333H3.96369V4.01761H15.9009V15.9781H13.919V19.9495H19.8645V0Z" fill="#003778" />
-                </svg>
-              }
+        <div
+          [class.pl-5]="displayItem.isNested"
+          [class.border-l-2]="displayItem.isNested"
+          [class.border-gray-100]="displayItem.isNested"
+          [class.ml-4]="displayItem.isNested">
+          <button
+            type="button"
+            class="flex items-center gap-3 p-2 w-full text-left hover:bg-gray-100 rounded-lg transition-colors"
+            (click)="selectItem(displayItem.item, popover)"
+            [attr.data-testid]="'lens-item-' + displayItem.item.slug">
+            <div class="bg-gray-100 overflow-clip rounded-lg shrink-0 size-9 border border-gray-200">
+              <div class="flex items-center justify-center size-full p-1.5">
+                @if (displayItem.item.logoUrl) {
+                  <img [alt]="displayItem.item.name" class="w-full h-full object-contain" [src]="displayItem.item.logoUrl" />
+                } @else {
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3.96369 15.9789V7.98987H0V19.9504H11.9372V15.9789H3.96369Z" fill="#0094FF" />
+                    <path d="M19.8645 0H0V6.00333H3.96369V4.01761H15.9009V15.9781H13.919V19.9495H19.8645V0Z" fill="#003778" />
+                  </svg>
+                }
+              </div>
             </div>
-          </div>
 
-          <div class="flex-1 min-w-0">
-            <p class="font-medium text-sm text-gray-900 mb-0">{{ item.name || item.slug }}</p>
-          </div>
-        </button>
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-sm text-gray-900 mb-0 truncate">{{ displayItem.item.name || displayItem.item.slug }}</p>
+              <p class="text-xs text-gray-400 leading-none mt-0.5 truncate">
+                @if (displayItem.item.isFoundation) {
+                  <i class="fa-light fa-landmark mr-1" aria-hidden="true"></i>Foundation
+                } @else {
+                  Project
+                }
+                @if (getRoleLabel(displayItem.item)) {
+                  <span>&nbsp;·&nbsp;Role: {{ getRoleLabel(displayItem.item) }}</span>
+                }
+              </p>
+            </div>
+          </button>
+        </div>
       } @empty {
         @if (!loading()) {
           <div class="text-center py-8 text-gray-500 text-sm">{{ emptyMessage() }}</div>

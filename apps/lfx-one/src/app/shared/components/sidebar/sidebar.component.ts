@@ -49,6 +49,7 @@ export class SidebarComponent {
 
   protected readonly activeLens = this.lensService.activeLens;
   protected readonly isOrgLens = computed(() => this.activeLens() === 'org');
+  protected readonly isHybridPersona = this.lensService.isHybridPersona;
   protected readonly selectedProject: Signal<ProjectContext | null> = computed(() => this.projectContextService.activeContext());
   protected readonly navLens: Signal<NavLens | null> = this.initNavLens();
   protected readonly lensLoaded: Signal<boolean> = this.initLensLoaded();
@@ -82,11 +83,11 @@ export class SidebarComponent {
 
   protected onItemSelected(item: LensItem): void {
     const context = lensItemToProjectContext(item);
-    const lens = this.lensService.activeLens();
-
-    if (lens === 'foundation') {
+    if (item.isFoundation) {
+      this.lensService.setLens('foundation');
       this.projectContextService.setFoundation(context);
-    } else if (lens === 'project') {
+    } else {
+      this.lensService.setLens('project');
       this.projectContextService.setProject(context);
     }
   }

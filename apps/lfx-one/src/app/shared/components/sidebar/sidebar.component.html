@@ -19,8 +19,9 @@
           } @else {
             <lfx-project-selector
               [lens]="lens"
+              [hybridMode]="isHybridPersona()"
               [selectedProject]="selectedProject()"
-              [searchPlaceholder]="lens === 'foundation' ? 'Search foundations...' : 'Search projects...'"
+              [searchPlaceholder]="isHybridPersona() ? 'Search...' : lens === 'foundation' ? 'Search foundations...' : 'Search projects...'"
               [emptyMessage]="lens === 'foundation' ? 'No foundations found' : 'No projects found'"
               [(isPanelOpen)]="selectorPanelOpen"
               (itemSelected)="onItemSelected($event)"></lfx-project-selector>
