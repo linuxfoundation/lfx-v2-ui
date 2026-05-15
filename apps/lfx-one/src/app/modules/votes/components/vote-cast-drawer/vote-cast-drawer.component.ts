@@ -117,7 +117,7 @@ export class VoteCastDrawerComponent {
     this.visible.set(false);
   }
 
-  /** Reorder via CDK drag-and-drop — setValue fires statusChanges so submitDisabled re-evaluates. */
+  /** Reorder via CDK drag-and-drop — bumpFormVersion() drives submitDisabled re-evaluation since rebuildForm/setValue here suppress statusChanges. */
   protected onRankedDrop(questionId: string, event: CdkDragDrop<string[]>): void {
     const control = this.form.get(questionId);
     if (!control) return;

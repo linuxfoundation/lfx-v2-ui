@@ -112,7 +112,9 @@ export class VoteResultsDrawerComponent {
   private initIsGenericPoll(): Signal<boolean> {
     return computed(() => {
       const v = this.vote();
-      return v?.poll_type === PollType.GENERIC;
+      if (!v) return false;
+      // Missing poll_type defaults to GENERIC (matches initVotingMethodText) so the plurality branch renders.
+      return (v.poll_type ?? PollType.GENERIC) === PollType.GENERIC;
     });
   }
 
