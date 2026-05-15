@@ -77,7 +77,12 @@ export class VoteCastDrawerComponent {
   protected readonly abstain: Signal<boolean> = toSignal(this.abstainControl.valueChanges, { initialValue: this.abstainControl.value });
 
   // === Computed Signals ===
-  protected readonly isGenericPoll: Signal<boolean> = computed(() => this.vote()?.poll_type === PollType.GENERIC);
+  // Missing poll_type defaults to GENERIC (parity with vote-results-drawer.initIsGenericPoll) so the plurality branch renders when upstream omits the field.
+  protected readonly isGenericPoll: Signal<boolean> = computed(() => {
+    const v = this.vote();
+    if (!v) return false;
+    return (v.poll_type ?? PollType.GENERIC) === PollType.GENERIC;
+  });
   protected readonly isRankedPoll: Signal<boolean> = this.initIsRankedPoll();
   protected readonly questions: Signal<PollQuestion[]> = computed(() => this.vote()?.poll_questions ?? []);
   protected readonly allowAbstain: Signal<boolean> = computed(() => !!this.vote()?.allow_abstain);
