@@ -17,6 +17,7 @@ import { PersonaService } from '@services/persona.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { UserService } from '@services/user.service';
 import { SkeletonModule } from 'primeng/skeleton';
+import { TooltipModule } from 'primeng/tooltip';
 
 const PERSONA_ICONS: Partial<Record<PersonaType, string>> = {
   'executive-director': 'fa-light fa-briefcase',
@@ -27,7 +28,7 @@ const PERSONA_ICONS: Partial<Record<PersonaType, string>> = {
 
 @Component({
   selector: 'lfx-sidebar',
-  imports: [NgClass, NgTemplateOutlet, RouterModule, AvatarComponent, BadgeComponent, ProjectSelectorComponent, SkeletonModule],
+  imports: [NgClass, NgTemplateOutlet, RouterModule, AvatarComponent, BadgeComponent, ProjectSelectorComponent, SkeletonModule, TooltipModule],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss',
 })
@@ -56,7 +57,7 @@ export class SidebarComponent {
 
   protected readonly user = this.userService.user;
   protected readonly userInitials = this.userService.userInitials;
-  protected readonly personaLabels: Signal<{ label: string; icon: string }[]> = this.initPersonaLabels();
+  protected readonly personaLabels: Signal<{ label: string; icon: string; tooltip: string }[]> = this.initPersonaLabels();
   // Hide the persona badge when the user is a root-writer — executive-director is spoofed, not naturally detected.
   protected readonly showPersonaBadge: Signal<boolean> = computed(() => !this.personaService.isRootWriter());
 
@@ -108,11 +109,22 @@ export class SidebarComponent {
     });
   }
 
-  private initPersonaLabels(): Signal<{ label: string; icon: string }[]> {
+  private initPersonaLabels(): Signal<{ label: string; icon: string; tooltip: string }[]> {
     return computed(() => {
+      const personaProjects = this.personaService.personaProjects();
+      const escapeHtml = (s: string) =>
+        s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
       const toTag = (p: PersonaType) => {
         const option = PERSONA_OPTIONS.find((o) => o.value === p);
-        return { label: option?.label ?? toTitleCase(p), icon: PERSONA_ICONS[p] ?? 'fa-light fa-user' };
+        const label = option?.label ?? toTitleCase(p);
+        const icon = PERSONA_ICONS[p] ?? 'fa-light fa-user';
+        const names = (personaProjects[p] ?? []).map((proj) => proj.projectName).filter((n): n is string => !!n);
+        const header = `<div class="font-semibold">${escapeHtml(label)}</div>`;
+        const list =
+          names.length > 0
+            ? `<ul class="mt-1 pl-4 list-disc font-normal text-gray-300">${names.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}</ul>`
+            : '';
+        return { label, icon, tooltip: header + list };
       };
 
       if (this.activeLens() === 'me') {

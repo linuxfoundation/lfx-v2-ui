@@ -17,9 +17,20 @@
     </div>
   </div>
 
-  <div class="flex flex-col gap-0.5 grow items-start relative min-w-0 overflow-hidden">
+  <div class="flex flex-col gap-1.5 grow items-start relative min-w-0 overflow-hidden">
     <p class="sidebar-project-name" [attr.title]="displayName()">{{ displayName() }}</p>
-    <span class="text-xs font-normal text-gray-400 leading-none">{{ lensTypeLabel() }}</span>
+    <div class="flex items-center gap-1 w-full min-w-0 text-left">
+      <span class="text-xs font-normal text-gray-400 leading-none truncate">{{ lensTypeLabel() }}</span>
+      @if (selectedRoleLabel()) {
+        <span class="text-xs font-normal text-gray-400 leading-none shrink-0" aria-hidden="true">・</span>
+        <span
+          [pTooltip]="selectedRoleLabel()"
+          tooltipPosition="top"
+          class="inline-flex items-center justify-center size-5 rounded-full bg-white border border-gray-200 text-gray-700 shrink-0">
+          <i [class]="selectedRoleIcon()" class="text-[10px]" aria-hidden="true"></i>
+        </span>
+      }
+    </div>
   </div>
 
   <i class="fa-light fa-angles-up-down shrink-0 text-gray-400" aria-hidden="true"></i>
@@ -49,14 +60,14 @@
 
     <!-- Tab switcher — hybrid mode only -->
     @if (hybridMode()) {
-      <div class="flex gap-1 mb-2 bg-gray-100 rounded-lg p-1" role="tablist">
+      <div class="flex gap-1 mb-5 bg-gray-100 rounded-full p-1" role="tablist">
         @for (tab of selectorTabs; track tab) {
           <button
             type="button"
             role="tab"
             [attr.aria-selected]="activeTab() === tab"
             (click)="activeTab.set(tab)"
-            class="flex-1 text-xs font-medium py-1.5 px-2 rounded-md transition-colors capitalize"
+            class="flex-1 text-sm font-medium py-1 px-3 rounded-full transition-colors capitalize"
             [class.bg-white]="activeTab() === tab"
             [class.shadow-sm]="activeTab() === tab"
             [class.text-gray-900]="activeTab() === tab"
@@ -79,15 +90,19 @@
         }
 
         <div
+          class="mb-1"
           [class.pl-5]="displayItem.isNested"
           [class.border-l-2]="displayItem.isNested"
           [class.border-gray-100]="displayItem.isNested"
-          [class.ml-4]="displayItem.isNested">
+          [class.ml-[18px]]="displayItem.isNested">
           <button
             type="button"
-            class="flex items-center gap-3 p-2 w-full text-left hover:bg-gray-100 rounded-lg transition-colors"
+            class="flex items-center gap-3 p-2 w-full text-left rounded-lg transition-colors"
+            [class.bg-blue-50]="isItemSelected(displayItem.item)"
+            [class.hover:bg-gray-100]="!isItemSelected(displayItem.item)"
             (click)="selectItem(displayItem.item, popover)"
-            [attr.data-testid]="'lens-item-' + displayItem.item.slug">
+            [attr.data-testid]="'lens-item-' + displayItem.item.slug"
+            [attr.data-selected]="isItemSelected(displayItem.item)">
             <div class="bg-gray-100 overflow-clip rounded-lg shrink-0 size-9 border border-gray-200">
               <div class="flex items-center justify-center size-full p-1.5">
                 @if (displayItem.item.logoUrl) {
@@ -103,17 +118,19 @@
 
             <div class="flex-1 min-w-0">
               <p class="font-medium text-sm text-gray-900 mb-0 truncate">{{ displayItem.item.name || displayItem.item.slug }}</p>
-              <p class="text-xs text-gray-400 leading-none mt-0.5 truncate">
-                @if (displayItem.item.isFoundation) {
-                  <i class="fa-light fa-landmark mr-1" aria-hidden="true"></i>Foundation
-                } @else {
-                  Project
-                }
-                @if (getRoleLabel(displayItem.item)) {
-                  <span>&nbsp;·&nbsp;Role: {{ getRoleLabel(displayItem.item) }}</span>
-                }
-              </p>
+              @if (getRoleLabel(displayItem.item)) {
+                <p class="text-xs text-gray-400 leading-none mt-0.5 truncate">
+                  <i [class]="getRoleIcon(displayItem.item)" class="mr-1" aria-hidden="true"></i>{{ getRoleLabel(displayItem.item) }}
+                </p>
+              }
             </div>
+
+            <i
+              class="fa-light fa-check text-blue-500 shrink-0 transition-opacity"
+              [class.opacity-100]="isItemSelected(displayItem.item)"
+              [class.opacity-0]="!isItemSelected(displayItem.item)"
+              [attr.aria-label]="isItemSelected(displayItem.item) ? 'Selected' : null"
+              [attr.aria-hidden]="!isItemSelected(displayItem.item)"></i>
           </button>
         </div>
       } @empty {

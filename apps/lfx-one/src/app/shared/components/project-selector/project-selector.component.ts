@@ -14,6 +14,7 @@ import { OnRenderDirective } from '@shared/directives/on-render.directive';
 import { AutoFocus } from 'primeng/autofocus';
 import { InputTextModule } from 'primeng/inputtext';
 import { Popover, PopoverModule } from 'primeng/popover';
+import { TooltipModule } from 'primeng/tooltip';
 
 export interface DisplayLensItem {
   item: LensItem;
@@ -24,7 +25,7 @@ type SelectorTab = 'all' | 'foundations' | 'projects';
 
 @Component({
   selector: 'lfx-project-selector',
-  imports: [ReactiveFormsModule, PopoverModule, InputTextModule, AutoFocus, OnRenderDirective],
+  imports: [ReactiveFormsModule, PopoverModule, InputTextModule, AutoFocus, OnRenderDirective, TooltipModule],
   templateUrl: './project-selector.component.html',
   styleUrl: './project-selector.component.scss',
 })
@@ -53,6 +54,13 @@ export class ProjectSelectorComponent {
 
   protected readonly lensTypeLabel = computed(() => {
     if (this.hybridMode()) {
+      const selectedUid = this.selectedProject()?.uid;
+      if (selectedUid) {
+        const detected = this.personaService.detectedProjects().find((p) => p.projectUid === selectedUid);
+        if (detected) {
+          return detected.isFoundation ? 'Foundation' : 'Project';
+        }
+      }
       return this.lensService.activeLens() === 'foundation' ? 'Foundation' : 'Project';
     }
     return this.lens() === 'foundation' ? 'Foundation' : 'Project';
@@ -64,6 +72,31 @@ export class ProjectSelectorComponent {
   });
 
   protected readonly displayLogo: Signal<string> = computed(() => this.selectedProject()?.logoUrl || '');
+
+  protected readonly selectedRolePersona: Signal<PersonaType | null> = computed(() => {
+    const uid = this.selectedProject()?.uid;
+    if (!uid) return null;
+    const detected = this.personaService.detectedProjects().find((p) => p.projectUid === uid);
+    const isFoundation = detected?.isFoundation ?? this.lensService.activeLens() === 'foundation';
+    const priority = isFoundation ? BOARD_SCOPED_PERSONA_PRIORITY : PROJECT_SCOPED_PERSONA_PRIORITY;
+    const personaProjects = this.personaService.personaProjects();
+    for (const persona of priority) {
+      if ((personaProjects[persona] ?? []).some((p) => p.projectUid === uid)) {
+        return persona;
+      }
+    }
+    return null;
+  });
+
+  protected readonly selectedRoleLabel: Signal<string> = computed(() => {
+    const persona = this.selectedRolePersona();
+    return persona ? this.personaTypeToLabel(persona) : '';
+  });
+
+  protected readonly selectedRoleIcon: Signal<string> = computed(() => {
+    const persona = this.selectedRolePersona();
+    return persona ? this.personaTypeToIcon(persona) : '';
+  });
 
   protected readonly foundationItems: Signal<LensItem[]> = computed(() => (this.hybridMode() ? this.navigationService.items('foundation')() : []));
 
@@ -157,15 +190,29 @@ export class ProjectSelectorComponent {
     }
   }
 
+  protected isItemSelected(item: LensItem): boolean {
+    return this.selectedProject()?.uid === item.uid;
+  }
+
   protected getRoleLabel(item: LensItem): string {
+    const persona = this.resolveRolePersona(item);
+    return persona ? this.personaTypeToLabel(persona) : '';
+  }
+
+  protected getRoleIcon(item: LensItem): string {
+    const persona = this.resolveRolePersona(item);
+    return persona ? this.personaTypeToIcon(persona) : '';
+  }
+
+  private resolveRolePersona(item: LensItem): PersonaType | null {
     const priority = item.isFoundation ? BOARD_SCOPED_PERSONA_PRIORITY : PROJECT_SCOPED_PERSONA_PRIORITY;
     const personaProjects = this.personaService.personaProjects();
     for (const persona of priority) {
       if ((personaProjects[persona] ?? []).some((p) => p.projectUid === item.uid)) {
-        return this.personaTypeToLabel(persona);
+        return persona;
       }
     }
-    return '';
+    return null;
   }
 
   private personaTypeToLabel(persona: PersonaType): string {
@@ -174,6 +221,16 @@ export class ProjectSelectorComponent {
       'board-member': 'Board Member',
       maintainer: 'Maintainer',
       contributor: 'Contributor',
+    };
+    return map[persona] ?? '';
+  }
+
+  private personaTypeToIcon(persona: PersonaType): string {
+    const map: Record<PersonaType, string> = {
+      'executive-director': 'fa-light fa-briefcase',
+      'board-member': 'fa-light fa-building-columns',
+      maintainer: 'fa-light fa-code',
+      contributor: 'fa-light fa-code',
     };
     return map[persona] ?? '';
   }
