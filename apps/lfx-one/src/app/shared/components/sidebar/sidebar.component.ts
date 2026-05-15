@@ -84,12 +84,14 @@ export class SidebarComponent {
 
   protected onItemSelected(item: LensItem): void {
     const context = lensItemToProjectContext(item);
+    // Set the context before switching lenses: NavigationService injects selected_uid from
+    // ProjectContextService at reload time, so the lens flip must see the clicked UID.
     if (item.isFoundation) {
-      this.lensService.setLens('foundation');
       this.projectContextService.setFoundation(context);
+      this.lensService.setLens('foundation');
     } else {
-      this.lensService.setLens('project');
       this.projectContextService.setProject(context);
+      this.lensService.setLens('project');
     }
   }
 

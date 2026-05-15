@@ -22,7 +22,7 @@
               [hybridMode]="isHybridPersona()"
               [selectedProject]="selectedProject()"
               [searchPlaceholder]="isHybridPersona() ? 'Search...' : lens === 'foundation' ? 'Search foundations...' : 'Search projects...'"
-              [emptyMessage]="lens === 'foundation' ? 'No foundations found' : 'No projects found'"
+              [emptyMessage]="isHybridPersona() ? 'No results found' : lens === 'foundation' ? 'No foundations found' : 'No projects found'"
               [(isPanelOpen)]="selectorPanelOpen"
               (itemSelected)="onItemSelected($event)"></lfx-project-selector>
           }

@@ -39,11 +39,11 @@ export class NavigationService {
       tap((lens) => {
         this.resetAndReload(lens);
         // For hybrid personas, preload the sibling lens so the merged dropdown has both sets ready.
+        // preloadSibling() skips default-selection side effects so it can't overwrite the active
+        // lens's context/URL, and it bails out if the sibling is already loaded or in flight.
         if (this.lensService.isHybridPersona()) {
           const sibling: NavLens = lens === 'foundation' ? 'project' : 'foundation';
-          if (!this.getState(sibling).loaded()) {
-            this.resetAndReload(sibling);
-          }
+          this.preloadSibling(sibling);
         }
       })
     ),
@@ -99,6 +99,16 @@ export class NavigationService {
   public resetAndReload(lens: NavLens): void {
     const state = this.getState(lens);
     state.pendingDefaultSelection.set(true);
+    state.reload$.next();
+  }
+
+  private preloadSibling(lens: NavLens): void {
+    const state = this.getState(lens);
+    if (state.loaded() || state.loading()) {
+      return;
+    }
+    // Deliberately do NOT set pendingDefaultSelection — preload must not race with the active
+    // lens's selection and can't be allowed to overwrite the URL/context.
     state.reload$.next();
   }
 
