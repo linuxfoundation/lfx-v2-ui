@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, Signal } from '@angular/core';
+import { Component, computed, inject, signal, Signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { PendingActionItem } from '@lfx-one/shared/interfaces';
 import { LensService } from '@services/lens.service';
@@ -10,6 +10,7 @@ import { ProjectService } from '@services/project.service';
 import { SkeletonModule } from 'primeng/skeleton';
 import { BehaviorSubject, catchError, of, switchMap } from 'rxjs';
 
+import { DashboardCastDrawerHostComponent } from '../components/dashboard-cast-drawer-host/dashboard-cast-drawer-host.component';
 import { DashboardQuicklinksComponent } from '../components/dashboard-quicklinks/dashboard-quicklinks.component';
 import { FoundationHealthComponent } from '../components/foundation-health/foundation-health.component';
 import { MyMeetingsComponent } from '../components/my-meetings/my-meetings.component';
@@ -25,6 +26,7 @@ import { PendingActionsComponent } from '../components/pending-actions/pending-a
     FoundationHealthComponent,
     SkeletonModule,
     DashboardQuicklinksComponent,
+    DashboardCastDrawerHostComponent,
   ],
   templateUrl: './board-member-dashboard.component.html',
   styleUrl: './board-member-dashboard.component.scss',
@@ -40,6 +42,9 @@ export class BoardMemberDashboardComponent {
   public readonly selectedFoundation = computed(() => this.projectContextService.selectedFoundation());
   public readonly selectedProject = computed(() => this.projectContextService.activeContext());
   public readonly refresh$: BehaviorSubject<void> = new BehaviorSubject<void>(undefined);
+
+  protected readonly castDrawerVoteId = signal<string | null>(null);
+  protected readonly castDrawerVisible = signal<boolean>(false);
   // Windowing (dismiss filtering + display cap) is owned by PendingActionsComponent.
   // Pass the raw list and let the child render the top N unhidden items.
   public readonly boardMemberActions: Signal<PendingActionItem[]>;
@@ -49,6 +54,15 @@ export class BoardMemberDashboardComponent {
   }
 
   public handleActionClick(): void {
+    this.refresh$.next();
+  }
+
+  protected handleCastVoteRequested(voteUid: string): void {
+    this.castDrawerVoteId.set(voteUid);
+    this.castDrawerVisible.set(true);
+  }
+
+  protected handleVoteSubmitted(): void {
     this.refresh$.next();
   }
 

@@ -30,6 +30,8 @@ export class PendingActionsComponent {
   public readonly displayLimit = input<number>(5);
 
   public readonly actionClick = output<PendingActionItem>();
+  // Emits the voteUid when a Vote pending-action is clicked, so the parent dashboard can open the cast drawer inline instead of navigating to /votes.
+  public readonly castVoteRequested = output<string>();
 
   // Cookie-backed dismissals live outside the signal graph; bumping forces the computed to recompute.
   private readonly hiddenActionsVersion = signal(0);
@@ -56,6 +58,14 @@ export class PendingActionsComponent {
   protected handleActionClick(item: DecoratedPendingAction): void {
     if (this.isRsvpInline(item)) {
       this.loadMeetingForRsvp(item);
+      return;
+    }
+
+    if (this.isVoteInline(item) && item.voteUid) {
+      // Vote rows: hide optimistically and emit voteUid upward so the parent dashboard opens the cast drawer inline.
+      this.hiddenActionsService.hideAction(item);
+      this.hiddenActionsVersion.update((v) => v + 1);
+      this.castVoteRequested.emit(item.voteUid);
       return;
     }
 
@@ -103,6 +113,10 @@ export class PendingActionsComponent {
     return item.type === 'RSVP' && !!item.meetingUid;
   }
 
+  private isVoteInline(item: PendingActionItem): boolean {
+    return item.type === 'Vote' && !!item.voteUid;
+  }
+
   // Composite fallback for action types that don't carry intrinsic IDs yet.
   private getRowKey(item: PendingActionItem): string {
     if (item.meetingUid) {
@@ -121,6 +135,7 @@ export class PendingActionsComponent {
       return this.visibleActions().map((item) => {
         const rowKey = this.getRowKey(item);
         const isRsvpInline = this.isRsvpInline(item);
+        const isVoteInline = this.isVoteInline(item);
         const meeting = item.meetingUid ? (cache[item.meetingUid] ?? null) : null;
         let rowClass: string;
         if (dismissing.has(rowKey)) {
@@ -134,6 +149,7 @@ export class PendingActionsComponent {
           ...item,
           rowKey,
           isRsvpInline,
+          isVoteInline,
           isRsvpInlineLink: isRsvpInline && !!item.buttonLink,
           isExpanded: expandedKey === rowKey,
           isLoading: !!item.meetingUid && loadingUid === item.meetingUid,

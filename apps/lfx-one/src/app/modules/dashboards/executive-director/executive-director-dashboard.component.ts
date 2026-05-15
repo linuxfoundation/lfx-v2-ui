@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, Signal } from '@angular/core';
+import { Component, computed, inject, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { PendingActionItem } from '@lfx-one/shared/interfaces';
 import { LensService } from '@services/lens.service';
@@ -10,6 +10,7 @@ import { ProjectService } from '@services/project.service';
 import { SkeletonModule } from 'primeng/skeleton';
 import { BehaviorSubject, catchError, combineLatest, of, switchMap } from 'rxjs';
 
+import { DashboardCastDrawerHostComponent } from '../components/dashboard-cast-drawer-host/dashboard-cast-drawer-host.component';
 import { DashboardQuicklinksComponent } from '../components/dashboard-quicklinks/dashboard-quicklinks.component';
 import { FoundationHealthComponent } from '../components/foundation-health/foundation-health.component';
 import { MyMeetingsComponent } from '../components/my-meetings/my-meetings.component';
@@ -28,6 +29,7 @@ import { MarketingOverviewComponent } from './components/marketing-overview/mark
     OrganizationInvolvementComponent,
     SkeletonModule,
     DashboardQuicklinksComponent,
+    DashboardCastDrawerHostComponent,
   ],
   templateUrl: './executive-director-dashboard.component.html',
 })
@@ -43,6 +45,9 @@ export class ExecutiveDirectorDashboardComponent {
   // === Configuration ===
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
 
+  protected readonly castDrawerVoteId = signal<string | null>(null);
+  protected readonly castDrawerVisible = signal<boolean>(false);
+
   // === Computed Signals ===
   protected readonly selectedFoundation = this.projectContextService.selectedFoundation;
   protected readonly selectedProject = computed(() => this.projectContextService.activeContext());
@@ -56,6 +61,15 @@ export class ExecutiveDirectorDashboardComponent {
 
   // === Public Methods ===
   public handleActionClick(): void {
+    this.refresh$.next();
+  }
+
+  protected handleCastVoteRequested(voteUid: string): void {
+    this.castDrawerVoteId.set(voteUid);
+    this.castDrawerVisible.set(true);
+  }
+
+  protected handleVoteSubmitted(): void {
     this.refresh$.next();
   }
 
