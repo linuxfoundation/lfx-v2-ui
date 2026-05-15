@@ -3,7 +3,7 @@
 
 import { SURVEY_LINK_ALLOWLIST } from '@lfx-one/shared/constants';
 import { SurveyStatus } from '@lfx-one/shared/enums';
-import { CreateSurveyRequest, MySurveyResponse, QueryServiceResponse, Survey } from '@lfx-one/shared/interfaces';
+import { CreateSurveyRequest, MySurveyResponse, QueryServiceResponse, Survey, SurveyResponseRecord } from '@lfx-one/shared/interfaces';
 import { getSurveyDisplayStatus } from '@lfx-one/shared/utils';
 import { Request } from 'express';
 
@@ -223,25 +223,28 @@ export class SurveyService {
     }
 
     // Query survey_response records using filters_or (OR logic on data fields).
-    // response_datetime distinguishes invited-only (empty) from submitted (populated).
-    const responses = await fetchAllQueryResources<{ survey_uid: string; survey_link?: string; response_datetime?: string }>(req, (pageToken) =>
-      this.microserviceProxy.proxyRequest<QueryServiceResponse<{ survey_uid: string; survey_link?: string; response_datetime?: string }>>(
-        req,
-        'LFX_V2_SERVICE',
-        '/query/resources',
-        'GET',
-        {
-          type: 'survey_response',
-          filters_or: filtersOr,
-          ...(pageToken && { page_token: pageToken }),
-        }
-      )
+    // The response records carry denormalized survey-level fields so we can build
+    // Survey objects directly without a secondary /surveys/{uid} fetch.
+    // Respondents don't hold survey:{uid}:viewer, so that fetch would 403 for them.
+    const responses = await fetchAllQueryResources<SurveyResponseRecord>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<SurveyResponseRecord>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        type: 'survey_response',
+        filters_or: filtersOr,
+        ...(pageToken && { page_token: pageToken }),
+      })
     );
 
+    // First response per survey_uid wins for the link and survey-level fields.
+    // A user can have multiple responses for the same survey (added to several
+    // committees), but the denormalized survey fields are identical across all of them.
+    const byUid = new Map<string, SurveyResponseRecord>();
     const surveyLinkMap = new Map<string, string>();
     const respondedSurveyUids = new Set<string>();
     for (const r of responses) {
       if (!r.survey_uid) continue;
+      if (!byUid.has(r.survey_uid)) {
+        byUid.set(r.survey_uid, r);
+      }
       if (r.response_datetime && r.response_datetime.trim() !== '') {
         respondedSurveyUids.add(r.survey_uid);
       }
@@ -253,61 +256,37 @@ export class SurveyService {
       }
     }
 
-    // Extract unique survey UIDs
-    const surveyUids = [...new Set(responses.filter((r) => r.survey_uid).map((r) => r.survey_uid))];
-
-    if (surveyUids.length === 0) {
+    if (byUid.size === 0) {
       return [];
     }
 
     logger.debug(req, 'get_my_surveys', 'Found user survey responses', {
       response_count: responses.length,
-      unique_survey_count: surveyUids.length,
+      unique_survey_count: byUid.size,
     });
 
-    // Fetch survey details in parallel via the survey microservice, then stamp
-    // response_status based on whether the user's survey_response row has a populated
-    // response_datetime. The UI consumes response_status to open the per-user response
-    // drawer on the Me lens and switch the action button to 'Update' (vs 'Take Survey')
-    // while the survey is still open.
-    // When the detail fetch fails (404 / transient upstream error), keep the row in
-    // the list with a stub Survey built from the response record so the user can still
-    // see they were invited — silently dropping invited surveys hides the user's history.
-    const surveys = await Promise.all(
-      surveyUids.map(async (uid) => {
-        try {
-          const survey = await this.microserviceProxy.proxyRequest<Survey>(req, 'LFX_V2_SERVICE', `/surveys/${uid}`, 'GET');
-          if (survey && respondedSurveyUids.has(uid)) {
-            return { ...survey, response_status: 'responded' };
-          }
-          return survey;
-        } catch (error) {
-          logger.warning(req, 'get_my_surveys', 'Survey detail unavailable — rendering stub', {
-            survey_uid: uid,
-            error: error instanceof Error ? error.message : 'Unknown error',
-          });
-          const stub: Survey = {
-            uid,
-            survey_title: 'Survey (details unavailable)',
-            survey_status: 'closed',
-            // null instead of '' so Angular's DatePipe doesn't choke on an
-            // invalid empty-string input when the table renders the Due column.
-            survey_cutoff_date: null,
-            is_nps_survey: false,
-            is_project_survey: false,
-            committees: [],
-            committee_category: '',
-            total_responses: 0,
-            total_recipients: 0,
-            created_at: '',
-            last_modified_at: '',
-            creator_name: '',
-          };
-          if (respondedSurveyUids.has(uid)) stub.response_status = 'responded';
-          return stub;
-        }
-      })
-    );
+    // Build Survey objects from the denormalized response fields — no upstream fetch needed.
+    const surveys: Survey[] = [];
+    for (const [uid, r] of byUid) {
+      const survey: Survey = {
+        uid,
+        survey_title: r.survey_title || '',
+        survey_status: r.survey_status || '',
+        // Keep null (not empty string) when absent so Angular's DatePipe doesn't choke.
+        survey_cutoff_date: r.survey_cutoff_date || null,
+        is_nps_survey: r.is_nps_survey ?? false,
+        is_project_survey: r.is_project_survey ?? false,
+        committees: [],
+        committee_category: r.committee_category || '',
+        creator_name: r.creator_name || '',
+        created_at: r.survey_created_at || '',
+        last_modified_at: r.survey_last_modified_at || '',
+        total_responses: r.total_responses ?? 0,
+        total_recipients: r.total_recipients ?? 0,
+      };
+      if (respondedSurveyUids.has(uid)) survey.response_status = 'responded';
+      surveys.push(survey);
+    }
 
     // Sort: effectively-open surveys first, then by cutoff date descending.
     // Use the shared helper so SENT-past-cutoff and uppercase API values are
@@ -338,15 +317,12 @@ export class SurveyService {
       })
       .map((entry) => entry.survey);
 
-    // Flatten project_uid from committees to top level for enrichment
-    const withProjectUid = sorted.map((s) => {
-      const projectUids = [...new Set((s.committees ?? []).map((c) => c.project_uid).filter(Boolean))];
-      return {
-        ...s,
-        project_uid: projectUids.length === 1 ? projectUids[0] : '',
-        survey_link: surveyLinkMap.get(s.uid),
-      };
-    });
+    // Attach project_uid (from the response record) and survey_link for enrichment.
+    const withProjectUid = sorted.map((s) => ({
+      ...s,
+      project_uid: byUid.get(s.uid)?.project?.project_uid || '',
+      survey_link: surveyLinkMap.get(s.uid),
+    }));
 
     return this.projectService.enrichWithProjectData(req, withProjectUid);
   }
