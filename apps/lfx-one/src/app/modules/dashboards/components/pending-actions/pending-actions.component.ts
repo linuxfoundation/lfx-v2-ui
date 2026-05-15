@@ -62,9 +62,7 @@ export class PendingActionsComponent {
     }
 
     if (this.isVoteInline(item) && item.voteUid) {
-      // Vote rows: hide optimistically and emit voteUid upward so the parent dashboard opens the cast drawer inline.
-      this.hiddenActionsService.hideAction(item);
-      this.hiddenActionsVersion.update((v) => v + 1);
+      // Vote rows: just open the drawer; hide-on-success happens via the parent dashboard's handleVoteSubmitted path, so cancel/error leaves the row in place.
       this.castVoteRequested.emit(item.voteUid);
       return;
     }
@@ -117,10 +115,13 @@ export class PendingActionsComponent {
     return item.type === 'Vote' && !!item.voteUid;
   }
 
-  // Composite fallback for action types that don't carry intrinsic IDs yet.
+  // Intrinsic IDs first (meetingUid for RSVP/Agenda, voteUid for Vote); composite fallback for action types without one. Distinct intrinsic IDs prevent two same-titled votes from colliding on the hidden-actions cookie.
   private getRowKey(item: PendingActionItem): string {
     if (item.meetingUid) {
       return `${item.type}-${item.meetingUid}-${item.occurrenceId ?? ''}`;
+    }
+    if (item.voteUid) {
+      return `${item.type}-${item.voteUid}`;
     }
     return `${item.type}-${item.text}-${item.buttonLink ?? ''}`;
   }

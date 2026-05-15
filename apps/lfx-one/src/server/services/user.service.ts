@@ -1317,7 +1317,7 @@ export class UserService {
         icon: 'fa-regular fa-check-to-slot',
         severity: PENDING_ACTION_SEVERITY.Vote,
         buttonText: 'Cast Vote',
-        // buttonLink stays as a no-JS fallback; the dashboard prefers inline launch when voteUid is present.
+        // Inline launch is the active path (template branches on isVoteInline when voteUid is set); buttonLink kept for the older Survey/Agenda code path and any future caller that hasn't migrated.
         buttonLink: '/votes',
         voteUid,
         date: `Closes ${formattedEnd}`,
