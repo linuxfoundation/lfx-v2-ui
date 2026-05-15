@@ -84,9 +84,11 @@ export class SidebarComponent {
 
   protected onItemSelected(item: LensItem): void {
     const context = lensItemToProjectContext(item);
-    // Set the context before switching lenses: NavigationService injects selected_uid from
-    // ProjectContextService at reload time, so the lens flip must see the clicked UID.
-    if (item.isFoundation) {
+    // Project-only users still see foundations in their project list (NavigationService only filters
+    // foundations out when the foundation lens is visible). Treat a foundation row as a project context
+    // for those users — setLens('foundation') would be a no-op and the selection would silently fail.
+    const foundationAllowed = this.lensService.availableLenses().some((option) => option.id === 'foundation');
+    if (item.isFoundation && foundationAllowed) {
       this.projectContextService.setFoundation(context);
       this.lensService.setLens('foundation');
     } else {

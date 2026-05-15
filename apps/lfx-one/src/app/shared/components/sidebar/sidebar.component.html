@@ -47,7 +47,7 @@
                       <div class="font-semibold">{{ tag.label }}</div>
                       @if (tag.names.length > 0) {
                         <ul class="mt-1 pl-4 list-disc font-normal text-gray-300">
-                          @for (name of tag.names; track name) {
+                          @for (name of tag.names; track $index) {
                             <li>{{ name }}</li>
                           }
                         </ul>
