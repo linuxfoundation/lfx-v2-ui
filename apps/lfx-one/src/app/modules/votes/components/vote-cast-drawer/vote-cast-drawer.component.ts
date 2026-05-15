@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { DatePipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, effect, inject, input, model, output, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -64,12 +65,12 @@ export class VoteCastDrawerComponent {
   protected readonly submitting = signal<boolean>(false);
   protected readonly abstain = signal<boolean>(false);
 
-  // Emits when the drawer is closed. Used to cancel any in-flight submit so the
-  // success toast can't fire after the user "cancelled" (see PR #710 review).
-  private readonly cancelSubmit$ = new Subject<void>();
-
   // === Shared Observables ===
   private readonly voteId$ = toObservable(this.voteId).pipe(shareReplay({ bufferSize: 1, refCount: true }));
+  // Emits when the drawer is closed mid-submit. The submit chain pipes through
+  // takeUntil(cancelSubmit$) so the HTTP stream is cancelled cleanly and the
+  // success/error toast cannot fire after the user has already closed the drawer.
+  private readonly cancelSubmit$ = new Subject<void>();
 
   // === Derived Signals (from API) ===
   protected readonly vote: Signal<Vote | null> = this.initVote();
@@ -96,8 +97,14 @@ export class VoteCastDrawerComponent {
     });
 
     // Reset transient state when the drawer closes so reopening starts fresh.
+    // Cancels any in-flight submit regardless of how the drawer was dismissed
+    // (close button, ESC, or overlay-click) so the success toast cannot fire
+    // after the user has already navigated away.
     effect(() => {
       if (!this.visible()) {
+        if (this.submitting()) {
+          this.cancelSubmit$.next();
+        }
         this.abstain.set(false);
         this.submitting.set(false);
       }
@@ -115,13 +122,9 @@ export class VoteCastDrawerComponent {
 
   // === Protected Methods ===
   protected onClose(): void {
-    // Cancel any in-flight submit so its success/error toast doesn't fire after
-    // the user has already cancelled. The submit subscription pipes through
-    // takeUntil(cancelSubmit$) so emitting here completes the stream cleanly.
-    if (this.submitting()) {
-      this.cancelSubmit$.next();
-      this.submitting.set(false);
-    }
+    // Setting visible to false triggers the visibility effect, which handles
+    // in-flight submit cancellation and all other state resets for every
+    // close path (close button, ESC, overlay-click).
     this.visible.set(false);
   }
 
@@ -182,7 +185,7 @@ export class VoteCastDrawerComponent {
           this.voteSubmitted.emit(vote.uid);
           this.visible.set(false);
         },
-        error: (err: Error) => {
+        error: (err: Error | HttpErrorResponse) => {
           const isInvitationMissing = err?.message === 'INVITATION_NOT_FOUND';
           this.messageService.add({
             severity: 'error',
@@ -233,11 +236,15 @@ export class VoteCastDrawerComponent {
     for (const question of questions) {
       if (this.form.contains(question.question_id)) continue;
       if (question.type === 'multiple_choice') {
-        this.form.addControl(question.question_id, new FormControl<string[] | null>(null, Validators.required), { emitEvent: false });
+        this.form.addControl(question.question_id, new FormControl<string[]>([], Validators.required), { emitEvent: false });
       } else {
         this.form.addControl(question.question_id, new FormControl<string | null>(null, Validators.required), { emitEvent: false });
       }
     }
+    // All add/removeControl calls above suppress individual emissions to avoid
+    // per-control churn. Fire a single status update once all controls are
+    // reconciled so toSignal(statusChanges) reflects the correct validity state.
+    this.form.updateValueAndValidity({ emitEvent: true });
   }
 
   private buildAnswers(questions: PollQuestion[]): VoteAnswerInput[] {

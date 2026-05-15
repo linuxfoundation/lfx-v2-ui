@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { VoteResponseStatus } from '@lfx-one/shared/enums';
+import { VoteResponseIndexerStatus, VoteResponseStatus } from '@lfx-one/shared/enums';
 import {
   CreateVoteRequest,
   CreateVoteResponseRequest,
@@ -286,7 +286,7 @@ export class VoteService {
             filters: [`vote_uid:${payload.vote_uid}`],
           }
         );
-        return resources.some((r) => r.data.uid === payload.vote_response_uid && r.data.vote_status === 'submitted');
+        return resources.some((r) => r.data.uid === payload.vote_response_uid && r.data.vote_status === VoteResponseIndexerStatus.SUBMITTED);
       },
       maxRetries: 5,
       retryDelayMs: 1000,
@@ -344,12 +344,12 @@ export class VoteService {
       })
     );
 
-    // Track which votes the user has already submitted a ballot for. `'submitted'` is the
-    // indexer's terminal state for a cast ballot; anything else (e.g. `'awaiting_response'`)
-    // is treated as still-invited.
+    // Track which votes the user has already submitted a ballot for.
+    // VoteResponseIndexerStatus.SUBMITTED is the indexer's terminal state for a cast ballot;
+    // anything else (e.g. VoteResponseIndexerStatus.AWAITING) is treated as still-invited.
     const respondedVoteUids = new Set<string>();
     for (const r of responses) {
-      if (r.vote_uid && r.vote_status === 'submitted') respondedVoteUids.add(r.vote_uid);
+      if (r.vote_uid && r.vote_status === VoteResponseIndexerStatus.SUBMITTED) respondedVoteUids.add(r.vote_uid);
     }
 
     // Extract unique vote UIDs
