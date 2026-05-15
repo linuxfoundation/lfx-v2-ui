@@ -328,12 +328,18 @@ export class VoteService {
     if (email) filtersOr.push(`user_email:${email}`);
     if (username) filtersOr.push(`username:${username}`);
 
-    const responses = await fetchAllQueryResources<{ vote_uid: string; vote_status?: string }>(req, (pageToken) =>
-      this.microserviceProxy.proxyRequest<QueryServiceResponse<{ vote_uid: string; vote_status?: string }>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-        type: 'vote_response',
-        filters_or: filtersOr,
-        ...(pageToken && { page_token: pageToken }),
-      })
+    const responses = await fetchAllQueryResources<{ vote_uid: string; vote_status?: IndexedVoteResponseStatus }>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<{ vote_uid: string; vote_status?: IndexedVoteResponseStatus }>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        {
+          type: 'vote_response',
+          filters_or: filtersOr,
+          ...(pageToken && { page_token: pageToken }),
+        }
+      )
     );
 
     const respondedVoteUids = new Set<string>();

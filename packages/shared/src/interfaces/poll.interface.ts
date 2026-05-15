@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { IndividualVoteStatus, PollStatus, PollType, VoteResponseStatus } from '../enums/poll.enum';
+import { IndexedVoteResponseStatus, IndividualVoteStatus, PollStatus, PollType, VoteResponseStatus } from '../enums/poll.enum';
 import { CommitteeReference } from './committee.interface';
 
 /**
@@ -231,7 +231,7 @@ export interface MyVoteResponse {
   vote_uid: string;
   /** v1 alias for the response row id; identical value to `uid` when indexer populates it. */
   vote_id?: string;
-  vote_status?: string;
+  vote_status?: IndexedVoteResponseStatus;
   voter_removed?: boolean;
   user_email?: string;
   username?: string;

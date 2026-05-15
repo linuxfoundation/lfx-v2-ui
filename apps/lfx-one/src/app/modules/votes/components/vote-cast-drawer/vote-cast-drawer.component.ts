@@ -137,6 +137,7 @@ export class VoteCastDrawerComponent {
           return this.voteService.createVoteResponse(payload);
         }),
         takeUntil(this.cancelSubmit$),
+        takeUntilDestroyed(this.destroyRef),
         finalize(() => this.submitting.set(false))
       )
       .subscribe({

@@ -109,10 +109,9 @@ export class VotesDashboardComponent {
     this.resultsDrawerVisible.set(true);
   }
 
-  // Refresh My Votes after a successful ballot submission so response_status flips to RESPONDED.
+  // Me-lens uses myVotes (refresh$); fetch$ feeds initVotes (non-Me) and would just cause extra churn.
   protected onVoteSubmitted(): void {
     this.refresh$.next();
-    this.fetch$.next();
   }
 
   protected refreshVotes(): void {
