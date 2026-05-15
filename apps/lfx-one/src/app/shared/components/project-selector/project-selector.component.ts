@@ -163,7 +163,7 @@ export class ProjectSelectorComponent {
           return persona;
         }
       }
-      return null;
+      return this.fallbackRolePersona(priority);
     });
   }
 
@@ -234,6 +234,22 @@ export class ProjectSelectorComponent {
     const personaProjects = this.personaService.personaProjects();
     for (const persona of priority) {
       if ((personaProjects[persona] ?? []).some((p) => p.projectUid === item.uid)) {
+        return persona;
+      }
+    }
+    return this.fallbackRolePersona(priority);
+  }
+
+  // personaProjects only covers projects with explicit detections, but the navigation API returns
+  // every accessible project. For non-hybrid users the scope is unambiguous (board-only or
+  // project-only), so we surface the highest-priority persona they hold within that scope.
+  private fallbackRolePersona(priority: readonly PersonaType[]): PersonaType | null {
+    if (this.hybridMode()) {
+      return null;
+    }
+    const allPersonas = this.personaService.allPersonas();
+    for (const persona of priority) {
+      if (allPersonas.includes(persona)) {
         return persona;
       }
     }
