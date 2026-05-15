@@ -9,10 +9,8 @@
   styleClass="xl:w-[45%] lg:w-[55%] md:w-[70%] sm:w-[90%] w-full vote-results-drawer"
   data-testid="vote-results-drawer">
   @if (vote(); as voteData) {
-    <!-- Header Section -->
     <ng-template #header>
       <div class="flex flex-col gap-3 w-full pr-4" data-testid="vote-results-drawer-header">
-        <!-- Title Row with Close Button -->
         <div class="flex items-center justify-between gap-2">
           <h1 class="text-lg sm:text-xl font-semibold text-slate-900 flex-1 min-w-0 truncate" data-testid="vote-results-drawer-title">
             {{ voteData.name }}
@@ -26,38 +24,30 @@
           </button>
         </div>
 
-        <!-- Status and Meta Info -->
         <div class="flex flex-wrap items-center gap-2 text-sm text-slate-600">
-          <!-- Committee Badge -->
           <span class="bg-blue-100 text-blue-700 text-xs px-2.5 py-1 rounded font-medium">
             {{ voteData.committee_name || 'Unknown' }}
           </span>
           <span class="text-slate-400">•</span>
-          <!-- Status -->
           <lfx-tag
             [value]="voteData.status | pollStatusLabel"
             [severity]="voteData.status | pollStatusSeverity"
             data-testid="vote-results-drawer-status"></lfx-tag>
           <span class="text-slate-400">•</span>
-          <!-- Close Date -->
           @if (isVoteClosed()) {
             <span>Closed {{ voteData.end_time | date: 'MMM d, y' }}</span>
           } @else {
             <span>Due {{ voteData.end_time | date: 'MMM d, y' }}</span>
           }
           <span class="text-slate-400">•</span>
-          <!-- Voting Method -->
           <span>{{ votingMethodText() }}</span>
         </div>
       </div>
     </ng-template>
 
-    <!-- Content Section -->
     <div class="flex flex-col gap-6" data-testid="vote-results-drawer-content">
       @if (isLoading()) {
-        <!-- Loading Skeleton -->
         <div class="flex flex-col gap-6">
-          <!-- Participation Stats Skeleton -->
           <div class="p-4 bg-slate-50 rounded-lg border border-slate-200 flex flex-col gap-3">
             <div class="flex items-center justify-between">
               <p-skeleton width="80px" height="40px"></p-skeleton>
@@ -67,7 +57,6 @@
             <p-skeleton width="100%" height="8px"></p-skeleton>
           </div>
 
-          <!-- Questions Skeleton -->
           <div class="flex flex-col gap-4">
             <p-skeleton width="150px" height="24px"></p-skeleton>
             @for (i of [1, 2, 3]; track i) {
@@ -79,9 +68,7 @@
           </div>
         </div>
       } @else if (!isGenericPoll()) {
-        <!-- Ranked-choice results (replaces the old PCC redirect) -->
         <div class="flex flex-col gap-6" data-testid="vote-results-ranked">
-          <!-- Voting method + algorithm banner -->
           <div class="rounded-lg bg-slate-50 border border-slate-200 p-4 flex items-start gap-3" data-testid="vote-results-ranked-method">
             <i class="fa-light fa-list-ol text-2xl text-blue-600 flex-shrink-0 mt-0.5"></i>
             <div class="flex flex-col gap-1">
@@ -93,7 +80,6 @@
             </div>
           </div>
 
-          <!-- Participation summary -->
           <div class="p-4 bg-slate-50 rounded-lg border border-slate-200 flex flex-col gap-3" data-testid="vote-results-ranked-participation">
             <div class="flex items-center justify-between text-sm text-slate-600">
               <div class="text-center flex-1">
@@ -114,7 +100,6 @@
             </div>
           </div>
 
-          <!-- Per-question rank distribution -->
           @if (rankedQuestions().length > 0) {
             @for (q of rankedQuestions(); track q.questionId) {
               <div class="rounded-lg border border-slate-200 p-4 flex flex-col gap-4" [attr.data-testid]="'vote-results-ranked-question-' + q.questionId">
@@ -147,7 +132,6 @@
                   }
                 </div>
 
-                <!-- Round summary placeholder (IRV / Meek STV) -->
                 @if (q.hasRoundSummary) {
                   <div
                     class="rounded-md border border-slate-200 bg-slate-50 p-3 flex items-center gap-2"
@@ -164,9 +148,6 @@
             </div>
           }
 
-          <!-- Comments (parity with generic-live and final-results branches — ranked polls can
-               have comment prompts too; previously these were silently hidden in the PCC-redirect
-               branch). -->
           @if (commentResults().length > 0) {
             <div class="flex flex-col gap-4 pt-4 border-t border-slate-200" data-testid="vote-results-comments">
               <h2 class="text-lg font-semibold text-slate-900">Comments</h2>
@@ -183,7 +164,6 @@
             </div>
           }
 
-          <!-- Vote Details -->
           @if (voteData.description) {
             <div class="rounded-lg border border-slate-200 p-4 flex flex-col gap-2" data-testid="vote-results-details">
               <h4 class="text-sm font-semibold text-slate-900">Vote Details</h4>
@@ -192,9 +172,7 @@
           }
         </div>
       } @else if (!isVoteClosed()) {
-        <!-- Live/Active Vote - Simplified Layout -->
         <div class="flex flex-col gap-6">
-          <!-- Vote Details Section (at top for live votes) -->
           @if (voteData.description) {
             <div class="flex flex-col gap-4" data-testid="vote-results-details">
               <h2 class="text-lg font-semibold text-slate-900">Vote Details</h2>
@@ -203,18 +181,15 @@
             </div>
           }
 
-          <!-- Live Results -->
           <div class="flex flex-col gap-6" data-testid="vote-results-questions">
             <h2 class="text-lg font-semibold text-slate-900">Live Results</h2>
 
             @for (question of questionsWithResults(); track question.questionId; let idx = $index) {
               <div class="flex flex-col gap-4">
-                <!-- Question Header (only show for multi-question) -->
                 @if (questionsWithResults().length > 1) {
                   <h3 class="text-base font-semibold text-slate-900">Q{{ idx + 1 }}. {{ question.question }}</h3>
                 }
 
-                <!-- Options with horizontal bars -->
                 <div class="flex flex-col gap-3">
                   @for (option of question.options; track option.choiceId) {
                     <div class="flex flex-col gap-1.5" [attr.data-testid]="'vote-results-option-' + option.choiceId">
@@ -240,7 +215,6 @@
             }
           </div>
 
-          <!-- Participation Summary (at bottom for live votes) -->
           <div class="pt-4 border-t border-slate-200 flex flex-col gap-4">
             <div class="p-4 bg-slate-50 rounded-lg border border-slate-200 flex flex-col gap-3" data-testid="vote-results-participation">
               <div class="flex items-center justify-between text-sm text-slate-600">
@@ -258,13 +232,11 @@
                 </div>
               </div>
 
-              <!-- Participation Progress Bar -->
               <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
                 <div class="h-full bg-blue-500 transition-all" [style.width.%]="participationStats().participationRate"></div>
               </div>
             </div>
 
-            <!-- Admin Governance Note -->
             <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p class="text-sm text-blue-800">
                 As the creator, you can monitor live results and close the vote when ready. Final results will be available after the vote closes.
@@ -272,7 +244,6 @@
             </div>
           </div>
 
-          <!-- Comments Section -->
           @if (commentResults().length > 0) {
             <div class="flex flex-col gap-4 pt-4 border-t border-slate-200" data-testid="vote-results-comments">
               <h2 class="text-lg font-semibold text-slate-900">Comments</h2>
@@ -290,12 +261,9 @@
           }
         </div>
       } @else {
-        <!-- Closed Vote - Final Results Layout -->
         <div class="flex flex-col gap-6">
-          <!-- Title -->
           <h2 class="text-xl font-semibold text-slate-900">Final Results</h2>
 
-          <!-- Participation Bar (at top for closed votes) -->
           <div class="p-4 bg-slate-50 rounded-lg border border-slate-200 flex flex-col gap-3" data-testid="vote-results-participation">
             <div class="flex items-center justify-between text-sm text-slate-600">
               <div class="text-center flex-1">
@@ -312,17 +280,14 @@
               </div>
             </div>
 
-            <!-- Participation Progress Bar -->
             <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
               <div class="h-full bg-blue-500 transition-all" [style.width.%]="participationStats().participationRate"></div>
             </div>
           </div>
 
-          <!-- Question Results -->
           <div class="flex flex-col gap-6 mt-2" data-testid="vote-results-questions">
             @for (question of questionsWithResults(); track question.questionId; let idx = $index) {
               <div class="flex flex-col gap-4">
-                <!-- Question Header -->
                 <h3 class="text-base font-semibold text-slate-900">
                   @if (questionsWithResults().length > 1) {
                     Q{{ idx + 1 }}.
@@ -330,7 +295,6 @@
                   {{ question.question }}
                 </h3>
 
-                <!-- Options with Vote Results -->
                 <div class="flex flex-col gap-3">
                   @for (option of question.options; track option.choiceId) {
                     <div
@@ -382,7 +346,6 @@
                         </div>
                       </div>
 
-                      <!-- Progress Bar -->
                       <div class="w-full bg-white rounded-full h-2 overflow-hidden">
                         <div
                           class="h-full transition-all"
@@ -399,7 +362,6 @@
           </div>
         </div>
 
-        <!-- Comments Section -->
         @if (commentResults().length > 0) {
           <div class="flex flex-col gap-4 pt-4 border-t border-slate-200" data-testid="vote-results-comments">
             <h2 class="text-lg font-semibold text-slate-900">Comments</h2>
@@ -416,7 +378,6 @@
           </div>
         }
 
-        <!-- Vote Details Section (at bottom for closed votes) -->
         @if (voteData.description) {
           <div class="flex flex-col gap-4 pt-4 border-t border-slate-200" data-testid="vote-results-details">
             <h2 class="text-lg font-semibold text-slate-900">Vote Details</h2>

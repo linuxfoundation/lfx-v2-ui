@@ -6,31 +6,21 @@ import { Component, computed, inject, input, model, signal, Signal } from '@angu
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { TagComponent } from '@components/tag/tag.component';
 import { PollStatus, PollType } from '@lfx-one/shared';
-import { PollCommentResult, Vote, VoteParticipationStats, VoteResultsOption, VoteResultsQuestion, VoteResultsResponse } from '@lfx-one/shared/interfaces';
+import {
+  PollCommentResult,
+  RankedQuestionView,
+  Vote,
+  VoteParticipationStats,
+  VoteResultsOption,
+  VoteResultsQuestion,
+  VoteResultsResponse,
+} from '@lfx-one/shared/interfaces';
 import { PollStatusLabelPipe } from '@pipes/poll-status-label.pipe';
 import { PollStatusSeverityPipe } from '@pipes/poll-status-severity.pipe';
 import { VoteService } from '@services/vote.service';
 import { DrawerModule } from 'primeng/drawer';
 import { SkeletonModule } from 'primeng/skeleton';
 import { catchError, finalize, of, shareReplay, startWith, switchMap } from 'rxjs';
-
-/**
- * Local view model for ranked-choice question rendering. Derived from
- * `PollQuestionResult` by `initRankedQuestions`. Kept local because it's purely
- * a presentation-layer reshape; promote to `@lfx-one/shared/interfaces` if a
- * second consumer ever needs it.
- */
-interface RankedQuestionView {
-  questionId: string;
-  prompt: string;
-  choiceDistributions: {
-    choiceId: string;
-    choiceText: string;
-    totalRanked: number;
-    rankCounts: { rank: number; count: number; percentage: number }[];
-  }[];
-  hasRoundSummary: boolean;
-}
 
 @Component({
   selector: 'lfx-vote-results-drawer',
@@ -200,20 +190,14 @@ export class VoteResultsDrawerComponent {
     });
   }
 
-  // Derives the ranked-choice per-question view model from raw poll_results.
-  // For each question we build per-choice rank distributions (rank, count, percentage)
-  // and flag whether the upstream returned a round-by-round summary (IRV / Meek STV)
-  // so the template can show a placeholder banner — the round payload itself is
-  // currently untyped (`any`) so detailed visualization is deferred.
+  /** Derives the ranked-choice per-question view model — round-summary payload is untyped upstream so detailed visualization is deferred to a placeholder banner. */
   private initRankedQuestions(): Signal<RankedQuestionView[]> {
     return computed(() => {
       const results = this.voteResults();
       if (!results?.poll_results?.length) return [];
 
       return results.poll_results.map((pr) => {
-        // Choice text resolution: prefer the winner_info candidate list (it carries
-        // choice_text), fall back to the question's own choices. Defensive both ways
-        // in case upstream omits either.
+        // Choice text: prefer winner_info.poll_choices, fall back to question.choices.
         const choiceTextById = new Map((pr.ranked_choice_winner_info?.poll_choices ?? pr.question.choices ?? []).map((c) => [c.choice_id, c.choice_text]));
 
         const choiceDistributions = (pr.ranked_choice_votes ?? []).map((rcv) => {
