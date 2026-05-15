@@ -44,6 +44,7 @@ import { LinkifyPipe } from '@pipes/linkify.pipe';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { RecurrenceSummaryPipe } from '@pipes/recurrence-summary.pipe';
 import { MeetingService } from '@services/meeting.service';
+import { PlausibleService } from '@services/plausible.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ProjectService } from '@services/project.service';
 import { UserService } from '@services/user.service';
@@ -115,6 +116,7 @@ export class MeetingJoinComponent implements OnInit {
   private readonly userService = inject(UserService);
   private readonly clipboard = inject(Clipboard);
   private readonly projectContextService = inject(ProjectContextService);
+  private readonly plausibleService = inject(PlausibleService);
   private readonly dialogService = inject(DialogService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
@@ -124,7 +126,7 @@ export class MeetingJoinComponent implements OnInit {
   public user: Signal<User | null> = this.userService.user;
   public joinForm: FormGroup;
   public project: WritableSignal<Partial<Project> | null> = signal<Partial<Project> | null>(null);
-  public meeting: Signal<Meeting & { project: Partial<Project> }>;
+  public meeting: Signal<Meeting & { project: Partial<Project> | null }>;
   public currentOccurrence: Signal<MeetingOccurrence | null>;
   private occurrenceContext: Signal<{ sorted: MeetingOccurrence[]; currentIdx: number }>;
   protected previousOccurrenceUrl: Signal<string | null>;
@@ -169,6 +171,9 @@ export class MeetingJoinComponent implements OnInit {
   public meetingTitle: Signal<string>;
   public meetingDescription: Signal<string>;
   public hasAiCompanion: Signal<boolean>;
+  // True when the viewer is anonymous on a private meeting — drives the strict sign-in gate
+  // that hides all sensitive content (title, agenda, materials, join info) on the page.
+  public restrictedView: Signal<boolean>;
   protected isPastMeeting: Signal<boolean>;
   protected pastMeetingSummary: Signal<PastMeetingSummary | null>;
   private pastMeetingRecording: Signal<PastMeetingRecording | null>;
@@ -265,6 +270,7 @@ export class MeetingJoinComponent implements OnInit {
     this.meetingTitle = this.initializeMeetingTitle();
     this.meetingDescription = this.initializeMeetingDescription();
     this.hasAiCompanion = this.initializeHasAiCompanion();
+    this.restrictedView = this.initializeRestrictedView();
     this.isPastMeeting = this.initializeIsPastMeeting();
     this.pastMeetingSummary = this.initializePastMeetingSummary();
     this.pastMeetingRecording = this.initializePastMeetingRecording();
@@ -293,6 +299,7 @@ export class MeetingJoinComponent implements OnInit {
     this.registrants = this.initializeRegistrants();
     this.parentProject = this.initializeParentProject();
     this.initializeAutoJoin();
+    this.initializePublicMeetingPageviewTracking();
   }
 
   public ngOnInit(): void {
@@ -505,7 +512,7 @@ export class MeetingJoinComponent implements OnInit {
   }
 
   private initializeMeeting() {
-    return toSignal<Meeting & { project: Partial<Project> }>(
+    return toSignal<Meeting & { project: Partial<Project> | null }>(
       combineLatest([this.activatedRoute.paramMap, this.activatedRoute.queryParamMap, this.refreshTrigger$]).pipe(
         debounceTime(0), // Coalesce rapid SSR hydration emissions so the fallback chain isn't canceled
         switchMap(([params, queryParams]) => {
@@ -526,7 +533,7 @@ export class MeetingJoinComponent implements OnInit {
               }),
               map((res: PublicPastMeetingResponse) => ({
                 meeting: res.meeting,
-                project: res.project as Partial<Project>,
+                project: res.project as Partial<Project> | null,
               })),
               catchError((error) => {
                 if ([404, 403, 400].includes(error.status)) {
@@ -550,7 +557,7 @@ export class MeetingJoinComponent implements OnInit {
                   }),
                   map((res: PublicPastMeetingResponse) => ({
                     meeting: res.meeting,
-                    project: res.project as Partial<Project>,
+                    project: res.project as Partial<Project> | null,
                   })),
                   catchError(() => {
                     this.router.navigate(['/meetings/not-found']);
@@ -565,12 +572,16 @@ export class MeetingJoinComponent implements OnInit {
             })
           );
         }),
-        map((res) => ({ ...res.meeting, project: res.project })),
+        // The response shape is widened to allow the redacted variant ({id, visibility}, project: null)
+        // for private + anonymous viewers. Downstream signals and the template gate that case via
+        // `restrictedView` — full-Meeting field access only happens when restrictedView() is false,
+        // so the assertion to `Meeting & { project: ... }` is safe at the points where it's read.
+        map((res) => ({ ...res.meeting, project: res.project }) as Meeting & { project: Partial<Project> | null }),
         tap((res) => {
           this.project.set(res.project);
         })
       )
-    ) as Signal<Meeting & { project: Partial<Project> }>;
+    ) as Signal<Meeting & { project: Partial<Project> | null }>;
   }
 
   private isPastMeetingOccurrenceId(id: string): boolean {
@@ -895,6 +906,10 @@ export class MeetingJoinComponent implements OnInit {
     return computed(() => this.meeting()?.zoom_config?.ai_companion_enabled || false);
   }
 
+  private initializeRestrictedView(): Signal<boolean> {
+    return computed(() => this.meeting()?.visibility === 'private' && !this.authenticated());
+  }
+
   private initializeIsInvited(): Signal<boolean> {
     return computed(() => this.meeting()?.invited ?? false);
   }
@@ -1114,6 +1129,46 @@ export class MeetingJoinComponent implements OnInit {
       ),
       { initialValue: null }
     );
+  }
+
+  // PlausibleService defers the auto-pageview for /meetings/:id — fire it here once context lands.
+  private initializePublicMeetingPageviewTracking(): void {
+    if (isPlatformServer(this.platformId)) {
+      return;
+    }
+    // Caps the parent foundation fetch so ROOT_PROJECT_SLUG → null (mapped in initializeParentProject)
+    // doesn't block the pageview forever. Sub-projects whose parent doesn't land in time record
+    // project_* correctly and leave foundation_* empty (see buildPageviewContext callsite below).
+    const PARENT_FETCH_TIMEOUT_MS = 2000;
+    toObservable(this.project)
+      .pipe(
+        filter((p): p is Partial<Project> => !!p?.slug),
+        switchMap((project) => {
+          if (!project.parent_uid) {
+            return of({ project, parent: null as Project | null });
+          }
+          return merge(
+            toObservable(this.parentProject).pipe(
+              filter((parent): parent is Project => !!parent),
+              map((parent) => ({ project, parent: parent as Project | null }))
+            ),
+            timer(PARENT_FETCH_TIMEOUT_MS).pipe(map(() => ({ project, parent: null as Project | null })))
+          );
+        }),
+        take(1),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(({ project, parent }) => {
+        const isTopLevel = !project.parent_uid;
+        this.plausibleService.trackPage(
+          PlausibleService.buildPageviewContext({
+            foundationSlug: isTopLevel ? project.slug : parent?.slug,
+            foundationName: isTopLevel ? project.name : parent?.name,
+            projectSlug: isTopLevel ? undefined : project.slug,
+            projectName: isTopLevel ? undefined : project.name,
+          })
+        );
+      });
   }
 
   private initializeRegistrants(): Signal<MeetingRegistrant[]> {
