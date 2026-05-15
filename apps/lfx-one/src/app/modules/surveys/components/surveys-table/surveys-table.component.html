@@ -85,9 +85,11 @@
           <ng-template #header>
             <tr>
               <th class="w-[26%]">{{ surveyLabel.singular }} Name</th>
-              <th class="w-[15%]">Survey Type</th>
-              <th class="w-[16%]">Group</th>
-              @if (!isMeLens()) {
+              <th [class]="isMeLens() ? 'w-[13%]' : 'w-[15%]'">Survey Type</th>
+              <th [class]="isMeLens() ? 'w-[14%]' : 'w-[16%]'">Group</th>
+              @if (isMeLens()) {
+                <th class="w-[15%]">Project</th>
+              } @else {
                 <th class="w-[11%]">Responses</th>
               }
               <th class="w-[12%]">Due</th>
@@ -123,7 +125,18 @@
                 </span>
               </td>
 
-              @if (!isMeLens()) {
+              @if (isMeLens()) {
+                <td>
+                  <span
+                    class="text-sm text-gray-700 truncate block max-w-full"
+                    [pTooltip]="survey.project_name || ''"
+                    [tooltipDisabled]="!survey.project_name"
+                    tooltipPosition="top"
+                    [attr.data-testid]="'surveys-project-' + survey.uid">
+                    {{ survey.project_name || '—' }}
+                  </span>
+                </td>
+              } @else {
                 <td>
                   <span
                     class="text-sm text-gray-700"
