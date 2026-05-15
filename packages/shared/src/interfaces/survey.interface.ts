@@ -128,6 +128,8 @@ export interface Survey {
   num_detractors?: number;
   /** Personalized SurveyMonkey response link for the current user (present only in the Me lens; populated from survey_response records) */
   survey_link?: string;
+  /** survey_response UID — present only in the Me lens; identifies the specific response record this row was built from (one row per survey × committee) */
+  response_uid?: string;
 }
 
 /**

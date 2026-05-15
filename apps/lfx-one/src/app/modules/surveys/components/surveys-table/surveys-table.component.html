@@ -87,7 +87,9 @@
               <th class="w-[26%]">{{ surveyLabel.singular }} Name</th>
               <th class="w-[15%]">Survey Type</th>
               <th class="w-[16%]">Group</th>
-              <th class="w-[11%]">Responses</th>
+              @if (!isMeLens()) {
+                <th class="w-[11%]">Responses</th>
+              }
               <th class="w-[12%]">Due</th>
               <th class="w-[8%] text-right">Status</th>
               <th class="w-[12%] whitespace-nowrap"></th>
@@ -100,7 +102,7 @@
                 <button
                   type="button"
                   class="lfx-table-name-link text-sm text-left bg-transparent border-none p-0"
-                  (click)="onViewResults(survey.uid)"
+                  (click)="onViewResults(survey)"
                   [attr.data-testid]="'surveys-name-' + survey.uid">
                   {{ survey.survey_title }}
                 </button>
@@ -113,20 +115,25 @@
               </td>
 
               <td>
-                <span class="bg-white border border-gray-300 text-gray-700 text-xs px-2 py-0.5 rounded">
+                <span
+                  class="inline-block max-w-full truncate bg-white border border-gray-300 text-gray-700 text-xs px-2 py-0.5 rounded"
+                  [pTooltip]="getGroupName(survey)"
+                  tooltipPosition="top">
                   {{ getGroupName(survey) }}
                 </span>
               </td>
 
-              <td>
-                <span
-                  class="text-sm text-gray-700"
-                  [pTooltip]="getResponseTooltip(survey)"
-                  tooltipPosition="top"
-                  [attr.data-testid]="'surveys-responses-' + survey.uid">
-                  {{ survey.total_responses }}
-                </span>
-              </td>
+              @if (!isMeLens()) {
+                <td>
+                  <span
+                    class="text-sm text-gray-700"
+                    [pTooltip]="getResponseTooltip(survey)"
+                    tooltipPosition="top"
+                    [attr.data-testid]="'surveys-responses-' + survey.uid">
+                    {{ survey.total_responses }}
+                  </span>
+                </td>
+              }
 
               <td>
                 @if (survey.displayStatus === SurveyStatus.CLOSED) {
@@ -189,7 +196,7 @@
                       size="small"
                       [text]="true"
                       styleClass=""
-                      (onClick)="onViewResults(survey.uid)"
+                      (onClick)="onViewResults(survey)"
                       [attr.data-testid]="'surveys-view-' + survey.uid">
                     </lfx-button>
                   } @else if (!isMeLens() && (survey.displayStatus === SurveyStatus.OPEN || survey.displayStatus === SurveyStatus.CLOSED)) {
@@ -199,7 +206,7 @@
                       size="small"
                       [text]="true"
                       styleClass=""
-                      (onClick)="onViewResults(survey.uid)"
+                      (onClick)="onViewResults(survey)"
                       [attr.data-testid]="'surveys-results-' + survey.uid">
                     </lfx-button>
                   }

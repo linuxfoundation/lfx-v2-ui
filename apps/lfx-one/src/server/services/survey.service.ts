@@ -234,42 +234,26 @@ export class SurveyService {
       })
     );
 
-    // First response per survey_uid wins for the link and survey-level fields.
-    // A user can have multiple responses for the same survey (added to several
-    // committees), but the denormalized survey fields are identical across all of them.
-    const byUid = new Map<string, SurveyResponseRecord>();
-    const surveyLinkMap = new Map<string, string>();
-    const respondedSurveyUids = new Set<string>();
-    for (const r of responses) {
-      if (!r.survey_uid) continue;
-      if (!byUid.has(r.survey_uid)) {
-        byUid.set(r.survey_uid, r);
-      }
-      if (r.response_datetime && r.response_datetime.trim() !== '') {
-        respondedSurveyUids.add(r.survey_uid);
-      }
-      if (r.survey_link && !surveyLinkMap.has(r.survey_uid)) {
-        const validatedLink = validateAndSanitizeUrl(r.survey_link.trim(), SURVEY_LINK_ALLOWLIST);
-        if (validatedLink) {
-          surveyLinkMap.set(r.survey_uid, validatedLink);
-        }
-      }
-    }
+    const validResponses = responses.filter((r) => !!r.survey_uid);
 
-    if (byUid.size === 0) {
+    if (validResponses.length === 0) {
       return [];
     }
 
     logger.debug(req, 'get_my_surveys', 'Found user survey responses', {
-      response_count: responses.length,
-      unique_survey_count: byUid.size,
+      response_count: validResponses.length,
     });
 
-    // Build Survey objects from the denormalized response fields — no upstream fetch needed.
+    // Build one Survey row per response record — one per survey × committee so the
+    // user can act on (or take) each committee invitation independently.
     const surveys: Survey[] = [];
-    for (const [uid, r] of byUid) {
+    for (const r of validResponses) {
+      const isResponded = !!(r.response_datetime && r.response_datetime.trim() !== '');
+      const surveyLink = r.survey_link ? validateAndSanitizeUrl(r.survey_link.trim(), SURVEY_LINK_ALLOWLIST) : undefined;
+
       const survey: Survey = {
-        uid,
+        uid: r.survey_uid,
+        response_uid: r.uid,
         survey_title: r.survey_title || '',
         survey_status: r.survey_status || '',
         // Keep null (not empty string) when absent so Angular's DatePipe doesn't choke.
@@ -283,8 +267,10 @@ export class SurveyService {
         last_modified_at: r.survey_last_modified_at || '',
         total_responses: r.total_responses ?? 0,
         total_recipients: r.total_recipients ?? 0,
+        project_uid: r.project?.project_uid || '',
+        ...(surveyLink && { survey_link: surveyLink }),
+        ...(isResponded && { response_status: 'responded' }),
       };
-      if (respondedSurveyUids.has(uid)) survey.response_status = 'responded';
       surveys.push(survey);
     }
 
@@ -317,14 +303,9 @@ export class SurveyService {
       })
       .map((entry) => entry.survey);
 
-    // Attach project_uid (from the response record) and survey_link for enrichment.
-    const withProjectUid = sorted.map((s) => ({
-      ...s,
-      project_uid: byUid.get(s.uid)?.project?.project_uid || '',
-      survey_link: surveyLinkMap.get(s.uid),
-    }));
-
-    return this.projectService.enrichWithProjectData(req, withProjectUid);
+    // Cast is safe: every row in sorted has project_uid set to a string in the loop above.
+    // Survey.project_uid is typed as optional but enrichWithProjectData requires the field present.
+    return this.projectService.enrichWithProjectData(req, sorted as Array<Survey & { project_uid: string }>) as Promise<Survey[]>;
   }
 
   /**
