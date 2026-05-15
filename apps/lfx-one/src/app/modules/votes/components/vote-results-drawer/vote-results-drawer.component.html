@@ -164,6 +164,25 @@
             </div>
           }
 
+          <!-- Comments (parity with generic-live and final-results branches — ranked polls can
+               have comment prompts too; previously these were silently hidden in the PCC-redirect
+               branch). -->
+          @if (commentResults().length > 0) {
+            <div class="flex flex-col gap-4 pt-4 border-t border-slate-200" data-testid="vote-results-comments">
+              <h2 class="text-lg font-semibold text-slate-900">Comments</h2>
+              @for (commentResult of commentResults(); track commentResult.prompt) {
+                <div class="flex flex-col gap-2">
+                  <h3 class="text-sm font-medium text-slate-700">{{ commentResult.prompt }}</h3>
+                  @for (comment of commentResult.comments; track $index) {
+                    <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                      <p class="text-sm text-slate-700">{{ comment }}</p>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+
           <!-- Vote Details -->
           @if (voteData.description) {
             <div class="rounded-lg border border-slate-200 p-4 flex flex-col gap-2" data-testid="vote-results-details">
