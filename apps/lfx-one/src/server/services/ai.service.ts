@@ -29,6 +29,10 @@ export class AiService {
   }
 
   public async generateMeetingAgenda(req: Request, request: GenerateAgendaRequest): Promise<GenerateAgendaResponse> {
+    if (!this.isAiConfigured()) {
+      throw new Error('AI service not configured: AI_PROXY_URL and AI_API_KEY environment variables are required');
+    }
+
     const startTime = logger.startOperation(req, 'generate_meeting_agenda', {
       meetingType: request.meetingType,
       title: request.title,

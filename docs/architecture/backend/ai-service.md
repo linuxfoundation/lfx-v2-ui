@@ -51,7 +51,7 @@ export class AiService {
 }
 ```
 
-Defaults are empty strings, not placeholder URLs/keys — so missing env fails loudly at request time instead of silently routing to a wrong endpoint or sending a fake key. `makeAiRequest` guards with `isAiConfigured()` and throws a clear "AI service not configured" error when either variable is unset. Production and CI must set `AI_PROXY_URL` and `AI_API_KEY` to real values (see `.env.example`).
+Defaults are empty strings, not placeholder URLs/keys — so missing env never silently routes to a wrong endpoint or sends a fake key. `generateMeetingAgenda` checks `isAiConfigured()` up front and throws `"AI service not configured: AI_PROXY_URL and AI_API_KEY environment variables are required"` when either variable is unset; `makeAiRequest` repeats the guard as defense-in-depth. The thrown error is a plain `Error`, so the default `apiErrorHandler` branch surfaces it to API clients as a generic `500 INTERNAL_ERROR` — by design, since env-var details should not leak to end users. The specific message is logged server-side (CloudWatch) with the request context for ops to act on. Production and CI must set `AI_PROXY_URL` and `AI_API_KEY` to real values (see `.env.example`).
 
 ### Request/Response Schema
 
