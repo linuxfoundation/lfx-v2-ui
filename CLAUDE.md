@@ -255,7 +255,7 @@ Detailed patterns are in `.claude/rules/` and loaded contextually based on the `
 - ❌ Hard-code brand hex values (reference `lfxColors` scales)
 - ❌ Reference browser-only APIs without `isPlatformBrowser`
 - ❌ Mix module concerns in one change
-- ❌ Open a PR without first running `/lfx-self-serve-self-review` to a clean verdict — this is non-negotiable
+- ❌ Open a PR without first running BOTH `/lfx-self-serve-self-review` AND `/lfx-self-serve-pr-readiness` to a clean verdict — this is non-negotiable
 - ❌ Open a PR without DCO sign-off + GPG (`--signoff -S`)
 - ❌ Commit and claim "done" before `yarn build` passes
 - ❌ Re-introduce Figma references — design source is HTML/GitHub
@@ -263,12 +263,13 @@ Detailed patterns are in `.claude/rules/` and loaded contextually based on the `
 
 ## Work cycle — mandatory before opening a PR
 
-> **CRITICAL: `/lfx-self-serve-self-review` is not optional.** Every PR opened from this repo must be preceded by a self-review run against the target base branch. The reviewers' time is the most expensive resource in this workflow — landing a PR without a self-review pass wastes it and is the single biggest contributor to slow review cycles. Do not skip this step, do not save it for later, do not assume your changes are "small enough" to bypass it.
+> **CRITICAL: both pre-PR review skills are mandatory.** Every PR opened from this repo must be preceded by `/lfx-self-serve-self-review` (code-convention audit via the `code-standards-enforcer` agent) AND `/lfx-self-serve-pr-readiness` (PR-shape sanity + bot-reviewer simulation). The reviewers' time is the most expensive resource in this workflow — landing a PR without both audits wastes it and is the single biggest contributor to slow review cycles. Do not skip either, do not save them for later, do not assume your changes are "small enough" to bypass them.
 
-1. **Run `/lfx-self-serve-self-review` against the target base branch.** The skill runs in a forked context using the `code-standards-enforcer` subagent type, so the diff is evaluated independently of the implementation thread. If you just finished coding in this same session, this is the only way to get an unbiased audit of your own work.
-2. Address every CRITICAL finding. Address every reasonable SHOULD_FIX finding.
-3. Rerun the skill until it returns `READY` (or remaining findings are explicitly documented in the PR description with a stated trade-off).
-4. Run `/preflight` for license / format / lint / build / protected-file mechanical checks.
-5. Only then push and open the PR. (Reviewers run `/lfx-review-pr` against the open PR — they should not be your first standards check.)
+1. **Run `/lfx-self-serve-self-review` against the target base branch.** Audits code against `.claude/rules/`, the four `docs/reviews/` code checklists, architecture docs, and validates upstream API contracts for any backend changes. Runs in a forked context using the `code-standards-enforcer` subagent type — diff evaluated independently of the implementation thread. If you just finished coding in this same session, this is the only way to get an unbiased audit of your own work.
+2. **Run `/lfx-self-serve-pr-readiness` against the target base branch.** Audits PR-shape (branch name, JIRA, conventional commits, rebase, DCO + GPG signing, diff size) and simulates the behavioural / correctness findings CodeRabbit and GitHub Copilot reliably catch on this repo — empirical patterns from PR-comment history plus the union of their published rubrics. Runs in a forked context with no subagent. Catches the things bots would flag *before* the PR opens.
+3. Address every CRITICAL finding from both. Address every reasonable SHOULD_FIX finding.
+4. Rerun both skills until each returns `READY` (or remaining findings are explicitly documented in the PR description with a stated trade-off).
+5. Run `/preflight` for license / format / lint / build / protected-file mechanical checks.
+6. Only then push and open the PR. (Reviewers run `/lfx-review-pr` against the open PR — they should not be your first standards check.)
 
 After `/compact`, re-invoke `/develop` or the relevant convention skill if continuing work that depends on it.

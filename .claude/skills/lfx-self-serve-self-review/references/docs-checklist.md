@@ -1,1 +1,0 @@
-../../lfx-review-pr/references/docs-checklist.md

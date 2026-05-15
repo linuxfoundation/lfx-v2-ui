@@ -8,13 +8,14 @@ paths:
 
 This project has guided skills for common workflows. **Proactively suggest the relevant skill** when a user's request matches one of these:
 
-| Skill                         | When to Suggest                                                                                                               |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `/setup`                      | Getting started, first-time setup, broken environments, install failures, missing env vars, 1Password, how to run the app     |
-| `/develop`                    | Add a feature, fix a bug, modify code, create components/services/endpoints/types, refactor, build, implement any code change |
-| `/lfx-self-serve-self-review` | Before pushing or opening a PR — audit the local branch against rules, checklists, and upstream API contracts (cold context)  |
-| `/preflight`                  | Mechanical pre-PR checks — license headers, format, lint, build, protected files, commit signoff                              |
-| `/lfx-review-pr`              | Review an **existing** PR by number — audit a PR's diff, validate against standards, draft inline comments                    |
+| Skill                            | When to Suggest                                                                                                                       |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `/setup`                         | Getting started, first-time setup, broken environments, install failures, missing env vars, 1Password, how to run the app             |
+| `/develop`                       | Add a feature, fix a bug, modify code, create components/services/endpoints/types, refactor, build, implement any code change         |
+| `/lfx-self-serve-self-review`    | Before pushing or opening a PR — code-convention audit via the code-standards-enforcer agent (rules, checklists, upstream API)        |
+| `/lfx-self-serve-pr-readiness`   | Before pushing or opening a PR — PR-shape sanity (branch, JIRA, commits, DCO+GPG) + bot-reviewer simulation. Run alongside self-review |
+| `/preflight`                     | Mechanical pre-PR checks — license headers, format, lint, build, protected files, commit signoff                                      |
+| `/lfx-review-pr`                 | Review an **existing** PR by number — audit a PR's diff, validate against standards, draft inline comments                            |
 
 ## Trigger Phrases
 
@@ -33,14 +34,24 @@ This project has guided skills for common workflows. **Proactively suggest the r
 - "New interface", "Add a filter", "Create a form"
 - Describes any code change, feature request, or bug fix
 
-**`/lfx-self-serve-self-review`** — match any of these intents (development is finished but no PR is open yet):
+**`/lfx-self-serve-self-review`** — match any of these intents (development is finished but no PR is open yet; code-convention focus):
 
 - "Ready for PR", "Is my branch ready?", "Review my work"
 - "Before I open a PR", "Audit my changes", "Self-review"
 - "Check this branch", "Validate my diff"
 - Any "is this ready" question where there is no PR number
 
-**`/preflight`** — match any of these intents (mechanical checks; usually after `/lfx-self-serve-self-review`):
+Suggest **both** `/lfx-self-serve-self-review` AND `/lfx-self-serve-pr-readiness` — they're sibling pre-PR audits and the work-cycle gate requires both.
+
+**`/lfx-self-serve-pr-readiness`** — match any of these intents (development is finished but no PR is open yet; PR-shape + bot focus):
+
+- "PR readiness", "Is this ready to be a PR?"
+- "Check PR shape", "Validate my commits", "Are my commits signed?"
+- "What would CodeRabbit flag?", "What would Copilot say?", "Bot review check"
+- "Did I forget the JIRA ticket?", "Is my branch named right?"
+- Suggest alongside `/lfx-self-serve-self-review` for any "is this ready" question pre-PR
+
+**`/preflight`** — match any of these intents (mechanical checks; usually after both pre-PR review skills):
 
 - "Run checks", "Lint and build", "Pre-PR validation"
 - "Format check", "License check"
@@ -58,6 +69,6 @@ Non-developer contributors use these skills as guided workflows. Follow these ru
 
 - If the user describes a feature they want to build, suggest `/develop` — it walks them through the full process step-by-step
 - If the user asks about setup or getting started, suggest `/setup`
-- After any development work is complete, remind them to run `/lfx-self-serve-self-review` and then `/preflight` before creating a PR
+- After any development work is complete, remind them to run BOTH `/lfx-self-serve-self-review` AND `/lfx-self-serve-pr-readiness`, then `/preflight`, before creating a PR
 - If you are unsure which skill applies, ask the user what they're trying to accomplish
 - When a skill references architecture docs in `docs/`, read those docs before generating code — they are the source of truth
