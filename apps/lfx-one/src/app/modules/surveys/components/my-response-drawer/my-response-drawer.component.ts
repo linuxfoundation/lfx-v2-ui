@@ -22,6 +22,7 @@ export class MyResponseDrawerComponent {
   private readonly surveyService = inject(SurveyService);
 
   public readonly surveyId = input<string | null>(null);
+  public readonly responseUid = input<string | null>(null);
   public readonly survey = input<Survey | null>(null);
   public readonly visible = model<boolean>(false);
 
@@ -75,7 +76,8 @@ export class MyResponseDrawerComponent {
             return of(null);
           }
           this.loading.set(true);
-          return this.surveyService.getMyResponse(id).pipe(finalize(() => this.loading.set(false)));
+          const responseUid = this.responseUid();
+          return this.surveyService.getMyResponse(id, responseUid ?? undefined).pipe(finalize(() => this.loading.set(false)));
         })
       ),
       { initialValue: null }

@@ -99,13 +99,14 @@
           </ng-template>
 
           <ng-template #body let-survey let-rowIndex="rowIndex">
-            <tr [attr.data-row-index]="rowIndex" [attr.data-testid]="'surveys-row-' + survey.uid">
+            @let rowId = survey.response_uid || survey.uid
+            <tr [attr.data-row-index]="rowIndex" [attr.data-testid]="'surveys-row-' + rowId">
               <td>
                 <button
                   type="button"
                   class="lfx-table-name-link text-sm text-left bg-transparent border-none p-0"
                   (click)="onViewResults(survey)"
-                  [attr.data-testid]="'surveys-name-' + survey.uid">
+                  [attr.data-testid]="'surveys-name-' + rowId">
                   {{ survey.survey_title }}
                 </button>
               </td>
@@ -132,7 +133,7 @@
                     [pTooltip]="survey.project_name || ''"
                     [tooltipDisabled]="!survey.project_name"
                     tooltipPosition="top"
-                    [attr.data-testid]="'surveys-project-' + survey.uid">
+                    [attr.data-testid]="'surveys-project-' + rowId">
                     {{ survey.project_name || '—' }}
                   </span>
                 </td>
@@ -142,7 +143,7 @@
                     class="text-sm text-gray-700"
                     [pTooltip]="getResponseTooltip(survey)"
                     tooltipPosition="top"
-                    [attr.data-testid]="'surveys-responses-' + survey.uid">
+                    [attr.data-testid]="'surveys-responses-' + rowId">
                     {{ survey.total_responses }}
                   </span>
                 </td>
@@ -178,7 +179,7 @@
               <td>
                 <div class="flex items-center justify-end gap-1">
                   @if (hasPMOAccess() && survey.displayStatus === SurveyStatus.DRAFT) {
-                    <lfx-button label="Edit" severity="primary" size="small" [text]="true" styleClass="" [attr.data-testid]="'surveys-edit-' + survey.uid">
+                    <lfx-button label="Edit" severity="primary" size="small" [text]="true" styleClass="" [attr.data-testid]="'surveys-edit-' + rowId">
                     </lfx-button>
                     <lfx-button
                       label="Delete"
@@ -188,7 +189,7 @@
                       styleClass=""
                       (onClick)="onDeleteSurvey(survey)"
                       [disabled]="isDeleting()"
-                      [attr.data-testid]="'surveys-delete-' + survey.uid">
+                      [attr.data-testid]="'surveys-delete-' + rowId">
                     </lfx-button>
                   } @else if (!hasPMOAccess() && survey.displayStatus === SurveyStatus.OPEN && survey.survey_link) {
                     @let actionIsResponded = survey.response_status?.toLowerCase() === 'responded';
@@ -200,7 +201,7 @@
                       [href]="survey.survey_link"
                       target="_blank"
                       rel="noopener noreferrer"
-                      [attr.data-testid]="(actionIsResponded ? 'surveys-update-' : 'surveys-take-') + survey.uid">
+                      [attr.data-testid]="(actionIsResponded ? 'surveys-update-' : 'surveys-take-') + rowId">
                     </lfx-button>
                   } @else if (isMeLens() && survey.displayStatus === SurveyStatus.CLOSED) {
                     <lfx-button
@@ -210,7 +211,7 @@
                       [text]="true"
                       styleClass=""
                       (onClick)="onViewResults(survey)"
-                      [attr.data-testid]="'surveys-view-' + survey.uid">
+                      [attr.data-testid]="'surveys-view-' + rowId">
                     </lfx-button>
                   } @else if (!isMeLens() && (survey.displayStatus === SurveyStatus.OPEN || survey.displayStatus === SurveyStatus.CLOSED)) {
                     <lfx-button
@@ -220,7 +221,7 @@
                       [text]="true"
                       styleClass=""
                       (onClick)="onViewResults(survey)"
-                      [attr.data-testid]="'surveys-results-' + survey.uid">
+                      [attr.data-testid]="'surveys-results-' + rowId">
                     </lfx-button>
                   }
                 </div>

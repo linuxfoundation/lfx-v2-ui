@@ -328,12 +328,14 @@ export class SurveyService {
   /**
    * Returns the current user's submitted response for a survey, or null if no response exists.
    * Used by the Me lens "View My Response" drawer. Queries type=survey_response filtered by
-   * the user's email/username (via filters_or) and matches survey_uid in-memory after the
-   * query returns, since the index has no native survey_uid filter on this resource type.
+   * the user's email/username (via filters_or) and matches in-memory. When responseUid is
+   * provided (Me lens one-row-per-committee), it is used to match the exact invitation record
+   * so the correct survey_link is returned for the selected row. Falls back to matching by
+   * survey_uid when responseUid is absent.
    * Only returns a record whose response_datetime is populated — invitation-only rows are
    * treated as "not yet responded" and return null.
    */
-  public async getMyResponse(req: Request, surveyUid: string): Promise<MySurveyResponse | null> {
+  public async getMyResponse(req: Request, surveyUid: string, responseUid?: string): Promise<MySurveyResponse | null> {
     const rawUsername = await getUsernameFromAuth(req);
     const username = rawUsername ? stripAuthPrefix(rawUsername) : null;
     const email = getEffectiveEmail(req);
@@ -352,7 +354,10 @@ export class SurveyService {
       })
     );
 
-    const match = responses.find((r) => r?.survey_uid === surveyUid && r.response_datetime && r.response_datetime.trim() !== '');
+    const match = responseUid
+      ? (responses.find((r) => r?.uid === responseUid && r.response_datetime && r.response_datetime.trim() !== '') ??
+        responses.find((r) => r?.survey_uid === surveyUid && r.response_datetime && r.response_datetime.trim() !== ''))
+      : responses.find((r) => r?.survey_uid === surveyUid && r.response_datetime && r.response_datetime.trim() !== '');
     if (!match) return null;
 
     // Defense-in-depth: validate survey_link against the same allowlist getMySurveys uses
