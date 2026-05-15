@@ -29,9 +29,7 @@ export class AiService {
   }
 
   public async generateMeetingAgenda(req: Request, request: GenerateAgendaRequest): Promise<GenerateAgendaResponse> {
-    if (!this.isAiConfigured()) {
-      throw new Error('AI service not configured: AI_PROXY_URL and AI_API_KEY environment variables are required');
-    }
+    this.assertConfigured();
 
     const startTime = logger.startOperation(req, 'generate_meeting_agenda', {
       meetingType: request.meetingType,
@@ -136,10 +134,14 @@ export class AiService {
     }
   }
 
-  private async makeAiRequest(request: OpenAIChatRequest): Promise<OpenAIChatResponse> {
+  private assertConfigured(): void {
     if (!this.isAiConfigured()) {
       throw new Error('AI service not configured: AI_PROXY_URL and AI_API_KEY environment variables are required');
     }
+  }
+
+  private async makeAiRequest(request: OpenAIChatRequest): Promise<OpenAIChatResponse> {
+    this.assertConfigured();
 
     const response = await fetch(this.aiProxyUrl, {
       method: 'POST',
