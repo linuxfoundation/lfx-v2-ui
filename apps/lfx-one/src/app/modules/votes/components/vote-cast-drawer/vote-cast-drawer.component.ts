@@ -240,7 +240,9 @@ export class VoteCastDrawerComponent {
       const result = new Map<string, UserChoice[]>();
       if (!this.isRankedPoll()) return result;
       for (const question of this.questions()) {
-        const order = this.form.get(question.question_id)?.value as string[] | null | undefined;
+        // Defensive Array.isArray — if a stale non-array control value lingers (e.g. mid-session vote reshape), fall back to declared order.
+        const raw = this.form.get(question.question_id)?.value;
+        const order = Array.isArray(raw) ? (raw as string[]) : null;
         if (!order?.length) {
           result.set(question.question_id, question.choices);
           continue;

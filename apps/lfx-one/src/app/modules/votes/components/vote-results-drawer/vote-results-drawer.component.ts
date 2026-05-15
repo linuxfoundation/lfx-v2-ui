@@ -59,6 +59,7 @@ export class VoteResultsDrawerComponent {
   protected readonly rankedQuestions: Signal<RankedQuestionView[]> = this.initRankedQuestions();
   protected readonly commentResults: Signal<PollCommentResult[]> = this.initCommentResults();
   protected readonly votingMethodText: Signal<string> = this.initVotingMethodText();
+  protected readonly rankedMethodDescription: Signal<string> = this.initRankedMethodDescription();
 
   // === Protected Methods ===
   protected onClose(): void {
@@ -258,6 +259,22 @@ export class VoteResultsDrawerComponent {
 
       const pollType = v.poll_type ?? PollType.GENERIC;
       return methodLabels[pollType] || pollType;
+    });
+  }
+
+  private initRankedMethodDescription(): Signal<string> {
+    return computed(() => {
+      const pollType = this.vote()?.poll_type;
+      switch (pollType) {
+        case PollType.CONDORCET_IRV:
+          return 'Voters ranked the choices in order of preference. Condorcet IRV first looks for a candidate who would beat every other candidate in head-to-head pairwise comparisons; if no such Condorcet winner exists, it falls back to instant-runoff elimination.';
+        case PollType.INSTANT_RUNOFF_VOTE:
+          return 'Voters ranked the choices in order of preference. Instant-runoff voting tallies first-preference votes and eliminates the lowest-ranked choice each round, reallocating those ballots until a candidate has a majority.';
+        case PollType.MEEK_STV:
+          return 'Voters ranked the choices in order of preference. Meek STV is a multi-winner single-transferable-vote method that elects candidates as they meet a quota and proportionally redistributes surplus and eliminated ballots.';
+        default:
+          return 'Voters ranked the choices in order of preference. The configured ranked-choice algorithm determines the winner (or winners).';
+      }
     });
   }
 }
