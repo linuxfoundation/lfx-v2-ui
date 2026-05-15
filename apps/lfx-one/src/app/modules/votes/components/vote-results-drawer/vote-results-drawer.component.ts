@@ -4,9 +4,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, input, model, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { ButtonComponent } from '@components/button/button.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { environment } from '@environments/environment';
 import { PollStatus, PollType } from '@lfx-one/shared';
 import { PollCommentResult, Vote, VoteParticipationStats, VoteResultsOption, VoteResultsQuestion, VoteResultsResponse } from '@lfx-one/shared/interfaces';
 import { PollStatusLabelPipe } from '@pipes/poll-status-label.pipe';
@@ -16,9 +14,27 @@ import { DrawerModule } from 'primeng/drawer';
 import { SkeletonModule } from 'primeng/skeleton';
 import { catchError, finalize, of, shareReplay, startWith, switchMap } from 'rxjs';
 
+/**
+ * Local view model for ranked-choice question rendering. Derived from
+ * `PollQuestionResult` by `initRankedQuestions`. Kept local because it's purely
+ * a presentation-layer reshape; promote to `@lfx-one/shared/interfaces` if a
+ * second consumer ever needs it.
+ */
+interface RankedQuestionView {
+  questionId: string;
+  prompt: string;
+  choiceDistributions: {
+    choiceId: string;
+    choiceText: string;
+    totalRanked: number;
+    rankCounts: { rank: number; count: number; percentage: number }[];
+  }[];
+  hasRoundSummary: boolean;
+}
+
 @Component({
   selector: 'lfx-vote-results-drawer',
-  imports: [DrawerModule, TagComponent, ButtonComponent, DatePipe, PollStatusLabelPipe, PollStatusSeverityPipe, SkeletonModule],
+  imports: [DrawerModule, TagComponent, DatePipe, PollStatusLabelPipe, PollStatusSeverityPipe, SkeletonModule],
   templateUrl: './vote-results-drawer.component.html',
   styleUrl: './vote-results-drawer.component.scss',
 })
@@ -46,11 +62,11 @@ export class VoteResultsDrawerComponent {
 
   // === Computed Signals ===
   protected readonly isGenericPoll: Signal<boolean> = this.initIsGenericPoll();
-  protected readonly pccVotingUrl: Signal<string> = this.initPccVotingUrl();
   protected readonly isLoading: Signal<boolean> = computed(() => this.loadingVoteDetails() || this.loadingVoteResults());
   protected readonly participationStats: Signal<VoteParticipationStats> = this.initParticipationStats();
   protected readonly isVoteClosed: Signal<boolean> = this.initIsVoteClosed();
   protected readonly questionsWithResults: Signal<VoteResultsQuestion[]> = this.initQuestionsWithResults();
+  protected readonly rankedQuestions: Signal<RankedQuestionView[]> = this.initRankedQuestions();
   protected readonly commentResults: Signal<PollCommentResult[]> = this.initCommentResults();
   protected readonly votingMethodText: Signal<string> = this.initVotingMethodText();
 
@@ -107,18 +123,6 @@ export class VoteResultsDrawerComponent {
     return computed(() => {
       const v = this.vote();
       return v?.poll_type === PollType.GENERIC;
-    });
-  }
-
-  private initPccVotingUrl(): Signal<string> {
-    return computed(() => {
-      const v = this.vote();
-      if (!v) return '';
-
-      const pccBaseUrl = environment.urls.pcc;
-      // Remove trailing slash if present
-      const baseUrl = pccBaseUrl.endsWith('/') ? pccBaseUrl.slice(0, -1) : pccBaseUrl;
-      return `${baseUrl}/project/${v.project_uid}/collaboration/voting`;
     });
   }
 
@@ -191,6 +195,47 @@ export class VoteResultsDrawerComponent {
           question: pollResult.question.prompt,
           options: processedOptions,
           totalVotes,
+        };
+      });
+    });
+  }
+
+  // Derives the ranked-choice per-question view model from raw poll_results.
+  // For each question we build per-choice rank distributions (rank, count, percentage)
+  // and flag whether the upstream returned a round-by-round summary (IRV / Meek STV)
+  // so the template can show a placeholder banner — the round payload itself is
+  // currently untyped (`any`) so detailed visualization is deferred.
+  private initRankedQuestions(): Signal<RankedQuestionView[]> {
+    return computed(() => {
+      const results = this.voteResults();
+      if (!results?.poll_results?.length) return [];
+
+      return results.poll_results.map((pr) => {
+        // Choice text resolution: prefer the winner_info candidate list (it carries
+        // choice_text), fall back to the question's own choices. Defensive both ways
+        // in case upstream omits either.
+        const choiceTextById = new Map((pr.ranked_choice_winner_info?.poll_choices ?? pr.question.choices ?? []).map((c) => [c.choice_id, c.choice_text]));
+
+        const choiceDistributions = (pr.ranked_choice_votes ?? []).map((rcv) => {
+          const totalRanked = rcv.rank_counts.reduce((sum, rc) => sum + rc.count, 0);
+          const rankCounts = rcv.rank_counts.map((rc) => ({
+            rank: rc.rank,
+            count: rc.count,
+            percentage: totalRanked > 0 ? Math.round((rc.count / totalRanked) * 100) : 0,
+          }));
+          return {
+            choiceId: rcv.choice_id,
+            choiceText: choiceTextById.get(rcv.choice_id) ?? rcv.choice_id,
+            totalRanked,
+            rankCounts,
+          };
+        });
+
+        return {
+          questionId: pr.question.question_id,
+          prompt: pr.question.prompt,
+          choiceDistributions,
+          hasRoundSummary: !!pr.irv_round_summary || !!pr.meek_stv_round_summary,
         };
       });
     });
