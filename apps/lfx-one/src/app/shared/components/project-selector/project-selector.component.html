@@ -101,11 +101,11 @@
           <button
             type="button"
             class="flex items-center gap-3 p-2 w-full text-left rounded-lg transition-colors"
-            [class.bg-blue-50]="isItemSelected(displayItem.item)"
-            [class.hover:bg-gray-100]="!isItemSelected(displayItem.item)"
+            [class.bg-blue-50]="displayItem.isSelected"
+            [class.hover:bg-gray-100]="!displayItem.isSelected"
             (click)="selectItem(displayItem.item, popover)"
             [attr.data-testid]="'lens-item-' + displayItem.item.slug"
-            [attr.data-selected]="isItemSelected(displayItem.item)">
+            [attr.data-selected]="displayItem.isSelected">
             <div class="bg-gray-100 overflow-clip rounded-lg shrink-0 size-9 border border-gray-200">
               <div class="flex items-center justify-center size-full p-1.5">
                 @if (displayItem.item.logoUrl) {
@@ -121,19 +121,19 @@
 
             <div class="flex-1 min-w-0">
               <p class="font-medium text-sm text-gray-900 mb-0 truncate">{{ displayItem.item.name || displayItem.item.slug }}</p>
-              @if (getRoleLabel(displayItem.item)) {
+              @if (displayItem.roleLabel) {
                 <p class="text-xs text-gray-400 leading-none mt-0.5 truncate">
-                  <i [ngClass]="getRoleIcon(displayItem.item)" class="mr-1" aria-hidden="true"></i>{{ getRoleLabel(displayItem.item) }}
+                  <i [ngClass]="displayItem.roleIcon" class="mr-1" aria-hidden="true"></i>{{ displayItem.roleLabel }}
                 </p>
               }
             </div>
 
             <i
               class="fa-light fa-check text-blue-500 shrink-0 transition-opacity"
-              [class.opacity-100]="isItemSelected(displayItem.item)"
-              [class.opacity-0]="!isItemSelected(displayItem.item)"
-              [attr.aria-label]="isItemSelected(displayItem.item) ? 'Selected' : null"
-              [attr.aria-hidden]="!isItemSelected(displayItem.item)"></i>
+              [class.opacity-100]="displayItem.isSelected"
+              [class.opacity-0]="!displayItem.isSelected"
+              [attr.aria-label]="displayItem.isSelected ? 'Selected' : null"
+              [attr.aria-hidden]="!displayItem.isSelected"></i>
           </button>
         </div>
       } @empty {

@@ -57,7 +57,7 @@ export class SidebarComponent {
 
   protected readonly user = this.userService.user;
   protected readonly userInitials = this.userService.userInitials;
-  protected readonly personaLabels: Signal<{ label: string; icon: string; tooltip: string }[]> = this.initPersonaLabels();
+  protected readonly personaLabels: Signal<{ label: string; icon: string; names: string[] }[]> = this.initPersonaLabels();
   // Hide the persona badge when the user is a root-writer — executive-director is spoofed, not naturally detected.
   protected readonly showPersonaBadge: Signal<boolean> = computed(() => !this.personaService.isRootWriter());
 
@@ -109,19 +109,15 @@ export class SidebarComponent {
     });
   }
 
-  private initPersonaLabels(): Signal<{ label: string; icon: string; tooltip: string }[]> {
+  private initPersonaLabels(): Signal<{ label: string; icon: string; names: string[] }[]> {
     return computed(() => {
       const personaProjects = this.personaService.personaProjects();
-      const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
       const toTag = (p: PersonaType) => {
         const option = PERSONA_OPTIONS.find((o) => o.value === p);
         const label = option?.label ?? toTitleCase(p);
         const icon = PERSONA_ICONS[p] ?? 'fa-light fa-user';
         const names = (personaProjects[p] ?? []).map((proj) => proj.projectName).filter((n): n is string => !!n);
-        const header = `<div class="font-semibold">${escapeHtml(label)}</div>`;
-        const list =
-          names.length > 0 ? `<ul class="mt-1 pl-4 list-disc font-normal text-gray-300">${names.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}</ul>` : '';
-        return { label, icon, tooltip: header + list };
+        return { label, icon, names };
       };
 
       if (this.activeLens() === 'me') {

@@ -6,7 +6,7 @@ import { Component, computed, inject, input, model, output, signal, Signal } fro
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { BOARD_SCOPED_PERSONA_PRIORITY, PROJECT_SCOPED_PERSONA_PRIORITY } from '@lfx-one/shared/constants';
-import { LensItem, NavLens, PersonaType, ProjectContext } from '@lfx-one/shared/interfaces';
+import { DisplayLensItem, LensItem, NavLens, PersonaType, ProjectContext, SelectorTab } from '@lfx-one/shared/interfaces';
 import { LensService } from '@services/lens.service';
 import { NavigationService } from '@services/navigation.service';
 import { PersonaService } from '@services/persona.service';
@@ -16,13 +16,6 @@ import { AutoFocus } from 'primeng/autofocus';
 import { InputTextModule } from 'primeng/inputtext';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { TooltipModule } from 'primeng/tooltip';
-
-export interface DisplayLensItem {
-  item: LensItem;
-  isNested: boolean;
-}
-
-type SelectorTab = 'all' | 'foundations' | 'projects';
 
 @Component({
   selector: 'lfx-project-selector',
@@ -49,101 +42,27 @@ export class ProjectSelectorComponent {
   protected readonly selectorTabs: readonly SelectorTab[] = ['all', 'foundations', 'projects'];
   protected readonly searchControl = new FormControl<string>('', { nonNullable: true });
 
-  protected readonly panelStyleClass = computed(() =>
-    this.userService.impersonating() ? 'project-selector-panel project-selector-panel--with-banner' : 'project-selector-panel'
-  );
-
-  protected readonly lensTypeLabel = computed(() => {
-    if (this.hybridMode()) {
-      const selectedUid = this.selectedProject()?.uid;
-      if (selectedUid) {
-        const detected = this.personaService.detectedProjects().find((p) => p.projectUid === selectedUid);
-        if (detected) {
-          return detected.isFoundation ? 'Foundation' : 'Project';
-        }
-      }
-      return this.lensService.activeLens() === 'foundation' ? 'Foundation' : 'Project';
-    }
-    return this.lens() === 'foundation' ? 'Foundation' : 'Project';
-  });
-
-  protected readonly displayName: Signal<string> = computed(() => {
-    const project = this.selectedProject();
-    return project?.name?.trim() || `Select ${this.lensTypeLabel()}`;
-  });
-
+  protected readonly panelStyleClass: Signal<string> = this.initPanelStyleClass();
+  protected readonly lensTypeLabel: Signal<string> = this.initLensTypeLabel();
+  protected readonly displayName: Signal<string> = this.initDisplayName();
   protected readonly displayLogo: Signal<string> = computed(() => this.selectedProject()?.logoUrl || '');
-
-  protected readonly selectedRolePersona: Signal<PersonaType | null> = computed(() => {
-    const uid = this.selectedProject()?.uid;
-    if (!uid) return null;
-    const detected = this.personaService.detectedProjects().find((p) => p.projectUid === uid);
-    const isFoundation = detected?.isFoundation ?? this.lensService.activeLens() === 'foundation';
-    const priority = isFoundation ? BOARD_SCOPED_PERSONA_PRIORITY : PROJECT_SCOPED_PERSONA_PRIORITY;
-    const personaProjects = this.personaService.personaProjects();
-    for (const persona of priority) {
-      if ((personaProjects[persona] ?? []).some((p) => p.projectUid === uid)) {
-        return persona;
-      }
-    }
-    return null;
-  });
-
+  protected readonly selectedRolePersona: Signal<PersonaType | null> = this.initSelectedRolePersona();
   protected readonly selectedRoleLabel: Signal<string> = computed(() => {
     const persona = this.selectedRolePersona();
     return persona ? this.personaTypeToLabel(persona) : '';
   });
-
   protected readonly selectedRoleIcon: Signal<string> = computed(() => {
     const persona = this.selectedRolePersona();
     return persona ? this.personaTypeToIcon(persona) : '';
   });
 
-  protected readonly foundationItems: Signal<LensItem[]> = computed(() => (this.hybridMode() ? this.navigationService.items('foundation')() : []));
-
-  // The project-lens API can include foundations the user has access to. Those belong in the
-  // foundation lens (or the Foundations tab in hybrid mode), never in the projects list.
-  protected readonly rawProjectItems: Signal<LensItem[]> = computed(() => {
-    const lens: NavLens = this.hybridMode() ? 'project' : this.lens();
-    const items = this.navigationService.items(lens)();
-    return lens === 'project' ? items.filter((item) => !item.isFoundation) : items;
-  });
-
-  // Kept for template backward-compat (auto-load sentinel uses items() in non-hybrid path)
+  protected readonly foundationItems: Signal<LensItem[]> = this.initFoundationItems();
+  protected readonly rawProjectItems: Signal<LensItem[]> = this.initRawProjectItems();
   protected readonly items: Signal<LensItem[]> = computed(() => this.rawProjectItems());
+  protected readonly loading: Signal<boolean> = this.initLoading();
+  protected readonly hasMore: Signal<boolean> = this.initHasMore();
+  protected readonly displayedItems: Signal<DisplayLensItem[]> = this.initDisplayedItems();
 
-  protected readonly loading: Signal<boolean> = computed(() => {
-    if (this.hybridMode()) {
-      return this.navigationService.loading('foundation')() || this.navigationService.loading('project')();
-    }
-    return this.navigationService.loading(this.lens())();
-  });
-
-  protected readonly hasMore: Signal<boolean> = computed(() => {
-    if (this.hybridMode()) {
-      const tab = this.activeTab();
-      if (tab === 'foundations') return this.navigationService.hasMore('foundation')();
-      if (tab === 'projects') return this.navigationService.hasMore('project')();
-      return this.navigationService.hasMore('foundation')() || this.navigationService.hasMore('project')();
-    }
-    return this.navigationService.hasMore(this.lens())();
-  });
-
-  protected readonly displayedItems: Signal<DisplayLensItem[]> = computed(() => {
-    if (!this.hybridMode()) {
-      return this.sortByRole(this.rawProjectItems()).map((item) => ({ item, isNested: false }));
-    }
-    const tab = this.activeTab();
-    if (tab === 'foundations') {
-      return this.sortByRole(this.foundationItems()).map((item) => ({ item, isNested: false }));
-    }
-    if (tab === 'projects') {
-      return this.sortByRole(this.rawProjectItems()).map((item) => ({ item, isNested: false }));
-    }
-    return this.buildAllTabItems();
-  });
-
-  // Sentinel shifts on each page load so Angular re-creates OnRenderDirective and re-fires the fetch.
   protected readonly autoLoadTriggerIndex: Signal<number> = computed(() => Math.max(0, this.displayedItems().length - 8));
 
   public constructor() {
@@ -185,9 +104,7 @@ export class ProjectSelectorComponent {
   protected loadMore(): void {
     if (this.hybridMode()) {
       const tab = this.activeTab();
-      // Scope pagination to the active tab so the visible list keeps advancing instead of
-      // exhausting the inactive lens first. The All tab fetches whichever side still has pages,
-      // preferring foundations so they're complete before standalone projects pile on.
+      // All-tab drains foundations first so the higher-priority group completes before standalone projects appear.
       if (tab === 'foundations') {
         this.navigationService.loadNextPage('foundation');
         return;
@@ -206,18 +123,110 @@ export class ProjectSelectorComponent {
     }
   }
 
-  protected isItemSelected(item: LensItem): boolean {
-    return this.selectedProject()?.uid === item.uid;
+  private initPanelStyleClass(): Signal<string> {
+    return computed(() => (this.userService.impersonating() ? 'project-selector-panel project-selector-panel--with-banner' : 'project-selector-panel'));
   }
 
-  protected getRoleLabel(item: LensItem): string {
-    const persona = this.resolveRolePersona(item);
-    return persona ? this.personaTypeToLabel(persona) : '';
+  private initLensTypeLabel(): Signal<string> {
+    return computed(() => {
+      if (this.hybridMode()) {
+        const selectedUid = this.selectedProject()?.uid;
+        if (selectedUid) {
+          const detected = this.personaService.detectedProjects().find((p) => p.projectUid === selectedUid);
+          if (detected) {
+            return detected.isFoundation ? 'Foundation' : 'Project';
+          }
+        }
+        return this.lensService.activeLens() === 'foundation' ? 'Foundation' : 'Project';
+      }
+      return this.lens() === 'foundation' ? 'Foundation' : 'Project';
+    });
   }
 
-  protected getRoleIcon(item: LensItem): string {
+  private initDisplayName(): Signal<string> {
+    return computed(() => {
+      const project = this.selectedProject();
+      return project?.name?.trim() || `Select ${this.lensTypeLabel()}`;
+    });
+  }
+
+  private initSelectedRolePersona(): Signal<PersonaType | null> {
+    return computed(() => {
+      const uid = this.selectedProject()?.uid;
+      if (!uid) return null;
+      const detected = this.personaService.detectedProjects().find((p) => p.projectUid === uid);
+      const isFoundation = detected?.isFoundation ?? this.lensService.activeLens() === 'foundation';
+      const priority = isFoundation ? BOARD_SCOPED_PERSONA_PRIORITY : PROJECT_SCOPED_PERSONA_PRIORITY;
+      const personaProjects = this.personaService.personaProjects();
+      for (const persona of priority) {
+        if ((personaProjects[persona] ?? []).some((p) => p.projectUid === uid)) {
+          return persona;
+        }
+      }
+      return null;
+    });
+  }
+
+  private initFoundationItems(): Signal<LensItem[]> {
+    return computed(() => (this.hybridMode() ? this.navigationService.items('foundation')() : []));
+  }
+
+  private initRawProjectItems(): Signal<LensItem[]> {
+    return computed(() => {
+      // /project lens API returns foundations too — keep them only in the foundation list/tab.
+      const lens: NavLens = this.hybridMode() ? 'project' : this.lens();
+      const items = this.navigationService.items(lens)();
+      return lens === 'project' ? items.filter((item) => !item.isFoundation) : items;
+    });
+  }
+
+  private initLoading(): Signal<boolean> {
+    return computed(() => {
+      if (this.hybridMode()) {
+        return this.navigationService.loading('foundation')() || this.navigationService.loading('project')();
+      }
+      return this.navigationService.loading(this.lens())();
+    });
+  }
+
+  private initHasMore(): Signal<boolean> {
+    return computed(() => {
+      if (this.hybridMode()) {
+        const tab = this.activeTab();
+        if (tab === 'foundations') return this.navigationService.hasMore('foundation')();
+        if (tab === 'projects') return this.navigationService.hasMore('project')();
+        return this.navigationService.hasMore('foundation')() || this.navigationService.hasMore('project')();
+      }
+      return this.navigationService.hasMore(this.lens())();
+    });
+  }
+
+  private initDisplayedItems(): Signal<DisplayLensItem[]> {
+    return computed(() => {
+      const selectedUid = this.selectedProject()?.uid ?? null;
+      if (!this.hybridMode()) {
+        return this.sortByRole(this.rawProjectItems()).map((item) => this.toDisplayItem(item, false, selectedUid));
+      }
+      const tab = this.activeTab();
+      if (tab === 'foundations') {
+        return this.sortByRole(this.foundationItems()).map((item) => this.toDisplayItem(item, false, selectedUid));
+      }
+      if (tab === 'projects') {
+        return this.sortByRole(this.rawProjectItems()).map((item) => this.toDisplayItem(item, false, selectedUid));
+      }
+      return this.buildAllTabItems(selectedUid);
+    });
+  }
+
+  private toDisplayItem(item: LensItem, isNested: boolean, selectedUid: string | null): DisplayLensItem {
     const persona = this.resolveRolePersona(item);
-    return persona ? this.personaTypeToIcon(persona) : '';
+    return {
+      item,
+      isNested,
+      isSelected: selectedUid === item.uid,
+      roleLabel: persona ? this.personaTypeToLabel(persona) : '',
+      roleIcon: persona ? this.personaTypeToIcon(persona) : '',
+    };
   }
 
   private resolveRolePersona(item: LensItem): PersonaType | null {
@@ -269,12 +278,11 @@ export class ProjectSelectorComponent {
     });
   }
 
-  private buildAllTabItems(): DisplayLensItem[] {
+  private buildAllTabItems(selectedUid: string | null): DisplayLensItem[] {
     const sortedFoundations = this.sortByRole(this.foundationItems());
     const sortedProjects = this.sortByRole(this.rawProjectItems());
 
-    // Pre-group sortedProjects by parentProjectUid in a single pass so the nesting loop is O(F + P)
-    // instead of O(F × P).
+    // Pre-group projects by parent foundation in a single pass so nesting is O(F + P), not O(F × P).
     const detectedProjects = this.personaService.detectedProjects();
     const parentByProjectUid = new Map<string, string>();
     for (const dp of detectedProjects) {
@@ -301,18 +309,18 @@ export class ProjectSelectorComponent {
 
     const result: DisplayLensItem[] = [];
     for (const foundation of sortedFoundations) {
-      result.push({ item: foundation, isNested: false });
+      result.push(this.toDisplayItem(foundation, false, selectedUid));
       const children = childrenByFoundationUid.get(foundation.uid);
       if (children) {
         for (const project of children) {
-          result.push({ item: project, isNested: true });
+          result.push(this.toDisplayItem(project, true, selectedUid));
         }
       }
     }
 
     for (const project of sortedProjects) {
       if (!nestedProjectUids.has(project.uid)) {
-        result.push({ item: project, isNested: false });
+        result.push(this.toDisplayItem(project, false, selectedUid));
       }
     }
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { NgClass } from '@angular/common';
-import { afterNextRender, Component, computed, inject, input, signal, viewChild } from '@angular/core';
+import { afterNextRender, Component, computed, inject, input, signal, Signal, viewChild } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AvatarComponent } from '@components/avatar/avatar.component';
 import { ButtonComponent } from '@components/button/button.component';
@@ -37,6 +37,11 @@ export class LensSwitcherComponent {
   protected readonly activeLens = this.lensService.activeLens;
   protected readonly lenses = this.lensService.displayLenses;
   protected readonly isHybrid = this.lensService.isHybridPersona;
+  // Hybrid personas merge the 'project' button with the 'foundation' lens state — both map to 'project' for highlighting.
+  protected readonly activeLensId: Signal<Lens> = computed(() => {
+    const active = this.activeLens();
+    return this.isHybrid() && active === 'foundation' ? 'project' : active;
+  });
   protected readonly user = this.userService.user;
   protected readonly insightsUrl = buildInsightsUrl();
   protected readonly userMenu = viewChild<Popover>('userMenu');
@@ -60,16 +65,6 @@ export class LensSwitcherComponent {
       }
       this.changelogService.loadUnseenCount();
     });
-  }
-
-  protected isLensActive(lensId: Lens): boolean {
-    const active = this.activeLens();
-    if (active === lensId) return true;
-    // For hybrid personas the merged 'project' button covers both foundation and project states.
-    if (this.isHybrid() && lensId === 'project') {
-      return active === 'foundation' || active === 'project';
-    }
-    return false;
   }
 
   protected setLens(lens: Lens): void {

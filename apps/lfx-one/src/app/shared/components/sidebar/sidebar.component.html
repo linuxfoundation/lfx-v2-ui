@@ -43,13 +43,22 @@
               } @else {
                 <div class="flex flex-wrap gap-1">
                   @for (tag of personaLabels(); track $index) {
+                    <ng-template #personaTooltipContent>
+                      <div class="font-semibold">{{ tag.label }}</div>
+                      @if (tag.names.length > 0) {
+                        <ul class="mt-1 pl-4 list-disc font-normal text-gray-300">
+                          @for (name of tag.names; track name) {
+                            <li>{{ name }}</li>
+                          }
+                        </ul>
+                      }
+                    </ng-template>
                     <span
                       tabindex="0"
                       role="img"
                       [attr.aria-label]="'Role: ' + tag.label"
-                      [pTooltip]="tag.tooltip"
+                      [pTooltip]="personaTooltipContent"
                       tooltipPosition="top"
-                      [escape]="false"
                       tooltipStyleClass="persona-tooltip"
                       class="inline-flex items-center justify-center size-6 rounded-full bg-white border border-gray-200 text-gray-700 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
                       <i [ngClass]="tag.icon" class="text-[10px]" aria-hidden="true"></i>
