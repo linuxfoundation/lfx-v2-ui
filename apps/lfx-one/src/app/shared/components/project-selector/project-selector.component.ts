@@ -171,12 +171,8 @@ export class ProjectSelectorComponent {
   }
 
   private initRawProjectItems(): Signal<LensItem[]> {
-    return computed(() => {
-      // /project lens API returns foundations too — keep them only in the foundation list/tab.
-      const lens: NavLens = this.hybridMode() ? 'project' : this.lens();
-      const items = this.navigationService.items(lens)();
-      return lens === 'project' ? items.filter((item) => !item.isFoundation) : items;
-    });
+    // NavigationService.applyVisibilityFilters already filters foundations from the project lens when the foundation lens is available; re-filtering here would hide rows project-only users are meant to select.
+    return computed(() => this.navigationService.items(this.hybridMode() ? 'project' : this.lens())());
   }
 
   private initLoading(): Signal<boolean> {
