@@ -31,23 +31,14 @@ export enum VoteResponseStatus {
   AWAITING_RESPONSE = 'awaiting_response',
 }
 
-/**
- * Individual vote status from query service
- * @description Status values as stored in lfx.index.individual_vote
- */
+/** Status values as stored in `lfx.index.individual_vote`. */
 export enum IndividualVoteStatus {
   AWAITING_RESPONSE = 'awaiting response',
   RESPONDED = 'responded',
 }
 
-/**
- * Vote response status values as stored in the LFX query-service indexer.
- * Used to distinguish invited-only rows from submitted ballots on vote_response resources.
- * @description Indexer-side status for a vote_response record (different from VoteResponseStatus
- *              which is the Me-lens decoration on Vote objects)
- */
-export const VoteResponseIndexerStatus = {
-  AWAITING: 'awaiting_response',
-  SUBMITTED: 'submitted',
-} as const;
-
+/** Raw `vote_status` values written by the v2 indexer to `vote_response` rows. */
+export enum IndexedVoteResponseStatus {
+  AWAITING_RESPONSE = 'awaiting_response',
+  SUBMITTED = 'submitted',
+}

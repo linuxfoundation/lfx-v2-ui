@@ -191,28 +191,17 @@
                     }
                   } @else {
                     @if (vote.status === PollStatus.ACTIVE) {
-                      @if (vote.response_status === VoteResponseStatus.AWAITING_RESPONSE) {
-                        <lfx-button
-                          label="Vote"
-                          icon="fa-light fa-check-to-slot"
-                          severity="primary"
-                          size="small"
-                          styleClass="whitespace-nowrap"
-                          (onClick)="onViewVote(vote.uid)"
-                          [attr.data-testid]="'votes-cast-' + vote.uid">
-                        </lfx-button>
-                      } @else {
-                        <lfx-button
-                          label="Review"
-                          icon="fa-light fa-clipboard"
-                          severity="primary"
-                          [outlined]="true"
-                          size="small"
-                          styleClass="whitespace-nowrap"
-                          (onClick)="onViewVote(vote.uid)"
-                          [attr.data-testid]="'votes-cast-' + vote.uid">
-                        </lfx-button>
-                      }
+                      @let awaiting = vote.response_status === VoteResponseStatus.AWAITING_RESPONSE;
+                      <lfx-button
+                        [label]="awaiting ? 'Vote' : 'Review'"
+                        [icon]="awaiting ? 'fa-light fa-check-to-slot' : 'fa-light fa-clipboard'"
+                        severity="primary"
+                        [outlined]="!awaiting"
+                        size="small"
+                        styleClass="whitespace-nowrap"
+                        (onClick)="onViewVote(vote.uid)"
+                        [attr.data-testid]="'votes-cast-' + vote.uid">
+                      </lfx-button>
                     } @else if (vote.status === PollStatus.ENDED) {
                       <lfx-button
                         label="Results"

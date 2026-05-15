@@ -78,13 +78,13 @@
             <div class="rounded-lg border border-slate-200 p-4 flex flex-col gap-3" [attr.data-testid]="'vote-cast-question-' + question.question_id">
               <div class="flex flex-col gap-1">
                 <h3 class="text-sm font-semibold text-slate-900">{{ question.prompt }}</h3>
-                @if (isMultipleChoice(question)) {
+                @if (question.type === 'multiple_choice') {
                   <p class="text-xs text-slate-500">Select all that apply.</p>
                 }
               </div>
 
               <div class="flex flex-col gap-2">
-                @if (isSingleChoice(question)) {
+                @if (question.type === 'single_choice') {
                   @for (choice of question.choices; track choice.choice_id) {
                     <lfx-radio-button
                       [form]="form"
@@ -95,7 +95,7 @@
                       [label]="choice.choice_text"
                       [attr.data-testid]="'vote-cast-choice-' + choice.choice_id"></lfx-radio-button>
                   }
-                } @else if (isMultipleChoice(question)) {
+                } @else if (question.type === 'multiple_choice') {
                   @for (choice of question.choices; track choice.choice_id) {
                     <div class="flex items-center gap-2" [attr.data-testid]="'vote-cast-choice-' + choice.choice_id">
                       <p-checkbox
@@ -117,12 +117,7 @@
         @if (allowAbstain()) {
           <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 flex flex-col gap-2">
             <div class="flex items-center gap-2" data-testid="vote-cast-abstain-toggle">
-              <p-checkbox
-                [binary]="true"
-                [ngModel]="abstain()"
-                [ngModelOptions]="{ standalone: true }"
-                (ngModelChange)="onAbstainChange($event)"
-                inputId="vote-cast-abstain" />
+              <p-checkbox [binary]="true" [formControl]="abstainControl" inputId="vote-cast-abstain" />
               <label for="vote-cast-abstain" class="text-sm font-medium text-gray-700 cursor-pointer">Abstain from this vote</label>
             </div>
             <p class="text-xs text-slate-500">An abstention is recorded as a non-vote and overrides any selections above.</p>

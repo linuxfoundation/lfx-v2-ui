@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { VoteResponseIndexerStatus, VoteResponseStatus } from '@lfx-one/shared/enums';
+import { IndexedVoteResponseStatus, VoteResponseStatus } from '@lfx-one/shared/enums';
 import {
   CreateVoteRequest,
   CreateVoteResponseRequest,
@@ -286,7 +286,7 @@ export class VoteService {
             filters: [`vote_uid:${payload.vote_uid}`],
           }
         );
-        return resources.some((r) => r.data.uid === payload.vote_response_uid && r.data.vote_status === VoteResponseIndexerStatus.SUBMITTED);
+        return resources.some((r) => r.data.uid === payload.vote_response_uid && r.data.vote_status === IndexedVoteResponseStatus.SUBMITTED);
       },
       maxRetries: 5,
       retryDelayMs: 1000,
@@ -323,19 +323,11 @@ export class VoteService {
       return [];
     }
 
-    // Build filters_or array — note: vote_response uses 'user_email' not 'email'
+    // vote_response uses 'user_email' not 'email'.
     const filtersOr: string[] = [];
-    if (email) {
-      filtersOr.push(`user_email:${email}`);
-    }
-    if (username) {
-      filtersOr.push(`username:${username}`);
-    }
+    if (email) filtersOr.push(`user_email:${email}`);
+    if (username) filtersOr.push(`username:${username}`);
 
-    // Query vote_response records using filters_or (OR logic on data fields).
-    // `vote_status` distinguishes invited-only rows from submitted ballots — used below
-    // to stamp `response_status` on each Vote so the Me-lens UI can switch between the
-    // cast-ballot flow and the read-only results view.
     const responses = await fetchAllQueryResources<{ vote_uid: string; vote_status?: string }>(req, (pageToken) =>
       this.microserviceProxy.proxyRequest<QueryServiceResponse<{ vote_uid: string; vote_status?: string }>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'vote_response',
@@ -344,12 +336,9 @@ export class VoteService {
       })
     );
 
-    // Track which votes the user has already submitted a ballot for.
-    // VoteResponseIndexerStatus.SUBMITTED is the indexer's terminal state for a cast ballot;
-    // anything else (e.g. VoteResponseIndexerStatus.AWAITING) is treated as still-invited.
     const respondedVoteUids = new Set<string>();
     for (const r of responses) {
-      if (r.vote_uid && r.vote_status === VoteResponseIndexerStatus.SUBMITTED) respondedVoteUids.add(r.vote_uid);
+      if (r.vote_uid && r.vote_status === IndexedVoteResponseStatus.SUBMITTED) respondedVoteUids.add(r.vote_uid);
     }
 
     // Extract unique vote UIDs
@@ -365,10 +354,7 @@ export class VoteService {
       responded_count: respondedVoteUids.size,
     });
 
-    // Fetch vote details in parallel via the voting microservice, then stamp
-    // `response_status` based on whether the user's vote_response row was 'submitted'.
-    // The UI consumes `response_status` on the Me lens to decide between the ballot-cast
-    // flow (AWAITING_RESPONSE) and the read-only results view (RESPONDED).
+    // Decorate each Vote with response_status so the Me-lens UI can branch cast vs view.
     const votes = await Promise.all(
       voteUids.map(async (uid): Promise<Vote | null> => {
         try {
@@ -404,16 +390,7 @@ export class VoteService {
     return this.projectService.enrichWithProjectData(req, sorted);
   }
 
-  /**
-   * Fetches the current user's vote_response row for a single vote. The voting service
-   * pre-allocates these rows on invitation (one per invitee, addressable by `vote_response_uid`).
-   * Submitting a ballot via POST /vote_responses MUST reuse this UID — passing a fresh
-   * client-generated UUID returns 404 from the upstream service.
-   *
-   * Queries `type=vote_response` with filters_or on the user's email/username (same shape as
-   * getMyVotes), then matches `vote_uid` in-memory. Returns null when the user cannot be
-   * identified or no matching row exists.
-   */
+  /** POST /vote_responses requires the pre-allocated invitation row's UID — a fresh UUID returns 404 upstream. */
   public async getMyVoteResponse(req: Request, voteUid: string): Promise<MyVoteResponse | null> {
     const rawUsername = await getUsernameFromAuth(req);
     const username = rawUsername ? stripAuthPrefix(rawUsername) : null;
@@ -425,15 +402,24 @@ export class VoteService {
     if (email) filtersOr.push(`user_email:${email}`);
     if (username) filtersOr.push(`username:${username}`);
 
+    // `filters` narrows on vote_uid at the index, avoiding a full-history scan per drawer open;
+    // `filters_or` then disjuncts the user-identity match. Both AND together.
     const responses = await fetchAllQueryResources<MyVoteResponse>(req, (pageToken) =>
       this.microserviceProxy.proxyRequest<QueryServiceResponse<MyVoteResponse>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'vote_response',
+        filters: [`vote_uid:${voteUid}`],
         filters_or: filtersOr,
         ...(pageToken && { page_token: pageToken }),
       })
     );
 
-    const match = responses.find((r) => r?.vote_uid === voteUid && !!r?.uid);
+    // Defensive: `r.uid` should always be populated by the indexer, but fall back to `vote_id`
+    // (the v1 alias) if it isn't — logging the anomaly so we catch any indexer drift.
+    const match = responses.find((r) => r?.vote_uid === voteUid && (!!r?.uid || !!r?.vote_id));
+    if (match && !match.uid && match.vote_id) {
+      logger.warning(req, 'get_my_vote_response', 'vote_response row missing uid; falling back to vote_id', { vote_uid: voteUid, vote_id: match.vote_id });
+      return { ...match, uid: match.vote_id };
+    }
     return match ?? null;
   }
 

@@ -3,9 +3,9 @@
 
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, effect, inject, input, model, output, signal, Signal } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Component, computed, DestroyRef, inject, input, model, output, signal, Signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { RadioButtonComponent } from '@components/radio-button/radio-button.component';
 import { TagComponent } from '@components/tag/tag.component';
@@ -18,7 +18,9 @@ import { MessageService } from 'primeng/api';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DrawerModule } from 'primeng/drawer';
 import { SkeletonModule } from 'primeng/skeleton';
-import { catchError, finalize, of, shareReplay, startWith, Subject, switchMap, take, takeUntil, throwError } from 'rxjs';
+import { catchError, filter, finalize, of, shareReplay, startWith, Subject, switchMap, take, takeUntil, throwError } from 'rxjs';
+
+const INVITATION_NOT_FOUND = 'INVITATION_NOT_FOUND';
 
 @Component({
   selector: 'lfx-vote-cast-drawer',
@@ -26,7 +28,6 @@ import { catchError, finalize, of, shareReplay, startWith, Subject, switchMap, t
     DrawerModule,
     SkeletonModule,
     CheckboxModule,
-    FormsModule,
     ReactiveFormsModule,
     ButtonComponent,
     RadioButtonComponent,
@@ -42,6 +43,7 @@ export class VoteCastDrawerComponent {
   // === Services ===
   private readonly voteService = inject(VoteService);
   private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
 
   // === Inputs ===
   public readonly voteId = input<string | null>(null);
@@ -54,90 +56,60 @@ export class VoteCastDrawerComponent {
   public readonly voteSubmitted = output<string>();
 
   // === Forms ===
-  // Per-question form. Keys are question_id. Each value is:
-  //   - string | null for single_choice (selected choice_id)
-  //   - string[] | null for multiple_choice (array of selected choice_ids)
-  // Submit normalises both shapes into VoteAnswerInput.choice_ids.
   public readonly form = new FormGroup({});
+  public readonly abstainControl = new FormControl<boolean>(false, { nonNullable: true });
 
   // === Writable Signals ===
   protected readonly loadingVote = signal<boolean>(false);
   protected readonly submitting = signal<boolean>(false);
-  protected readonly abstain = signal<boolean>(false);
+  // Reactive dependency for submitDisabled — rebuildForm uses { emitEvent: false }, so statusChanges is silent.
+  private readonly formVersion = signal<number>(0);
 
   // === Shared Observables ===
   private readonly voteId$ = toObservable(this.voteId).pipe(shareReplay({ bufferSize: 1, refCount: true }));
-  // Emits when the drawer is closed mid-submit. The submit chain pipes through
-  // takeUntil(cancelSubmit$) so the HTTP stream is cancelled cleanly and the
-  // success/error toast cannot fire after the user has already closed the drawer.
+  // Emits on drawer dismissal (close button OR ESC OR overlay click — all flip visible to false).
   private readonly cancelSubmit$ = new Subject<void>();
 
   // === Derived Signals (from API) ===
   protected readonly vote: Signal<Vote | null> = this.initVote();
-  // form.statusChanges is the canonical reactive surface for FormGroup validity.
-  // We pipe to startWith(form.status) so the signal has a synchronous initial value
-  // (status emissions only fire on changes, not on initial construction).
-  private readonly formStatus: Signal<string> = toSignal(this.form.statusChanges.pipe(startWith(this.form.status)), { initialValue: this.form.status });
+  protected readonly abstain: Signal<boolean> = toSignal(this.abstainControl.valueChanges, { initialValue: this.abstainControl.value });
 
   // === Computed Signals ===
   protected readonly isGenericPoll: Signal<boolean> = computed(() => this.vote()?.poll_type === PollType.GENERIC);
   protected readonly questions: Signal<PollQuestion[]> = computed(() => this.vote()?.poll_questions ?? []);
   protected readonly allowAbstain: Signal<boolean> = computed(() => !!this.vote()?.allow_abstain);
-  protected readonly submitDisabled: Signal<boolean> = computed(() => {
-    if (this.submitting()) return true;
-    if (this.abstain()) return false;
-    return this.formStatus() !== 'VALID';
-  });
+  protected readonly submitDisabled: Signal<boolean> = this.initSubmitDisabled();
 
   public constructor() {
-    // Rebuild the form whenever a new vote is loaded so controls match its questions.
-    effect(() => {
-      const questions = this.questions();
-      this.rebuildForm(questions);
+    // Rebuild the form when the loaded vote's questions change.
+    toObservable(this.questions)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((questions) => this.rebuildForm(questions));
+
+    // Abstain toggle disables answer controls without losing their values.
+    this.abstainControl.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((isAbstaining) => {
+      if (isAbstaining) this.form.disable({ emitEvent: false });
+      else this.form.enable({ emitEvent: false });
+      this.bumpFormVersion();
     });
 
-    // Reset transient state when the drawer closes so reopening starts fresh.
-    // Cancels any in-flight submit regardless of how the drawer was dismissed
-    // (close button, ESC, or overlay-click) so the success toast cannot fire
-    // after the user has already navigated away.
-    effect(() => {
-      if (!this.visible()) {
-        if (this.submitting()) {
-          this.cancelSubmit$.next();
-        }
-        this.abstain.set(false);
+    // Drawer dismissal (close button / ESC / overlay click) — cancel any in-flight submit and reset transient state.
+    toObservable(this.visible)
+      .pipe(
+        filter((v) => !v),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => {
+        if (this.submitting()) this.cancelSubmit$.next();
         this.submitting.set(false);
-      }
-    });
-
-    // Toggling abstain disables answer fields without losing their values.
-    effect(() => {
-      if (this.abstain()) {
-        this.form.disable({ emitEvent: false });
-      } else {
-        this.form.enable({ emitEvent: false });
-      }
-    });
+        // Reset abstain so reopening starts fresh — letting valueChanges fire keeps form.enable + abstain signal in sync.
+        if (this.abstainControl.value) this.abstainControl.setValue(false);
+      });
   }
 
   // === Protected Methods ===
   protected onClose(): void {
-    // Setting visible to false triggers the visibility effect, which handles
-    // in-flight submit cancellation and all other state resets for every
-    // close path (close button, ESC, overlay-click).
     this.visible.set(false);
-  }
-
-  protected onAbstainChange(checked: boolean): void {
-    this.abstain.set(checked);
-  }
-
-  protected isSingleChoice(question: PollQuestion): boolean {
-    return question.type === 'single_choice';
-  }
-
-  protected isMultipleChoice(question: PollQuestion): boolean {
-    return question.type === 'multiple_choice';
   }
 
   protected onSubmit(): void {
@@ -149,18 +121,13 @@ export class VoteCastDrawerComponent {
 
     this.submitting.set(true);
 
-    // The voting service pre-allocates one vote_response row per invitee when a vote
-    // is enabled; the cast endpoint requires that pre-allocated UID — a fresh client
-    // UUID returns 404. Chain the lookup into the submit via switchMap so the two
-    // sequential calls share one subscription and one error funnel.
+    // The voting service pre-allocates one vote_response row per invitee — POST /vote_responses MUST reuse that uid.
     this.voteService
       .getMyVoteResponse(vote.uid)
       .pipe(
         take(1),
         switchMap((myResponse) => {
-          if (!myResponse?.uid) {
-            return throwError(() => new Error('INVITATION_NOT_FOUND'));
-          }
+          if (!myResponse?.uid) return throwError(() => new Error(INVITATION_NOT_FOUND));
           const payload: CreateVoteResponseRequest = {
             vote_response_uid: myResponse.uid,
             vote_uid: vote.uid,
@@ -169,8 +136,6 @@ export class VoteCastDrawerComponent {
           };
           return this.voteService.createVoteResponse(payload);
         }),
-        // If the user closes the drawer mid-submit, drop the stream silently —
-        // no success/error toast fires, submitting is already reset by onClose.
         takeUntil(this.cancelSubmit$),
         finalize(() => this.submitting.set(false))
       )
@@ -185,8 +150,8 @@ export class VoteCastDrawerComponent {
           this.voteSubmitted.emit(vote.uid);
           this.visible.set(false);
         },
-        error: (err: Error | HttpErrorResponse) => {
-          const isInvitationMissing = err?.message === 'INVITATION_NOT_FOUND';
+        error: (err: unknown) => {
+          const isInvitationMissing = err instanceof Error && !(err instanceof HttpErrorResponse) && err.message === INVITATION_NOT_FOUND;
           this.messageService.add({
             severity: 'error',
             summary: isInvitationMissing ? 'Unable to find your invitation' : 'Unable to submit vote',
@@ -208,10 +173,8 @@ export class VoteCastDrawerComponent {
             this.loadingVote.set(false);
             return of(null);
           }
-
           this.loadingVote.set(true);
           const listVote = this.listVote();
-
           return this.voteService.getVote(id).pipe(
             catchError(() => of(listVote)),
             finalize(() => this.loadingVote.set(false)),
@@ -223,28 +186,37 @@ export class VoteCastDrawerComponent {
     );
   }
 
+  private initSubmitDisabled(): Signal<boolean> {
+    return computed(() => {
+      this.formVersion(); // re-evaluate when controls are added/removed/disabled via { emitEvent: false }
+      if (this.submitting()) return true;
+      if (this.abstain()) return false;
+      return !this.form.valid;
+    });
+  }
+
   // === Private Helpers ===
-  // Reconciles the form against the current vote's questions: drops controls for
-  // removed questions, adds controls for new ones, leaves stable controls alone.
+  // Reconciles the form against the current vote's questions; bumps formVersion since we suppress emitEvent.
   private rebuildForm(questions: PollQuestion[]): void {
     const desiredIds = new Set(questions.map((q) => q.question_id));
     for (const existingId of Object.keys(this.form.controls)) {
-      if (!desiredIds.has(existingId)) {
-        this.form.removeControl(existingId, { emitEvent: false });
-      }
+      if (!desiredIds.has(existingId)) this.form.removeControl(existingId, { emitEvent: false });
     }
     for (const question of questions) {
       if (this.form.contains(question.question_id)) continue;
       if (question.type === 'multiple_choice') {
-        this.form.addControl(question.question_id, new FormControl<string[]>([], Validators.required), { emitEvent: false });
+        this.form.addControl(question.question_id, new FormControl<string[]>([], { nonNullable: true, validators: [Validators.required] }), {
+          emitEvent: false,
+        });
       } else {
         this.form.addControl(question.question_id, new FormControl<string | null>(null, Validators.required), { emitEvent: false });
       }
     }
-    // All add/removeControl calls above suppress individual emissions to avoid
-    // per-control churn. Fire a single status update once all controls are
-    // reconciled so toSignal(statusChanges) reflects the correct validity state.
-    this.form.updateValueAndValidity({ emitEvent: true });
+    this.bumpFormVersion();
+  }
+
+  private bumpFormVersion(): void {
+    this.formVersion.update((v) => v + 1);
   }
 
   private buildAnswers(questions: PollQuestion[]): VoteAnswerInput[] {

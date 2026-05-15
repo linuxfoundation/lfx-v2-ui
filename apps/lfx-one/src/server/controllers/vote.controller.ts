@@ -236,11 +236,7 @@ export class VoteController {
     }
   }
 
-  /**
-   * GET /votes/:uid/my-response — current user's pre-allocated vote_response row.
-   * Used by the cast drawer to obtain the correct vote_response_uid before submitting
-   * (the voting service requires the existing invitation row's UID, not a fresh UUID).
-   */
+  /** GET /votes/:uid/my-response — pre-allocated vote_response row whose uid the cast drawer uses as vote_response_uid on submit. */
   public async getMyVoteResponse(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { uid } = req.params;
     const startTime = logger.startOperation(req, 'get_my_vote_response', { vote_uid: uid });
@@ -258,10 +254,7 @@ export class VoteController {
       const response = await this.voteService.getMyVoteResponse(req, uid);
 
       if (!response) {
-        // Throw ResourceNotFoundError so apiErrorHandler emits a structured 404
-        // with request_id correlation — matches the surveys equivalent at
-        // SurveyController.getMyResponse. Clients distinguish "no invitation row"
-        // (404) from other failures (500/network) instead of seeing 200 + null.
+        // Mirrors SurveyController.getMyResponse — structured 404 lets clients distinguish "no invitation" from upstream failure.
         return next(
           new ResourceNotFoundError('Vote response', uid, {
             operation: 'get_my_vote_response',
