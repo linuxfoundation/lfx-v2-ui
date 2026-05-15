@@ -1,8 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { isPlatformBrowser } from '@angular/common';
-import { Component, computed, effect, inject, input, model, output, PLATFORM_ID, signal, Signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { Component, computed, effect, inject, input, model, output, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
@@ -17,9 +17,7 @@ import { MessageService } from 'primeng/api';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DrawerModule } from 'primeng/drawer';
 import { SkeletonModule } from 'primeng/skeleton';
-import { catchError, finalize, of, shareReplay, startWith, switchMap, take } from 'rxjs';
-
-import { DatePipe } from '@angular/common';
+import { catchError, finalize, of, shareReplay, startWith, switchMap, take, throwError } from 'rxjs';
 
 @Component({
   selector: 'lfx-vote-cast-drawer',
@@ -43,7 +41,6 @@ export class VoteCastDrawerComponent {
   // === Services ===
   private readonly voteService = inject(VoteService);
   private readonly messageService = inject(MessageService);
-  private readonly platformId = inject(PLATFORM_ID);
 
   // === Inputs ===
   public readonly voteId = input<string | null>(null);
@@ -130,8 +127,6 @@ export class VoteCastDrawerComponent {
   }
 
   protected onSubmit(): void {
-    if (!isPlatformBrowser(this.platformId)) return;
-
     const vote = this.vote();
     if (!vote || this.submitting()) return;
 
@@ -141,61 +136,46 @@ export class VoteCastDrawerComponent {
     this.submitting.set(true);
 
     // The voting service pre-allocates one vote_response row per invitee when a vote
-    // is enabled; the cast endpoint requires that pre-allocated UID. A fresh client
-    // UUID returns 404. Fetch the user's row first, then POST with its uid.
+    // is enabled; the cast endpoint requires that pre-allocated UID — a fresh client
+    // UUID returns 404. Chain the lookup into the submit via switchMap so the two
+    // sequential calls share one subscription and one error funnel.
     this.voteService
       .getMyVoteResponse(vote.uid)
-      .pipe(take(1))
-      .subscribe({
-        next: (myResponse) => {
+      .pipe(
+        take(1),
+        switchMap((myResponse) => {
           if (!myResponse?.uid) {
-            this.submitting.set(false);
-            this.messageService.add({
-              severity: 'error',
-              summary: 'Unable to find your invitation',
-              detail: 'We could not find your vote invitation for this ballot. Please refresh and try again.',
-              life: 5000,
-            });
-            return;
+            return throwError(() => new Error('INVITATION_NOT_FOUND'));
           }
-
           const payload: CreateVoteResponseRequest = {
             vote_response_uid: myResponse.uid,
             vote_uid: vote.uid,
             abstain: isAbstain,
             user_vote_content: userVoteContent,
           };
-
-          this.voteService
-            .createVoteResponse(payload)
-            .pipe(finalize(() => this.submitting.set(false)))
-            .subscribe({
-              next: () => {
-                this.messageService.add({
-                  severity: 'success',
-                  summary: 'Vote submitted',
-                  detail: `Your ${isAbstain ? 'abstention' : 'ballot'} has been recorded.`,
-                  life: 3000,
-                });
-                this.voteSubmitted.emit(vote.uid);
-                this.visible.set(false);
-              },
-              error: () => {
-                this.messageService.add({
-                  severity: 'error',
-                  summary: 'Unable to submit vote',
-                  detail: 'Something went wrong submitting your ballot. Please try again.',
-                  life: 5000,
-                });
-              },
-            });
+          return this.voteService.createVoteResponse(payload);
+        }),
+        finalize(() => this.submitting.set(false))
+      )
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Vote submitted',
+            detail: `Your ${isAbstain ? 'abstention' : 'ballot'} has been recorded.`,
+            life: 3000,
+          });
+          this.voteSubmitted.emit(vote.uid);
+          this.visible.set(false);
         },
-        error: () => {
-          this.submitting.set(false);
+        error: (err: Error) => {
+          const isInvitationMissing = err?.message === 'INVITATION_NOT_FOUND';
           this.messageService.add({
             severity: 'error',
-            summary: 'Unable to submit vote',
-            detail: 'We could not look up your invitation. Please refresh and try again.',
+            summary: isInvitationMissing ? 'Unable to find your invitation' : 'Unable to submit vote',
+            detail: isInvitationMissing
+              ? 'We could not find your vote invitation for this ballot. Please refresh and try again.'
+              : 'Something went wrong submitting your ballot. Please try again.',
             life: 5000,
           });
         },

@@ -134,6 +134,13 @@ export class VoteService {
   }
 
   public getMyVoteResponse(voteUid: string): Observable<MyVoteResponse | null> {
-    return this.http.get<MyVoteResponse | null>(`/api/votes/${voteUid}/my-response`).pipe(catchError(() => of(null)));
+    return this.http.get<MyVoteResponse | null>(`/api/votes/${voteUid}/my-response`).pipe(
+      catchError((err) => {
+        // Log the breadcrumb but degrade gracefully — callers (cast drawer) surface a user-facing
+        // toast and a `null` response triggers the "INVITATION_NOT_FOUND" path on submit.
+        console.error(`Failed to load my-response for vote ${voteUid}:`, err);
+        return of(null);
+      })
+    );
   }
 }
