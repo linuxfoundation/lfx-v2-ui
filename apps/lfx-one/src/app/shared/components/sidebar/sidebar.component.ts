@@ -57,7 +57,7 @@ export class SidebarComponent {
 
   protected readonly user = this.userService.user;
   protected readonly userInitials = this.userService.userInitials;
-  protected readonly personaLabels: Signal<{ label: string; icon: string; names: string[] }[]> = this.initPersonaLabels();
+  protected readonly personaLabels: Signal<{ label: string; icon: string; names: string[]; ariaLabel: string }[]> = this.initPersonaLabels();
   // Hide the persona badge when the user is a root-writer — executive-director is spoofed, not naturally detected.
   protected readonly showPersonaBadge: Signal<boolean> = computed(() => !this.personaService.isRootWriter());
 
@@ -113,7 +113,7 @@ export class SidebarComponent {
     });
   }
 
-  private initPersonaLabels(): Signal<{ label: string; icon: string; names: string[] }[]> {
+  private initPersonaLabels(): Signal<{ label: string; icon: string; names: string[]; ariaLabel: string }[]> {
     return computed(() => {
       const personaProjects = this.personaService.personaProjects();
       const toTag = (p: PersonaType) => {
@@ -121,7 +121,8 @@ export class SidebarComponent {
         const label = option?.label ?? toTitleCase(p);
         const icon = PERSONA_ICONS[p] ?? 'fa-light fa-user';
         const names = (personaProjects[p] ?? []).map((proj) => proj.projectName).filter((n): n is string => !!n);
-        return { label, icon, names };
+        const ariaLabel = names.length ? `Role: ${label} (${names.join(', ')})` : `Role: ${label}`;
+        return { label, icon, names, ariaLabel };
       };
 
       if (this.activeLens() === 'me') {

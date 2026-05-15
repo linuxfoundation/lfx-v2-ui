@@ -58,7 +58,6 @@ export class ProjectSelectorComponent {
 
   protected readonly foundationItems: Signal<LensItem[]> = this.initFoundationItems();
   protected readonly rawProjectItems: Signal<LensItem[]> = this.initRawProjectItems();
-  protected readonly items: Signal<LensItem[]> = computed(() => this.rawProjectItems());
   protected readonly loading: Signal<boolean> = this.initLoading();
   protected readonly hasMore: Signal<boolean> = this.initHasMore();
   protected readonly displayedItems: Signal<DisplayLensItem[]> = this.initDisplayedItems();
