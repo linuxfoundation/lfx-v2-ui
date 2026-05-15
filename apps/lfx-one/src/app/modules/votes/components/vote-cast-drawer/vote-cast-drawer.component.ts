@@ -17,7 +17,7 @@ import { MessageService } from 'primeng/api';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DrawerModule } from 'primeng/drawer';
 import { SkeletonModule } from 'primeng/skeleton';
-import { catchError, finalize, of, shareReplay, startWith, switchMap, take, throwError } from 'rxjs';
+import { catchError, finalize, of, shareReplay, startWith, Subject, switchMap, take, takeUntil, throwError } from 'rxjs';
 
 @Component({
   selector: 'lfx-vote-cast-drawer',
@@ -63,6 +63,10 @@ export class VoteCastDrawerComponent {
   protected readonly loadingVote = signal<boolean>(false);
   protected readonly submitting = signal<boolean>(false);
   protected readonly abstain = signal<boolean>(false);
+
+  // Emits when the drawer is closed. Used to cancel any in-flight submit so the
+  // success toast can't fire after the user "cancelled" (see PR #710 review).
+  private readonly cancelSubmit$ = new Subject<void>();
 
   // === Shared Observables ===
   private readonly voteId$ = toObservable(this.voteId).pipe(shareReplay({ bufferSize: 1, refCount: true }));
@@ -111,6 +115,13 @@ export class VoteCastDrawerComponent {
 
   // === Protected Methods ===
   protected onClose(): void {
+    // Cancel any in-flight submit so its success/error toast doesn't fire after
+    // the user has already cancelled. The submit subscription pipes through
+    // takeUntil(cancelSubmit$) so emitting here completes the stream cleanly.
+    if (this.submitting()) {
+      this.cancelSubmit$.next();
+      this.submitting.set(false);
+    }
     this.visible.set(false);
   }
 
@@ -155,6 +166,9 @@ export class VoteCastDrawerComponent {
           };
           return this.voteService.createVoteResponse(payload);
         }),
+        // If the user closes the drawer mid-submit, drop the stream silently —
+        // no success/error toast fires, submitting is already reset by onClose.
+        takeUntil(this.cancelSubmit$),
         finalize(() => this.submitting.set(false))
       )
       .subscribe({
