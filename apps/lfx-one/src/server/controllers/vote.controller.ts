@@ -237,6 +237,33 @@ export class VoteController {
   }
 
   /**
+   * GET /votes/:uid/my-response — current user's pre-allocated vote_response row.
+   * Used by the cast drawer to obtain the correct vote_response_uid before submitting
+   * (the voting service requires the existing invitation row's UID, not a fresh UUID).
+   */
+  public async getMyVoteResponse(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { uid } = req.params;
+    const startTime = logger.startOperation(req, 'get_my_vote_response', { vote_uid: uid });
+
+    try {
+      if (
+        !validateUidParameter(uid, req, next, {
+          operation: 'get_my_vote_response',
+          service: 'vote_controller',
+        })
+      ) {
+        return;
+      }
+
+      const response = await this.voteService.getMyVoteResponse(req, uid);
+      logger.success(req, 'get_my_vote_response', startTime, { vote_uid: uid, found: !!response });
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * POST /votes/responses
    */
   public async createVoteResponse(req: Request, res: Response, next: NextFunction): Promise<void> {

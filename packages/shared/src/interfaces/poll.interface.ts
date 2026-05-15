@@ -215,6 +215,13 @@ export interface Vote {
   total_voting_request_invitations?: number;
   /** Number of responses received */
   num_response_received?: number;
+  /**
+   * The current user's response state for this vote, set only by the Me-lens
+   * `getMyVotes` server decoration. RESPONDED means the user has submitted a ballot
+   * (the indexed vote_response row has `vote_status === 'submitted'`); AWAITING_RESPONSE
+   * means invited but not yet voted. Absent on raw upstream Vote responses (e.g. GET /votes/:uid).
+   */
+  response_status?: VoteResponseStatus;
 }
 
 /**
@@ -225,6 +232,28 @@ export interface Vote {
 export interface IndexedVote extends Omit<Vote, 'uid'> {
   vote_uid: string;
   uid?: string;
+}
+
+/**
+ * Current user's vote_response row for a single vote, as returned by
+ * GET /api/votes/:uid/my-response. Mirrors MySurveyResponse — the UID here is
+ * the *invitation row* that was pre-allocated when the vote was enabled;
+ * casting a ballot via POST /vote_responses MUST reuse this UID, otherwise the
+ * voting service returns 404 because no such response exists.
+ */
+export interface MyVoteResponse {
+  /** vote_response_uid — pre-allocated by the voting service on invitation. */
+  uid: string;
+  /** Parent poll identifier. */
+  vote_uid: string;
+  /** Indexer status: `'awaiting_response'` until the user submits, then `'submitted'`. */
+  vote_status?: string;
+  /** Whether the user has been removed from this poll's eligible list. */
+  voter_removed?: boolean;
+  /** The voter's identifier in the index (whichever filter matched). */
+  user_email?: string;
+  /** The voter's friendly username in the index. */
+  username?: string;
 }
 
 /**
