@@ -63,6 +63,24 @@ export class NavigationService {
     { initialValue: false }
   );
 
+  // Persona refresh can promote a user to hybrid without changing activeLens — in that case the
+  // activeLensPreloader doesn't re-run, leaving the sibling lens unloaded and the merged tabs empty.
+  private readonly hybridTransitionPreloader = toSignal(
+    toObservable(this.lensService.isHybridPersona).pipe(
+      distinctUntilChanged(),
+      skip(1),
+      filter((isHybrid) => isHybrid),
+      tap(() => {
+        const active = this.lensService.activeLens();
+        if (active === 'foundation' || active === 'project') {
+          const sibling: NavLens = active === 'foundation' ? 'project' : 'foundation';
+          this.preloadSibling(sibling);
+        }
+      })
+    ),
+    { initialValue: false }
+  );
+
   public items(lens: NavLens): Signal<LensItem[]> {
     return this.getState(lens).items;
   }
