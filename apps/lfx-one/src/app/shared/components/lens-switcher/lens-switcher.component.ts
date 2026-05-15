@@ -35,7 +35,7 @@ export class LensSwitcherComponent {
   public readonly mobile = input<boolean>(false);
 
   protected readonly activeLens = this.lensService.activeLens;
-  protected readonly lenses = this.lensService.availableLenses;
+  protected readonly lenses = this.lensService.displayLenses;
   protected readonly isHybrid = this.lensService.isHybridPersona;
   protected readonly user = this.userService.user;
   protected readonly insightsUrl = buildInsightsUrl();

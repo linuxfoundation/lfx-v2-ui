@@ -112,8 +112,7 @@ export class SidebarComponent {
   private initPersonaLabels(): Signal<{ label: string; icon: string; tooltip: string }[]> {
     return computed(() => {
       const personaProjects = this.personaService.personaProjects();
-      const escapeHtml = (s: string) =>
-        s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
       const toTag = (p: PersonaType) => {
         const option = PERSONA_OPTIONS.find((o) => o.value === p);
         const label = option?.label ?? toTitleCase(p);
@@ -121,9 +120,7 @@ export class SidebarComponent {
         const names = (personaProjects[p] ?? []).map((proj) => proj.projectName).filter((n): n is string => !!n);
         const header = `<div class="font-semibold">${escapeHtml(label)}</div>`;
         const list =
-          names.length > 0
-            ? `<ul class="mt-1 pl-4 list-disc font-normal text-gray-300">${names.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}</ul>`
-            : '';
+          names.length > 0 ? `<ul class="mt-1 pl-4 list-disc font-normal text-gray-300">${names.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}</ul>` : '';
         return { label, icon, tooltip: header + list };
       };
 

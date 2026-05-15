@@ -44,11 +44,14 @@
                 <div class="flex flex-wrap gap-1">
                   @for (tag of personaLabels(); track $index) {
                     <span
+                      tabindex="0"
+                      role="img"
+                      [attr.aria-label]="'Role: ' + tag.label"
                       [pTooltip]="tag.tooltip"
                       tooltipPosition="top"
                       [escape]="false"
                       tooltipStyleClass="persona-tooltip"
-                      class="inline-flex items-center justify-center size-6 rounded-full bg-white border border-gray-200 text-gray-700 shrink-0">
+                      class="inline-flex items-center justify-center size-6 rounded-full bg-white border border-gray-200 text-gray-700 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
                       <i [ngClass]="tag.icon" class="text-[10px]" aria-hidden="true"></i>
                     </span>
                   }

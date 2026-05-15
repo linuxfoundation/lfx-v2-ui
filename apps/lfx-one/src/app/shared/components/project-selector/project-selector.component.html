@@ -24,10 +24,13 @@
       @if (selectedRoleLabel()) {
         <span class="text-xs font-normal text-gray-400 leading-none shrink-0" aria-hidden="true">・</span>
         <span
+          tabindex="0"
+          role="img"
+          [attr.aria-label]="'Role: ' + selectedRoleLabel()"
           [pTooltip]="selectedRoleLabel()"
           tooltipPosition="top"
-          class="inline-flex items-center justify-center size-5 rounded-full bg-white border border-gray-200 text-gray-700 shrink-0">
-          <i [class]="selectedRoleIcon()" class="text-[10px]" aria-hidden="true"></i>
+          class="inline-flex items-center justify-center size-5 rounded-full bg-white border border-gray-200 text-gray-700 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+          <i [ngClass]="selectedRoleIcon()" class="text-[10px]" aria-hidden="true"></i>
         </span>
       }
     </div>
@@ -58,14 +61,14 @@
         data-testid="project-search-input" />
     </div>
 
-    <!-- Tab switcher — hybrid mode only -->
+    <!-- Tab switcher — hybrid mode only. These are filter buttons, not an ARIA tabs widget, so we
+         use aria-pressed instead of role="tab" to avoid promising tab-panel semantics we don't ship. -->
     @if (hybridMode()) {
-      <div class="flex gap-1 mb-5 bg-gray-100 rounded-full p-1" role="tablist">
+      <div class="flex gap-1 mb-5 bg-gray-100 rounded-full p-1" role="group" aria-label="Filter results">
         @for (tab of selectorTabs; track tab) {
           <button
             type="button"
-            role="tab"
-            [attr.aria-selected]="activeTab() === tab"
+            [attr.aria-pressed]="activeTab() === tab"
             (click)="activeTab.set(tab)"
             class="flex-1 text-sm font-medium py-1 px-3 rounded-full transition-colors capitalize"
             [class.bg-white]="activeTab() === tab"
@@ -109,8 +112,8 @@
                   <img [alt]="displayItem.item.name" class="w-full h-full object-contain" [src]="displayItem.item.logoUrl" />
                 } @else {
                   <svg width="14" height="14" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3.96369 15.9789V7.98987H0V19.9504H11.9372V15.9789H3.96369Z" fill="#0094FF" />
-                    <path d="M19.8645 0H0V6.00333H3.96369V4.01761H15.9009V15.9781H13.919V19.9495H19.8645V0Z" fill="#003778" />
+                    <path d="M3.96369 15.9789V7.98987H0V19.9504H11.9372V15.9789H3.96369Z" class="fill-blue-500" />
+                    <path d="M19.8645 0H0V6.00333H3.96369V4.01761H15.9009V15.9781H13.919V19.9495H19.8645V0Z" class="fill-blue-800" />
                   </svg>
                 }
               </div>
@@ -120,7 +123,7 @@
               <p class="font-medium text-sm text-gray-900 mb-0 truncate">{{ displayItem.item.name || displayItem.item.slug }}</p>
               @if (getRoleLabel(displayItem.item)) {
                 <p class="text-xs text-gray-400 leading-none mt-0.5 truncate">
-                  <i [class]="getRoleIcon(displayItem.item)" class="mr-1" aria-hidden="true"></i>{{ getRoleLabel(displayItem.item) }}
+                  <i [ngClass]="getRoleIcon(displayItem.item)" class="mr-1" aria-hidden="true"></i>{{ getRoleLabel(displayItem.item) }}
                 </p>
               }
             </div>

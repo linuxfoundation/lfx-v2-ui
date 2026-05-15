@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { NgClass } from '@angular/common';
 import { Component, computed, inject, input, model, output, signal, Signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
@@ -25,7 +26,7 @@ type SelectorTab = 'all' | 'foundations' | 'projects';
 
 @Component({
   selector: 'lfx-project-selector',
-  imports: [ReactiveFormsModule, PopoverModule, InputTextModule, AutoFocus, OnRenderDirective, TooltipModule],
+  imports: [NgClass, ReactiveFormsModule, PopoverModule, InputTextModule, AutoFocus, OnRenderDirective, TooltipModule],
   templateUrl: './project-selector.component.html',
   styleUrl: './project-selector.component.scss',
 })
@@ -120,6 +121,9 @@ export class ProjectSelectorComponent {
 
   protected readonly hasMore: Signal<boolean> = computed(() => {
     if (this.hybridMode()) {
+      const tab = this.activeTab();
+      if (tab === 'foundations') return this.navigationService.hasMore('foundation')();
+      if (tab === 'projects') return this.navigationService.hasMore('project')();
       return this.navigationService.hasMore('foundation')() || this.navigationService.hasMore('project')();
     }
     return this.navigationService.hasMore(this.lens())();
@@ -180,6 +184,18 @@ export class ProjectSelectorComponent {
 
   protected loadMore(): void {
     if (this.hybridMode()) {
+      const tab = this.activeTab();
+      // Scope pagination to the active tab so the visible list keeps advancing instead of
+      // exhausting the inactive lens first. The All tab fetches whichever side still has pages,
+      // preferring foundations so they're complete before standalone projects pile on.
+      if (tab === 'foundations') {
+        this.navigationService.loadNextPage('foundation');
+        return;
+      }
+      if (tab === 'projects') {
+        this.navigationService.loadNextPage('project');
+        return;
+      }
       if (this.navigationService.hasMore('foundation')()) {
         this.navigationService.loadNextPage('foundation');
       } else {
@@ -257,26 +273,39 @@ export class ProjectSelectorComponent {
     const sortedFoundations = this.sortByRole(this.foundationItems());
     const sortedProjects = this.sortByRole(this.rawProjectItems());
 
-    // Build parentProjectUid → project uid map for nesting lookup
+    // Pre-group sortedProjects by parentProjectUid in a single pass so the nesting loop is O(F + P)
+    // instead of O(F × P).
     const detectedProjects = this.personaService.detectedProjects();
-    const parentMap = new Map<string, string>();
+    const parentByProjectUid = new Map<string, string>();
     for (const dp of detectedProjects) {
       if (dp.parentProjectUid) {
-        parentMap.set(dp.projectUid, dp.parentProjectUid);
+        parentByProjectUid.set(dp.projectUid, dp.parentProjectUid);
       }
     }
 
     const foundationUidSet = new Set(sortedFoundations.map((f) => f.uid));
-    const result: DisplayLensItem[] = [];
+    const childrenByFoundationUid = new Map<string, LensItem[]>();
     const nestedProjectUids = new Set<string>();
+    for (const project of sortedProjects) {
+      const parentUid = parentByProjectUid.get(project.uid);
+      if (parentUid && foundationUidSet.has(parentUid)) {
+        const bucket = childrenByFoundationUid.get(parentUid);
+        if (bucket) {
+          bucket.push(project);
+        } else {
+          childrenByFoundationUid.set(parentUid, [project]);
+        }
+        nestedProjectUids.add(project.uid);
+      }
+    }
 
+    const result: DisplayLensItem[] = [];
     for (const foundation of sortedFoundations) {
       result.push({ item: foundation, isNested: false });
-      for (const project of sortedProjects) {
-        const parentUid = parentMap.get(project.uid);
-        if (parentUid && parentUid === foundation.uid && foundationUidSet.has(foundation.uid)) {
+      const children = childrenByFoundationUid.get(foundation.uid);
+      if (children) {
+        for (const project of children) {
           result.push({ item: project, isNested: true });
-          nestedProjectUids.add(project.uid);
         }
       }
     }
