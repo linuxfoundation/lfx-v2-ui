@@ -153,7 +153,7 @@
           @if (commentResults().length > 0) {
             <div class="flex flex-col gap-4 pt-4 border-t border-slate-200" data-testid="vote-results-comments">
               <h2 class="text-lg font-semibold text-slate-900">Comments</h2>
-              @for (commentResult of commentResults(); track commentResult.prompt) {
+              @for (commentResult of commentResults(); track $index) {
                 <div class="flex flex-col gap-2">
                   <h3 class="text-sm font-medium text-slate-700">{{ commentResult.prompt }}</h3>
                   @for (comment of commentResult.comments; track $index) {
@@ -249,7 +249,7 @@
           @if (commentResults().length > 0) {
             <div class="flex flex-col gap-4 pt-4 border-t border-slate-200" data-testid="vote-results-comments">
               <h2 class="text-lg font-semibold text-slate-900">Comments</h2>
-              @for (commentResult of commentResults(); track commentResult.prompt) {
+              @for (commentResult of commentResults(); track $index) {
                 <div class="flex flex-col gap-2">
                   <h3 class="text-sm font-medium text-slate-700">{{ commentResult.prompt }}</h3>
                   @for (comment of commentResult.comments; track $index) {
@@ -367,7 +367,7 @@
         @if (commentResults().length > 0) {
           <div class="flex flex-col gap-4 pt-4 border-t border-slate-200" data-testid="vote-results-comments">
             <h2 class="text-lg font-semibold text-slate-900">Comments</h2>
-            @for (commentResult of commentResults(); track commentResult.prompt) {
+            @for (commentResult of commentResults(); track $index) {
               <div class="flex flex-col gap-2">
                 <h3 class="text-sm font-medium text-slate-700">{{ commentResult.prompt }}</h3>
                 @for (comment of commentResult.comments; track $index) {

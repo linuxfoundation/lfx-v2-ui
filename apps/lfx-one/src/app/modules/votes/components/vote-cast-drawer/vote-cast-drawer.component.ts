@@ -66,6 +66,8 @@ export class VoteCastDrawerComponent {
   protected readonly submitting = signal<boolean>(false);
   // Reactive dependency for submitDisabled — rebuildForm uses { emitEvent: false }, so statusChanges is silent.
   private readonly formVersion = signal<number>(0);
+  // Tracks the poll_type the form was last built for; if it changes (e.g., list vote omitted poll_type and detail fetch supplied a ranked one), rebuildForm wipes controls so they get the right shape.
+  private lastBuiltPollType: PollType | null = null;
 
   // === Shared Observables ===
   private readonly voteId$ = toObservable(this.voteId).pipe(shareReplay({ bufferSize: 1, refCount: true }));
@@ -260,7 +262,15 @@ export class VoteCastDrawerComponent {
   // === Private Helpers ===
   /** Reconciles the form against the current vote's questions; ranked polls seed declared order so the form is valid on load. */
   private rebuildForm(questions: PollQuestion[]): void {
+    const currentPollType = this.vote()?.poll_type ?? PollType.GENERIC;
     const pollIsRanked = this.isRankedPoll();
+    // If poll_type flipped between builds (e.g., list vote omitted it → detail fetch supplied a ranked one), wipe all controls so they get re-added with the correct shape.
+    if (this.lastBuiltPollType !== null && this.lastBuiltPollType !== currentPollType) {
+      for (const existingId of Object.keys(this.form.controls)) {
+        this.form.removeControl(existingId, { emitEvent: false });
+      }
+    }
+    this.lastBuiltPollType = currentPollType;
     const desiredIds = new Set(questions.map((q) => q.question_id));
     for (const existingId of Object.keys(this.form.controls)) {
       if (!desiredIds.has(existingId)) this.form.removeControl(existingId, { emitEvent: false });
