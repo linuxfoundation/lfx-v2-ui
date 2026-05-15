@@ -57,9 +57,6 @@ export class MultiPersonaDashboardComponent {
 
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
 
-  protected readonly castDrawerVoteId = signal<string | null>(null);
-  protected readonly castDrawerVisible = signal<boolean>(false);
-
   // All detected projects (foundations + projects)
   protected readonly allProjects: Signal<EnrichedPersonaProject[]> = computed(() => this.personaService.detectedProjects());
 
@@ -128,11 +125,6 @@ export class MultiPersonaDashboardComponent {
 
   public handleActionClick(): void {
     this.refresh$.next();
-  }
-
-  protected handleCastVoteRequested(voteUid: string): void {
-    this.castDrawerVoteId.set(voteUid);
-    this.castDrawerVisible.set(true);
   }
 
   protected handleVoteSubmitted(): void {

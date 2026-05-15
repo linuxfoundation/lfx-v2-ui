@@ -34,7 +34,7 @@
         [pendingActions]="pendingActions()"
         [displayLimit]="2"
         (actionClick)="handleActionClick()"
-        (castVoteRequested)="handleCastVoteRequested($event)" />
+        (castVoteRequested)="castDrawerHost.open($event)" />
     } @placeholder {
       <section class="flex flex-col flex-1" data-testid="user-dashboard-pending-actions-placeholder">
         <div class="flex items-center justify-between mb-4 px-2 h-8">
@@ -124,4 +124,4 @@
 </div>
 
 <!-- Inline ballot cast drawer launched from a Vote pending action — same drawer used on /votes. -->
-<lfx-dashboard-cast-drawer-host [voteId]="castDrawerVoteId()" [(visible)]="castDrawerVisible" (voteSubmitted)="handleVoteSubmitted()" />
+<lfx-dashboard-cast-drawer-host #castDrawerHost (voteSubmitted)="handleVoteSubmitted()" />

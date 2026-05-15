@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, Signal } from '@angular/core';
+import { Component, computed, inject, Signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { isBoardScopedPersona, PendingActionItem } from '@lfx-one/shared/interfaces';
 import { PersonaService } from '@services/persona.service';
@@ -27,9 +27,6 @@ export class UserDashboardComponent {
 
   public readonly refresh$ = new BehaviorSubject<void>(undefined);
 
-  protected readonly castDrawerVoteId = signal<string | null>(null);
-  protected readonly castDrawerVisible = signal<boolean>(false);
-
   protected readonly isBoardScoped = computed(() => isBoardScopedPersona(this.personaService.currentPersona()));
   protected readonly activityRoleLabel = computed(() => {
     const persona = this.personaService.currentPersona();
@@ -52,11 +49,6 @@ export class UserDashboardComponent {
 
   public handleActionClick(): void {
     this.refresh$.next();
-  }
-
-  protected handleCastVoteRequested(voteUid: string): void {
-    this.castDrawerVoteId.set(voteUid);
-    this.castDrawerVisible.set(true);
   }
 
   protected handleVoteSubmitted(): void {

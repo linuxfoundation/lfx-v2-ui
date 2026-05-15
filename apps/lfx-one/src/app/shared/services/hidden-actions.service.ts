@@ -52,14 +52,7 @@ export class HiddenActionsService {
     return this.cookieService.check(cookieName);
   }
 
-  /**
-   * Generate a unique identifier for an action.
-   * Prefer intrinsic IDs when available so same-text siblings (for example multiple votes)
-   * never collide. Fall back to stable display fields for legacy action shapes.
-   *
-   * @param item The pending action item
-   * @returns A unique string identifier
-   */
+  // Prefer intrinsic IDs (meetingUid, voteUid) so same-text siblings never collide; fall back to type+badge+text+buttonLink for legacy action shapes without one.
   private getActionIdentifier(item: PendingActionItem): string {
     if (item.meetingUid) {
       return `${item.type}-${item.meetingUid}-${item.occurrenceId ?? ''}`;

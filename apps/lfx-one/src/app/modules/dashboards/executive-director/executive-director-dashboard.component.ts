@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, Signal } from '@angular/core';
+import { Component, computed, inject, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { PendingActionItem } from '@lfx-one/shared/interfaces';
 import { LensService } from '@services/lens.service';
@@ -45,9 +45,6 @@ export class ExecutiveDirectorDashboardComponent {
   // === Configuration ===
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
 
-  protected readonly castDrawerVoteId = signal<string | null>(null);
-  protected readonly castDrawerVisible = signal<boolean>(false);
-
   // === Computed Signals ===
   protected readonly selectedFoundation = this.projectContextService.selectedFoundation;
   protected readonly selectedProject = computed(() => this.projectContextService.activeContext());
@@ -62,11 +59,6 @@ export class ExecutiveDirectorDashboardComponent {
   // === Public Methods ===
   public handleActionClick(): void {
     this.refresh$.next();
-  }
-
-  protected handleCastVoteRequested(voteUid: string): void {
-    this.castDrawerVoteId.set(voteUid);
-    this.castDrawerVisible.set(true);
   }
 
   protected handleVoteSubmitted(): void {

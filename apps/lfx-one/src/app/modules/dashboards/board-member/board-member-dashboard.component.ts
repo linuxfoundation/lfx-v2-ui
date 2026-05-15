@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, Signal } from '@angular/core';
+import { Component, computed, inject, Signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { PendingActionItem } from '@lfx-one/shared/interfaces';
 import { LensService } from '@services/lens.service';
@@ -42,9 +42,6 @@ export class BoardMemberDashboardComponent {
   public readonly selectedFoundation = computed(() => this.projectContextService.selectedFoundation());
   public readonly selectedProject = computed(() => this.projectContextService.activeContext());
   public readonly refresh$: BehaviorSubject<void> = new BehaviorSubject<void>(undefined);
-
-  protected readonly castDrawerVoteId = signal<string | null>(null);
-  protected readonly castDrawerVisible = signal<boolean>(false);
   // Windowing (dismiss filtering + display cap) is owned by PendingActionsComponent.
   // Pass the raw list and let the child render the top N unhidden items.
   public readonly boardMemberActions: Signal<PendingActionItem[]>;
@@ -55,11 +52,6 @@ export class BoardMemberDashboardComponent {
 
   public handleActionClick(): void {
     this.refresh$.next();
-  }
-
-  protected handleCastVoteRequested(voteUid: string): void {
-    this.castDrawerVoteId.set(voteUid);
-    this.castDrawerVisible.set(true);
   }
 
   protected handleVoteSubmitted(): void {
