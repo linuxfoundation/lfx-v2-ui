@@ -260,7 +260,24 @@ export class SurveyService {
         survey_cutoff_date: r.survey_cutoff_date || null,
         is_nps_survey: r.is_nps_survey ?? false,
         is_project_survey: r.is_project_survey ?? false,
-        committees: [],
+        committees: r.committee_name
+          ? [
+              {
+                committee_id: r.committee_id || '',
+                committee_uid: r.committee_uid || '',
+                committee_name: r.committee_name,
+                project_id: r.project?.id || '',
+                project_uid: r.project?.project_uid || '',
+                project_name: r.project?.name || '',
+                total_recipients: r.total_recipients ?? 0,
+                total_responses: r.total_responses ?? 0,
+                nps_value: 0,
+                num_detractors: 0,
+                num_passives: 0,
+                num_promoters: 0,
+              },
+            ]
+          : [],
         committee_category: r.committee_category || '',
         creator_name: r.creator_name || '',
         created_at: r.survey_created_at || '',
