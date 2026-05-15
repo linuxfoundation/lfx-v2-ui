@@ -99,7 +99,7 @@
           </ng-template>
 
           <ng-template #body let-survey let-rowIndex="rowIndex">
-            @let rowId = survey.response_uid || survey.uid
+            @let rowId = survey.response_uid || survey.uid;
             <tr [attr.data-row-index]="rowIndex" [attr.data-testid]="'surveys-row-' + rowId">
               <td>
                 <button
