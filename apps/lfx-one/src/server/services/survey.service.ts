@@ -322,7 +322,7 @@ export class SurveyService {
 
     // Cast is safe: every row in sorted has project_uid set to a string in the loop above.
     // Survey.project_uid is typed as optional but enrichWithProjectData requires the field present.
-    return this.projectService.enrichWithProjectData(req, sorted as Array<Survey & { project_uid: string }>) as Promise<Survey[]>;
+    return this.projectService.enrichWithProjectData(req, sorted as (Survey & { project_uid: string })[]) as Promise<Survey[]>;
   }
 
   /**
