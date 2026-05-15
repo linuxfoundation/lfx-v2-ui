@@ -91,7 +91,8 @@ export class SurveyController {
    */
   public async getMyResponse(req: Request, res: Response, next: NextFunction): Promise<void> {
     const surveyUid = req.params['uid'];
-    const responseUid = typeof req.query['response_uid'] === 'string' ? req.query['response_uid'] : undefined;
+    const rawResponseUid = typeof req.query['response_uid'] === 'string' ? req.query['response_uid'].trim() : undefined;
+    const responseUid = rawResponseUid !== '' ? rawResponseUid : undefined;
     const startTime = logger.startOperation(req, 'get_my_response', { survey_uid: surveyUid });
 
     try {

@@ -269,6 +269,7 @@ export class SurveyService {
                 project_id: r.project?.id || '',
                 project_uid: r.project?.project_uid || '',
                 project_name: r.project?.name || '',
+                // Committee-scoped totals from this response record, not survey-wide aggregates.
                 total_recipients: r.total_recipients ?? 0,
                 total_responses: r.total_responses ?? 0,
                 nps_value: 0,
@@ -282,6 +283,7 @@ export class SurveyService {
         creator_name: r.creator_name || '',
         created_at: r.survey_created_at || '',
         last_modified_at: r.survey_last_modified_at || '',
+        // Committee-scoped totals from this response record — not survey-wide aggregates; not surfaced in the Me lens.
         total_responses: r.total_responses ?? 0,
         total_recipients: r.total_recipients ?? 0,
         project_uid: r.project?.project_uid || '',
@@ -354,9 +356,13 @@ export class SurveyService {
       })
     );
 
+    // When responseUid is present (Me-lens one-row-per-committee), match only the
+    // exact record — no fallback to survey_uid. A fallback would return a different
+    // committee's response when the selected invitation hasn't been submitted yet,
+    // causing the drawer to show the wrong state. The survey_uid cross-check
+    // prevents a tampered query param from leaking another survey's response.
     const match = responseUid
-      ? (responses.find((r) => r?.uid === responseUid && r.response_datetime && r.response_datetime.trim() !== '') ??
-        responses.find((r) => r?.survey_uid === surveyUid && r.response_datetime && r.response_datetime.trim() !== ''))
+      ? responses.find((r) => r?.uid === responseUid && r.survey_uid === surveyUid && r.response_datetime && r.response_datetime.trim() !== '')
       : responses.find((r) => r?.survey_uid === surveyUid && r.response_datetime && r.response_datetime.trim() !== '');
     if (!match) return null;
 
