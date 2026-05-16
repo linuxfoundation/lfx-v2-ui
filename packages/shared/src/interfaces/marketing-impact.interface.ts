@@ -105,3 +105,13 @@ export interface TopCampaignRow {
   openRate: string;
   ctr: string;
 }
+
+/** View-model row for the web activity domain table. */
+export interface WebActivityDomainRow {
+  domain: string;
+  sessions: string;
+  pageViews: string;
+  pagesPerSession: string;
+  sessionShare: number;
+  sessionShareFormatted: string;
+}
