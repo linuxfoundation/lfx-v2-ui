@@ -171,19 +171,22 @@ export class OverviewTabComponent {
   }
 
   // === Private Helpers ===
-  private trendDirection(pct: number): 'up' | 'down' | 'neutral' {
+  private trendDirection(pct: number | null | undefined): 'up' | 'down' | 'neutral' {
+    if (pct == null || Number.isNaN(pct)) return 'neutral';
     if (pct > 0) return 'up';
     if (pct < 0) return 'down';
     return 'neutral';
   }
 
-  private trendColorClass(pct: number): string {
+  private trendColorClass(pct: number | null | undefined): string {
+    if (pct == null || Number.isNaN(pct)) return 'text-gray-500';
     if (pct > 0) return 'text-green-600';
     if (pct < 0) return 'text-red-600';
     return 'text-gray-500';
   }
 
-  private formatChangePct(pct: number, suffix: string): string {
+  private formatChangePct(pct: number | null | undefined, suffix: string): string | null {
+    if (pct == null || Number.isNaN(pct)) return null;
     const sign = pct > 0 ? '+' : '';
     return `${sign}${pct.toFixed(1)}% ${suffix}`;
   }
