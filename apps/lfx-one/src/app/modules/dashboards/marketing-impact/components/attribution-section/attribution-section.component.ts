@@ -36,6 +36,14 @@ export class AttributionSectionComponent {
 
   protected readonly modelOptions: AttributionModelOption[] = ATTRIBUTION_MODEL_OPTIONS;
 
+  // === Static ===
+  private static readonly revenueKeyByModel: Record<AttributionModel, 'linearRevenue' | 'firstTouchRevenue' | 'lastTouchRevenue' | 'timeDecayRevenue'> = {
+    linear: 'linearRevenue',
+    firstTouch: 'firstTouchRevenue',
+    lastTouch: 'lastTouchRevenue',
+    timeDecay: 'timeDecayRevenue',
+  };
+
   // === WritableSignals ===
   protected readonly loading = signal(false);
 
@@ -109,14 +117,7 @@ export class AttributionSectionComponent {
   }
 
   // === Private Helpers ===
-  private static readonly REVENUE_KEY_BY_MODEL: Record<AttributionModel, 'linearRevenue' | 'firstTouchRevenue' | 'lastTouchRevenue' | 'timeDecayRevenue'> = {
-    linear: 'linearRevenue',
-    firstTouch: 'firstTouchRevenue',
-    lastTouch: 'lastTouchRevenue',
-    timeDecay: 'timeDecayRevenue',
-  };
-
   private getRevenueKey(model: AttributionModel): 'linearRevenue' | 'firstTouchRevenue' | 'lastTouchRevenue' | 'timeDecayRevenue' {
-    return AttributionSectionComponent.REVENUE_KEY_BY_MODEL[model];
+    return AttributionSectionComponent.revenueKeyByModel[model];
   }
 }
