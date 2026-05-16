@@ -4,7 +4,9 @@
 <div class="flex flex-col gap-2 border-l border-gray-200 pl-4" [attr.data-testid]="'kpi-card-' + kpi().id">
   <div class="flex items-center justify-between">
     <div class="flex items-center gap-1.5">
-      <i [class]="kpi().icon + ' text-xs text-gray-400'" aria-hidden="true"></i>
+      <span class="inline-flex h-6 w-6 items-center justify-center rounded-md" [ngClass]="kpi().iconClass">
+        <i [class]="kpi().icon + ' text-xs'" aria-hidden="true"></i>
+      </span>
       <span class="text-xs font-medium text-gray-500">{{ kpi().label }}</span>
     </div>
     @if (kpi().badge) {

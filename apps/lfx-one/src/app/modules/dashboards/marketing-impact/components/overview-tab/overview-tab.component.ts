@@ -4,9 +4,9 @@
 import { Component, computed, inject, input, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
-import { formatCurrency, formatNumber } from '@lfx-one/shared/utils';
+import { formatChangePct, formatCurrency, formatNumber, trendColorClass, trendDirection } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
-import { finalize, forkJoin, of, switchMap } from 'rxjs';
+import { catchError, finalize, forkJoin, of, switchMap } from 'rxjs';
 
 import type { OverviewKpiData, PerformanceSummaryKpi } from '@lfx-one/shared/interfaces';
 
@@ -31,7 +31,7 @@ export class OverviewTabComponent {
   protected readonly loading = signal(false);
 
   // === Computed Signals ===
-  protected readonly attributionData: Signal<OverviewKpiData> = this.initOverviewKpiData();
+  protected readonly overviewKpiData: Signal<OverviewKpiData> = this.initOverviewKpiData();
   protected readonly performanceSummaryKpis: Signal<PerformanceSummaryKpi[]> = this.initPerformanceSummaryKpis();
   protected readonly summaryTitle: Signal<string> = this.initSummaryTitle();
   protected readonly summarySubtitle: Signal<string> = this.initSummarySubtitle();
@@ -49,9 +49,9 @@ export class OverviewTabComponent {
           }
           this.loading.set(true);
           return forkJoin({
-            revenueImpact: this.analyticsService.getRevenueImpact(slug),
-            brandReach: this.analyticsService.getBrandReach(slug),
-            emailCtr: this.analyticsService.getEmailCtr(slug),
+            revenueImpact: this.analyticsService.getRevenueImpact(slug).pipe(catchError(() => of(null))),
+            brandReach: this.analyticsService.getBrandReach(slug).pipe(catchError(() => of(null))),
+            emailCtr: this.analyticsService.getEmailCtr(slug).pipe(catchError(() => of(null))),
           }).pipe(finalize(() => this.loading.set(false)));
         })
       ),
@@ -61,7 +61,7 @@ export class OverviewTabComponent {
 
   private initPerformanceSummaryKpis(): Signal<PerformanceSummaryKpi[]> {
     return computed(() => {
-      const data = this.attributionData();
+      const data = this.overviewKpiData();
       const cards: PerformanceSummaryKpi[] = [];
 
       if (data.revenueImpact) {
@@ -77,16 +77,16 @@ export class OverviewTabComponent {
             momChange: null,
             momTrend: 'neutral',
             momTrendClass: 'text-gray-500',
-            yoyChange: this.formatChangePct(yoyPct, 'YoY'),
-            yoyTrend: this.trendDirection(yoyPct),
-            yoyTrendClass: this.trendColorClass(yoyPct),
+            yoyChange: formatChangePct(yoyPct, 'YoY'),
+            yoyTrend: trendDirection(yoyPct),
+            yoyTrendClass: trendColorClass(yoyPct),
           },
           {
             id: 'roas',
             label: 'Return on Ad Spend',
             icon: 'fa-light fa-chart-line-up',
             iconClass: 'bg-blue-100 text-blue-600',
-            value: `${ri.paidMedia.roas.toFixed(2)}x`,
+            value: `${(ri.paidMedia?.roas ?? 0).toFixed(2)}x`,
             momChange: null,
             momTrend: 'neutral',
             momTrendClass: 'text-gray-500',
@@ -106,9 +106,9 @@ export class OverviewTabComponent {
           icon: 'fa-light fa-globe',
           iconClass: 'bg-violet-100 text-violet-600',
           value: formatNumber(br.totalMonthlySessions),
-          momChange: this.formatChangePct(momPct, 'MoM'),
-          momTrend: this.trendDirection(momPct),
-          momTrendClass: this.trendColorClass(momPct),
+          momChange: formatChangePct(momPct, 'MoM'),
+          momTrend: trendDirection(momPct),
+          momTrendClass: trendColorClass(momPct),
           yoyChange: null,
           yoyTrend: 'neutral',
           yoyTrendClass: 'text-gray-500',
@@ -119,18 +119,18 @@ export class OverviewTabComponent {
         const ec = data.emailCtr;
         const momPct = ec.changePercentage;
         cards.push({
-          id: 'email-open-rate',
-          label: 'Email Open Rate',
+          id: 'email-ctr',
+          label: 'Email CTR',
           icon: 'fa-light fa-envelope-open',
           iconClass: 'bg-amber-100 text-amber-600',
           value: `${ec.currentCtr.toFixed(2)}%`,
-          momChange: this.formatChangePct(momPct, 'MoM'),
-          momTrend: this.trendDirection(momPct),
-          momTrendClass: this.trendColorClass(momPct),
+          momChange: formatChangePct(momPct, 'MoM'),
+          momTrend: trendDirection(momPct),
+          momTrendClass: trendColorClass(momPct),
           yoyChange: null,
           yoyTrend: 'neutral',
           yoyTrendClass: 'text-gray-500',
-          badge: momPct < 0 ? 'Needs review' : undefined,
+          badge: momPct != null && momPct < 0 ? 'Needs review' : undefined,
         });
       }
 
@@ -164,26 +164,5 @@ export class OverviewTabComponent {
       const foundation = name ? name : 'all LF projects';
       return `Compared to ${momLabel} and ${yoyLabel} · Linear attribution · ${foundation}`;
     });
-  }
-
-  // === Private Helpers ===
-  private trendDirection(pct: number | null | undefined): 'up' | 'down' | 'neutral' {
-    if (pct == null || Number.isNaN(pct)) return 'neutral';
-    if (pct > 0) return 'up';
-    if (pct < 0) return 'down';
-    return 'neutral';
-  }
-
-  private trendColorClass(pct: number | null | undefined): string {
-    if (pct == null || Number.isNaN(pct)) return 'text-gray-500';
-    if (pct > 0) return 'text-green-600';
-    if (pct < 0) return 'text-red-600';
-    return 'text-gray-500';
-  }
-
-  private formatChangePct(pct: number | null | undefined, suffix: string): string | null {
-    if (pct == null || Number.isNaN(pct)) return null;
-    const sign = pct > 0 ? '+' : '';
-    return `${sign}${pct.toFixed(1)}% ${suffix}`;
   }
 }
