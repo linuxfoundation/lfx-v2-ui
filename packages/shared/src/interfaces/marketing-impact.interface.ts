@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import type { BrandReachResponse, EmailCtrResponse, RevenueImpactResponse } from './analytics-data.interface';
+import type { BrandReachResponse, EmailCtrResponse, MarketingAttributionChannel, RevenueImpactResponse } from './analytics-data.interface';
 
 /** Month option for the Marketing Impact page month picker. */
 export interface MarketingImpactMonthOption {
@@ -46,4 +46,24 @@ export interface PerformanceSummaryKpi {
   comparisonLine: string;
   /** Optional badge text (e.g., "Needs review") shown when metric requires attention. */
   badge?: string;
+}
+
+/** Attribution model identifier for the model selector dropdown. */
+export type AttributionModel = 'linear' | 'firstTouch' | 'lastTouch' | 'timeDecay';
+
+/** Option shape for the attribution model dropdown. */
+export interface AttributionModelOption {
+  label: string;
+  value: AttributionModel;
+}
+
+/** View-model row for the attribution channel table. */
+export interface AttributionChannelRow {
+  channel: string;
+  revenue: number;
+  revenueFormatted: string;
+  sharePercent: number;
+  sessions: number;
+  sessionsFormatted: string;
+  raw: MarketingAttributionChannel;
 }

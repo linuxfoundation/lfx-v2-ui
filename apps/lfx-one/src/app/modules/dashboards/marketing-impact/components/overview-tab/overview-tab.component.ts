@@ -10,11 +10,12 @@ import { catchError, forkJoin, of, switchMap, tap } from 'rxjs';
 
 import type { AttributionData, BrandReachResponse, EmailCtrResponse, PerformanceSummaryKpi, RevenueImpactResponse } from '@lfx-one/shared/interfaces';
 
+import { AttributionSectionComponent } from '../attribution-section/attribution-section.component';
 import { SparklineKpiCardComponent } from '../sparkline-kpi-card/sparkline-kpi-card.component';
 
 @Component({
   selector: 'lfx-overview-tab',
-  imports: [ButtonComponent, SparklineKpiCardComponent],
+  imports: [ButtonComponent, SparklineKpiCardComponent, AttributionSectionComponent],
   templateUrl: './overview-tab.component.html',
 })
 export class OverviewTabComponent {
