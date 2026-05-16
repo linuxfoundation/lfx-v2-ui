@@ -23,8 +23,8 @@ export type MarketingImpactFocusProgram = 'all' | 'events' | 'newsletters' | 'su
 /** Tab identifiers for the Marketing Impact section tabs. */
 export type MarketingImpactTab = 'overview' | 'attribution' | 'performance-marketing' | 'email' | 'web-activity' | 'social-accounts' | 'social-listening';
 
-/** Aggregated attribution data fetched for the Marketing Impact overview. */
-export interface AttributionData {
+/** Aggregated KPI source data fetched for the Marketing Impact overview tab. */
+export interface OverviewKpiData {
   revenueImpact: RevenueImpactResponse | null;
   brandReach: BrandReachResponse | null;
   emailCtr: EmailCtrResponse | null;

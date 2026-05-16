@@ -8,7 +8,7 @@ import { formatCurrency, formatNumber } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { finalize, forkJoin, of, switchMap } from 'rxjs';
 
-import type { AttributionData, PerformanceSummaryKpi } from '@lfx-one/shared/interfaces';
+import type { OverviewKpiData, PerformanceSummaryKpi } from '@lfx-one/shared/interfaces';
 
 import { AttributionSectionComponent } from '../attribution-section/attribution-section.component';
 import { SparklineKpiCardComponent } from '../sparkline-kpi-card/sparkline-kpi-card.component';
@@ -31,13 +31,13 @@ export class OverviewTabComponent {
   protected readonly loading = signal(false);
 
   // === Computed Signals ===
-  protected readonly attributionData: Signal<AttributionData> = this.initAttributionData();
+  protected readonly attributionData: Signal<OverviewKpiData> = this.initOverviewKpiData();
   protected readonly performanceSummaryKpis: Signal<PerformanceSummaryKpi[]> = this.initPerformanceSummaryKpis();
   protected readonly summaryTitle: Signal<string> = this.initSummaryTitle();
   protected readonly summarySubtitle: Signal<string> = this.initSummarySubtitle();
 
   // === Private Initializers ===
-  private initAttributionData(): Signal<AttributionData> {
+  private initOverviewKpiData(): Signal<OverviewKpiData> {
     const slug$ = toObservable(this.foundationSlug);
 
     return toSignal(
