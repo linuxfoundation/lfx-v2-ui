@@ -69,6 +69,7 @@
                 [attr.aria-valuenow]="row.sharePercent"
                 aria-valuemin="0"
                 aria-valuemax="100"
+                [attr.aria-label]="row.channel + ' revenue share'"
                 [style.width.%]="row.sharePercent"></div>
             </div>
             <span class="w-10 text-right text-[11px] text-gray-500">{{ row.sharePercent | number: '1.0-0' }}%</span>
@@ -79,11 +80,11 @@
       }
 
       <!-- Footer total -->
-      <div class="flex items-center gap-4 pt-2">
-        <span class="w-36 text-xs font-semibold text-gray-900">Total</span>
-        <div class="flex-1"></div>
-        <span class="w-24 text-right text-xs font-semibold text-gray-900">{{ totalRevenue() }}</span>
-        <span class="w-20"></span>
+      <div class="flex items-center gap-4 pt-2" role="row">
+        <span class="w-36 text-xs font-semibold text-gray-900" role="cell">Total</span>
+        <div class="flex-1" role="cell"></div>
+        <span class="w-24 text-right text-xs font-semibold text-gray-900" role="cell">{{ totalRevenue() }}</span>
+        <span class="w-20" role="cell"></span>
       </div>
     </div>
   } @else {
