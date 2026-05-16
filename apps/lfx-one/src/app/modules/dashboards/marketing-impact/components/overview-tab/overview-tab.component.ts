@@ -6,9 +6,9 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
 import { formatCurrency, formatNumber } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
-import { catchError, forkJoin, of, switchMap, tap } from 'rxjs';
+import { finalize, forkJoin, of, switchMap } from 'rxjs';
 
-import type { AttributionData, BrandReachResponse, EmailCtrResponse, PerformanceSummaryKpi, RevenueImpactResponse } from '@lfx-one/shared/interfaces';
+import type { AttributionData, PerformanceSummaryKpi } from '@lfx-one/shared/interfaces';
 
 import { AttributionSectionComponent } from '../attribution-section/attribution-section.component';
 import { SparklineKpiCardComponent } from '../sparkline-kpi-card/sparkline-kpi-card.component';
@@ -49,10 +49,10 @@ export class OverviewTabComponent {
           }
           this.loading.set(true);
           return forkJoin({
-            revenueImpact: this.analyticsService.getRevenueImpact(slug).pipe(catchError(() => of(null as RevenueImpactResponse | null))),
-            brandReach: this.analyticsService.getBrandReach(slug).pipe(catchError(() => of(null as BrandReachResponse | null))),
-            emailCtr: this.analyticsService.getEmailCtr(slug).pipe(catchError(() => of(null as EmailCtrResponse | null))),
-          }).pipe(tap(() => this.loading.set(false)));
+            revenueImpact: this.analyticsService.getRevenueImpact(slug),
+            brandReach: this.analyticsService.getBrandReach(slug),
+            emailCtr: this.analyticsService.getEmailCtr(slug),
+          }).pipe(finalize(() => this.loading.set(false)));
         })
       ),
       { initialValue: { revenueImpact: null, brandReach: null, emailCtr: null } }
@@ -80,7 +80,6 @@ export class OverviewTabComponent {
             yoyChange: this.formatChangePct(yoyPct, 'YoY'),
             yoyTrend: this.trendDirection(yoyPct),
             yoyTrendClass: this.trendColorClass(yoyPct),
-            comparisonLine: '',
           },
           {
             id: 'roas',
@@ -94,7 +93,6 @@ export class OverviewTabComponent {
             yoyChange: null,
             yoyTrend: 'neutral',
             yoyTrendClass: 'text-gray-500',
-            comparisonLine: '',
           }
         );
       }
@@ -114,7 +112,6 @@ export class OverviewTabComponent {
           yoyChange: null,
           yoyTrend: 'neutral',
           yoyTrendClass: 'text-gray-500',
-          comparisonLine: '',
         });
       }
 
@@ -133,7 +130,6 @@ export class OverviewTabComponent {
           yoyChange: null,
           yoyTrend: 'neutral',
           yoyTrendClass: 'text-gray-500',
-          comparisonLine: '',
           badge: momPct < 0 ? 'Needs review' : undefined,
         });
       }
@@ -166,7 +162,7 @@ export class OverviewTabComponent {
 
       const name = this.foundationName();
       const foundation = name ? name : 'all LF projects';
-      return `vs ${momLabel} (MoM) and ${yoyLabel} (YoY) · Linear attribution · ${foundation}`;
+      return `Compared to ${momLabel} and ${yoyLabel} · Linear attribution · ${foundation}`;
     });
   }
 

@@ -43,7 +43,7 @@ export interface PerformanceSummaryKpi {
   yoyChange: string | null;
   yoyTrend: 'up' | 'down' | 'neutral';
   yoyTrendClass: string;
-  comparisonLine: string;
+  comparisonLine?: string;
   /** Optional badge text (e.g., "Needs review") shown when metric requires attention. */
   badge?: string;
 }
