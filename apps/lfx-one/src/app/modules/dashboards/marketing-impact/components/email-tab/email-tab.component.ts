@@ -3,9 +3,9 @@
 
 import { Component, computed, inject, input, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { formatChangePct, formatNumber, trendColorClass, trendDirection } from '@lfx-one/shared/utils';
+import { formatNumber } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
-import { catchError, finalize, of, switchMap } from 'rxjs';
+import { catchError, of, switchMap, tap } from 'rxjs';
 
 import type { EmailCtrResponse, EmailTypeRow, PerformanceSummaryKpi, TopCampaignRow } from '@lfx-one/shared/interfaces';
 
@@ -49,8 +49,11 @@ export class EmailTabComponent {
           }
           this.loading.set(true);
           return this.analyticsService.getEmailCtr(slug).pipe(
-            finalize(() => this.loading.set(false)),
-            catchError(() => of(null))
+            tap(() => this.loading.set(false)),
+            catchError(() => {
+              this.loading.set(false);
+              return of(null);
+            })
           );
         })
       ),
@@ -65,21 +68,8 @@ export class EmailTabComponent {
 
       const totalSends = data.monthlySends?.reduce((s, v) => s + v, 0) ?? 0;
       const totalOpens = data.monthlyOpens?.reduce((s, v) => s + v, 0) ?? 0;
+      const openRate = totalSends > 0 ? (totalOpens / totalSends) * 100 : 0;
       const changePct = data.changePercentage;
-
-      const sendsMom = this.computeMomPct(data.monthlySends);
-      const opensMom = this.computeMomPct(data.monthlyOpens);
-
-      const sends = data.monthlySends ?? [];
-      const opens = data.monthlyOpens ?? [];
-      const lastSends = sends.length > 0 ? sends[sends.length - 1] : undefined;
-      const prevSends = sends.length > 1 ? sends[sends.length - 2] : undefined;
-      const lastOpens = sends.length > 0 ? (opens[opens.length - 1] ?? 0) : 0;
-      const prevOpens = sends.length > 1 ? (opens[opens.length - 2] ?? 0) : 0;
-
-      const currentOpenRate = lastSends !== undefined && lastSends > 0 ? (lastOpens / lastSends) * 100 : 0;
-      const prevOpenRate = prevSends !== undefined && prevSends > 0 ? (prevOpens / prevSends) * 100 : 0;
-      const openRateMom = prevOpenRate > 0 ? ((currentOpenRate - prevOpenRate) / prevOpenRate) * 100 : null;
 
       return [
         {
@@ -88,9 +78,9 @@ export class EmailTabComponent {
           icon: 'fa-light fa-paper-plane',
           iconClass: 'bg-blue-100 text-blue-600',
           value: formatNumber(totalSends),
-          momChange: formatChangePct(sendsMom, 'MoM'),
-          momTrend: trendDirection(sendsMom),
-          momTrendClass: trendColorClass(sendsMom),
+          momChange: null,
+          momTrend: 'neutral' as const,
+          momTrendClass: 'text-gray-500',
           yoyChange: null,
           yoyTrend: 'neutral' as const,
           yoyTrendClass: 'text-gray-500',
@@ -102,9 +92,9 @@ export class EmailTabComponent {
           icon: 'fa-light fa-envelope-open',
           iconClass: 'bg-green-100 text-green-600',
           value: formatNumber(totalOpens),
-          momChange: formatChangePct(opensMom, 'MoM'),
-          momTrend: trendDirection(opensMom),
-          momTrendClass: trendColorClass(opensMom),
+          momChange: null,
+          momTrend: 'neutral' as const,
+          momTrendClass: 'text-gray-500',
           yoyChange: null,
           yoyTrend: 'neutral' as const,
           yoyTrendClass: 'text-gray-500',
@@ -115,10 +105,10 @@ export class EmailTabComponent {
           label: 'Open Rate',
           icon: 'fa-light fa-chart-simple',
           iconClass: 'bg-amber-100 text-amber-600',
-          value: `${currentOpenRate.toFixed(1)}%`,
-          momChange: formatChangePct(openRateMom, 'MoM'),
-          momTrend: trendDirection(openRateMom),
-          momTrendClass: trendColorClass(openRateMom),
+          value: `${openRate.toFixed(1)}%`,
+          momChange: null,
+          momTrend: 'neutral' as const,
+          momTrendClass: 'text-gray-500',
           yoyChange: null,
           yoyTrend: 'neutral' as const,
           yoyTrendClass: 'text-gray-500',
@@ -130,9 +120,9 @@ export class EmailTabComponent {
           icon: 'fa-light fa-arrow-pointer',
           iconClass: 'bg-violet-100 text-violet-600',
           value: `${data.currentCtr.toFixed(2)}%`,
-          momChange: formatChangePct(changePct, 'vs avg'),
-          momTrend: trendDirection(changePct),
-          momTrendClass: trendColorClass(changePct),
+          momChange: this.formatChangePct(changePct, 'MoM'),
+          momTrend: this.trendDirection(changePct),
+          momTrendClass: this.trendColorClass(changePct),
           yoyChange: null,
           yoyTrend: 'neutral' as const,
           yoyTrendClass: 'text-gray-500',
@@ -183,11 +173,20 @@ export class EmailTabComponent {
   }
 
   // === Private Helpers ===
-  private computeMomPct(arr: number[] | undefined): number | null {
-    if (!arr || arr.length < 2) return null;
-    const current = arr.at(-1) ?? 0;
-    const previous = arr.at(-2) ?? 0;
-    if (previous === 0) return null;
-    return ((current - previous) / previous) * 100;
+  private trendDirection(pct: number): 'up' | 'down' | 'neutral' {
+    if (pct > 0) return 'up';
+    if (pct < 0) return 'down';
+    return 'neutral';
+  }
+
+  private trendColorClass(pct: number): string {
+    if (pct > 0) return 'text-green-600';
+    if (pct < 0) return 'text-red-600';
+    return 'text-gray-500';
+  }
+
+  private formatChangePct(pct: number, suffix: string): string {
+    const sign = pct > 0 ? '+' : '';
+    return `${sign}${pct.toFixed(1)}% ${suffix}`;
   }
 }
