@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { FilterPillOption } from '../interfaces/dashboard-metric.interface';
+import type { FilterPillOption } from '../interfaces/dashboard-metric.interface';
 import type { AttributionModelOption, MarketingImpactTabOption } from '../interfaces/marketing-impact.interface';
 
 /** Focus program filter options for the Marketing Impact FOCUS bar. */

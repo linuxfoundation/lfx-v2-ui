@@ -10,15 +10,9 @@ import { SelectComponent } from '@components/select/select.component';
 import { ATTRIBUTION_MODEL_OPTIONS } from '@lfx-one/shared/constants';
 import { formatCurrency, formatNumber } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
-import { catchError, of, startWith, switchMap, tap } from 'rxjs';
+import { catchError, finalize, of, startWith, switchMap } from 'rxjs';
 
-import type {
-  AttributionChannelRow,
-  AttributionModel,
-  AttributionModelOption,
-  MarketingAttributionChannel,
-  MarketingAttributionResponse,
-} from '@lfx-one/shared/interfaces';
+import type { AttributionChannelRow, AttributionModel, AttributionModelOption, MarketingAttributionResponse } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-attribution-section',
@@ -65,11 +59,8 @@ export class AttributionSectionComponent {
           }
           this.loading.set(true);
           return this.analyticsService.getMarketingAttribution(slug).pipe(
-            tap(() => this.loading.set(false)),
-            catchError(() => {
-              this.loading.set(false);
-              return of(null);
-            })
+            catchError(() => of(null)),
+            finalize(() => this.loading.set(false))
           );
         })
       ),
@@ -90,11 +81,11 @@ export class AttributionSectionComponent {
       if (!data?.channels?.length) return [];
 
       const revenueKey = this.getRevenueKey(model);
-      const total = data.channels.reduce((sum, ch) => sum + (ch[revenueKey] as number), 0);
+      const total = data.channels.reduce((sum, ch) => sum + ch[revenueKey], 0);
 
       return data.channels
         .map((ch): AttributionChannelRow => {
-          const revenue = ch[revenueKey] as number;
+          const revenue = ch[revenueKey];
           return {
             channel: ch.channel,
             revenue,
@@ -118,13 +109,14 @@ export class AttributionSectionComponent {
   }
 
   // === Private Helpers ===
-  private getRevenueKey(model: AttributionModel): keyof MarketingAttributionChannel {
-    const map: Record<AttributionModel, keyof MarketingAttributionChannel> = {
-      linear: 'linearRevenue',
-      firstTouch: 'firstTouchRevenue',
-      lastTouch: 'lastTouchRevenue',
-      timeDecay: 'timeDecayRevenue',
-    };
-    return map[model];
+  private static readonly REVENUE_KEY_BY_MODEL: Record<AttributionModel, 'linearRevenue' | 'firstTouchRevenue' | 'lastTouchRevenue' | 'timeDecayRevenue'> = {
+    linear: 'linearRevenue',
+    firstTouch: 'firstTouchRevenue',
+    lastTouch: 'lastTouchRevenue',
+    timeDecay: 'timeDecayRevenue',
+  };
+
+  private getRevenueKey(model: AttributionModel): 'linearRevenue' | 'firstTouchRevenue' | 'lastTouchRevenue' | 'timeDecayRevenue' {
+    return AttributionSectionComponent.REVENUE_KEY_BY_MODEL[model];
   }
 }
