@@ -106,6 +106,15 @@ export interface TopCampaignRow {
   ctr: string;
 }
 
+/** View-model row for the social accounts platform table. */
+export interface SocialAccountRow {
+  platform: string;
+  followers: string;
+  impressions: string;
+  engagementRate: string;
+  posts: string;
+}
+
 /** View-model row for the web activity domain table. */
 export interface WebActivityDomainRow {
   domain: string;

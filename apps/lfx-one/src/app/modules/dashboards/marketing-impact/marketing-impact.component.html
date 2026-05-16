@@ -89,6 +89,8 @@
         <lfx-email-tab [foundationSlug]="foundationSlug()" [foundationName]="foundationName()" data-testid="marketing-impact-email-tab" />
       } @else if (selectedTab() === 'web-activity') {
         <lfx-web-activity-tab [foundationSlug]="foundationSlug()" [foundationName]="foundationName()" data-testid="marketing-impact-web-activity-tab" />
+      } @else if (selectedTab() === 'social-accounts') {
+        <lfx-social-accounts-tab [foundationSlug]="foundationSlug()" [foundationName]="foundationName()" data-testid="marketing-impact-social-accounts-tab" />
       } @else {
         <div
           class="flex items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 p-16"
