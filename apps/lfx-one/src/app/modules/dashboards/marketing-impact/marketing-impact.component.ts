@@ -25,6 +25,7 @@ import { EmailTabComponent } from './components/email-tab/email-tab.component';
 import { OverviewTabComponent } from './components/overview-tab/overview-tab.component';
 import { PerformanceMarketingTabComponent } from './components/performance-marketing-tab/performance-marketing-tab.component';
 import { SocialAccountsTabComponent } from './components/social-accounts-tab/social-accounts-tab.component';
+import { SocialListeningTabComponent } from './components/social-listening-tab/social-listening-tab.component';
 import { WebActivityTabComponent } from './components/web-activity-tab/web-activity-tab.component';
 
 @Component({
@@ -40,6 +41,7 @@ import { WebActivityTabComponent } from './components/web-activity-tab/web-activ
     EmailTabComponent,
     WebActivityTabComponent,
     SocialAccountsTabComponent,
+    SocialListeningTabComponent,
   ],
   templateUrl: './marketing-impact.component.html',
   styleUrl: './marketing-impact.component.scss',
