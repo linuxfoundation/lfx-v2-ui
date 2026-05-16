@@ -15,6 +15,7 @@ import { ProjectContextService } from '@services/project-context.service';
 import { catchError, forkJoin, map, of, startWith, switchMap, tap } from 'rxjs';
 
 import type {
+  AttributionData,
   BrandReachResponse,
   EmailCtrResponse,
   FilterPillOption,
@@ -25,12 +26,6 @@ import type {
   PerformanceSummaryKpi,
   RevenueImpactResponse,
 } from '@lfx-one/shared/interfaces';
-
-interface AttributionData {
-  revenueImpact: RevenueImpactResponse | null;
-  brandReach: BrandReachResponse | null;
-  emailCtr: EmailCtrResponse | null;
-}
 
 @Component({
   selector: 'lfx-marketing-impact',
@@ -108,6 +103,7 @@ export class MarketingImpactComponent {
     return computed(() => {
       const monthValue = this.selectedMonth();
       const [year, month] = monthValue.split('-').map(Number);
+      if (!year || !month) return '';
       const date = new Date(Date.UTC(year, month - 1, 1));
       const priorMonth = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - 1, 1));
       const priorYear = new Date(Date.UTC(date.getUTCFullYear() - 1, date.getUTCMonth(), 1));
@@ -148,46 +144,41 @@ export class MarketingImpactComponent {
       const data = this.attributionData();
       const cards: PerformanceSummaryKpi[] = [];
 
-      // Card 1: Attributed Revenue
       if (data.revenueImpact) {
         const ri = data.revenueImpact;
         const yoyPct = ri.changePercentage;
-        cards.push({
-          id: 'attributed-revenue',
-          label: 'Attributed Revenue',
-          icon: 'fa-light fa-dollar-sign',
-          iconClass: 'bg-green-100 text-green-600',
-          value: formatCurrency(ri.revenueAttributed),
-          momChange: null,
-          momTrend: 'neutral',
-          momTrendClass: 'text-gray-500',
-          yoyChange: this.formatChangePct(yoyPct, 'YoY'),
-          yoyTrend: this.trendDirection(yoyPct),
-          yoyTrendClass: this.trendColorClass(yoyPct),
-          comparisonLine: '',
-        });
+        cards.push(
+          {
+            id: 'attributed-revenue',
+            label: 'Attributed Revenue',
+            icon: 'fa-light fa-dollar-sign',
+            iconClass: 'bg-green-100 text-green-600',
+            value: formatCurrency(ri.revenueAttributed),
+            momChange: null,
+            momTrend: 'neutral',
+            momTrendClass: 'text-gray-500',
+            yoyChange: this.formatChangePct(yoyPct, 'YoY'),
+            yoyTrend: this.trendDirection(yoyPct),
+            yoyTrendClass: this.trendColorClass(yoyPct),
+            comparisonLine: '',
+          },
+          {
+            id: 'roas',
+            label: 'Return on Ad Spend',
+            icon: 'fa-light fa-chart-line-up',
+            iconClass: 'bg-blue-100 text-blue-600',
+            value: `${ri.paidMedia.roas.toFixed(2)}x`,
+            momChange: null,
+            momTrend: 'neutral',
+            momTrendClass: 'text-gray-500',
+            yoyChange: null,
+            yoyTrend: 'neutral',
+            yoyTrendClass: 'text-gray-500',
+            comparisonLine: '',
+          }
+        );
       }
 
-      // Card 2: Return on Ad Spend
-      if (data.revenueImpact) {
-        const roas = data.revenueImpact.paidMedia.roas;
-        cards.push({
-          id: 'roas',
-          label: 'Return on Ad Spend',
-          icon: 'fa-light fa-chart-line-up',
-          iconClass: 'bg-blue-100 text-blue-600',
-          value: `${roas.toFixed(2)}x`,
-          momChange: null,
-          momTrend: 'neutral',
-          momTrendClass: 'text-gray-500',
-          yoyChange: null,
-          yoyTrend: 'neutral',
-          yoyTrendClass: 'text-gray-500',
-          comparisonLine: '',
-        });
-      }
-
-      // Card 3: Total Web Sessions
       if (data.brandReach) {
         const br = data.brandReach;
         const momPct = br.sessionMomChangePct;
@@ -207,7 +198,6 @@ export class MarketingImpactComponent {
         });
       }
 
-      // Card 4: Email Open Rate
       if (data.emailCtr) {
         const ec = data.emailCtr;
         const momPct = ec.changePercentage;

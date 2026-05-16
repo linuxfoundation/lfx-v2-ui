@@ -1,6 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import type { BrandReachResponse, EmailCtrResponse, RevenueImpactResponse } from './analytics-data.interface';
+
 /** Month option for the Marketing Impact page month picker. */
 export interface MarketingImpactMonthOption {
   /** Display label (e.g., "April 2026") */
@@ -20,6 +22,13 @@ export type MarketingImpactFocusProgram = 'all' | 'events' | 'newsletters' | 'su
 
 /** Tab identifiers for the Marketing Impact section tabs. */
 export type MarketingImpactTab = 'overview' | 'attribution' | 'performance-marketing' | 'email' | 'web-activity' | 'social-accounts' | 'social-listening';
+
+/** Aggregated attribution data fetched for the Marketing Impact overview. */
+export interface AttributionData {
+  revenueImpact: RevenueImpactResponse | null;
+  brandReach: BrandReachResponse | null;
+  emailCtr: EmailCtrResponse | null;
+}
 
 /** Pre-formatted KPI card data for the Marketing Impact performance summary. */
 export interface PerformanceSummaryKpi {
