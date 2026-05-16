@@ -1,7 +1,6 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { NgClass } from '@angular/common';
 import { Component, computed, inject, input, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
@@ -11,9 +10,11 @@ import { catchError, forkJoin, of, switchMap, tap } from 'rxjs';
 
 import type { AttributionData, BrandReachResponse, EmailCtrResponse, PerformanceSummaryKpi, RevenueImpactResponse } from '@lfx-one/shared/interfaces';
 
+import { SparklineKpiCardComponent } from '../sparkline-kpi-card/sparkline-kpi-card.component';
+
 @Component({
   selector: 'lfx-overview-tab',
-  imports: [NgClass, ButtonComponent],
+  imports: [ButtonComponent, SparklineKpiCardComponent],
   templateUrl: './overview-tab.component.html',
 })
 export class OverviewTabComponent {
