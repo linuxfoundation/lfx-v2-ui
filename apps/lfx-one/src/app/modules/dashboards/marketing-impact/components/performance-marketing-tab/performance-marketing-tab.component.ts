@@ -7,9 +7,16 @@ import { FilterPillsComponent } from '@components/filter-pills/filter-pills.comp
 import { FUNNEL_STAGE_OPTIONS } from '@lfx-one/shared/constants';
 import { formatCurrency, formatNumber } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
-import { catchError, of, switchMap, tap } from 'rxjs';
+import { catchError, finalize, of, switchMap } from 'rxjs';
 
-import type { FilterPillOption, FunnelStage, PaidProjectRow, PerformanceSummaryKpi, SocialReachResponse } from '@lfx-one/shared/interfaces';
+import type {
+  FilterPillOption,
+  FunnelStage,
+  PaidProjectPerformance,
+  PaidProjectRow,
+  PerformanceSummaryKpi,
+  SocialReachResponse,
+} from '@lfx-one/shared/interfaces';
 
 import { SparklineKpiCardComponent } from '../sparkline-kpi-card/sparkline-kpi-card.component';
 
@@ -20,6 +27,20 @@ import { SparklineKpiCardComponent } from '../sparkline-kpi-card/sparkline-kpi-c
   styleUrl: './performance-marketing-tab.component.scss',
 })
 export class PerformanceMarketingTabComponent {
+  private static readonly performanceClassMap: Record<PaidProjectPerformance, string> = {
+    EXCELLENT: 'bg-green-50 text-green-700',
+    GOOD: 'bg-blue-50 text-blue-700',
+    POOR: 'bg-amber-100 text-amber-700',
+    'NO REVENUE': 'bg-gray-100 text-gray-600',
+  };
+
+  private static readonly performanceOrderMap: Record<PaidProjectPerformance, number> = {
+    EXCELLENT: 0,
+    GOOD: 1,
+    POOR: 2,
+    'NO REVENUE': 3,
+  };
+
   // === Services ===
   private readonly analyticsService = inject(AnalyticsService);
 
@@ -60,11 +81,8 @@ export class PerformanceMarketingTabComponent {
           }
           this.loading.set(true);
           return this.analyticsService.getSocialReach(slug).pipe(
-            tap(() => this.loading.set(false)),
-            catchError(() => {
-              this.loading.set(false);
-              return of(null);
-            })
+            catchError(() => of(null)),
+            finalize(() => this.loading.set(false))
           );
         })
       ),
@@ -91,7 +109,6 @@ export class PerformanceMarketingTabComponent {
           yoyChange: null,
           yoyTrend: 'neutral',
           yoyTrendClass: 'text-gray-500',
-          comparisonLine: '',
         },
         {
           id: 'total-spend',
@@ -105,7 +122,6 @@ export class PerformanceMarketingTabComponent {
           yoyChange: null,
           yoyTrend: 'neutral',
           yoyTrendClass: 'text-gray-500',
-          comparisonLine: '',
         },
         {
           id: 'total-revenue',
@@ -119,7 +135,6 @@ export class PerformanceMarketingTabComponent {
           yoyChange: null,
           yoyTrend: 'neutral',
           yoyTrendClass: 'text-gray-500',
-          comparisonLine: '',
         },
         {
           id: 'roas',
@@ -133,7 +148,6 @@ export class PerformanceMarketingTabComponent {
           yoyChange: null,
           yoyTrend: 'neutral',
           yoyTrendClass: 'text-gray-500',
-          comparisonLine: '',
         },
       ];
 
@@ -151,7 +165,8 @@ export class PerformanceMarketingTabComponent {
         .filter((p) => {
           if (funnel === 'all') return true;
           const stage = p.funnelStage?.toLowerCase() ?? '';
-          if (funnel === 'tofu') return stage.startsWith('tofu') || stage === 'unknown';
+          if (stage === 'unknown') return false;
+          if (funnel === 'tofu') return stage.startsWith('tofu');
           if (funnel === 'mofu') return stage === 'mofu';
           if (funnel === 'bofu') return stage === 'bofu';
           return true;
@@ -164,43 +179,41 @@ export class PerformanceMarketingTabComponent {
             revenue: formatCurrency(p.revenue),
             roas: `${p.roas.toFixed(2)}x`,
             impressions: formatNumber(p.impressions),
-            performance: p.performance,
-            performanceClass: this.getPerformanceClass(p.performance),
+            performance: p.performance as PaidProjectPerformance,
+            performanceClass: this.getPerformanceClass(p.performance as PaidProjectPerformance),
           })
         )
         .sort((a, b) => {
-          const order: Record<string, number> = { EXCELLENT: 0, GOOD: 1, POOR: 2, 'NO REVENUE': 3 };
-          return (order[a.performance] ?? 4) - (order[b.performance] ?? 4);
+          return (
+            (PerformanceMarketingTabComponent.performanceOrderMap[a.performance] ?? 4) -
+            (PerformanceMarketingTabComponent.performanceOrderMap[b.performance] ?? 4)
+          );
         });
     });
   }
 
   // === Private Helpers ===
-  private trendDirection(pct: number): 'up' | 'down' | 'neutral' {
+  private trendDirection(pct: number | null | undefined): 'up' | 'down' | 'neutral' {
+    if (pct == null || Number.isNaN(pct)) return 'neutral';
     if (pct > 0) return 'up';
     if (pct < 0) return 'down';
     return 'neutral';
   }
 
-  private trendColorClass(pct: number): string {
+  private trendColorClass(pct: number | null | undefined): string {
+    if (pct == null || Number.isNaN(pct)) return 'text-gray-500';
     if (pct > 0) return 'text-green-600';
     if (pct < 0) return 'text-red-600';
     return 'text-gray-500';
   }
 
-  private formatChangePct(pct: number, suffix: string): string {
+  private formatChangePct(pct: number | null | undefined, suffix: string): string | null {
+    if (pct == null || Number.isNaN(pct)) return null;
     const sign = pct > 0 ? '+' : '';
     return `${sign}${pct.toFixed(1)}% ${suffix}`;
   }
 
-  private getPerformanceClass(perf: string): string {
-    switch (perf) {
-      case 'EXCELLENT':
-        return 'bg-green-50 text-green-700';
-      case 'GOOD':
-        return 'bg-blue-50 text-blue-700';
-      default:
-        return '';
-    }
+  private getPerformanceClass(perf: PaidProjectPerformance): string {
+    return PerformanceMarketingTabComponent.performanceClassMap[perf] ?? 'bg-gray-50 text-gray-700';
   }
 }

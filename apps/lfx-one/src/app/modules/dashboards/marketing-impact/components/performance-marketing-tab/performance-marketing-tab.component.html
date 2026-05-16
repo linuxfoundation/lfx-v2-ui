@@ -43,28 +43,28 @@
       <h4 class="text-sm font-semibold text-gray-900">Campaign performance by project</h4>
 
       @if (hasProjects()) {
-        <div class="flex flex-col gap-0" data-testid="performance-marketing-table">
+        <div class="flex flex-col gap-0" role="table" data-testid="performance-marketing-table">
           <!-- Table header -->
-          <div class="flex items-center gap-3 border-b border-gray-200 pb-2">
-            <span class="w-40 text-[11px] font-semibold tracking-wide text-gray-400">PROJECT</span>
-            <span class="w-20 text-[11px] font-semibold tracking-wide text-gray-400">STAGE</span>
-            <span class="w-24 text-right text-[11px] font-semibold tracking-wide text-gray-400">SPEND</span>
-            <span class="w-24 text-right text-[11px] font-semibold tracking-wide text-gray-400">REVENUE</span>
-            <span class="w-16 text-right text-[11px] font-semibold tracking-wide text-gray-400">ROAS</span>
-            <span class="w-24 text-right text-[11px] font-semibold tracking-wide text-gray-400">IMPRESSIONS</span>
-            <span class="flex-1 text-right text-[11px] font-semibold tracking-wide text-gray-400">PERF.</span>
+          <div class="flex items-center gap-3 border-b border-gray-200 pb-2" role="row">
+            <span class="w-40 text-[11px] font-semibold tracking-wide text-gray-400" role="columnheader">PROJECT</span>
+            <span class="w-20 text-[11px] font-semibold tracking-wide text-gray-400" role="columnheader">STAGE</span>
+            <span class="w-24 text-right text-[11px] font-semibold tracking-wide text-gray-400" role="columnheader">SPEND</span>
+            <span class="w-24 text-right text-[11px] font-semibold tracking-wide text-gray-400" role="columnheader">REVENUE</span>
+            <span class="w-16 text-right text-[11px] font-semibold tracking-wide text-gray-400" role="columnheader">ROAS</span>
+            <span class="w-24 text-right text-[11px] font-semibold tracking-wide text-gray-400" role="columnheader">IMPRESSIONS</span>
+            <span class="flex-1 text-right text-[11px] font-semibold tracking-wide text-gray-400" role="columnheader">PERF.</span>
           </div>
 
           <!-- Rows -->
           @for (row of projectRows(); track row.name) {
-            <div class="flex items-center gap-3 border-b border-gray-100 py-2.5" [attr.data-testid]="'performance-marketing-row-' + row.name">
-              <span class="w-40 truncate text-xs font-medium text-gray-700">{{ row.name }}</span>
-              <span class="w-20 truncate text-[11px] text-gray-500">{{ row.funnelStage }}</span>
-              <span class="w-24 text-right text-xs text-gray-900">{{ row.spend }}</span>
-              <span class="w-24 text-right text-xs text-gray-900">{{ row.revenue }}</span>
-              <span class="w-16 text-right text-xs font-medium text-gray-900">{{ row.roas }}</span>
-              <span class="w-24 text-right text-xs text-gray-500">{{ row.impressions }}</span>
-              <div class="flex flex-1 justify-end">
+            <div class="flex items-center gap-3 border-b border-gray-100 py-2.5" role="row" [attr.data-testid]="'performance-marketing-row-' + row.name">
+              <span class="w-40 truncate text-xs font-medium text-gray-700" role="cell">{{ row.name }}</span>
+              <span class="w-20 truncate text-[11px] text-gray-500" role="cell">{{ row.funnelStage }}</span>
+              <span class="w-24 text-right text-xs text-gray-900" role="cell">{{ row.spend }}</span>
+              <span class="w-24 text-right text-xs text-gray-900" role="cell">{{ row.revenue }}</span>
+              <span class="w-16 text-right text-xs font-medium text-gray-900" role="cell">{{ row.roas }}</span>
+              <span class="w-24 text-right text-xs text-gray-500" role="cell">{{ row.impressions }}</span>
+              <div class="flex flex-1 justify-end" role="cell">
                 @if (row.performanceClass) {
                   <span class="rounded px-1.5 py-0.5 text-[10px] font-medium" [class]="row.performanceClass">
                     {{ row.performance }}
