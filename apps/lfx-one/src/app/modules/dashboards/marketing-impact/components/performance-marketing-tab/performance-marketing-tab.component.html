@@ -32,7 +32,7 @@
       }
     } @else {
       @for (kpi of kpiCards(); track kpi.id) {
-        <lfx-sparkline-kpi-card [kpi]="kpi" />
+        <lfx-sparkline-kpi-card [kpi]="kpi" section="perf-marketing" />
       }
     }
   </div>

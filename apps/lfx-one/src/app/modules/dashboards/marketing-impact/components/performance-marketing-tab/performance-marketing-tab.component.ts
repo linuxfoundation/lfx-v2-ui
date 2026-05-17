@@ -176,11 +176,11 @@ export class PerformanceMarketingTabComponent {
         .filter((p) => {
           if (funnel === 'all') return true;
           const stage = p.funnelStage?.toLowerCase() ?? '';
-          if (stage === 'unknown') return false;
+          if (!stage || stage === 'unknown') return false;
           if (funnel === 'tofu') return stage.startsWith('tofu');
           if (funnel === 'mofu') return stage === 'mofu';
           if (funnel === 'bofu') return stage === 'bofu';
-          return true;
+          return false;
         })
         .map(
           (p): PaidProjectRow => ({

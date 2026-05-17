@@ -34,7 +34,7 @@ export type TrendDirection = 'up' | 'down' | 'neutral';
 
 /** Determines trend direction from a percentage change value. */
 export function trendDirection(pct: number | null | undefined): TrendDirection {
-  if (pct == null || Number.isNaN(pct)) return 'neutral';
+  if (pct == null || !Number.isFinite(pct)) return 'neutral';
   if (pct > 0) return 'up';
   if (pct < 0) return 'down';
   return 'neutral';
@@ -42,7 +42,7 @@ export function trendDirection(pct: number | null | undefined): TrendDirection {
 
 /** Returns a Tailwind color class based on trend direction. */
 export function trendColorClass(pct: number | null | undefined): string {
-  if (pct == null || Number.isNaN(pct)) return 'text-gray-500';
+  if (pct == null || !Number.isFinite(pct)) return 'text-gray-500';
   if (pct > 0) return 'text-green-600';
   if (pct < 0) return 'text-red-600';
   return 'text-gray-500';
@@ -50,7 +50,7 @@ export function trendColorClass(pct: number | null | undefined): string {
 
 /** Formats a percentage change with sign and suffix (e.g., "+5.2% MoM"). */
 export function formatChangePct(pct: number | null | undefined, suffix: string): string | null {
-  if (pct == null || Number.isNaN(pct)) return null;
+  if (pct == null || !Number.isFinite(pct)) return null;
   const sign = pct > 0 ? '+' : '';
   return `${sign}${pct.toFixed(1)}% ${suffix}`;
 }
