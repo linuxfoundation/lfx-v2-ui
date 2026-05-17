@@ -115,6 +115,16 @@ export interface SocialAccountRow {
   posts: string;
 }
 
+/** Segment data for the sentiment breakdown horizontal bar chart. */
+export interface SentimentBar {
+  positive: number;
+  neutral: number;
+  negative: number;
+  positiveLabel: string;
+  neutralLabel: string;
+  negativeLabel: string;
+}
+
 /** View-model row for the web activity domain table. */
 export interface WebActivityDomainRow {
   domain: string;

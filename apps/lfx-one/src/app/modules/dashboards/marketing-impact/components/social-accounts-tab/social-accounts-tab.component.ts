@@ -3,7 +3,7 @@
 
 import { Component, computed, inject, input, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { formatNumber } from '@lfx-one/shared/utils';
+import { formatChangePct, formatNumber, trendColorClass, trendDirection } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { catchError, of, switchMap, tap } from 'rxjs';
 
@@ -76,9 +76,9 @@ export class SocialAccountsTabComponent {
           icon: 'fa-light fa-users',
           iconClass: 'bg-blue-100 text-blue-600',
           value: formatNumber(data.totalFollowers),
-          momChange: this.formatChangePct(changePct, 'MoM'),
-          momTrend: this.trendDirection(changePct),
-          momTrendClass: this.trendColorClass(changePct),
+          momChange: formatChangePct(changePct, 'MoM'),
+          momTrend: trendDirection(changePct),
+          momTrendClass: trendColorClass(changePct),
           yoyChange: null,
           yoyTrend: 'neutral' as const,
           yoyTrendClass: 'text-gray-500',
@@ -135,7 +135,7 @@ export class SocialAccountsTabComponent {
       const data = this.socialData();
       if (!data?.platforms?.length) return [];
 
-      return data.platforms
+      return [...data.platforms]
         .sort((a, b) => b.followers - a.followers)
         .map(
           (p): SocialAccountRow => ({
@@ -147,23 +147,5 @@ export class SocialAccountsTabComponent {
           })
         );
     });
-  }
-
-  // === Private Helpers ===
-  private trendDirection(pct: number): 'up' | 'down' | 'neutral' {
-    if (pct > 0) return 'up';
-    if (pct < 0) return 'down';
-    return 'neutral';
-  }
-
-  private trendColorClass(pct: number): string {
-    if (pct > 0) return 'text-green-600';
-    if (pct < 0) return 'text-red-600';
-    return 'text-gray-500';
-  }
-
-  private formatChangePct(pct: number, suffix: string): string {
-    const sign = pct > 0 ? '+' : '';
-    return `${sign}${pct.toFixed(1)}% ${suffix}`;
   }
 }

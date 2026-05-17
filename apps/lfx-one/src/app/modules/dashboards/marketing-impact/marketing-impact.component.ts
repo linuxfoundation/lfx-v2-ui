@@ -69,7 +69,6 @@ export class MarketingImpactComponent {
   protected readonly hasFoundation = computed(() => !!this.projectContextService.selectedFoundation());
   protected readonly foundationName = computed(() => this.projectContextService.selectedFoundation()?.name ?? '');
   protected readonly foundationSlug = computed(() => this.projectContextService.selectedFoundation()?.slug);
-  protected readonly selectedTabLabel = computed(() => this.tabs.find((t) => t.id === this.selectedTab())?.label ?? '');
   protected readonly selectedMonth: Signal<string> = this.initSelectedMonth();
   protected readonly contextLabel: Signal<string> = this.initContextLabel();
 

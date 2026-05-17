@@ -3,11 +3,11 @@
 
 import { Component, computed, inject, input, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { formatNumber } from '@lfx-one/shared/utils';
+import { formatChangePct, formatNumber, trendColorClass, trendDirection } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { catchError, of, switchMap, tap } from 'rxjs';
 
-import type { BrandHealthMention, BrandHealthResponse, BrandHealthTopProject, PerformanceSummaryKpi } from '@lfx-one/shared/interfaces';
+import type { BrandHealthMention, BrandHealthResponse, BrandHealthTopProject, PerformanceSummaryKpi, SentimentBar } from '@lfx-one/shared/interfaces';
 
 import { SparklineKpiCardComponent } from '../sparkline-kpi-card/sparkline-kpi-card.component';
 
@@ -76,9 +76,9 @@ export class SocialListeningTabComponent {
           icon: 'fa-light fa-at',
           iconClass: 'bg-blue-100 text-blue-600',
           value: formatNumber(data.totalMentions),
-          momChange: this.formatChangePct(changePct, 'MoM'),
-          momTrend: this.trendDirection(changePct),
-          momTrendClass: this.trendColorClass(changePct),
+          momChange: formatChangePct(changePct, 'MoM'),
+          momTrend: trendDirection(changePct),
+          momTrendClass: trendColorClass(changePct),
           yoyChange: null,
           yoyTrend: 'neutral' as const,
           yoyTrendClass: 'text-gray-500',
@@ -146,31 +146,4 @@ export class SocialListeningTabComponent {
       return [...(data.topPositiveMentions ?? []), ...(data.topNegativeMentions ?? [])].slice(0, 5);
     });
   }
-
-  // === Private Helpers ===
-  private trendDirection(pct: number): 'up' | 'down' | 'neutral' {
-    if (pct > 0) return 'up';
-    if (pct < 0) return 'down';
-    return 'neutral';
-  }
-
-  private trendColorClass(pct: number): string {
-    if (pct > 0) return 'text-green-600';
-    if (pct < 0) return 'text-red-600';
-    return 'text-gray-500';
-  }
-
-  private formatChangePct(pct: number, suffix: string): string {
-    const sign = pct > 0 ? '+' : '';
-    return `${sign}${pct.toFixed(1)}% ${suffix}`;
-  }
-}
-
-interface SentimentBar {
-  positive: number;
-  neutral: number;
-  negative: number;
-  positiveLabel: string;
-  neutralLabel: string;
-  negativeLabel: string;
 }
