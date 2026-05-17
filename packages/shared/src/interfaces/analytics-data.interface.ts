@@ -2695,6 +2695,23 @@ export interface PaidProjectBreakdown {
 }
 
 /**
+ * Platform-level paid performance breakdown (aggregated by ad channel)
+ */
+export interface PaidPlatformBreakdown {
+  platform: string;
+  spend: number;
+  revenue: number;
+  roas: number;
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  cpc: number;
+  convRate: number;
+  conversions: number;
+  performance: string;
+}
+
+/**
  * API response for Paid Social query (ROAS + impressions)
  */
 export interface SocialReachResponse {
@@ -2709,6 +2726,7 @@ export interface SocialReachResponse {
   monthlyRoas: number[];
   channelGroups: SocialReachChannelGroup[];
   projectBreakdown?: PaidProjectBreakdown[];
+  platformBreakdown?: PaidPlatformBreakdown[];
 }
 
 // ============================================

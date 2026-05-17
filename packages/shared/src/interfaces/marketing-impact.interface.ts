@@ -72,7 +72,7 @@ export interface AttributionChannelRow {
 export type FunnelStage = 'all' | 'tofu' | 'mofu' | 'bofu';
 
 /** Performance rating for paid project campaigns. */
-export type PaidProjectPerformance = 'EXCELLENT' | 'GOOD' | 'POOR' | 'NO REVENUE';
+export type PaidProjectPerformance = 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'EMERGING';
 
 /** View-model row for the performance marketing project table. */
 export interface PaidProjectRow {
@@ -114,4 +114,20 @@ export interface WebActivityDomainRow {
   pagesPerSession: string;
   sessionShare: number;
   sessionShareFormatted: string;
+}
+
+/** View-model row for the platform performance table. */
+export interface PlatformPerformanceRow {
+  platform: string;
+  spend: string;
+  revenue: string;
+  roas: string;
+  clicks: string;
+  impressions: string;
+  ctr: string;
+  cpc: string;
+  convRate: string;
+  conversions: string;
+  performance: PaidProjectPerformance;
+  performanceClass: string;
 }

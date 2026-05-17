@@ -2260,50 +2260,103 @@ export class ProjectService {
       ORDER BY SPEND DESC
     `;
 
-      const [impressionsResult, roasKpiResult, monthlyRoasResult, monthlyImpressionsResult, channelResult, projectPerfResult] = await Promise.all([
-        this.snowflakeService.execute<{ TOTAL_IMPRESSIONS: number; TOTAL_SPEND: number; TOTAL_REVENUE: number }>(impressionsQuery, [foundationSlug]),
-        this.snowflakeService.execute<{ ROAS: number; ROAS_MOM_PCT: number }>(roasKpiQuery, [foundationSlug]),
-        this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; ROAS: number }>(monthlyRoasQuery, [foundationSlug]),
-        this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; IMPRESSIONS: number }>(monthlyImpressionsQuery, [foundationSlug]),
-        this.snowflakeService.execute<{ CHANNEL: string; IMPRESSIONS: number }>(channelQuery, [foundationSlug]),
-        this.snowflakeService
-          .execute<{
-            PROJECT_NAME: string;
-            CAMPAIGN_NAME: string;
-            FUNNEL_STAGE: string;
-            SPEND: number;
-            REVENUE: number;
-            ROAS: number;
-            CONVERSIONS: number;
-            CONV_RATE: number;
-            CPC: number;
-            SESSIONS: number;
-            IMPRESSIONS: number;
-            CLICKS: number;
-          }>(projectPerfQuery, [foundationSlug])
-          .catch((error) => {
-            logger.warning(undefined, 'get_social_reach', 'Optional project breakdown query failed, degrading gracefully', {
-              foundation_slug: foundationSlug,
-              err: error,
-            });
-            return {
-              rows: [] as {
-                PROJECT_NAME: string;
-                CAMPAIGN_NAME: string;
-                FUNNEL_STAGE: string;
-                SPEND: number;
-                REVENUE: number;
-                ROAS: number;
-                CONVERSIONS: number;
-                CONV_RATE: number;
-                CPC: number;
-                SESSIONS: number;
-                IMPRESSIONS: number;
-                CLICKS: number;
-              }[],
-            };
-          }),
-      ]);
+      // Block 7: Platform-level performance breakdown (aggregated by CHANNEL)
+      const platformPerfQuery = `
+      SELECT
+        CHANNEL,
+        SUM(SPEND) AS SPEND, SUM(LINEAR_REVENUE) AS REVENUE,
+        ROUND(DIV0(SUM(LINEAR_REVENUE), SUM(SPEND)), 2) AS ROAS,
+        SUM(CLICKS) AS CLICKS,
+        SUM(IMPRESSIONS) AS IMPRESSIONS,
+        ROUND(DIV0(SUM(CLICKS), NULLIF(SUM(IMPRESSIONS), 0)) * 100, 2) AS CTR,
+        ROUND(DIV0(SUM(SPEND), NULLIF(SUM(CLICKS), 0)), 2) AS CPC,
+        ROUND(DIV0(SUM(CONV), NULLIF(SUM(CLICKS), 0)) * 100, 2) AS CONV_RATE,
+        SUM(CONV) AS CONVERSIONS
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
+      WHERE FOUNDATION_SLUG = ?
+        AND CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
+      GROUP BY CHANNEL
+      ORDER BY SPEND DESC
+    `;
+
+      const [impressionsResult, roasKpiResult, monthlyRoasResult, monthlyImpressionsResult, channelResult, projectPerfResult, platformPerfResult] =
+        await Promise.all([
+          this.snowflakeService.execute<{ TOTAL_IMPRESSIONS: number; TOTAL_SPEND: number; TOTAL_REVENUE: number }>(impressionsQuery, [foundationSlug]),
+          this.snowflakeService.execute<{ ROAS: number; ROAS_MOM_PCT: number }>(roasKpiQuery, [foundationSlug]),
+          this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; ROAS: number }>(monthlyRoasQuery, [foundationSlug]),
+          this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; IMPRESSIONS: number }>(monthlyImpressionsQuery, [foundationSlug]),
+          this.snowflakeService.execute<{ CHANNEL: string; IMPRESSIONS: number }>(channelQuery, [foundationSlug]),
+          this.snowflakeService
+            .execute<{
+              PROJECT_NAME: string;
+              CAMPAIGN_NAME: string;
+              FUNNEL_STAGE: string;
+              SPEND: number;
+              REVENUE: number;
+              ROAS: number;
+              CONVERSIONS: number;
+              CONV_RATE: number;
+              CPC: number;
+              SESSIONS: number;
+              IMPRESSIONS: number;
+              CLICKS: number;
+            }>(projectPerfQuery, [foundationSlug])
+            .catch((error) => {
+              logger.warning(undefined, 'get_social_reach', 'Optional project breakdown query failed, degrading gracefully', {
+                foundation_slug: foundationSlug,
+                err: error,
+              });
+              return {
+                rows: [] as {
+                  PROJECT_NAME: string;
+                  CAMPAIGN_NAME: string;
+                  FUNNEL_STAGE: string;
+                  SPEND: number;
+                  REVENUE: number;
+                  ROAS: number;
+                  CONVERSIONS: number;
+                  CONV_RATE: number;
+                  CPC: number;
+                  SESSIONS: number;
+                  IMPRESSIONS: number;
+                  CLICKS: number;
+                }[],
+              };
+            }),
+          this.snowflakeService
+            .execute<{
+              CHANNEL: string;
+              SPEND: number;
+              REVENUE: number;
+              ROAS: number;
+              CLICKS: number;
+              IMPRESSIONS: number;
+              CTR: number;
+              CPC: number;
+              CONV_RATE: number;
+              CONVERSIONS: number;
+            }>(platformPerfQuery, [foundationSlug])
+            .catch((error) => {
+              logger.warning(undefined, 'get_social_reach', 'Optional platform breakdown query failed, degrading gracefully', {
+                foundation_slug: foundationSlug,
+                err: error,
+              });
+              return {
+                rows: [] as {
+                  CHANNEL: string;
+                  SPEND: number;
+                  REVENUE: number;
+                  ROAS: number;
+                  CLICKS: number;
+                  IMPRESSIONS: number;
+                  CTR: number;
+                  CPC: number;
+                  CONV_RATE: number;
+                  CONVERSIONS: number;
+                }[],
+              };
+            }),
+        ]);
 
       const totalReach = impressionsResult.rows[0]?.TOTAL_IMPRESSIONS ?? 0;
       const totalSpend = impressionsResult.rows[0]?.TOTAL_SPEND ?? 0;
@@ -2379,8 +2432,8 @@ export class ProjectService {
       const getPaidPerformance = (projectRoas: number): string => {
         if (projectRoas >= 2) return 'EXCELLENT';
         if (projectRoas >= 1) return 'GOOD';
-        if (projectRoas > 0) return 'POOR';
-        return 'NO REVENUE';
+        if (projectRoas > 0) return 'AVERAGE';
+        return 'EMERGING';
       };
 
       const formatFunnel = (stages: Set<string>): string => {
@@ -2430,6 +2483,20 @@ export class ProjectService {
         })
         .sort((a, b) => b.spend - a.spend);
 
+      const platformBreakdown = platformPerfResult.rows.map((row) => ({
+        platform: row.CHANNEL,
+        spend: Math.round((row.SPEND ?? 0) * 100) / 100,
+        revenue: Math.round((row.REVENUE ?? 0) * 100) / 100,
+        roas: row.ROAS ?? 0,
+        clicks: row.CLICKS ?? 0,
+        impressions: row.IMPRESSIONS ?? 0,
+        ctr: row.CTR ?? 0,
+        cpc: row.CPC ?? 0,
+        convRate: row.CONV_RATE ?? 0,
+        conversions: row.CONVERSIONS ?? 0,
+        performance: getPaidPerformance(row.ROAS ?? 0),
+      }));
+
       return {
         totalReach,
         roas: Math.round(roas * 100) / 100,
@@ -2442,6 +2509,7 @@ export class ProjectService {
         monthlyRoas,
         channelGroups,
         projectBreakdown,
+        platformBreakdown,
       };
     } catch (error) {
       logger.warning(undefined, 'get_social_reach', 'Failed to fetch social reach data, returning defaults', {
