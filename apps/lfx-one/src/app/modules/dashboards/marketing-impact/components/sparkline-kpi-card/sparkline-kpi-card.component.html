@@ -10,7 +10,7 @@
       <span class="text-xs font-medium text-gray-500">{{ kpi().label }}</span>
     </div>
     @if (kpi().badge) {
-      <span class="rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-600" [attr.data-testid]="'kpi-card-badge-' + kpi().id">
+      <span class="rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-600" [attr.data-testid]="testId() + '-badge'">
         {{ kpi().badge }}
       </span>
     }
