@@ -5,7 +5,7 @@ import { Component, computed, inject, input, signal, Signal } from '@angular/cor
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { FUNNEL_STAGE_OPTIONS } from '@lfx-one/shared/constants';
-import { formatCurrency, formatNumber } from '@lfx-one/shared/utils';
+import { formatChangePct, formatCurrency, formatNumber, trendColorClass, trendDirection } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { catchError, finalize, of, switchMap } from 'rxjs';
 
@@ -103,9 +103,9 @@ export class PerformanceMarketingTabComponent {
           icon: 'fa-light fa-eye',
           iconClass: 'bg-blue-100 text-blue-600',
           value: formatNumber(data.totalReach),
-          momChange: this.formatChangePct(changePct, 'MoM'),
-          momTrend: this.trendDirection(changePct),
-          momTrendClass: this.trendColorClass(changePct),
+          momChange: formatChangePct(changePct, 'MoM'),
+          momTrend: trendDirection(changePct),
+          momTrendClass: trendColorClass(changePct),
           yoyChange: null,
           yoyTrend: 'neutral',
           yoyTrendClass: 'text-gray-500',
@@ -141,7 +141,7 @@ export class PerformanceMarketingTabComponent {
           label: 'ROAS',
           icon: 'fa-light fa-chart-line-up',
           iconClass: 'bg-violet-100 text-violet-600',
-          value: `${data.roas.toFixed(2)}x`,
+          value: `${(data.roas ?? 0).toFixed(2)}x`,
           momChange: null,
           momTrend: 'neutral',
           momTrendClass: 'text-gray-500',
@@ -177,7 +177,7 @@ export class PerformanceMarketingTabComponent {
             funnelStage: p.funnelStage,
             spend: formatCurrency(p.spend),
             revenue: formatCurrency(p.revenue),
-            roas: `${p.roas.toFixed(2)}x`,
+            roas: `${(p.roas ?? 0).toFixed(2)}x`,
             impressions: formatNumber(p.impressions),
             performance: p.performance as PaidProjectPerformance,
             performanceClass: this.getPerformanceClass(p.performance as PaidProjectPerformance),
@@ -193,26 +193,6 @@ export class PerformanceMarketingTabComponent {
   }
 
   // === Private Helpers ===
-  private trendDirection(pct: number | null | undefined): 'up' | 'down' | 'neutral' {
-    if (pct == null || Number.isNaN(pct)) return 'neutral';
-    if (pct > 0) return 'up';
-    if (pct < 0) return 'down';
-    return 'neutral';
-  }
-
-  private trendColorClass(pct: number | null | undefined): string {
-    if (pct == null || Number.isNaN(pct)) return 'text-gray-500';
-    if (pct > 0) return 'text-green-600';
-    if (pct < 0) return 'text-red-600';
-    return 'text-gray-500';
-  }
-
-  private formatChangePct(pct: number | null | undefined, suffix: string): string | null {
-    if (pct == null || Number.isNaN(pct)) return null;
-    const sign = pct > 0 ? '+' : '';
-    return `${sign}${pct.toFixed(1)}% ${suffix}`;
-  }
-
   private getPerformanceClass(perf: PaidProjectPerformance): string {
     return PerformanceMarketingTabComponent.performanceClassMap[perf] ?? 'bg-gray-50 text-gray-700';
   }
