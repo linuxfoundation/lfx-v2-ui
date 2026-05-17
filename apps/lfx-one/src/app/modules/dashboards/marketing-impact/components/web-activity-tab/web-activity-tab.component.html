@@ -11,7 +11,7 @@
   <!-- KPI Cards -->
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="web-activity-kpi-grid">
     @if (loading()) {
-      @for (i of [1, 2, 3]; track i) {
+      @for (i of [1, 2, 3]; track $index) {
         <div class="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4" data-testid="web-activity-kpi-skeleton">
           <div class="h-4 w-24 animate-pulse rounded bg-gray-200"></div>
           <div class="h-8 w-32 animate-pulse rounded bg-gray-200"></div>
@@ -28,7 +28,7 @@
   <!-- Domain breakdown table -->
   @if (!loading()) {
     <div class="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-5" data-testid="web-activity-domains">
-      <h4 class="text-sm font-semibold text-gray-900">Web activity by project</h4>
+      <h4 class="text-sm font-semibold text-gray-900">Web activity by domain</h4>
 
       @if (hasDomains()) {
         <div class="flex flex-col gap-0" data-testid="web-activity-table">

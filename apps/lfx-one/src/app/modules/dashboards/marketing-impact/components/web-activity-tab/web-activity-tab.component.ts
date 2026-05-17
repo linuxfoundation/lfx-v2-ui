@@ -5,7 +5,7 @@ import { Component, computed, inject, input, signal, Signal } from '@angular/cor
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { formatNumber } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
-import { catchError, of, switchMap, tap } from 'rxjs';
+import { finalize, of, switchMap } from 'rxjs';
 
 import type { PerformanceSummaryKpi, WebActivitiesSummaryResponse, WebActivityDomainRow } from '@lfx-one/shared/interfaces';
 
@@ -15,7 +15,7 @@ import { SparklineKpiCardComponent } from '../sparkline-kpi-card/sparkline-kpi-c
   selector: 'lfx-web-activity-tab',
   imports: [SparklineKpiCardComponent],
   templateUrl: './web-activity-tab.component.html',
-  styleUrl: './web-activity-tab.component.scss',
+  styles: [],
 })
 export class WebActivityTabComponent {
   // === Services ===
@@ -46,13 +46,7 @@ export class WebActivityTabComponent {
             return of(null);
           }
           this.loading.set(true);
-          return this.analyticsService.getWebActivitiesSummary(slug).pipe(
-            tap(() => this.loading.set(false)),
-            catchError(() => {
-              this.loading.set(false);
-              return of(null);
-            })
-          );
+          return this.analyticsService.getWebActivitiesSummary(slug).pipe(finalize(() => this.loading.set(false)));
         })
       ),
       { initialValue: null }
@@ -81,13 +75,12 @@ export class WebActivityTabComponent {
           yoyChange: null,
           yoyTrend: 'neutral' as const,
           yoyTrendClass: 'text-gray-500',
-          comparisonLine: '',
         },
         {
           id: 'total-page-views',
           label: 'Total Page Views',
           icon: 'fa-light fa-file-lines',
-          iconClass: 'bg-green-100 text-green-600',
+          iconClass: 'bg-emerald-100 text-emerald-600',
           value: formatNumber(totalPageViews),
           momChange: null,
           momTrend: 'neutral' as const,
@@ -95,7 +88,6 @@ export class WebActivityTabComponent {
           yoyChange: null,
           yoyTrend: 'neutral' as const,
           yoyTrendClass: 'text-gray-500',
-          comparisonLine: '',
         },
         {
           id: 'pages-per-session',
@@ -109,7 +101,6 @@ export class WebActivityTabComponent {
           yoyChange: null,
           yoyTrend: 'neutral' as const,
           yoyTrendClass: 'text-gray-500',
-          comparisonLine: '',
         },
       ];
     });
@@ -120,12 +111,12 @@ export class WebActivityTabComponent {
       const data = this.webData();
       if (!data?.domainGroups?.length) return [];
 
-      const totalSessions = data.totalSessions || 1;
+      const totalSessions = data.totalSessions ?? 0;
 
-      return data.domainGroups
+      return [...data.domainGroups]
         .sort((a, b) => b.totalSessions - a.totalSessions)
         .map((d): WebActivityDomainRow => {
-          const share = (d.totalSessions / totalSessions) * 100;
+          const share = totalSessions > 0 ? (d.totalSessions / totalSessions) * 100 : 0;
           return {
             domain: d.domainGroup,
             sessions: formatNumber(d.totalSessions),
