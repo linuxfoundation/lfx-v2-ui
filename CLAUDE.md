@@ -255,6 +255,7 @@ Detailed patterns are in `.claude/rules/` and loaded contextually based on the `
 - ❌ Hard-code brand hex values (reference `lfxColors` scales)
 - ❌ Reference browser-only APIs without `isPlatformBrowser`
 - ❌ Mix module concerns in one change
+- ❌ Run `git commit` while either pre-commit subagent is still running in the background — wait for **both** background tasks to complete and surface their reports before staging anything. The commit window is after both verdicts are in, not before.
 - ❌ Commit without first spawning the `lfx-self-serve-code-reviewer` AND `lfx-self-serve-learnings-reviewer` subagents (parallel, `run_in_background: true`) and clearing every CRITICAL finding — both pre-commit reviews are non-negotiable
 - ❌ Open a PR without running `/lfx-self-serve-pr-readiness` to a clean verdict — also non-negotiable
 - ❌ Open a PR without DCO sign-off + GPG (`--signoff -S`)
@@ -272,11 +273,12 @@ Before every commit, spawn both pre-commit review subagents in parallel by issui
 
 1. **`lfx-self-serve-code-reviewer`** — code-convention audit. `subagent_type: lfx-self-serve-code-reviewer`, prompt: `"mode: local\nbase: origin/main\nextra: <any focus>"`. Audits against `.claude/rules/`, the four `docs/reviews/` checklists, architecture docs, upstream API contracts, and protected files. Returns a rendered markdown review.
 2. **`lfx-self-serve-learnings-reviewer`** — empirical-pattern audit. `subagent_type: lfx-self-serve-learnings-reviewer`, prompt: `"base: origin/main\nextra: <any focus>"`. Runs the senior-engineer review rubric (security, performance, code quality, architecture, testing) cross-checked against `.claude/pr-knowledge/` — empirical patterns sampled from past PR review comments. Returns a rendered markdown review.
-3. Wait for both. Address every CRITICAL finding from either. Address every reasonable SHOULD_FIX finding.
-4. Rerun (re-spawn both) if you make material changes after the first pass.
-5. Commit only after both reviews return `READY` (or remaining findings are explicitly documented in the commit body / PR description with a stated trade-off).
+3. **WAIT — do not run `git commit` until both background tasks have completed and surfaced their reports.** You'll get one completion notification per agent. Do not proceed to step 4 with only one report in. Do not start staging files in the meantime. The commit window opens after both verdicts are in.
+4. Read both reports. Address every CRITICAL finding from either. Address every reasonable SHOULD_FIX finding.
+5. Rerun (re-spawn both, in parallel again) if you make material changes after the first pass — and wait for both again before committing.
+6. Commit only after both reviews return `READY` (or remaining findings are explicitly documented in the commit body / PR description with a stated trade-off).
 
-The two agents run in fully fresh forked contexts — neither inherits dev-thread bias, and `run_in_background: true` lets them execute concurrently rather than sequentially.
+The two agents run in fully fresh forked contexts — neither inherits dev-thread bias, and `run_in_background: true` lets them execute concurrently rather than sequentially. The cost of waiting is small (each runs in seconds); the cost of committing on incomplete review is wasted reviewer time.
 
 ### Pre-PR (once, before opening the PR)
 
