@@ -65,14 +65,20 @@ export class EmailTabComponent {
 
       const totalSends = data.monthlySends?.reduce((s, v) => s + v, 0) ?? 0;
       const totalOpens = data.monthlyOpens?.reduce((s, v) => s + v, 0) ?? 0;
-      const openRate = totalSends > 0 ? (totalOpens / totalSends) * 100 : 0;
       const changePct = data.changePercentage;
 
       const sendsMom = this.computeMomPct(data.monthlySends);
       const opensMom = this.computeMomPct(data.monthlyOpens);
 
-      const currentOpenRate = data.monthlySends?.at(-1) ? ((data.monthlyOpens?.at(-1) ?? 0) / data.monthlySends.at(-1)!) * 100 : 0;
-      const prevOpenRate = data.monthlySends?.at(-2) ? ((data.monthlyOpens?.at(-2) ?? 0) / data.monthlySends.at(-2)!) * 100 : 0;
+      const sends = data.monthlySends ?? [];
+      const opens = data.monthlyOpens ?? [];
+      const lastSends = sends.length > 0 ? sends[sends.length - 1] : undefined;
+      const prevSends = sends.length > 1 ? sends[sends.length - 2] : undefined;
+      const lastOpens = sends.length > 0 ? (opens[opens.length - 1] ?? 0) : 0;
+      const prevOpens = sends.length > 1 ? (opens[opens.length - 2] ?? 0) : 0;
+
+      const currentOpenRate = lastSends !== undefined && lastSends > 0 ? (lastOpens / lastSends) * 100 : 0;
+      const prevOpenRate = prevSends !== undefined && prevSends > 0 ? (prevOpens / prevSends) * 100 : 0;
       const openRateMom = prevOpenRate > 0 ? ((currentOpenRate - prevOpenRate) / prevOpenRate) * 100 : null;
 
       return [
@@ -109,7 +115,7 @@ export class EmailTabComponent {
           label: 'Open Rate',
           icon: 'fa-light fa-chart-simple',
           iconClass: 'bg-amber-100 text-amber-600',
-          value: `${openRate.toFixed(1)}%`,
+          value: `${currentOpenRate.toFixed(1)}%`,
           momChange: formatChangePct(openRateMom, 'MoM'),
           momTrend: trendDirection(openRateMom),
           momTrendClass: trendColorClass(openRateMom),
@@ -124,7 +130,7 @@ export class EmailTabComponent {
           icon: 'fa-light fa-arrow-pointer',
           iconClass: 'bg-violet-100 text-violet-600',
           value: `${data.currentCtr.toFixed(2)}%`,
-          momChange: formatChangePct(changePct, 'MoM'),
+          momChange: formatChangePct(changePct, 'vs avg'),
           momTrend: trendDirection(changePct),
           momTrendClass: trendColorClass(changePct),
           yoyChange: null,
