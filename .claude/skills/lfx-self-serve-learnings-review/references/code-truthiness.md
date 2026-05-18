@@ -6,7 +6,7 @@ Patterns where the code lies about itself — docstrings, inline comments, JSDoc
 
 ---
 
-## `pr-knowledge/code-truthiness/jsdoc-route-mismatch` — SHOULD_FIX
+## `code-truthiness/jsdoc-route-mismatch` — SHOULD_FIX
 
 **Pattern:** JSDoc on a controller method or route handler declares a path (`@route GET /...`) that doesn't match the path the router actually mounts.
 
@@ -20,7 +20,7 @@ Patterns where the code lies about itself — docstrings, inline comments, JSDoc
 
 ---
 
-## `pr-knowledge/code-truthiness/docstring-describes-stale-behavior` — SHOULD_FIX
+## `code-truthiness/docstring-describes-stale-behavior` — SHOULD_FIX
 
 **Pattern:** docstring on a constant, function, or module describes a behavior that has since moved or been removed elsewhere. Reading the docstring sends maintainers down the wrong path.
 
@@ -34,7 +34,7 @@ Patterns where the code lies about itself — docstrings, inline comments, JSDoc
 
 ---
 
-## `pr-knowledge/code-truthiness/inline-comment-lies-about-side-effects` — SHOULD_FIX
+## `code-truthiness/inline-comment-lies-about-side-effects` — SHOULD_FIX
 
 **Pattern:** inline comment near a piece of code claims "no navigation" / "no guard re-evaluation" / "no side effects" / "in-memory only" — when the surrounding code actually has those side effects.
 
@@ -48,7 +48,7 @@ Patterns where the code lies about itself — docstrings, inline comments, JSDoc
 
 ---
 
-## `pr-knowledge/code-truthiness/helm-values-drift-vs-pr-desc` — SHOULD_FIX
+## `code-truthiness/helm-values-drift-vs-pr-desc` — SHOULD_FIX
 
 **Pattern:** `charts/**/values.yaml` has changes (e.g., new `startupProbe`, `livenessProbe`, resource limits) that aren't mentioned in the PR description. Reviewers approve the code change without realizing deployment behavior is also changing.
 
@@ -62,7 +62,7 @@ Patterns where the code lies about itself — docstrings, inline comments, JSDoc
 
 ---
 
-## `pr-knowledge/code-truthiness/hardcoded-list-duplicates-config` — SHOULD_FIX
+## `code-truthiness/hardcoded-list-duplicates-config` — SHOULD_FIX
 
 **Pattern:** a short hard-coded list/array in code (typically 3–6 strings) duplicates a value that already exists as a config constant or can be derived programmatically (Object.keys, Object.values of a config object).
 
@@ -76,7 +76,7 @@ Patterns where the code lies about itself — docstrings, inline comments, JSDoc
 
 ---
 
-## `pr-knowledge/code-truthiness/pr-desc-vs-code-mismatch` — SHOULD_FIX
+## `code-truthiness/pr-desc-vs-code-mismatch` — SHOULD_FIX
 
 **Pattern:** the PR description claims one behavior, the code implements another. Reviewers approve based on description without comparing.
 
@@ -90,7 +90,7 @@ Patterns where the code lies about itself — docstrings, inline comments, JSDoc
 
 ---
 
-## `pr-knowledge/code-truthiness/new-service-without-spec` — SHOULD_FIX
+## `code-truthiness/new-service-without-spec` — SHOULD_FIX
 
 **Pattern:** a new `.service.ts` file is added to the diff without a corresponding `.service.spec.ts` in the same directory. Same applies to new `.module.ts` / non-trivial `.component.ts`.
 
@@ -104,7 +104,7 @@ Patterns where the code lies about itself — docstrings, inline comments, JSDoc
 
 ---
 
-## `pr-knowledge/code-truthiness/missing-e2e-for-empty-state` — SHOULD_FIX
+## `code-truthiness/missing-e2e-for-empty-state` — SHOULD_FIX
 
 **Pattern:** a new empty-state UI (no-data card, zero-mentions panel, fallback message) is added without an e2e spec exercising it. Empty-states are notoriously easy to break silently when data shapes change.
 
@@ -118,7 +118,7 @@ Patterns where the code lies about itself — docstrings, inline comments, JSDoc
 
 ---
 
-## `pr-knowledge/code-truthiness/non-trivial-logic-without-unit` — SHOULD_FIX
+## `code-truthiness/non-trivial-logic-without-unit` — SHOULD_FIX
 
 **Pattern:** an existing service gains a non-trivial method (>10 lines, branching, transforms data) without a corresponding new test case in the sibling `.spec.ts`.
 

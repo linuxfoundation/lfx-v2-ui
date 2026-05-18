@@ -32,8 +32,8 @@ This skill runs `context: fork` but with **no subagent**. The entire workflow li
 
 Each finding you emit must trace back to a quotable item in one of these files. If you cannot quote the source, drop the finding. Hallucinated rules are worse than missed ones.
 
-- **`.claude/skills/lfx-self-serve-learnings-review/references/bot-rubric.md`** — unioned CodeRabbit + GitHub Copilot review rubric: 8 consolidated buckets, severity map (CodeRabbit's Critical/Major/Minor/Trivial → our CRITICAL/SHOULD_FIX/NIT), index into the `pr-knowledge/` files.
-- **`.claude/skills/lfx-self-serve-learnings-review/references/pr-knowledge/*.md`** — per-category checklists of repo-specific empirical patterns observed in past PR comments. Each pattern cites its origin PR# + file. Read conditionally per the routing table in Phase 3.
+- **`.claude/skills/lfx-self-serve-learnings-review/references/bot-rubric.md`** — unioned CodeRabbit + GitHub Copilot review rubric: 8 consolidated buckets, severity map (CodeRabbit's Critical/Major/Minor/Trivial → our CRITICAL/SHOULD_FIX/NIT), index into the per-category pattern files.
+- **`.claude/skills/lfx-self-serve-learnings-review/references/*.md`** — per-category checklists of repo-specific empirical patterns observed in past PR comments. Each pattern cites its origin PR# + file. Read conditionally per the routing table in Phase 3.
 - **`.claude/skills/lfx-self-serve-learnings-review/references/known-false-positives.md`** — applied LAST to drop findings the bots still surface that aren't real for this codebase.
 
 **If you emit findings without reading every reference relevant to the diff, your audit is invalid.**
@@ -77,9 +77,9 @@ If both are empty, abort: "No changes to audit against `<base>`."
 - `.claude/skills/lfx-self-serve-learnings-review/references/bot-rubric.md`
 - `.claude/skills/lfx-self-serve-learnings-review/references/known-false-positives.md`
 
-### Conditionally read `.claude/skills/lfx-self-serve-learnings-review/references/pr-knowledge/*.md` based on changed-file paths
+### Conditionally read `.claude/skills/lfx-self-serve-learnings-review/references/*.md` based on changed-file paths
 
-| Bot-find file                      | Read when                                                                                                                                                                                                                                                                          |
+| Pattern file                       | Read when                                                                                                                                                                                                                                                                          |
 | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `security.md`                      | always (secrets, sanitization, auth-state leakage, untrusted cookies, untrusted URLs can hit any change)                                                                                                                                                                            |
 | `typescript-correctness.md`        | any `.ts` file changed (type-soundness + async lifecycle + timer leaks)                                                                                                                                                                                                            |
@@ -94,7 +94,7 @@ The table is a guideline. When in doubt, read the file. Reading too much wastes 
 
 ## Phase 4 — Knowledge-base pass
 
-For each `pr-knowledge/<category>.md` file loaded in Phase 3:
+For each `<category>.md` file loaded in Phase 3:
 
 1. Walk every pattern in the file against the diff (Phase 2 outputs, plus targeted `Read` of changed files for line-level detail).
 2. For each match, emit a finding:
@@ -110,11 +110,11 @@ For each `pr-knowledge/<category>.md` file loaded in Phase 3:
 }
 ```
 
-Each pattern's default severity is set in its pr-knowledge file; deviate only with reasoning (e.g., the same `any` cast might be CRITICAL in a security-sensitive path and SHOULD_FIX elsewhere).
+Each pattern's default severity is set in its pattern file; deviate only with reasoning (e.g., the same `any` cast might be CRITICAL in a security-sensitive path and SHOULD_FIX elsewhere).
 
 ## Phase 5 — Cross-check discipline
 
-Every finding must quote the specific pattern in a `pr-knowledge/<file>.md` file. If you cannot quote the source, drop the finding.
+Every finding must quote the specific pattern in a `<file>.md` file. If you cannot quote the source, drop the finding.
 
 If you couldn't read a reference that the Phase 3 routing said you should have, return `status: incomplete` rather than ship a partial verdict.
 
@@ -135,7 +135,7 @@ Print to terminal — no `/review` chaining, no `gh pr ...` mutation.
 
 ## Findings against the knowledge base
 
-Grouped by severity. Each finding cites its pr-knowledge source.
+Grouped by severity. Each finding cites its pattern source.
 
 ### 🔴 Critical (N)
 
@@ -169,7 +169,7 @@ If the user passed extra instructions after the base-branch (e.g. "focus on secu
 ## References used
 
 - **`.claude/skills/lfx-self-serve-learnings-review/references/bot-rubric.md`** — unioned CodeRabbit + Copilot rubric + severity map
-- **`.claude/skills/lfx-self-serve-learnings-review/references/pr-knowledge/*.md`** — 8 per-category empirical-pattern checklists (read conditionally per Phase 3 routing)
+- **`.claude/skills/lfx-self-serve-learnings-review/references/*.md`** — 8 per-category empirical-pattern checklists (read conditionally per Phase 3 routing)
 - **`.claude/skills/lfx-self-serve-learnings-review/references/known-false-positives.md`** — applied LAST to drop known false matches
 
 ## Companion skills

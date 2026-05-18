@@ -6,7 +6,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ---
 
-## `pr-knowledge/security/secrets-in-diff` — CRITICAL
+## `security/secrets-in-diff` — CRITICAL
 
 **Pattern:** hardcoded tokens, API keys, `Bearer ey...`, `sk_live_`, `sk_test_`, AWS keys, or any other credential committed to the diff.
 
@@ -20,7 +20,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ---
 
-## `pr-knowledge/security/public-meeting-visibility-filter` — CRITICAL
+## `security/public-meeting-visibility-filter` — CRITICAL
 
 **Pattern:** a public endpoint serving meeting/event data must filter by `visibility: 'public'` before pagination — otherwise the page response can contain private items.
 
@@ -34,7 +34,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ---
 
-## `pr-knowledge/security/href-from-untrusted-source` — CRITICAL
+## `security/href-from-untrusted-source` — CRITICAL
 
 **Pattern:** an element's `[href]` is bound to a value sourced from user input or an external API response without validation. Risk of `javascript:` URL injection.
 
@@ -48,7 +48,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ---
 
-## `pr-knowledge/security/cookie-as-identity-no-validation` — CRITICAL
+## `security/cookie-as-identity-no-validation` — CRITICAL
 
 **Pattern:** a cookie value is parsed as JSON or destructured as an identity/account/session object, and the resulting data is used to drive authorization, queries, or UI state — without validating the shape or verifying a signature.
 
@@ -62,7 +62,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ---
 
-## `pr-knowledge/security/error-message-identity-leak` — SHOULD_FIX
+## `security/error-message-identity-leak` — SHOULD_FIX
 
 **Pattern:** error messages that disclose whether a username/email/identifier matched (timing or content-based account enumeration). The denial response differs based on which lookup failed. Applies to both unauthenticated lookups and authenticated endpoints whose error payloads vary by which lookup failed (user vs. registrant vs. permission check).
 
@@ -76,7 +76,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ---
 
-## `pr-knowledge/security/non-http-scheme-stripped` — SHOULD_FIX
+## `security/non-http-scheme-stripped` — SHOULD_FIX
 
 **Pattern:** a non-http URL scheme (`webcal:`, `tel:`, `mailto:`, `sms:`) bound to `[href]` (or interpolated into a template-bound `href`) is silently stripped by Angular's `DomSanitizer` to `unsafe:...`. The link looks present in source but doesn't navigate at runtime.
 
@@ -90,7 +90,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ---
 
-## `pr-knowledge/security/missing-encodeURIComponent-on-slug` — SHOULD_FIX
+## `security/missing-encodeURIComponent-on-slug` — SHOULD_FIX
 
 **Pattern:** a template-literal URL or query-param construction interpolates a user-input or variable value (slug, search term, ID) into the URL without `encodeURIComponent`. Special characters break the URL or enable injection.
 
@@ -104,7 +104,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ---
 
-## `pr-knowledge/security/cookie-payload-bigger-than-headers` — NIT
+## `security/cookie-payload-bigger-than-headers` — NIT
 
 **Pattern:** cookie payload contains a large object (>1KB) that's pushed on every request. Network overhead; also can hit reverse-proxy header size limits.
 

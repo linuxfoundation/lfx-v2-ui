@@ -1,6 +1,6 @@
 # Known false positives — applied LAST in every review pass
 
-Findings that match any pattern below MUST be dropped, regardless of which source (rule file, checklist, pr-knowledge file) originally produced them. This list is the floor — even a quotable pattern doesn't survive if it matches a known false positive.
+Findings that match any pattern below MUST be dropped, regardless of which source (rule file, checklist, pattern file) originally produced them. This list is the floor — even a quotable pattern doesn't survive if it matches a known false positive.
 
 Used by `/lfx-self-serve-learnings-review` (Phase 6), and also relevant filter discipline for `/lfx-review-pr` and the `lfx-self-serve-code-reviewer` agent.
 
@@ -87,7 +87,7 @@ Used by `/lfx-self-serve-learnings-review` (Phase 6), and also relevant filter d
 When you encounter a bot finding the team has explicitly decided is not relevant for this codebase:
 
 1. Add an entry here with **Pattern matched**, **Why false**, and (where applicable) **Source**.
-2. If the pattern was previously in a `pr-knowledge/<file>.md`, remove it from there too — don't have a pattern in both files.
+2. If the pattern was previously in a `<file>.md`, remove it from there too — don't have a pattern in both files.
 3. If the pattern is something the bots will surface forever (e.g., zoneless OnPush flags from Copilot), that's permanent. If it's a one-time misread, no need to add it.
 
 This file should accumulate slowly. If it grows past ~50 entries, that's a signal we're being too permissive — re-audit.

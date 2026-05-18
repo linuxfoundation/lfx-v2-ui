@@ -6,7 +6,7 @@ Patterns the bots reliably flag at the signals ↔ observables interface — dou
 
 ---
 
-## `pr-knowledge/frontend-state-and-timing/toObservable-startWith-double-emit` — SHOULD_FIX
+## `frontend-state-and-timing/toObservable-startWith-double-emit` — SHOULD_FIX
 
 **Pattern:** `toObservable(signal).pipe(startWith(initialValue))` — `toObservable` already synchronously emits the signal's current value on subscribe. Adding `startWith` prepends a second synchronous emission, doubling downstream firing (e.g., `combineLatest` fires twice on mount, refetches data twice).
 
@@ -20,7 +20,7 @@ Patterns the bots reliably flag at the signals ↔ observables interface — dou
 
 ---
 
-## `pr-knowledge/frontend-state-and-timing/missing-distinctUntilChanged-after-id-projection` — SHOULD_FIX
+## `frontend-state-and-timing/missing-distinctUntilChanged-after-id-projection` — SHOULD_FIX
 
 **Pattern:** `toObservable(obj-signal).pipe(map(x => x.id))` — when the wrapping object can be re-emitted with the same `id` but a new object identity (e.g., context service enriches and re-sets the signal), downstream re-fires unnecessarily, triggering redundant fetches.
 
@@ -34,7 +34,7 @@ Patterns the bots reliably flag at the signals ↔ observables interface — dou
 
 ---
 
-## `pr-knowledge/frontend-state-and-timing/effect-resets-on-identity-equal-input` — SHOULD_FIX
+## `frontend-state-and-timing/effect-resets-on-identity-equal-input` — SHOULD_FIX
 
 **Pattern:** `effect()` reads a signal whose value is identity-different but semantically-equal (e.g., the same account enriched with extra metadata). The effect runs again and resets state that was set inside the effect — clobbering downstream state.
 

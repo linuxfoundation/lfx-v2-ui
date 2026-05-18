@@ -6,7 +6,7 @@ Patterns where Snowflake query results don't match TypeScript interface declarat
 
 ---
 
-## `pr-knowledge/data-and-snowflake/dev-schema-leak` — CRITICAL
+## `data-and-snowflake/dev-schema-leak` — CRITICAL
 
 **Pattern:** hard-coded `ANALYTICS_DEV.*` schema name, per-engineer workspace path (e.g., `LF_<NAME>_PLATINUM_LFX_ONE`), or any non-production database path in code on the release path.
 
@@ -20,7 +20,7 @@ Patterns where Snowflake query results don't match TypeScript interface declarat
 
 ---
 
-## `pr-knowledge/data-and-snowflake/placeholder-bind-count-mismatch` — CRITICAL
+## `data-and-snowflake/placeholder-bind-count-mismatch` — CRITICAL
 
 **Pattern:** the SQL string has N `?` placeholders but the binds array passed to the Snowflake helper has a different count of values. Snowflake driver will error at runtime (or silently misbind).
 
@@ -34,7 +34,7 @@ Patterns where Snowflake query results don't match TypeScript interface declarat
 
 ---
 
-## `pr-knowledge/data-and-snowflake/select-mismatch-row-interface` — SHOULD_FIX
+## `data-and-snowflake/select-mismatch-row-interface` — SHOULD_FIX
 
 **Pattern:** the SELECT list in a Snowflake query selects columns that aren't present in the corresponding TypeScript `Row` interface — or selects fewer than the interface declares. Either case produces runtime undefined fields and type confusion.
 
@@ -48,7 +48,7 @@ Patterns where Snowflake query results don't match TypeScript interface declarat
 
 ---
 
-## `pr-knowledge/data-and-snowflake/date-column-typed-as-Date` — SHOULD_FIX
+## `data-and-snowflake/date-column-typed-as-Date` — SHOULD_FIX
 
 **Pattern:** a Snowflake `DATE` / `TIMESTAMP_NTZ` / `TIMESTAMP_TZ` column is typed as `Date` in the TypeScript Row interface, but the Snowflake Node.js driver returns ISO strings, not `Date` instances. Downstream code calling `.getTime()` or `Date` methods on the value will throw.
 

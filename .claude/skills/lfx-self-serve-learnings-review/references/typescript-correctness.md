@@ -6,7 +6,7 @@ TypeScript-soundness and async-lifecycle patterns the bots flag — generics who
 
 ---
 
-## `pr-knowledge/typescript-correctness/generic-return-type-lies` — CRITICAL
+## `typescript-correctness/generic-return-type-lies` — CRITICAL
 
 **Pattern:** generic utility function whose declared return type doesn't account for runtime `null` / `undefined` when the type parameter resolves to a primitive (string, number).
 
@@ -20,7 +20,7 @@ TypeScript-soundness and async-lifecycle patterns the bots flag — generics who
 
 ---
 
-## `pr-knowledge/typescript-correctness/non-null-assertion-on-async-result` — SHOULD_FIX
+## `typescript-correctness/non-null-assertion-on-async-result` — SHOULD_FIX
 
 **Pattern:** non-null assertion (`!`) on a value that's the result of an async call, an array `.find(...)`, an HTTP response field, a route param, or a `signal()` value — any of which can be undefined at runtime.
 
@@ -34,7 +34,7 @@ TypeScript-soundness and async-lifecycle patterns the bots flag — generics who
 
 ---
 
-## `pr-knowledge/typescript-correctness/deep-shared-import` — SHOULD_FIX
+## `typescript-correctness/deep-shared-import` — SHOULD_FIX
 
 **Pattern:** importing from `@lfx-one/shared/<category>/<file>` instead of the barrel (`@lfx-one/shared/<category>`). Bypasses the curated public surface and risks importing internal helpers.
 
@@ -48,7 +48,7 @@ TypeScript-soundness and async-lifecycle patterns the bots flag — generics who
 
 ---
 
-## `pr-knowledge/typescript-correctness/setTimeout-no-cleanup` — SHOULD_FIX
+## `typescript-correctness/setTimeout-no-cleanup` — SHOULD_FIX
 
 **Pattern:** `setTimeout(...)` in a component / dialog / service that does not clear the timer on destroy. The callback can fire after the host is gone, setting state on a destroyed component or executing logic against stale references.
 
@@ -62,7 +62,7 @@ TypeScript-soundness and async-lifecycle patterns the bots flag — generics who
 
 ---
 
-## `pr-knowledge/typescript-correctness/take1-against-async-readiness` — SHOULD_FIX
+## `typescript-correctness/take1-against-async-readiness` — SHOULD_FIX
 
 **Pattern:** `take(1)` subscribed to an observable whose downstream short-circuits based on a readiness flag, when that flag is flipped by a separate async callback (e.g., `script.onload`). If the observable emits before the flag is true, the single value is dropped.
 
@@ -76,7 +76,7 @@ TypeScript-soundness and async-lifecycle patterns the bots flag — generics who
 
 ---
 
-## `pr-knowledge/typescript-correctness/timer-races-parent-fetch` — SHOULD_FIX
+## `typescript-correctness/timer-races-parent-fetch` — SHOULD_FIX
 
 **Pattern:** UI state transition driven by a `setTimeout` / interval races against a parent fetch that resolves on its own schedule. Final state depends on which finishes first.
 
