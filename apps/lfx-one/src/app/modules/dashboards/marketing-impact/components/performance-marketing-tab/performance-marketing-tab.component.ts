@@ -97,7 +97,9 @@ export class PerformanceMarketingTabComponent {
       const data = this.socialReachData();
       if (!data) return [];
 
-      const changePct = data.changePercentage;
+      const roasMomPct = data.changePercentage;
+      const impressionsMomPct = this.computeMomPct(data.monthlyData);
+
       const cards: PerformanceSummaryKpi[] = [
         {
           id: 'total-impressions',
@@ -105,9 +107,9 @@ export class PerformanceMarketingTabComponent {
           icon: 'fa-light fa-eye',
           iconClass: 'bg-blue-100 text-blue-600',
           value: formatNumber(data.totalReach),
-          momChange: formatChangePct(changePct, 'MoM'),
-          momTrend: trendDirection(changePct),
-          momTrendClass: trendColorClass(changePct),
+          momChange: formatChangePct(impressionsMomPct, 'MoM'),
+          momTrend: trendDirection(impressionsMomPct),
+          momTrendClass: trendColorClass(impressionsMomPct),
           yoyChange: null,
           yoyTrend: 'neutral',
           yoyTrendClass: 'text-gray-500',
@@ -144,9 +146,9 @@ export class PerformanceMarketingTabComponent {
           icon: 'fa-light fa-chart-line-up',
           iconClass: 'bg-violet-100 text-violet-600',
           value: `${(data.roas ?? 0).toFixed(2)}x`,
-          momChange: null,
-          momTrend: 'neutral',
-          momTrendClass: 'text-gray-500',
+          momChange: formatChangePct(roasMomPct, 'MoM'),
+          momTrend: trendDirection(roasMomPct),
+          momTrendClass: trendColorClass(roasMomPct),
           yoyChange: null,
           yoyTrend: 'neutral',
           yoyTrendClass: 'text-gray-500',
@@ -205,5 +207,13 @@ export class PerformanceMarketingTabComponent {
 
   private getPerformanceClass(perf: PaidProjectPerformance): string {
     return PerformanceMarketingTabComponent.performanceClassMap[perf] ?? 'bg-gray-50 text-gray-700';
+  }
+
+  private computeMomPct(arr: number[] | undefined): number | null {
+    if (!arr || arr.length < 2) return null;
+    const current = arr.at(-1) ?? 0;
+    const previous = arr.at(-2) ?? 0;
+    if (previous === 0) return null;
+    return ((current - previous) / previous) * 100;
   }
 }

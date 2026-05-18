@@ -21,13 +21,6 @@ import type { AttributionChannelRow, AttributionModel, AttributionModelOption, M
   styleUrl: './attribution-section.component.scss',
 })
 export class AttributionSectionComponent {
-  private static readonly revenueKeyMap: Record<AttributionModel, 'linearRevenue' | 'firstTouchRevenue' | 'lastTouchRevenue' | 'timeDecayRevenue'> = {
-    linear: 'linearRevenue',
-    firstTouch: 'firstTouchRevenue',
-    lastTouch: 'lastTouchRevenue',
-    timeDecay: 'timeDecayRevenue',
-  };
-
   // === Services ===
   private readonly analyticsService = inject(AnalyticsService);
   private readonly fb = inject(FormBuilder);
