@@ -43,16 +43,17 @@ Args format: `[base-branch] [extra instructions]`.
 
 ## Phase 2 — Gather PR-shape inputs
 
+**Normalize `<base>` first:** if it contains no `/` (e.g., bare `main`), prefix with `origin/` so the comparison runs against the freshly-fetched remote ref rather than a possibly-stale local branch.
+
 Run in parallel:
 
 ```bash
 git fetch origin
 git rev-parse --abbrev-ref HEAD                                 # current branch
-git merge-base <base> HEAD                                      # → $MB
-git diff --shortstat $MB..HEAD                                  # additions/deletions
-git log --format='%H %s' $MB..HEAD                              # commit subjects
-git log --format='%G? %h %s' $MB..HEAD                          # signature status
-git log --format=%B $MB..HEAD                                   # commit bodies (Signed-off-by trailers)
+git diff --shortstat <base>...HEAD                              # additions/deletions (three-dot = merge-base..HEAD)
+git log --format='%H %s' <base>..HEAD                           # commit subjects on the branch
+git log --format='%G? %h %s' <base>..HEAD                       # signature status per commit
+git log --format=%B <base>..HEAD                                # commit bodies (Signed-off-by trailers)
 git merge-base --is-ancestor <base> HEAD; echo $?                # rebase status (0 = ancestor)
 ```
 

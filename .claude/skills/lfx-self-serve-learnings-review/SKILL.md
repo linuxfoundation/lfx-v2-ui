@@ -50,13 +50,16 @@ Args format: `[base-branch] [extra instructions]`.
 
 ## Phase 2 — Compute the local diff
 
+**Normalize `<base>` first:** if it contains no `/` (e.g., bare `main`), prefix with `origin/` so the comparison runs against the freshly-fetched remote ref rather than a possibly-stale local branch.
+
 ```bash
 git fetch origin
 git rev-parse --abbrev-ref HEAD                                 # current branch
-git merge-base <base> HEAD                                      # → $MB
-git diff --name-only $MB..HEAD                                  # changed-file list
-git diff $MB..HEAD                                              # full diff
-git diff --shortstat $MB..HEAD                                  # additions/deletions
+
+# Committed work since base (three-dot = merge-base..HEAD):
+git diff --name-only <base>...HEAD                              # changed-file list
+git diff <base>...HEAD                                          # full diff
+git diff --shortstat <base>...HEAD                              # additions/deletions
 ```
 
 Also fold in staged-but-uncommitted changes for the pre-commit case:
@@ -66,7 +69,7 @@ git diff --name-only --cached                                   # staged changes
 git diff --cached                                               # staged full diff
 ```
 
-Audit the union of `$MB..HEAD` and the staged diff — pre-commit, the staged changes are exactly what the user is about to commit.
+Audit the union of the committed and staged diffs — pre-commit, the staged changes are exactly what the user is about to commit.
 
 If both are empty, abort: "No changes to audit against `<base>`."
 
@@ -79,16 +82,16 @@ If both are empty, abort: "No changes to audit against `<base>`."
 
 ### Conditionally read `.claude/skills/lfx-self-serve-learnings-review/references/*.md` based on changed-file paths
 
-| Pattern file                       | Read when                                                                                                                                                                                                                                                                          |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `security.md`                      | always (secrets, sanitization, auth-state leakage, untrusted cookies, untrusted URLs can hit any change)                                                                                                                                                                            |
-| `typescript-correctness.md`        | any `.ts` file changed (type-soundness + async lifecycle + timer leaks)                                                                                                                                                                                                            |
-| `templates-and-accessibility.md`   | any `.component.html` file changed (ARIA, semantic HTML, class-binding clobbering, `@for` track, lens param)                                                                                                                                                                       |
-| `frontend-state-and-timing.md`     | any `.component.ts` / `.service.ts` under `apps/lfx-one/src/app/` (signals ↔ observables timing)                                                                                                                                                                                  |
-| `server-request-handling.md`       | `app.config.ts`, anything under `app/shared/guards/` or `app/shared/interceptors/`, any `*.routes.ts`, any new file under `apps/lfx-one/src/server/routes/`, `apps/lfx-one/src/server/server.ts`, `middleware/auth*`, or any file under `server/controllers/` or `server/services/` |
-| `observability-and-logging.md`     | `apps/lfx-one/otel.mjs`, `apps/lfx-one/src/server/middleware/rate-limit.ts`, new route registrations in `server.ts`, or any file using `logger.info` / `logger.warning` / `logger.debug`                                                                                            |
-| `data-and-snowflake.md`            | `apps/lfx-one/src/server/services/snowflake.service.ts` or any file with direct Snowflake SQL                                                                                                                                                                                      |
-| `code-truthiness.md`               | any JSDoc / inline comment, anything under `docs/**`, or any new feature module / service / component without a matching `*.spec.ts`                                                                                                                                              |
+| Pattern file                     | Read when                                                                                                                                                                                                                                                                           |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `security.md`                    | always (secrets, sanitization, auth-state leakage, untrusted cookies, untrusted URLs can hit any change)                                                                                                                                                                            |
+| `typescript-correctness.md`      | any `.ts` file changed (type-soundness + async lifecycle + timer leaks)                                                                                                                                                                                                             |
+| `templates-and-accessibility.md` | any `.component.html` file changed (ARIA, semantic HTML, class-binding clobbering, `@for` track, lens param)                                                                                                                                                                        |
+| `frontend-state-and-timing.md`   | any `.component.ts` / `.service.ts` under `apps/lfx-one/src/app/` (signals ↔ observables timing)                                                                                                                                                                                    |
+| `server-request-handling.md`     | `app.config.ts`, anything under `app/shared/guards/` or `app/shared/interceptors/`, any `*.routes.ts`, any new file under `apps/lfx-one/src/server/routes/`, `apps/lfx-one/src/server/server.ts`, `middleware/auth*`, or any file under `server/controllers/` or `server/services/` |
+| `observability-and-logging.md`   | `apps/lfx-one/otel.mjs`, `apps/lfx-one/src/server/middleware/rate-limit.ts`, new route registrations in `server.ts`, or any file using `logger.info` / `logger.warning` / `logger.debug`                                                                                            |
+| `data-and-snowflake.md`          | `apps/lfx-one/src/server/services/snowflake.service.ts` or any file with direct Snowflake SQL                                                                                                                                                                                       |
+| `code-truthiness.md`             | any JSDoc / inline comment, anything under `docs/**`, or any new feature module / service / component without a matching `*.spec.ts`                                                                                                                                                |
 
 The table is a guideline. When in doubt, read the file. Reading too much wastes context; missing a relevant pattern means a missed finding.
 

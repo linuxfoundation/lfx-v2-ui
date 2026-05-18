@@ -271,7 +271,7 @@ Detailed patterns are in `.claude/rules/` and loaded contextually based on the `
 Spawn both reviews together so neither blocks the other — each runs `context: fork` in an independent context, and on substantial diffs the two passes can run side-by-side as parallel subagents.
 
 1. **`/lfx-self-serve-self-review` against the target base branch.** Code-convention audit via the `lfx-self-serve-code-reviewer` subagent — `.claude/rules/`, the four `docs/reviews/` code checklists, architecture docs, upstream API contracts, protected files. Diff evaluated independently of the implementation thread.
-2. **`/lfx-self-serve-learnings-review` against the target base branch.** Knowledge-base audit against accumulated patterns from past PRs (bot-flagged + human-flagged) and codebase gotchas, plus the union of CodeRabbit + Copilot's published rubrics. Catches things those bots would flag *before* the PR opens.
+2. **`/lfx-self-serve-learnings-review` against the target base branch.** Knowledge-base audit against accumulated patterns from past PRs (bot-flagged + human-flagged) and codebase gotchas, plus the union of CodeRabbit + Copilot's published rubrics. Catches things those bots would flag _before_ the PR opens.
 3. Address every CRITICAL finding from both. Address every reasonable SHOULD_FIX finding.
 4. Rerun if you make material changes after the first pass.
 5. Commit only after both reviews return `READY` (or remaining findings are explicitly documented in the commit body / PR description with a stated trade-off).

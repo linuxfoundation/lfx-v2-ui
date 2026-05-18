@@ -38,20 +38,30 @@ These four checklists are **the single most important source you consult**. Each
 
 ### `mode: local` — fields: `base: <ref>` (default `origin/main`), `extra: <free text>`
 
-Run these in parallel:
+This mode runs **pre-commit**, so audit the union of (a) commits since the base and (b) staged-but-uncommitted changes. The staged diff is exactly what the user is about to commit; missing it would make the skill useless for a first commit on a new branch.
+
+**Normalize `<base>` first:** if it contains no `/` (e.g., bare `main`), prefix with `origin/` so the comparison runs against the freshly-fetched remote ref rather than a possibly-stale local branch. `origin/main`, `upstream/develop`, etc. stay as-is.
+
+Run these in parallel (the three-dot `<base>...HEAD` syntax tells `git diff` to compute the merge-base internally, so no shell variable needed):
 
 ```bash
 git fetch origin
 git rev-parse --abbrev-ref HEAD                                 # current branch
-git merge-base <base> HEAD                                      # → $MB
-git diff --name-only $MB..HEAD                                  # changed-file list
-git diff $MB..HEAD                                              # full diff
-git diff --shortstat $MB..HEAD                                  # additions/deletions
+
+# Committed work since base (three-dot = merge-base..HEAD):
+git diff --name-only <base>...HEAD                              # committed file list
+git diff <base>...HEAD                                          # committed full diff
+git diff --shortstat <base>...HEAD                              # committed additions/deletions
+
+# Staged-but-uncommitted work:
+git diff --name-only --cached                                   # staged file list
+git diff --cached                                               # staged full diff
+git diff --cached --shortstat                                   # staged additions/deletions
 ```
 
-If the diff is too large to hold in context, save it to `/tmp/standards-diff.patch` and Read changed source files individually.
+Audit the **union** of the committed and staged diffs. If the diff is too large to hold in context, save the combined patch to `/tmp/standards-diff.patch` and Read changed source files individually.
 
-If there are no commits between `<base>` and HEAD, abort with: "No commits to review against `<base>` — make at least one commit on this branch."
+If both the committed diff and the staged diff are empty, abort with: "No changes to review against `<base>`."
 
 ### `mode: pr` — fields: `number: <N>`, `extra: <free text>`
 
@@ -83,22 +93,22 @@ Always pull current contents — never rely on memory of these files from prior 
 
 Inspect the changed-file list and Read only the relevant docs in one parallel call.
 
-| Touched paths | Load |
-|---|---|
-| (baseline — always) | `CLAUDE.md` |
-| `apps/lfx-one/src/app/**` | `docs/architecture/frontend/angular-patterns.md`, `docs/architecture/frontend/component-architecture.md`, `docs/architecture/frontend/styling-system.md` |
-| Drawer component or `DialogService.open` usage | `docs/architecture/frontend/drawer-pattern.md` |
-| `apps/lfx-one/src/server/**` | `docs/architecture/backend/README.md`, `docs/architecture/backend/error-handling-architecture.md`, `docs/architecture/backend/logging-monitoring.md`, `docs/architecture/backend/server-helpers.md` |
-| `middleware/auth*` | `docs/architecture/backend/authentication.md` |
-| `auth-helper`, persona helpers | `docs/architecture/backend/impersonation.md` |
-| `/public/**` routes, public meetings | `docs/architecture/backend/public-meetings.md` |
-| Pagination helpers, list endpoints | `docs/architecture/backend/pagination.md` |
-| `ai.service.ts`, AI proxy calls | `docs/architecture/backend/ai-service.md` |
-| `nats.service.ts`, project NATS RPCs | `docs/architecture/backend/nats-integration.md` |
-| `snowflake.service.ts`, direct SQL | `docs/architecture/backend/snowflake-integration.md` |
-| SSR / `server.ts` / render pipeline | `docs/architecture/backend/ssr-server.md` |
-| `packages/shared/**` | `docs/architecture/shared/package-architecture.md` |
-| `*.spec.ts` or `e2e/**` | `docs/architecture/testing/e2e-testing.md`, `docs/architecture/testing/testing-best-practices.md` |
+| Touched paths                                  | Load                                                                                                                                                                                                |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| (baseline — always)                            | `CLAUDE.md`                                                                                                                                                                                         |
+| `apps/lfx-one/src/app/**`                      | `docs/architecture/frontend/angular-patterns.md`, `docs/architecture/frontend/component-architecture.md`, `docs/architecture/frontend/styling-system.md`                                            |
+| Drawer component or `DialogService.open` usage | `docs/architecture/frontend/drawer-pattern.md`                                                                                                                                                      |
+| `apps/lfx-one/src/server/**`                   | `docs/architecture/backend/README.md`, `docs/architecture/backend/error-handling-architecture.md`, `docs/architecture/backend/logging-monitoring.md`, `docs/architecture/backend/server-helpers.md` |
+| `middleware/auth*`                             | `docs/architecture/backend/authentication.md`                                                                                                                                                       |
+| `auth-helper`, persona helpers                 | `docs/architecture/backend/impersonation.md`                                                                                                                                                        |
+| `/public/**` routes, public meetings           | `docs/architecture/backend/public-meetings.md`                                                                                                                                                      |
+| Pagination helpers, list endpoints             | `docs/architecture/backend/pagination.md`                                                                                                                                                           |
+| `ai.service.ts`, AI proxy calls                | `docs/architecture/backend/ai-service.md`                                                                                                                                                           |
+| `nats.service.ts`, project NATS RPCs           | `docs/architecture/backend/nats-integration.md`                                                                                                                                                     |
+| `snowflake.service.ts`, direct SQL             | `docs/architecture/backend/snowflake-integration.md`                                                                                                                                                |
+| SSR / `server.ts` / render pipeline            | `docs/architecture/backend/ssr-server.md`                                                                                                                                                           |
+| `packages/shared/**`                           | `docs/architecture/shared/package-architecture.md`                                                                                                                                                  |
+| `*.spec.ts` or `e2e/**`                        | `docs/architecture/testing/e2e-testing.md`, `docs/architecture/testing/testing-best-practices.md`                                                                                                   |
 
 ### Load domain checklists — MANDATORY (see callout above)
 
@@ -123,7 +133,7 @@ For each changed file:
 
 Before emitting any finding, locate the exact rule, checklist item, hook entry, or architecture-doc paragraph it violates. If you cannot quote the source text, do not emit the finding. **Hallucinated rules are worse than missed ones.** An unsourced finding is dropped, not downgraded.
 
-Symmetrically: a checklist item that *should* have produced a finding but didn't get checked is also a failure. If, in your final review, you cannot account for having considered every applicable checklist item in `docs/reviews/`, return your audit with `status: incomplete` so the calling skill can re-run rather than ship a partial verdict.
+Symmetrically: a checklist item that _should_ have produced a finding but didn't get checked is also a failure. If, in your final review, you cannot account for having considered every applicable checklist item in `docs/reviews/`, return your audit with `status: incomplete` so the calling skill can re-run rather than ship a partial verdict.
 
 ## Step 5 — Systematic audit
 
@@ -289,15 +299,15 @@ gh api repos/linuxfoundation/<repo-name>/contents/design/<file>.go \
 
 ### Upstream repo map
 
-| Domain | Repo |
-|---|---|
-| Queries | `lfx-v2-query-service` |
-| Projects | `lfx-v2-project-service` |
-| Meetings | `lfx-v2-meeting-service` |
+| Domain        | Repo                          |
+| ------------- | ----------------------------- |
+| Queries       | `lfx-v2-query-service`        |
+| Projects      | `lfx-v2-project-service`      |
+| Meetings      | `lfx-v2-meeting-service`      |
 | Mailing Lists | `lfx-v2-mailing-list-service` |
-| Committees | `lfx-v2-committee-service` |
-| Voting | `lfx-v2-voting-service` |
-| Surveys | `lfx-v2-survey-service` |
+| Committees    | `lfx-v2-committee-service`    |
+| Voting        | `lfx-v2-voting-service`       |
+| Surveys       | `lfx-v2-survey-service`       |
 
 ### What to validate
 
@@ -342,7 +352,7 @@ Emit a single JSON array. One object per finding. No prose around it, no markdow
 
 For protected-files findings, `file` may be set but `line` is typically `null` (the finding is about the file's presence in the diff, not a specific line).
 
-**PR-shape is NOT this agent's concern.** It lives in `/lfx-self-serve-pr-readiness` (pre-PR) and `/lfx-review-pr` (post-PR), both of which walk `docs/reviews/pr-shape.md` in their own skill bodies. If the caller asked you to do PR-shape, decline and direct them to the right skill.
+**PR-shape is NOT this agent's concern.** It lives in `/lfx-self-serve-pr-readiness` (pre-PR) and `/lfx-review-pr` (post-PR), both of which walk `.claude/skills/lfx-self-serve-pr-readiness/references/pr-shape.md` in their own skill bodies. If the caller asked you to do PR-shape, decline and direct them to the right skill.
 
 ## Severity calibration
 

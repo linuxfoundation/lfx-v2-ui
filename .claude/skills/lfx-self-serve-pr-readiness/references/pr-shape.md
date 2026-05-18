@@ -38,6 +38,7 @@ Regex: `^(feat|fix|docs|style|refactor|perf|test|build|ci|revert)/LFXV2-[0-9]+$`
 ## 4. `pr-shape/rebase` — SHOULD_FIX
 
 **Check:** the base branch is an ancestor of the head branch.
+
 - Pre-PR: `git merge-base --is-ancestor <base> HEAD` (typically `<base>` = `origin/main`).
 - Post-PR: `git merge-base --is-ancestor origin/<baseRefName> origin/<headRefName>`.
 
@@ -66,6 +67,7 @@ Non-zero exit → fail.
 **Failure message (GPG):** `Commit '<sha>' is not GPG-signed (code: <code>). Repo policy requires both --signoff and -S on every commit.`
 
 **Suggestion:**
+
 - Single-commit: `git commit --amend --signoff -S --no-edit`
 - Older commits / rebase / cherry-pick recovery: see the `/dco` skill.
 
@@ -82,6 +84,7 @@ Note: `U` is acceptable (good signature with an untrusted key); GitHub's "Verifi
 **Failure message:** `PR title '<title>' violates conventional-commit format. Title must be lowercase, use a valid type (not 'chore'), and must NOT include the JIRA ticket (which lives in commits and PR body).`
 
 **Suggestion (example):**
+
 - Invalid: `Fix: LFXV2-123 fix login bug`
 - Valid: `fix(auth): resolve login redirect on session expiry`
 

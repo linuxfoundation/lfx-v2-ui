@@ -8,15 +8,15 @@ paths:
 
 This project has guided skills for common workflows. **Proactively suggest the relevant skill** when a user's request matches one of these:
 
-| Skill                              | When to Suggest                                                                                                                            |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `/setup`                           | Getting started, first-time setup, broken environments, install failures, missing env vars, 1Password, how to run the app                  |
-| `/develop`                         | Add a feature, fix a bug, modify code, create components/services/endpoints/types, refactor, build, implement any code change              |
-| `/lfx-self-serve-self-review`      | Before every commit — code-convention audit via the lfx-self-serve-code-reviewer agent (rules, checklists, architecture, upstream API)     |
-| `/lfx-self-serve-learnings-review` | Before every commit — knowledge-base audit against past-PR patterns (bot + human) and the CodeRabbit + Copilot rubrics                     |
-| `/lfx-self-serve-pr-readiness`     | Before opening a PR — PR-shape sanity (branch, JIRA, conventional commits, rebase, DCO + GPG, diff size)                                   |
-| `/preflight`                       | Mechanical pre-PR checks — license headers, format, lint, build, protected files, commit signoff                                           |
-| `/lfx-review-pr`                   | Review an **existing** PR by number — audit a PR's diff, validate against standards, draft inline comments                                 |
+| Skill                              | When to Suggest                                                                                                                        |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `/setup`                           | Getting started, first-time setup, broken environments, install failures, missing env vars, 1Password, how to run the app              |
+| `/develop`                         | Add a feature, fix a bug, modify code, create components/services/endpoints/types, refactor, build, implement any code change          |
+| `/lfx-self-serve-self-review`      | Before every commit — code-convention audit via the lfx-self-serve-code-reviewer agent (rules, checklists, architecture, upstream API) |
+| `/lfx-self-serve-learnings-review` | Before every commit — knowledge-base audit against past-PR patterns (bot + human) and the CodeRabbit + Copilot rubrics                 |
+| `/lfx-self-serve-pr-readiness`     | Before opening a PR — PR-shape sanity (branch, JIRA, conventional commits, rebase, DCO + GPG, diff size)                               |
+| `/preflight`                       | Mechanical pre-PR checks — license headers, format, lint, build, protected files, commit signoff                                       |
+| `/lfx-review-pr`                   | Review an **existing** PR by number — audit a PR's diff, validate against standards, draft inline comments                             |
 
 ## Trigger Phrases
 

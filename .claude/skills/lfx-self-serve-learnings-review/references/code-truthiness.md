@@ -82,7 +82,7 @@ Patterns where the code lies about itself — docstrings, inline comments, JSDoc
 
 **Detect:** hand-review — read the PR body against the diff. Flag when the body says "X" but the code does "Y".
 
-**Empirical citation:** observed by Copilot across ~10 PRs in the dataset; clearest in PR #678 (CDP identity fallback) and PR #697 (ICS calendar route prefix). Note: only flag SHOULD_FIX when the mismatch is *semantic*, not just paraphrasing.
+**Empirical citation:** observed by Copilot across ~10 PRs in the dataset; clearest in PR #678 (CDP identity fallback) and PR #697 (ICS calendar route prefix). Note: only flag SHOULD*FIX when the mismatch is \_semantic*, not just paraphrasing.
 
 **Failure message:** PR description doesn't match shipped behavior.
 

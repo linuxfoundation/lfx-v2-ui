@@ -13,13 +13,13 @@ This file is itself not a finding source — empirical patterns are in the per-c
 
 ## Severity mapping
 
-| CodeRabbit | Ours | Reasoning |
-|---|---|---|
-| 🔴 Critical | CRITICAL | Direct match |
-| 🟠 Major | CRITICAL or SHOULD_FIX | Case-by-case — security / data-integrity → CRITICAL, structural → SHOULD_FIX |
-| 🟡 Minor | SHOULD_FIX | Direct match |
-| 🔵 Trivial / 🧹 Nitpick | NIT | Direct match |
-| ⚪ Info | **drop** | Not actionable |
+| CodeRabbit              | Ours                   | Reasoning                                                                    |
+| ----------------------- | ---------------------- | ---------------------------------------------------------------------------- |
+| 🔴 Critical             | CRITICAL               | Direct match                                                                 |
+| 🟠 Major                | CRITICAL or SHOULD_FIX | Case-by-case — security / data-integrity → CRITICAL, structural → SHOULD_FIX |
+| 🟡 Minor                | SHOULD_FIX             | Direct match                                                                 |
+| 🔵 Trivial / 🧹 Nitpick | NIT                    | Direct match                                                                 |
+| ⚪ Info                 | **drop**               | Not actionable                                                               |
 
 Copilot publishes no severity vocabulary. Default Copilot findings to **SHOULD_FIX**, except when the pattern is in `security.md`, on an async / error-handling path in `typescript-correctness.md` or `server-request-handling.md`, or on a framework-specific runtime-breakage path (auth-ordering, guard-ordering, signals-timing) — those default to **CRITICAL**.
 
@@ -27,16 +27,16 @@ Copilot publishes no severity vocabulary. Default Copilot findings to **SHOULD_F
 
 ## The 8 pattern files
 
-| # | File | Read when | Absorbs (originally) |
-|---|---|---|---|
-| 1 | `security.md` | always | security + sanitizer-and-public-urls + cookie-trust |
-| 2 | `typescript-correctness.md` | any `.ts` file changed | type-safety + async-correctness |
-| 3 | `templates-and-accessibility.md` | any `.component.html` changed | accessibility + template-binding-traps |
-| 4 | `frontend-state-and-timing.md` | any `.component.ts` / `.service.ts` under `apps/lfx-one/src/app/` | rxjs-signals-timing |
-| 5 | `server-request-handling.md` | `app.config.ts`, `app/shared/guards/`, `app/shared/interceptors/`, any `*.routes.ts`, new route files in `src/server/routes/`, controllers, services | route-auth-surface + guards-interceptors-ordering + query-param-hardening |
-| 6 | `observability-and-logging.md` | `otel.mjs`, `middleware/rate-limit.ts`, new route additions, files using `logger.info` / `logger.warning` / `logger.debug` | otel-and-rate-limit-drift + log-metric-correctness |
-| 7 | `data-and-snowflake.md` | `snowflake.service.ts` or any file with direct Snowflake SQL | snowflake-rowshape-schema |
-| 8 | `code-truthiness.md` | any JSDoc / inline comments / `docs/**`; any new feature module / service / component without `*.spec.ts` | docs-comments-drift + testing |
+| #   | File                             | Read when                                                                                                                                            | Absorbs (originally)                                                      |
+| --- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| 1   | `security.md`                    | always                                                                                                                                               | security + sanitizer-and-public-urls + cookie-trust                       |
+| 2   | `typescript-correctness.md`      | any `.ts` file changed                                                                                                                               | type-safety + async-correctness                                           |
+| 3   | `templates-and-accessibility.md` | any `.component.html` changed                                                                                                                        | accessibility + template-binding-traps                                    |
+| 4   | `frontend-state-and-timing.md`   | any `.component.ts` / `.service.ts` under `apps/lfx-one/src/app/`                                                                                    | rxjs-signals-timing                                                       |
+| 5   | `server-request-handling.md`     | `app.config.ts`, `app/shared/guards/`, `app/shared/interceptors/`, any `*.routes.ts`, new route files in `src/server/routes/`, controllers, services | route-auth-surface + guards-interceptors-ordering + query-param-hardening |
+| 6   | `observability-and-logging.md`   | `otel.mjs`, `middleware/rate-limit.ts`, new route additions, files using `logger.info` / `logger.warning` / `logger.debug`                           | otel-and-rate-limit-drift + log-metric-correctness                        |
+| 7   | `data-and-snowflake.md`          | `snowflake.service.ts` or any file with direct Snowflake SQL                                                                                         | snowflake-rowshape-schema                                                 |
+| 8   | `code-truthiness.md`             | any JSDoc / inline comments / `docs/**`; any new feature module / service / component without `*.spec.ts`                                            | docs-comments-drift + testing                                             |
 
 (The original CodeRabbit + Copilot taxonomy had separate "Performance", "Error handling", "Resource lifecycle", and "Code quality" buckets. Those categories had insufficient empirical evidence on this codebase to warrant their own files; their patterns are folded into the 8 above. Split out later if volume justifies it.)
 
@@ -63,7 +63,7 @@ Copilot publishes no severity vocabulary. Default Copilot findings to **SHOULD_F
 - **Protected-files flagging** → also in the agent.
 - **PR-shape sanity** → in `.claude/skills/lfx-self-serve-pr-readiness/references/pr-shape.md`, walked by `/lfx-self-serve-pr-readiness` and `/lfx-review-pr`.
 
-This rubric covers the *behavioural / correctness* patterns that CodeRabbit and Copilot catch which our rule library doesn't — the empirical signal accumulated from watching what they flag on this codebase.
+This rubric covers the _behavioural / correctness_ patterns that CodeRabbit and Copilot catch which our rule library doesn't — the empirical signal accumulated from watching what they flag on this codebase.
 
 ---
 

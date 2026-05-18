@@ -3,10 +3,11 @@ name: lfx-review-pr
 description: >
   Review a pull request against LFX architecture standards. Spawns the
   lfx-self-serve-code-reviewer subagent in `mode: pr` to compute the diff,
-  load rules and checklists, run PR-shape sanity, validate upstream API
-  contracts, flag protected files, and run the code review.
-  This skill body adds the post-PR layer the agent can't do alone:
-  verifying prior review comments are addressed, applying new-contributor
+  load rules and checklists, validate upstream API contracts, flag
+  protected files, and run the code review. This skill body adds what
+  only a post-PR skill can do: verifying prior review comments are
+  addressed, walking the PR-shape checklist (branch/JIRA/commits/DCO+GPG/
+  rebase/diff-size/PR-title/external-refs), applying new-contributor
   educational tone, presenting a draft for explicit approval, and posting
   via /review only after user go-ahead. NEVER auto-posts comments or
   submits reviews. Use when reviewing PRs, checking PR quality, validating
@@ -17,7 +18,7 @@ allowed-tools: Bash, Read, Glob, Grep, Agent, AskUserQuestion, Skill
 
 # LFX PR Review
 
-You are reviewing an opened pull request against LFX standards. The audit work — diff computation, rule loading, code review, upstream API contract validation, PR-shape sanity, protected-file flagging — is performed by the `lfx-self-serve-code-reviewer` agent spawned in Phase 2. This skill body handles **what only a post-PR skill can do:** verifying that prior review comments were addressed, applying new-contributor educational tone, compiling the agent's findings into a draft review, and posting via `/review` only after the user explicitly approves.
+You are reviewing an opened pull request against LFX standards. The code audit — diff computation, rule loading, code review, upstream API contract validation, protected-file flagging — is performed by the `lfx-self-serve-code-reviewer` agent spawned in Phase 2 (agent returns `code | upstream-api | protected-files` categories only). PR-shape sanity is NOT the agent's concern — this skill body walks it in Phase 4. This skill also handles **what only a post-PR skill can do:** verifying that prior review comments were addressed, applying new-contributor educational tone, compiling the agent's findings into a draft review, and posting via `/review` only after the user explicitly approves.
 
 Walk through each phase in order. Phases may short-circuit when their preconditions are not met (noted inline) but none should be skipped outright.
 
@@ -62,19 +63,21 @@ While the enforcer runs, verify whether prior review comments were actually addr
 
 ### Process
 
-1. Fetch inline comments and review bodies in parallel:
+First, fetch inline comments and review bodies in parallel:
 
 ```bash
 gh api repos/{owner}/{repo}/pulls/<N>/comments --paginate
 gh api repos/{owner}/{repo}/pulls/<N>/reviews --paginate
 ```
 
-2. Skip trivial comments: nits, acknowledgments, "+1", bot auto-comments (CodeRabbit / Copilot — these run their own review and don't need verification), and purely informational remarks.
-3. For every **CRITICAL** or **SHOULD_FIX** comment from a human reviewer:
+Then:
+
+1. Skip trivial comments: nits, acknowledgments, "+1", bot auto-comments (CodeRabbit / Copilot — these run their own review and don't need verification), and purely informational remarks.
+2. For every **CRITICAL** or **SHOULD_FIX** comment from a human reviewer:
    1. Read the file on the PR branch: `git show origin/<headRefName>:<file>` (use the `headRefName` from the agent's PR metadata fetch).
    2. Compare the current code against what the comment requested.
    3. Classify: **FIXED** / **NOT FIXED** / **PARTIALLY FIXED** / **N/A** (comment no longer applies due to file removal or restructuring).
-4. Build a markdown table:
+3. Build a markdown table:
 
 ```markdown
 | #   | Comment Summary                            | File                             | Status    | Evidence                          |
@@ -131,7 +134,7 @@ Assemble a single text block containing:
 4. **Upstream API validation** (`category: upstream-api`) — or "No backend changes — skipped"
 5. **Protected files touched** (`category: protected-files`) — list with hook reasons, or "None modified"
 6. **Code findings** (`category: code`)
-7. **Educational mode flag** (Phase 5) — if set, instruct `/review` to cite rule files inline and explain the *why*
+7. **Educational mode flag** (Phase 5) — if set, instruct `/review` to cite rule files inline and explain the _why_
 8. **Extra user instructions** (Phase 1) — relay as-is
 
 ## Phase 8 — Present the draft for approval (NEVER auto-post)
