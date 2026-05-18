@@ -136,7 +136,11 @@
                   <span class="w-16 text-right text-xs font-semibold text-gray-900" role="cell">{{ totals.cpc }}</span>
                   <span class="w-20 text-right text-xs font-semibold text-gray-900" role="cell">{{ totals.convRate }}</span>
                   <span class="w-24 text-right text-xs font-semibold text-gray-900" role="cell">{{ totals.conversions }}</span>
-                  <div class="flex flex-1 justify-end" role="cell"></div>
+                  <div class="flex flex-1 justify-end" role="cell">
+                    <span class="rounded px-1.5 py-0.5 text-[10px] font-medium" [class]="totals.performanceClass">
+                      {{ totals.performance }}
+                    </span>
+                  </div>
                 </div>
               }
             </div>
