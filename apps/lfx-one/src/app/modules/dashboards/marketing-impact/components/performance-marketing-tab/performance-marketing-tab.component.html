@@ -65,11 +65,9 @@
               <span class="w-16 text-right text-xs font-medium text-gray-900" role="cell">{{ row.roas }}</span>
               <span class="w-24 text-right text-xs text-gray-500" role="cell">{{ row.impressions }}</span>
               <div class="flex flex-1 justify-end" role="cell">
-                @if (row.performanceClass) {
-                  <span class="rounded px-1.5 py-0.5 text-[10px] font-medium" [class]="row.performanceClass">
-                    {{ row.performance }}
-                  </span>
-                }
+                <span class="rounded px-1.5 py-0.5 text-[10px] font-medium" [class]="row.performanceClass">
+                  {{ row.performance }}
+                </span>
               </div>
             </div>
           }

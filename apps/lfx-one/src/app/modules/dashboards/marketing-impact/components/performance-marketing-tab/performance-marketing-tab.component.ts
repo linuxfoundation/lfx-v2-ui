@@ -41,6 +41,8 @@ export class PerformanceMarketingTabComponent {
     'NO REVENUE': 3,
   };
 
+  private static readonly VALID_PERFORMANCE = new Set<PaidProjectPerformance>(['EXCELLENT', 'GOOD', 'POOR', 'NO REVENUE']);
+
   // === Services ===
   private readonly analyticsService = inject(AnalyticsService);
 
@@ -179,8 +181,8 @@ export class PerformanceMarketingTabComponent {
             revenue: formatCurrency(p.revenue),
             roas: `${(p.roas ?? 0).toFixed(2)}x`,
             impressions: formatNumber(p.impressions),
-            performance: p.performance as PaidProjectPerformance,
-            performanceClass: this.getPerformanceClass(p.performance as PaidProjectPerformance),
+            performance: this.normalizePerformance(p.performance),
+            performanceClass: this.getPerformanceClass(this.normalizePerformance(p.performance)),
           })
         )
         .sort((a, b) => {
@@ -193,6 +195,14 @@ export class PerformanceMarketingTabComponent {
   }
 
   // === Private Helpers ===
+  private normalizePerformance(value: string | null | undefined): PaidProjectPerformance {
+    const upper = (value ?? '').toUpperCase().trim();
+    if (PerformanceMarketingTabComponent.VALID_PERFORMANCE.has(upper as PaidProjectPerformance)) {
+      return upper as PaidProjectPerformance;
+    }
+    return 'NO REVENUE';
+  }
+
   private getPerformanceClass(perf: PaidProjectPerformance): string {
     return PerformanceMarketingTabComponent.performanceClassMap[perf] ?? 'bg-gray-50 text-gray-700';
   }
