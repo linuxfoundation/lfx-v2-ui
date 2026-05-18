@@ -2,7 +2,7 @@
 
 Trust-boundary patterns across the stack — credential disclosure, identity enumeration, public-meeting visibility, untrusted URL binding, sanitizer bypass, and cookie-as-identity. Sampled from CodeRabbit / GitHub Copilot PR comments 2026-01-15 → 2026-05-15.
 
-**Read when:** always — secrets, sanitization, auth-state leakage, untrusted cookies and untrusted URLs can hit any change. Cross-checked by `/lfx-self-serve-learnings-review` Phase 4 — findings without a quotable pattern below are dropped.
+**Read when:** always — secrets, sanitization, auth-state leakage, untrusted cookies and untrusted URLs can hit any change. Cross-checked by the `bot-rubric-agent` (Step 4) — findings without a quotable pattern below are dropped.
 
 ---
 

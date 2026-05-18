@@ -255,7 +255,7 @@ Detailed patterns are in `.claude/rules/` and loaded contextually based on the `
 - ❌ Hard-code brand hex values (reference `lfxColors` scales)
 - ❌ Reference browser-only APIs without `isPlatformBrowser`
 - ❌ Mix module concerns in one change
-- ❌ Commit without first running `/lfx-self-serve-self-review` AND `/lfx-self-serve-learnings-review` to a clean verdict — both are non-negotiable pre-commit reviews
+- ❌ Commit without first spawning the `lfx-self-serve-code-reviewer` AND `bot-rubric-agent` subagents (parallel, `run_in_background: true`) and clearing every CRITICAL finding — both pre-commit reviews are non-negotiable
 - ❌ Open a PR without running `/lfx-self-serve-pr-readiness` to a clean verdict — also non-negotiable
 - ❌ Open a PR without DCO sign-off + GPG (`--signoff -S`)
 - ❌ Commit and claim "done" before `yarn build` passes
@@ -264,17 +264,19 @@ Detailed patterns are in `.claude/rules/` and loaded contextually based on the `
 
 ## Work cycle — pre-commit and pre-PR reviews
 
-> **CRITICAL: pre-commit and pre-PR reviews are both mandatory.** Every commit must be preceded by `/lfx-self-serve-self-review` (code-convention audit) AND `/lfx-self-serve-learnings-review` (knowledge-base audit against past-PR patterns + bot rubrics). Every PR open must additionally be preceded by `/lfx-self-serve-pr-readiness` (PR-shape sanity — branch, JIRA, commits, DCO + GPG, rebase, diff size). The reviewers' time is the most expensive resource in this workflow — landing a PR without these audits wastes it and is the single biggest contributor to slow review cycles. Do not skip any, do not save them for later, do not assume your changes are "small enough" to bypass them.
+> **CRITICAL: pre-commit and pre-PR reviews are both mandatory.** Every commit must be preceded by the `lfx-self-serve-code-reviewer` AND `bot-rubric-agent` subagents (spawned in parallel via the Agent tool). Every PR open must additionally be preceded by `/lfx-self-serve-pr-readiness` (PR-shape sanity — branch, JIRA, commits, DCO + GPG, rebase, diff size). The reviewers' time is the most expensive resource in this workflow — landing a PR without these audits wastes it and is the single biggest contributor to slow review cycles. Do not skip any, do not save them for later, do not assume your changes are "small enough" to bypass them.
 
-### Pre-commit (every commit, parallel)
+### Pre-commit (every commit, in parallel)
 
-Spawn both reviews together so neither blocks the other — each runs `context: fork` in an independent context, and on substantial diffs the two passes can run side-by-side as parallel subagents.
+Before every commit, spawn both pre-commit review subagents in parallel by issuing two **Agent tool calls in a single message**, each with `run_in_background: true`. They share no state — they're independent reviews of the same diff.
 
-1. **`/lfx-self-serve-self-review` against the target base branch.** Code-convention audit via the `lfx-self-serve-code-reviewer` subagent — `.claude/rules/`, the four `docs/reviews/` code checklists, architecture docs, upstream API contracts, protected files. Diff evaluated independently of the implementation thread.
-2. **`/lfx-self-serve-learnings-review` against the target base branch.** Knowledge-base audit against accumulated patterns from past PRs (bot-flagged + human-flagged) and codebase gotchas, plus the union of CodeRabbit + Copilot's published rubrics. Catches things those bots would flag _before_ the PR opens.
-3. Address every CRITICAL finding from both. Address every reasonable SHOULD_FIX finding.
-4. Rerun if you make material changes after the first pass.
+1. **`lfx-self-serve-code-reviewer`** — code-convention audit. `subagent_type: lfx-self-serve-code-reviewer`, prompt: `"mode: local\nbase: origin/main\nextra: <any focus>"`. Audits against `.claude/rules/`, the four `docs/reviews/` checklists, architecture docs, upstream API contracts, and protected files. Returns a rendered markdown review.
+2. **`bot-rubric-agent`** — empirical-pattern audit. `subagent_type: bot-rubric-agent`, prompt: `"base: origin/main\nextra: <any focus>"`. Runs the senior-engineer review rubric (security, performance, code quality, architecture, testing) cross-checked against `.claude/pr-knowledge/` — empirical patterns sampled from past PR review comments. Returns a rendered markdown review.
+3. Wait for both. Address every CRITICAL finding from either. Address every reasonable SHOULD_FIX finding.
+4. Rerun (re-spawn both) if you make material changes after the first pass.
 5. Commit only after both reviews return `READY` (or remaining findings are explicitly documented in the commit body / PR description with a stated trade-off).
+
+The two agents run in fully fresh forked contexts — neither inherits dev-thread bias, and `run_in_background: true` lets them execute concurrently rather than sequentially.
 
 ### Pre-PR (once, before opening the PR)
 

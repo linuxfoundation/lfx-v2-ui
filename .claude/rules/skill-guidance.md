@@ -1,22 +1,33 @@
 ---
-description: Guides Claude to suggest the right skill based on user intent
+description: Guides Claude to suggest the right skill or subagent based on user intent
 paths:
   - '*'
 ---
 
-# Available Skills
+# Available Skills and Subagents
 
-This project has guided skills for common workflows. **Proactively suggest the relevant skill** when a user's request matches one of these:
+This project has guided skills and code-review subagents for common workflows. **Proactively suggest the relevant one** when a user's request matches.
 
-| Skill                              | When to Suggest                                                                                                                        |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `/setup`                           | Getting started, first-time setup, broken environments, install failures, missing env vars, 1Password, how to run the app              |
-| `/develop`                         | Add a feature, fix a bug, modify code, create components/services/endpoints/types, refactor, build, implement any code change          |
-| `/lfx-self-serve-self-review`      | Before every commit — code-convention audit via the lfx-self-serve-code-reviewer agent (rules, checklists, architecture, upstream API) |
-| `/lfx-self-serve-learnings-review` | Before every commit — knowledge-base audit against past-PR patterns (bot + human) and the CodeRabbit + Copilot rubrics                 |
-| `/lfx-self-serve-pr-readiness`     | Before opening a PR — PR-shape sanity (branch, JIRA, conventional commits, rebase, DCO + GPG, diff size)                               |
-| `/preflight`                       | Mechanical pre-PR checks — license headers, format, lint, build, protected files, commit signoff                                       |
-| `/lfx-review-pr`                   | Review an **existing** PR by number — audit a PR's diff, validate against standards, draft inline comments                             |
+## Skills
+
+| Skill                          | When to Suggest                                                                                                               |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `/setup`                       | Getting started, first-time setup, broken environments, install failures, missing env vars, 1Password, how to run the app     |
+| `/develop`                     | Add a feature, fix a bug, modify code, create components/services/endpoints/types, refactor, build, implement any code change |
+| `/lfx-self-serve-pr-readiness` | Before opening a PR — PR-shape sanity (branch, JIRA, conventional commits, rebase, DCO + GPG, diff size)                      |
+| `/preflight`                   | Mechanical pre-PR checks — license headers, format, lint, build, protected files, commit signoff                              |
+| `/lfx-review-pr`               | Review an **existing** PR by number — audit a PR's diff, validate against standards, draft inline comments                    |
+
+## Pre-commit review subagents (spawn via the Agent tool)
+
+The two pre-commit reviews are **subagents**, not skills — they're spawned in parallel via the Agent tool with `run_in_background: true` (see the work cycle in `CLAUDE.md`).
+
+| Subagent                       | When to spawn                                                                                                                                                                                                                            |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lfx-self-serve-code-reviewer` | Before every commit — code-convention audit (`.claude/rules/`, `docs/reviews/` checklists, architecture, upstream API contracts, protected files). Use `mode: local` for pre-commit review; `mode: pr` is reserved for `/lfx-review-pr`. |
+| `bot-rubric-agent`             | Before every commit — comprehensive code-review rubric (security, performance, code quality, architecture, testing) cross-checked against the empirical pattern KB at `.claude/pr-knowledge/`.                                           |
+
+Spawn both in parallel by issuing two Agent tool calls in a single message, each with `run_in_background: true`. Wait for both, address every CRITICAL, address reasonable SHOULD_FIX, rerun if material changes.
 
 ## Trigger Phrases
 
@@ -35,21 +46,15 @@ This project has guided skills for common workflows. **Proactively suggest the r
 - "New interface", "Add a filter", "Create a form"
 - Describes any code change, feature request, or bug fix
 
-**`/lfx-self-serve-self-review`** — pre-commit, code-convention focus. Match any of these intents:
+**Pre-commit review subagents** — match any of these intents (development is finished, about to commit):
 
 - "Ready to commit", "About to commit", "Review my work"
-- "Audit my changes", "Self-review", "Code-convention check"
-- "Check this branch", "Validate my diff"
+- "Self-review", "Code-convention check", "Check this branch"
+- "Validate my diff", "Audit my changes"
+- "What would CodeRabbit flag?", "What would Copilot say?", "Pre-commit review"
 - Any "is this ready" question where no PR number is given
 
-Suggest **both** `/lfx-self-serve-self-review` AND `/lfx-self-serve-learnings-review` together — they're the pre-commit pair and the work-cycle gate requires both before every commit.
-
-**`/lfx-self-serve-learnings-review`** — pre-commit, knowledge-base focus. Match any of these intents:
-
-- "Knowledge-base check", "Learnings review"
-- "What would CodeRabbit flag?", "What would Copilot say?", "Bot review check"
-- "Has this codebase hit this pattern before?", "Past-PR pattern check"
-- Suggest alongside `/lfx-self-serve-self-review` for any pre-commit review
+Spawn **both** `lfx-self-serve-code-reviewer` AND `bot-rubric-agent` in parallel via the Agent tool — they're the pre-commit pair and the work-cycle gate requires both before every commit.
 
 **`/lfx-self-serve-pr-readiness`** — pre-PR, shape focus (run once, before opening the PR). Match any of these intents:
 
@@ -76,7 +81,7 @@ Non-developer contributors use these skills as guided workflows. Follow these ru
 
 - If the user describes a feature they want to build, suggest `/develop` — it walks them through the full process step-by-step
 - If the user asks about setup or getting started, suggest `/setup`
-- **Before every commit**, remind them to run BOTH `/lfx-self-serve-self-review` AND `/lfx-self-serve-learnings-review`.
+- **Before every commit**, remind them that you'll spawn the two pre-commit review subagents (`lfx-self-serve-code-reviewer` + `bot-rubric-agent`) in parallel — they need to wait for both and address findings.
 - **Before opening a PR**, remind them to run `/lfx-self-serve-pr-readiness`, then `/preflight`.
-- If you are unsure which skill applies, ask the user what they're trying to accomplish
-- When a skill references architecture docs in `docs/`, read those docs before generating code — they are the source of truth
+- If you are unsure which workflow applies, ask the user what they're trying to accomplish.
+- When a skill or subagent references architecture docs in `docs/`, read those docs before generating code — they are the source of truth.

@@ -5,9 +5,9 @@ description: >
   sanity (branch name, JIRA reference, conventional-commit format,
   rebase status, DCO + GPG signing per commit, total diff size)
   against the target base branch. Does NOT audit code — code audits
-  run pre-commit via /lfx-self-serve-self-review and
-  /lfx-self-serve-learnings-review. Use once before opening a PR,
-  after pre-commit reviews pass.
+  run pre-commit via the lfx-self-serve-code-reviewer and
+  bot-rubric-agent subagents. Use once before opening a PR, after
+  pre-commit reviews pass.
 context: fork
 allowed-tools: Bash, Read, Glob, Grep
 ---
@@ -16,10 +16,7 @@ allowed-tools: Bash, Read, Glob, Grep
 
 You are checking whether **local commits are shaped correctly to open as a PR** — branch name, JIRA references in commit messages, conventional-commit format, rebase status, DCO + GPG signing on every commit, total diff size.
 
-This skill does NOT audit code. Code audits run pre-commit via:
-
-- `/lfx-self-serve-self-review` — code-convention audit via the `lfx-self-serve-code-reviewer` agent (rules, checklists, architecture, upstream API contracts, protected files).
-- `/lfx-self-serve-learnings-review` — knowledge-base audit against accumulated patterns from past PRs and the bot rubrics.
+This skill does NOT audit code. Code audits run pre-commit via two parallel subagents (`lfx-self-serve-code-reviewer` and `bot-rubric-agent`), spawned per the work cycle in `CLAUDE.md`. By the time you run, those should already be clean.
 
 The PR-shape checklist lives in `references/pr-shape.md` and is walked directly in this body.
 
@@ -126,6 +123,6 @@ Every finding must quote an item in `references/pr-shape.md`. Drop hallucinated 
 
 ## Companion skills
 
-- `/lfx-self-serve-self-review` + `/lfx-self-serve-learnings-review` — pre-commit reviews. Should be clean before this check.
+- `lfx-self-serve-code-reviewer` + `bot-rubric-agent` subagents — pre-commit reviews. Should be clean before this check.
 - `/preflight` — mechanical checks (license, format, lint, build, protected files). Run after this passes.
 - `/lfx-review-pr` — post-PR reviewer. Not part of pre-PR.
