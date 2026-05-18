@@ -1079,7 +1079,7 @@ export class UserService {
    * OpenSearch to exactly this user's rows. When `projectUid` is provided it is pushed
    * server-side to drop out-of-scope rows before pagination; when omitted, the unscoped Me-lens
    * call already gets exactly the user's vote_response rows across all their projects via
-   * `filter_grants=direct`. The remaining `vote_status === 'awaiting_response'` and `!voter_removed`
+   * `filter_grants=direct`. The remaining `vote_status === IndexedVoteResponseStatus.AWAITING_RESPONSE` and `!voter_removed`
    * checks stay client-side. Caveat: the FGA tuple is only emitted when the invitee has a
    * non-empty `Username`, so users invited by email but without an Auth0 username won't appear
    * here. We accept this trade-off — meetings already work the same way and FGA is the source
