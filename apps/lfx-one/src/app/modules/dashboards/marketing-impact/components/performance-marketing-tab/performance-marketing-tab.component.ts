@@ -41,7 +41,7 @@ export class PerformanceMarketingTabComponent {
     'NO REVENUE': 3,
   };
 
-  private static readonly VALID_PERFORMANCE = new Set<PaidProjectPerformance>(['EXCELLENT', 'GOOD', 'POOR', 'NO REVENUE']);
+  private static readonly validPerformance = new Set<PaidProjectPerformance>(['EXCELLENT', 'GOOD', 'POOR', 'NO REVENUE']);
 
   // === Services ===
   private readonly analyticsService = inject(AnalyticsService);
@@ -197,7 +197,7 @@ export class PerformanceMarketingTabComponent {
   // === Private Helpers ===
   private normalizePerformance(value: string | null | undefined): PaidProjectPerformance {
     const upper = (value ?? '').toUpperCase().trim();
-    if (PerformanceMarketingTabComponent.VALID_PERFORMANCE.has(upper as PaidProjectPerformance)) {
+    if (PerformanceMarketingTabComponent.validPerformance.has(upper as PaidProjectPerformance)) {
       return upper as PaidProjectPerformance;
     }
     return 'NO REVENUE';
