@@ -1005,7 +1005,7 @@ export class EventsService {
         ? new Date(row.APPLICATION_DATE).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
         : '—',
       status: row.REQUEST_STATUS,
-      travelFundEndDate: row.TRAVEL_FUND_END_DATE ?? null,
+      travelFundEndDate: row.TRAVEL_FUND_END_DATE ? new Date(row.TRAVEL_FUND_END_DATE).toISOString().split('T')[0] : null,
     };
   }
 
@@ -1050,7 +1050,7 @@ export class EventsService {
       role: row.USER_ROLE ?? '',
       status,
       isRegistered: row.IS_REGISTERED,
-      travelFundEndDate: row.TRAVEL_FUND_END_DATE ?? null,
+      travelFundEndDate: row.TRAVEL_FUND_END_DATE ? new Date(row.TRAVEL_FUND_END_DATE).toISOString().split('T')[0] : null,
     };
   }
 
