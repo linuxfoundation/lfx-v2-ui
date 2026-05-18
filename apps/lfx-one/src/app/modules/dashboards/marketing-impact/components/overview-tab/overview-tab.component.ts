@@ -137,7 +137,7 @@ export class OverviewTabComponent {
           label: 'Email CTR',
           icon: 'fa-light fa-envelope-open',
           iconClass: 'bg-amber-100 text-amber-600',
-          value: `${ec.currentCtr.toFixed(2)}%`,
+          value: `${(ec.currentCtr ?? 0).toFixed(2)}%`,
           momChange: formatChangePct(momPct, 'vs avg'),
           momTrend: trendDirection(momPct),
           momTrendClass: trendColorClass(momPct),
