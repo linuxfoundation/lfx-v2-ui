@@ -9,8 +9,6 @@ import type {
   RevenueImpactResponse,
 } from './analytics-data.interface';
 
-export type { PaidProjectPerformance } from './analytics-data.interface';
-
 /** Month option for the Marketing Impact page month picker. */
 export interface MarketingImpactMonthOption {
   /** Display label (e.g., "April 2026") */

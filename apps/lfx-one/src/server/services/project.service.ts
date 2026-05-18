@@ -2258,7 +2258,6 @@ export class ProjectService {
         CHANNEL,
         SUM(SPEND) AS SPEND, SUM(LINEAR_REVENUE) AS REVENUE,
         ROUND(DIV0(SUM(LINEAR_REVENUE), SUM(SPEND)), 2) AS ROAS,
-        DIV0(SUM(LINEAR_REVENUE), SUM(SPEND)) AS ROAS_RAW,
         SUM(CLICKS) AS CLICKS,
         SUM(IMPRESSIONS) AS IMPRESSIONS,
         ROUND(DIV0(SUM(CLICKS), NULLIF(SUM(IMPRESSIONS), 0)) * 100, 2) AS CTR,
@@ -2320,7 +2319,6 @@ export class ProjectService {
             SPEND: number;
             REVENUE: number;
             ROAS: number;
-            ROAS_RAW: number;
             CLICKS: number;
             IMPRESSIONS: number;
             CTR: number;
@@ -2339,7 +2337,6 @@ export class ProjectService {
                 SPEND: number;
                 REVENUE: number;
                 ROAS: number;
-                ROAS_RAW: number;
                 CLICKS: number;
                 IMPRESSIONS: number;
                 CTR: number;
@@ -2491,7 +2488,7 @@ export class ProjectService {
         cpc: row.CPC ?? 0,
         convRate: row.CONV_RATE ?? 0,
         conversions: row.CONVERSIONS ?? 0,
-        performance: getPaidPerformance(row.ROAS_RAW ?? 0),
+        performance: getPaidPerformance(row.ROAS ?? 0),
       }));
 
       return {
