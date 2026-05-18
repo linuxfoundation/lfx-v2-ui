@@ -42,15 +42,15 @@ Used by `/lfx-self-serve-learnings-review` (Phase 6), and also relevant filter d
 
 **Pattern matched:** finding states a `.ts` / `.html` / `.scss` is missing the MIT license header, when `head -2 <file>` confirms it's present.
 
-**Why false:** `check-headers.sh` and the pre-commit hook already enforce this. If they pass, the file has the header — the bot misread it.
+**Why false:** `check-headers.sh` and the pre-commit hook already enforce this. If they pass, the file has the header — CodeRabbit/Copilot misread it.
 
 ---
 
-## Bot-quirk noise
+## Review-automation quirks
 
 ### CodeRabbit `🏁 Script executed:` reconnaissance dumps
 
-**Pattern matched:** any text quoting a CodeRabbit `🏁 Script executed:` block (typically a `wc` or `grep` the bot ran to verify its claim).
+**Pattern matched:** any text quoting a CodeRabbit `🏁 Script executed:` block (typically a `wc` or `grep` CodeRabbit ran to verify its claim).
 
 **Why false:** this is internal CodeRabbit reasoning, not a finding. If we quote it in our report, we're surfacing noise.
 
@@ -84,10 +84,10 @@ Used by `/lfx-self-serve-learnings-review` (Phase 6), and also relevant filter d
 
 ## How to add a new entry
 
-When you encounter a bot finding the team has explicitly decided is not relevant for this codebase:
+When you encounter a finding from CodeRabbit + Copilot the team has explicitly decided is not relevant for this codebase:
 
 1. Add an entry here with **Pattern matched**, **Why false**, and (where applicable) **Source**.
 2. If the pattern was previously in a `<file>.md`, remove it from there too — don't have a pattern in both files.
-3. If the pattern is something the bots will surface forever (e.g., zoneless OnPush flags from Copilot), that's permanent. If it's a one-time misread, no need to add it.
+3. If the pattern is something the CodeRabbit + Copilot will surface forever (e.g., zoneless OnPush flags from Copilot), that's permanent. If it's a one-time misread, no need to add it.
 
 This file should accumulate slowly. If it grows past ~50 entries, that's a signal we're being too permissive — re-audit.

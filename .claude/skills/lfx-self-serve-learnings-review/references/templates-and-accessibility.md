@@ -1,6 +1,6 @@
 # Templates and accessibility
 
-Patterns the bots flag in Angular templates — ARIA roles, focus management, keyboard parity, semantic HTML, class-binding clobbering, wrong `@for` track keys, missing `lens=` query params, and inline-style misuse. Heavily concentrated in `.component.html` files for table rows, custom toggle buttons, and icon-only buttons.
+Patterns CodeRabbit + Copilot flag in Angular templates — ARIA roles, focus management, keyboard parity, semantic HTML, class-binding clobbering, wrong `@for` track keys, missing `lens=` query params, and inline-style misuse. Heavily concentrated in `.component.html` files for table rows, custom toggle buttons, and icon-only buttons.
 
 **Read when:** any `.component.html` file changed. Cross-checked by Phase 5; findings without a quotable pattern below are dropped.
 
@@ -54,7 +54,7 @@ Patterns the bots flag in Angular templates — ARIA roles, focus management, ke
 
 **Detect:** grep for `(click)=` on elements that aren't `<button>` / `<a>` / native form controls. Check for a sibling `(keydown.*)` handler.
 
-**Empirical citation:** Implied by PR #706's nested-interactive findings — when the bot recommends flattening, the keyboard-parity gap is part of the same fix.
+**Empirical citation:** Implied by PR #706's nested-interactive findings — when CodeRabbit + Copilot recommend flattening, the keyboard-parity gap is part of the same fix.
 
 **Failure message:** Click handler without keyboard equivalent; keyboard users can't trigger the action.
 

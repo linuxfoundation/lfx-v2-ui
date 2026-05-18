@@ -2,11 +2,11 @@
 name: lfx-self-serve-learnings-review
 description: >
   Pre-commit check on local lfx-self-serve work against an accumulating
-  knowledge base of patterns this codebase has hit before — bot-flagged
-  patterns from CodeRabbit + Copilot history, human-flagged patterns
-  from past reviewer comments, and codebase gotchas. Also applies the
-  union of CodeRabbit + Copilot's published review rubrics. Runs in a
-  forked context with no subagent. Use before every commit, alongside
+  knowledge base of patterns this codebase has hit before — patterns
+  flagged by CodeRabbit + Copilot in past PR review comments, patterns
+  human reviewers have called out, and codebase gotchas. Also applies
+  the union of CodeRabbit + Copilot's published review rubrics. Runs in
+  a forked context with no subagent. Use before every commit, alongside
   /lfx-self-serve-self-review.
 context: fork
 allowed-tools: Bash, Read, Glob, Grep
@@ -16,7 +16,7 @@ allowed-tools: Bash, Read, Glob, Grep
 
 You are checking whether **local uncommitted (or about-to-be-committed) work** matches any patterns this codebase has hit before. The knowledge base is the union of:
 
-1. **Bot-flagged patterns** — what CodeRabbit + GitHub Copilot reliably flag on opened PRs against this repo. Empirical, sampled from PR-comment history.
+1. **Automated review patterns** — what CodeRabbit + GitHub Copilot reliably flag on opened PRs against this repo. Empirical, sampled from PR-comment history.
 2. **Human-flagged patterns** — patterns reviewers have called out in past PRs that aren't yet covered by automated tooling. (Grows over time as reviewer feedback is folded in.)
 3. **Codebase gotchas** — failure modes from past incidents or post-mortems on this codebase. (Grows over time.)
 
@@ -32,9 +32,9 @@ This skill runs `context: fork` but with **no subagent**. The entire workflow li
 
 Each finding you emit must trace back to a quotable item in one of these files. If you cannot quote the source, drop the finding. Hallucinated rules are worse than missed ones.
 
-- **`.claude/skills/lfx-self-serve-learnings-review/references/bot-rubric.md`** — unioned CodeRabbit + GitHub Copilot review rubric: 8 consolidated buckets, severity map (CodeRabbit's Critical/Major/Minor/Trivial → our CRITICAL/SHOULD_FIX/NIT), index into the per-category pattern files.
+- **`.claude/skills/lfx-self-serve-learnings-review/references/review-rubric.md`** — unioned CodeRabbit + GitHub Copilot review rubric: 8 consolidated buckets, severity map (CodeRabbit's Critical/Major/Minor/Trivial → our CRITICAL/SHOULD_FIX/NIT), index into the per-category pattern files.
 - **`.claude/skills/lfx-self-serve-learnings-review/references/*.md`** — per-category checklists of repo-specific empirical patterns observed in past PR comments. Each pattern cites its origin PR# + file. Read conditionally per the routing table in Phase 3.
-- **`.claude/skills/lfx-self-serve-learnings-review/references/known-false-positives.md`** — applied LAST to drop findings the bots still surface that aren't real for this codebase.
+- **`.claude/skills/lfx-self-serve-learnings-review/references/known-false-positives.md`** — applied LAST to drop findings CodeRabbit + Copilot still surface that aren't real for this codebase.
 
 **If you emit findings without reading every reference relevant to the diff, your audit is invalid.**
 
@@ -74,7 +74,7 @@ If both are empty, abort: "No changes to audit against `<base>`."
 
 ### Always read
 
-- `.claude/skills/lfx-self-serve-learnings-review/references/bot-rubric.md`
+- `.claude/skills/lfx-self-serve-learnings-review/references/review-rubric.md`
 - `.claude/skills/lfx-self-serve-learnings-review/references/known-false-positives.md`
 
 ### Conditionally read `.claude/skills/lfx-self-serve-learnings-review/references/*.md` based on changed-file paths
@@ -168,7 +168,7 @@ If the user passed extra instructions after the base-branch (e.g. "focus on secu
 
 ## References used
 
-- **`.claude/skills/lfx-self-serve-learnings-review/references/bot-rubric.md`** — unioned CodeRabbit + Copilot rubric + severity map
+- **`.claude/skills/lfx-self-serve-learnings-review/references/review-rubric.md`** — unioned CodeRabbit + Copilot rubric + severity map
 - **`.claude/skills/lfx-self-serve-learnings-review/references/*.md`** — 8 per-category empirical-pattern checklists (read conditionally per Phase 3 routing)
 - **`.claude/skills/lfx-self-serve-learnings-review/references/known-false-positives.md`** — applied LAST to drop known false matches
 
@@ -177,4 +177,4 @@ If the user passed extra instructions after the base-branch (e.g. "focus on secu
 - `/lfx-self-serve-self-review` — code-convention audit via the `lfx-self-serve-code-reviewer` agent. Run alongside this one before every commit.
 - `/lfx-self-serve-pr-readiness` — PR-shape sanity (branch, JIRA, commits, DCO + GPG, rebase, diff size). Run once before opening the PR.
 - `/preflight` — mechanical checks (license, format, lint, build, protected files). Run after the pre-PR readiness pass.
-- `/lfx-review-pr` — post-PR reviewer flow. Not part of pre-PR; CodeRabbit and Copilot will do their bot-review pass on the opened PR themselves.
+- `/lfx-review-pr` — post-PR reviewer flow. Not part of pre-PR; CodeRabbit and Copilot will do their automated review pass on the opened PR themselves.

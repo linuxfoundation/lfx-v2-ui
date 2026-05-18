@@ -1,6 +1,6 @@
 # Frontend state and timing
 
-Patterns the bots reliably flag at the signals ↔ observables interface — double-emissions from `toObservable + startWith`, missing `distinctUntilChanged` after primitive projections, and identity-equal-object re-emissions triggering redundant downstream work.
+Patterns CodeRabbit + Copilot reliably flag at the signals ↔ observables interface — double-emissions from `toObservable + startWith`, missing `distinctUntilChanged` after primitive projections, and identity-equal-object re-emissions triggering redundant downstream work.
 
 **Read when:** any `.component.ts` / `.service.ts` under `apps/lfx-one/src/app/` changed. Cross-checked by Phase 5; findings without a quotable pattern below are dropped.
 

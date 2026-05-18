@@ -1,13 +1,13 @@
-# Bot-reviewer rubric (unioned CodeRabbit + GitHub Copilot)
+# Review rubric (unioned CodeRabbit + GitHub Copilot)
 
 This file is the umbrella for the knowledge-base audit that `/lfx-self-serve-learnings-review` performs. It defines:
 
 1. The **8 consolidated review buckets** (originally 11 unioned categories from CodeRabbit's wrapped tools and Copilot's documented code-reviewer instructions, folded into 8 routing-friendly files).
 2. The **severity vocabulary mapping** from CodeRabbit's tags to our `CRITICAL / SHOULD_FIX / NIT`.
 3. **Pointers to the `*.md` files** where the actual repo-specific patterns live.
-4. **Behavioural guidance** the bot-rubric pass should follow.
+4. **Behavioural guidance** the review-rubric pass should follow.
 
-This file is itself not a finding source — empirical patterns are in ``. This file is the index and the calibration.
+This file is itself not a finding source — empirical patterns are in the per-category `<category>.md` files (peer to this one under `references/`). This file is the index and the calibration.
 
 ---
 
@@ -42,7 +42,7 @@ Copilot publishes no severity vocabulary. Default Copilot findings to **SHOULD_F
 
 ---
 
-## Behavioural guidance for the bot-rubric pass
+## Behavioural guidance for the review-rubric pass
 
 1. **Repo-specific empirical evidence over generic best-practice.** Every pattern in `*.md` cites the PR# where CodeRabbit or Copilot flagged it on this codebase. Patterns without a citation should not be added — generic "Angular best practice" lists drift into noise.
 
@@ -50,9 +50,9 @@ Copilot publishes no severity vocabulary. Default Copilot findings to **SHOULD_F
 
 3. **Apply `known-false-positives.md` LAST.** A finding can match a pattern pattern AND a known-false-positive. The false-positive list wins.
 
-4. **Distinguish "the bots flagged this" from "we agree with the bots."** A pattern lives in `` because the bots reliably catch it AND we agree it matters. Patterns the bots flag that we've decided aren't relevant for this codebase belong in `known-false-positives.md` instead.
+4. **Distinguish "CodeRabbit + Copilot flagged this" from "we agree with CodeRabbit + Copilot."** A pattern lives in a `<category>.md` file because CodeRabbit + Copilot reliably catch it AND we agree it matters. Patterns CodeRabbit + Copilot flag that we've decided aren't relevant for this codebase belong in `known-false-positives.md` instead.
 
-5. **Cross-check discipline.** Every finding must quote the specific pattern in a `<file>.md` file. If you cannot quote the source, drop the finding. Hallucinated rules — especially "generic" bot-style suggestions that aren't in any file — are worse than missed ones.
+5. **Cross-check discipline.** Every finding must quote the specific pattern in a `<file>.md` file. If you cannot quote the source, drop the finding. Hallucinated rules — especially generic suggestions that aren't in any file — are worse than missed ones.
 
 ---
 

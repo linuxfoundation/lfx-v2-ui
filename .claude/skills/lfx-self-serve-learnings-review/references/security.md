@@ -40,7 +40,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 **Detect:** find `[href]="..."` bindings whose source is a service / API response / user-provided field. Verify the value is either (a) constructed from known-safe template literals, or (b) validated against an allowlist of schemes (`http`, `https`).
 
-**Empirical citation:** general security best-practice; bot-flagged occasionally in PRs touching external-link rendering.
+**Empirical citation:** general security best-practice; flagged occasionally in past PR review comments in PRs touching external-link rendering.
 
 **Failure message:** `[href]` bound to untrusted value — `javascript:` URL injection risk.
 

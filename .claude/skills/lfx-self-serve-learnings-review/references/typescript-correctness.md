@@ -1,6 +1,6 @@
 # TypeScript correctness
 
-TypeScript-soundness and async-lifecycle patterns the bots flag — generics whose return types lie, non-null assertions on async results, deep imports that route around the barrel, timer leaks, and observable readiness races.
+TypeScript-soundness and async-lifecycle patterns CodeRabbit + Copilot flag — generics whose return types lie, non-null assertions on async results, deep imports that route around the barrel, timer leaks, and observable readiness races.
 
 **Read when:** any `.ts` file changed. Cross-checked by Phase 5; findings without a quotable pattern below are dropped.
 
