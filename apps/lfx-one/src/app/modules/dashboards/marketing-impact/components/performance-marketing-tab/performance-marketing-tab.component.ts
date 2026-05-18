@@ -208,8 +208,9 @@ export class PerformanceMarketingTabComponent {
       const data = this.socialReachData();
       if (!data?.platformBreakdown?.length) return [];
 
-      return data.platformBreakdown.map(
-        (p): PlatformPerformanceRow => ({
+      return data.platformBreakdown.map((p): PlatformPerformanceRow => {
+        const perf = this.normalizePerformance(p.performance);
+        return {
           platform: p.platform,
           spend: formatCurrency(p.spend),
           revenue: formatCurrency(p.revenue),
@@ -220,10 +221,10 @@ export class PerformanceMarketingTabComponent {
           cpc: formatCurrency(p.cpc),
           convRate: `${(p.convRate ?? 0).toFixed(2)}%`,
           conversions: formatNumber(p.conversions),
-          performance: this.normalizePerformance(p.performance),
-          performanceClass: this.getPerformanceClass(this.normalizePerformance(p.performance)),
-        })
-      );
+          performance: perf,
+          performanceClass: this.getPerformanceClass(perf),
+        };
+      });
     });
   }
 
@@ -248,6 +249,7 @@ export class PerformanceMarketingTabComponent {
       const totalCpc = totals.clicks > 0 ? totals.spend / totals.clicks : 0;
       const totalConvRate = totals.clicks > 0 ? (totals.conversions / totals.clicks) * 100 : 0;
 
+      const totalPerf = this.getRoasPerformance(totalRoas);
       return {
         platform: 'TOTAL',
         spend: formatCurrency(totals.spend),
@@ -259,8 +261,8 @@ export class PerformanceMarketingTabComponent {
         cpc: formatCurrency(totalCpc),
         convRate: `${totalConvRate.toFixed(2)}%`,
         conversions: formatNumber(totals.conversions),
-        performance: this.getRoasPerformance(totalRoas),
-        performanceClass: this.getPerformanceClass(this.getRoasPerformance(totalRoas)),
+        performance: totalPerf,
+        performanceClass: this.getPerformanceClass(totalPerf),
       };
     });
   }
