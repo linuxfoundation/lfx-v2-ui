@@ -140,7 +140,15 @@ export class SocialListeningTabComponent {
     return computed(() => {
       const data = this.brandData();
       if (!data) return [];
-      return [...(data.topPositiveMentions ?? []), ...(data.topNegativeMentions ?? [])].slice(0, 5);
+      const positive = data.topPositiveMentions ?? [];
+      const negative = data.topNegativeMentions ?? [];
+      const interleaved: BrandHealthMention[] = [];
+      const maxLen = Math.max(positive.length, negative.length);
+      for (let i = 0; i < maxLen && interleaved.length < 5; i++) {
+        if (i < positive.length) interleaved.push(positive[i]);
+        if (i < negative.length && interleaved.length < 5) interleaved.push(negative[i]);
+      }
+      return interleaved;
     });
   }
 }

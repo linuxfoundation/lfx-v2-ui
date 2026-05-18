@@ -85,7 +85,7 @@
 
       @if (hasTopMentions()) {
         <div class="flex flex-col gap-3" data-testid="social-listening-mentions-list">
-          @for (mention of topMentions(); track mention.url) {
+          @for (mention of topMentions(); track $index) {
             <div class="flex flex-col gap-1 rounded-lg border border-gray-100 p-3" [attr.data-testid]="'social-listening-mention-' + mention.author">
               <div class="flex items-center gap-2">
                 <span class="text-xs font-medium text-gray-700">{{ mention.author }}</span>
