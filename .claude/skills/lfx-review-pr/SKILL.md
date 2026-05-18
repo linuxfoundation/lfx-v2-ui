@@ -2,9 +2,9 @@
 name: lfx-review-pr
 description: >
   Review a pull request against LFX architecture standards. Spawns the
-  code-standards-enforcer subagent in `mode: pr` to compute the diff,
+  lfx-self-serve-code-reviewer subagent in `mode: pr` to compute the diff,
   load rules and checklists, run PR-shape sanity, validate upstream API
-  contracts, flag protected files, and run code-standards enforcement.
+  contracts, flag protected files, and run the code review.
   This skill body adds the post-PR layer the agent can't do alone:
   verifying prior review comments are addressed, applying new-contributor
   educational tone, presenting a draft for explicit approval, and posting
@@ -17,7 +17,7 @@ allowed-tools: Bash, Read, Glob, Grep, Agent, AskUserQuestion, Skill
 
 # LFX PR Review
 
-You are reviewing an opened pull request against LFX standards. The audit work — diff computation, rule loading, code-standards enforcement, upstream API contract validation, PR-shape sanity, protected-file flagging — is performed by the `code-standards-enforcer` agent spawned in Phase 2. This skill body handles **what only a post-PR skill can do:** verifying that prior review comments were addressed, applying new-contributor educational tone, compiling the agent's findings into a draft review, and posting via `/review` only after the user explicitly approves.
+You are reviewing an opened pull request against LFX standards. The audit work — diff computation, rule loading, code review, upstream API contract validation, PR-shape sanity, protected-file flagging — is performed by the `lfx-self-serve-code-reviewer` agent spawned in Phase 2. This skill body handles **what only a post-PR skill can do:** verifying that prior review comments were addressed, applying new-contributor educational tone, compiling the agent's findings into a draft review, and posting via `/review` only after the user explicitly approves.
 
 Walk through each phase in order. Phases may short-circuit when their preconditions are not met (noted inline) but none should be skipped outright.
 
@@ -35,9 +35,9 @@ Args format: `<PR number> [extra instructions]`.
 gh repo view --json nameWithOwner --jq '.nameWithOwner'   # store as {owner}/{repo}
 ```
 
-## Phase 2 — Spawn the standards enforcer (background)
+## Phase 2 — Spawn the code reviewer (background)
 
-Spawn a **code-standards-enforcer** Agent with `run_in_background: true`. Do **not** wait — proceed to Phases 3–4 immediately so the enforcer's work overlaps with the skill-side audits.
+Spawn a **lfx-self-serve-code-reviewer** Agent with `run_in_background: true`. Do **not** wait — proceed to Phases 3–4 immediately so the reviewer's work overlaps with the skill-side audits.
 
 The agent's system prompt contains the full code-review playbook. Pass minimal context — anything you list here that's already in its playbook is duplicate signal. The agent fetches the PR diff and metadata itself.
 
@@ -119,7 +119,7 @@ If the author has fewer than 5 merged PRs to this repo, mark the review as **edu
 
 ## Phase 6 — Wait for the enforcer
 
-Wait for the `code-standards-enforcer` Agent from Phase 2 to complete. It returns a JSON array of findings with categories: `code`, `upstream-api`, `protected-files`.
+Wait for the `lfx-self-serve-code-reviewer` Agent from Phase 2 to complete. It returns a JSON array of findings with categories: `code`, `upstream-api`, `protected-files`.
 
 ## Phase 7 — Compile context for `/review`
 

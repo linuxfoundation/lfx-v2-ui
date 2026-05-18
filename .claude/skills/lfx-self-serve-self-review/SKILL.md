@@ -2,14 +2,14 @@
 name: lfx-self-serve-self-review
 description: >
   Pre-PR self-review of local lfx-self-serve work against a target base branch
-  (default origin/main). Delegates the full audit to the code-standards-enforcer
+  (default origin/main). Delegates the full audit to the lfx-self-serve-code-reviewer
   subagent in a forked context — diff computation, rule loading, PR-shape
-  sanity, code-standards enforcement, upstream API contract validation,
+  sanity, code review, upstream API contract validation,
   protected-file flagging — and renders the agent's findings as a structured
   report with verdict `NOT READY | READY WITH CHANGES | READY`. Use before
   opening a PR.
 context: fork
-agent: code-standards-enforcer
+agent: lfx-self-serve-code-reviewer
 allowed-tools: Bash, Read, Glob, Grep
 ---
 
@@ -17,7 +17,7 @@ allowed-tools: Bash, Read, Glob, Grep
 
 You are reviewing **local work that has not yet been opened as a PR** against LFX One standards. There is no `gh pr` to read — the audit operates on the local diff between the current branch and a target base (default `origin/main`).
 
-This skill runs in a **forked context** using the `code-standards-enforcer` subagent type. The agent's system prompt contains the full audit playbook (diff computation, rule loading, code-standards enforcement, upstream API contract validation, PR-shape sanity, protected-file flagging, severity calibration, false-positive list, findings JSON format). Your job in this body is to **parse args, hand off to the agent's playbook with the right mode flag, and render the agent's JSON findings into a human-readable report.**
+This skill runs in a **forked context** using the `lfx-self-serve-code-reviewer` subagent type. The agent's system prompt contains the full audit playbook (diff computation, rule loading, code review, upstream API contract validation, PR-shape sanity, protected-file flagging, severity calibration, false-positive list, findings JSON format). Your job in this body is to **parse args, hand off to the agent's playbook with the right mode flag, and render the agent's JSON findings into a human-readable report.**
 
 **Output:** a structured findings report printed to the terminal with a verdict. No `/review` chaining, no `gh pr ...` mutation. The reviewer skill (`/lfx-review-pr`) handles the post-open lifecycle.
 
@@ -33,7 +33,7 @@ Args format: `[base-branch] [extra instructions]`.
 
 ## Phase 2 — Run the standards playbook
 
-Execute your system prompt's playbook (you are the `code-standards-enforcer` subagent — the playbook is in scope) with these inputs as the first lines of context:
+Execute your system prompt's playbook (you are the `lfx-self-serve-code-reviewer` subagent — the playbook is in scope) with these inputs as the first lines of context:
 
 ```
 mode: local

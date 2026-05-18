@@ -54,7 +54,7 @@ Read when `apps/lfx-one/src/server/services/snowflake.service.ts` or any file co
 
 **Detect:** for any direct Snowflake SQL invocation, count `?` occurrences in the SQL string and compare against the binds array length.
 
-**Empirical citation:** general pattern surfaced in CodeRabbit comments on PRs touching `snowflake.service.ts` callers. The `code-standards-enforcer` agent also flags this in its Snowflake direct-SQL check, but pre-PR catching it is cheaper.
+**Empirical citation:** general pattern surfaced in CodeRabbit comments on PRs touching `snowflake.service.ts` callers. The `lfx-self-serve-code-reviewer` agent also flags this in its Snowflake direct-SQL check, but pre-PR catching it is cheaper.
 
 **Failure message:** SQL placeholder count doesn't match binds-array length.
 

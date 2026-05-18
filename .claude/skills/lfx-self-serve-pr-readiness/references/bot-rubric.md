@@ -61,8 +61,8 @@ Copilot publishes no severity vocabulary. Default Copilot findings to **SHOULD_F
 
 ## What this rubric explicitly does NOT cover
 
-- **Code-convention violations** (Angular component structure, logger usage, `inject()` vs constructor DI, `@if`/`@for` over `*ngIf`/`*ngFor`, etc.) → these are in `.claude/rules/` and `docs/reviews/{frontend,backend,shared-and-sql,docs}-checklist.md`, enforced by `/lfx-self-serve-self-review` via the `code-standards-enforcer` agent.
-- **Upstream API contract validation** → also in the `code-standards-enforcer` agent.
+- **Code-convention violations** (Angular component structure, logger usage, `inject()` vs constructor DI, `@if`/`@for` over `*ngIf`/`*ngFor`, etc.) → these are in `.claude/rules/` and `docs/reviews/{frontend,backend,shared-and-sql,docs}-checklist.md`, enforced by `/lfx-self-serve-self-review` via the `lfx-self-serve-code-reviewer` agent.
+- **Upstream API contract validation** → also in the `lfx-self-serve-code-reviewer` agent.
 - **Protected-files flagging** → also in the agent.
 - **PR-shape sanity** → in `docs/reviews/pr-shape.md`, walked by this skill (Phase 4) and `/lfx-review-pr` (Phase 4).
 

@@ -12,7 +12,7 @@ This project has guided skills for common workflows. **Proactively suggest the r
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `/setup`                         | Getting started, first-time setup, broken environments, install failures, missing env vars, 1Password, how to run the app             |
 | `/develop`                       | Add a feature, fix a bug, modify code, create components/services/endpoints/types, refactor, build, implement any code change         |
-| `/lfx-self-serve-self-review`    | Before pushing or opening a PR — code-convention audit via the code-standards-enforcer agent (rules, checklists, upstream API)        |
+| `/lfx-self-serve-self-review`    | Before pushing or opening a PR — code-convention audit via the lfx-self-serve-code-reviewer agent (rules, checklists, upstream API)        |
 | `/lfx-self-serve-pr-readiness`   | Before pushing or opening a PR — PR-shape sanity (branch, JIRA, commits, DCO+GPG) + bot-reviewer simulation. Run alongside self-review |
 | `/preflight`                     | Mechanical pre-PR checks — license headers, format, lint, build, protected files, commit signoff                                      |
 | `/lfx-review-pr`                 | Review an **existing** PR by number — audit a PR's diff, validate against standards, draft inline comments                            |

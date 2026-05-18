@@ -8,7 +8,7 @@ description: >
   empirical patterns from ~30 sampled PRs plus the union of their
   published rubrics. Runs in a forked context with no subagent. Use
   before opening a PR, alongside /lfx-self-serve-self-review (which
-  handles code-convention audits via the code-standards-enforcer
+  handles code-convention audits via the lfx-self-serve-code-reviewer
   agent). Together the two pre-PR skills form the work-cycle gate.
 context: fork
 allowed-tools: Bash, Read, Glob, Grep
@@ -21,7 +21,7 @@ You are checking whether **local work is ready to be opened as a PR**. The audit
 1. **PR shape** — branch name, JIRA reference in commits, conventional-commit format, rebase, DCO + GPG signing, diff size.
 2. **Bot-reviewer simulation** — the behavioural / correctness patterns CodeRabbit + GitHub Copilot reliably flag on opened PRs (empirical patterns from this repo's last 2 months of bot comments, plus the union of their published review rubrics).
 
-The companion skill `/lfx-self-serve-self-review` handles repo-convention code review via the `code-standards-enforcer` agent. That one and this one together are the pre-PR gate — both must pass before a PR opens, per the work-cycle in `CLAUDE.md`.
+The companion skill `/lfx-self-serve-self-review` handles repo-convention code review via the `lfx-self-serve-code-reviewer` agent. That one and this one together are the pre-PR gate — both must pass before a PR opens, per the work-cycle in `CLAUDE.md`.
 
 This skill runs `context: fork` but with **no subagent**. The entire workflow lives in this body. The reasoning: the content this skill enforces (PR-shape checks + bot rubric + common-find patterns) is consumed by only one caller (this skill itself), so there's no system-prompt-reuse benefit from extracting an agent. References live in `docs/reviews/` and are read directly.
 
@@ -218,6 +218,6 @@ If the user passed extra instructions after the base-branch (e.g. "focus on secu
 
 ## Companion skills
 
-- `/lfx-self-serve-self-review` — code-convention audit via the `code-standards-enforcer` agent. Run alongside this one before opening a PR.
+- `/lfx-self-serve-self-review` — code-convention audit via the `lfx-self-serve-code-reviewer` agent. Run alongside this one before opening a PR.
 - `/preflight` — mechanical checks (license, format, lint, build, protected files). Run after both reviews pass.
 - `/lfx-review-pr` — post-PR reviewer flow. Not part of pre-PR; CodeRabbit and Copilot will do the bot-review pass on the opened PR themselves.
