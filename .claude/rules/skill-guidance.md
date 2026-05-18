@@ -25,7 +25,7 @@ The two pre-commit reviews are **subagents**, not skills — they're spawned in 
 | Subagent                            | When to spawn                                                                                                                                                                                                                            |
 | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `lfx-self-serve-code-reviewer`      | Before every commit — code-convention audit (`.claude/rules/`, `docs/reviews/` checklists, architecture, upstream API contracts, protected files). Use `mode: local` for pre-commit review; `mode: pr` is reserved for `/lfx-review-pr`. |
-| `lfx-self-serve-learnings-reviewer` | Before every commit — comprehensive code-review rubric (security, performance, code quality, architecture, testing) cross-checked against the empirical pattern KB at `.claude/pr-knowledge/`.                                           |
+| `lfx-self-serve-learnings-reviewer` | Before every commit — comprehensive code-review rubric (security, performance, code quality, architecture, testing) cross-checked against the empirical pattern KB at `docs/reviews/knowledge-base/`.                                    |
 
 Spawn both in parallel by issuing two Agent tool calls in a single message, each with `run_in_background: true`. Wait for both, address every CRITICAL, address reasonable SHOULD_FIX, rerun if material changes.
 

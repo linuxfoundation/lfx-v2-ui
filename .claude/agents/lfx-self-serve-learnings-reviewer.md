@@ -50,9 +50,9 @@ If the diff is too large to hold in context, save the combined patch to `/tmp/le
 
 **Always read:**
 
-- `.claude/pr-knowledge/known-false-positives.md` — applied LAST to drop findings that aren't real for this codebase.
+- `docs/reviews/knowledge-base/known-false-positives.md` — applied LAST to drop findings that aren't real for this codebase.
 
-**Conditionally read** the per-category pattern files in `.claude/pr-knowledge/`, based on the changed-file paths:
+**Conditionally read** the per-category pattern files in `docs/reviews/knowledge-base/`, based on the changed-file paths:
 
 | Pattern file                     | Read when                                                                                                                                                                                                                                                          |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
