@@ -42,7 +42,7 @@ export class PerformanceMarketingTabComponent {
     EMERGING: 3,
   };
 
-  private static readonly validPerformance = new Set<PaidProjectPerformance>(['EXCELLENT', 'GOOD', 'POOR', 'NO REVENUE']);
+  private static readonly validPerformance = new Set<PaidProjectPerformance>(['EXCELLENT', 'GOOD', 'AVERAGE', 'EMERGING']);
 
   // === Services ===
   private readonly analyticsService = inject(AnalyticsService);
@@ -217,8 +217,8 @@ export class PerformanceMarketingTabComponent {
           cpc: formatCurrency(p.cpc),
           convRate: `${(p.convRate ?? 0).toFixed(2)}%`,
           conversions: formatNumber(p.conversions),
-          performance: p.performance as PaidProjectPerformance,
-          performanceClass: this.getPerformanceClass(p.performance as PaidProjectPerformance),
+          performance: this.normalizePerformance(p.performance),
+          performanceClass: this.getPerformanceClass(this.normalizePerformance(p.performance)),
         })
       );
     });
@@ -268,7 +268,11 @@ export class PerformanceMarketingTabComponent {
     if (PerformanceMarketingTabComponent.validPerformance.has(upper as PaidProjectPerformance)) {
       return upper as PaidProjectPerformance;
     }
+<<<<<<< HEAD
     return 'NO REVENUE';
+=======
+    return 'EMERGING';
+>>>>>>> dd3fad97 (fix(dashboards): address PR #724 review feedback)
   }
 
   private getPerformanceClass(perf: PaidProjectPerformance): string {

@@ -70,6 +70,7 @@ import {
   NorthStarMonthlyDataPoint,
   NpsSummaryResponse,
   OutstandingBalanceSummaryResponse,
+  PaidProjectPerformance,
   ParticipatingOrgsSummaryResponse,
   PendingActionItem,
   PendingSurveyRow,
@@ -2429,7 +2430,7 @@ export class ProjectService {
         projectMap.set(row.PROJECT_NAME, existing);
       }
 
-      const getPaidPerformance = (projectRoas: number): string => {
+      const getPaidPerformance = (projectRoas: number): PaidProjectPerformance => {
         if (projectRoas >= 2) return 'EXCELLENT';
         if (projectRoas >= 1) return 'GOOD';
         if (projectRoas > 0) return 'AVERAGE';

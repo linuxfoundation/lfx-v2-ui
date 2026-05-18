@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import type { ProjectTableRow } from './dashboard-metric.interface';
+import type { PaidProjectPerformance } from './marketing-impact.interface';
 
 /**
  * Active Weeks Streak row from Snowflake ACTIVE_WEEKS_STREAK table
@@ -2675,9 +2676,7 @@ export interface PaidCampaignPerformance {
   clicks: number;
 }
 
-/**
- * Project-level paid performance breakdown
- */
+/** Project-level paid performance breakdown. */
 export interface PaidProjectBreakdown {
   projectName: string;
   funnelStage: string;
@@ -2690,13 +2689,11 @@ export interface PaidProjectBreakdown {
   sessions: number;
   impressions: number;
   clicks: number;
-  performance: string;
+  performance: PaidProjectPerformance;
   campaigns: PaidCampaignPerformance[];
 }
 
-/**
- * Platform-level paid performance breakdown (aggregated by ad channel)
- */
+/** Platform-level paid performance breakdown aggregated by ad channel. */
 export interface PaidPlatformBreakdown {
   platform: string;
   spend: number;
@@ -2708,7 +2705,7 @@ export interface PaidPlatformBreakdown {
   cpc: number;
   convRate: number;
   conversions: number;
-  performance: string;
+  performance: PaidProjectPerformance;
 }
 
 /**
