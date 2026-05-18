@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import type { ProjectTableRow } from './dashboard-metric.interface';
+
 /** Performance rating for paid project campaigns. */
 export type PaidProjectPerformance = 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'EMERGING';
 
