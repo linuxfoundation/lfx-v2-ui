@@ -1,12 +1,12 @@
-# Snowflake row-shape & schema
+# Data and Snowflake
 
-Patterns where Snowflake query results don't match TypeScript interface declarations, or where dev / per-engineer schema paths leak into production code. Critical-severity for the dev-schema leak; row-shape drift is SHOULD_FIX (causes runtime null bugs).
+Patterns where Snowflake query results don't match TypeScript interface declarations, or where dev / per-engineer schema paths leak into production code. Critical-severity for the dev-schema leak and placeholder-bind-count mismatch; row-shape drift is SHOULD_FIX (causes runtime null bugs).
 
-Read when `apps/lfx-one/src/server/services/snowflake.service.ts` or any file containing direct Snowflake SQL changed. Cross-checked by Phase 5.
+**Read when:** `apps/lfx-one/src/server/services/snowflake.service.ts` or any file containing direct Snowflake SQL changed. Cross-checked by Phase 5.
 
 ---
 
-## `bot-finds/snowflake-rowshape-schema/dev-schema-leak` — CRITICAL
+## `pr-knowledge/data-and-snowflake/dev-schema-leak` — CRITICAL
 
 **Pattern:** hard-coded `ANALYTICS_DEV.*` schema name, per-engineer workspace path (e.g., `LF_<NAME>_PLATINUM_LFX_ONE`), or any non-production database path in code on the release path.
 
@@ -20,7 +20,21 @@ Read when `apps/lfx-one/src/server/services/snowflake.service.ts` or any file co
 
 ---
 
-## `bot-finds/snowflake-rowshape-schema/select-mismatch-row-interface` — SHOULD_FIX
+## `pr-knowledge/data-and-snowflake/placeholder-bind-count-mismatch` — CRITICAL
+
+**Pattern:** the SQL string has N `?` placeholders but the binds array passed to the Snowflake helper has a different count of values. Snowflake driver will error at runtime (or silently misbind).
+
+**Detect:** for any direct Snowflake SQL invocation, count `?` occurrences in the SQL string and compare against the binds array length.
+
+**Empirical citation:** general pattern surfaced in CodeRabbit comments on PRs touching `snowflake.service.ts` callers. The `lfx-self-serve-code-reviewer` agent also flags this in its Snowflake direct-SQL check, but pre-PR catching it is cheaper.
+
+**Failure message:** SQL placeholder count doesn't match binds-array length.
+
+**Fix:** match placeholder count to binds. If using template-string SQL composition, switch to a named-parameters helper to avoid the manual count.
+
+---
+
+## `pr-knowledge/data-and-snowflake/select-mismatch-row-interface` — SHOULD_FIX
 
 **Pattern:** the SELECT list in a Snowflake query selects columns that aren't present in the corresponding TypeScript `Row` interface — or selects fewer than the interface declares. Either case produces runtime undefined fields and type confusion.
 
@@ -34,7 +48,7 @@ Read when `apps/lfx-one/src/server/services/snowflake.service.ts` or any file co
 
 ---
 
-## `bot-finds/snowflake-rowshape-schema/date-column-typed-as-Date` — SHOULD_FIX
+## `pr-knowledge/data-and-snowflake/date-column-typed-as-Date` — SHOULD_FIX
 
 **Pattern:** a Snowflake `DATE` / `TIMESTAMP_NTZ` / `TIMESTAMP_TZ` column is typed as `Date` in the TypeScript Row interface, but the Snowflake Node.js driver returns ISO strings, not `Date` instances. Downstream code calling `.getTime()` or `Date` methods on the value will throw.
 
@@ -45,17 +59,3 @@ Read when `apps/lfx-one/src/server/services/snowflake.service.ts` or any file co
 **Failure message:** Field typed as `Date` but Snowflake returns ISO string — runtime type mismatch.
 
 **Fix:** type as `string` (ISO 8601). Add a helper to parse to `Date` at the boundary where you need date arithmetic. Or configure the Snowflake driver to coerce — but document the choice.
-
----
-
-## `bot-finds/snowflake-rowshape-schema/placeholder-bind-count-mismatch` — CRITICAL
-
-**Pattern:** the SQL string has N `?` placeholders but the binds array passed to the Snowflake helper has a different count of values. Snowflake driver will error at runtime (or silently misbind).
-
-**Detect:** for any direct Snowflake SQL invocation, count `?` occurrences in the SQL string and compare against the binds array length.
-
-**Empirical citation:** general pattern surfaced in CodeRabbit comments on PRs touching `snowflake.service.ts` callers. The `lfx-self-serve-code-reviewer` agent also flags this in its Snowflake direct-SQL check, but pre-PR catching it is cheaper.
-
-**Failure message:** SQL placeholder count doesn't match binds-array length.
-
-**Fix:** match placeholder count to binds. If using template-string SQL composition, switch to a named-parameters helper to avoid the manual count.

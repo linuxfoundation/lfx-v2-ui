@@ -1,12 +1,12 @@
-# RxJS / signals timing
+# Frontend state and timing
 
 Patterns the bots reliably flag at the signals ↔ observables interface — double-emissions from `toObservable + startWith`, missing `distinctUntilChanged` after primitive projections, and identity-equal-object re-emissions triggering redundant downstream work.
 
-Read when any `.component.ts` / `.service.ts` under `apps/lfx-one/src/app/` changed. Cross-checked by Phase 5; findings without a quotable pattern below are dropped.
+**Read when:** any `.component.ts` / `.service.ts` under `apps/lfx-one/src/app/` changed. Cross-checked by Phase 5; findings without a quotable pattern below are dropped.
 
 ---
 
-## `bot-finds/rxjs-signals-timing/toObservable-startWith-double-emit` — SHOULD_FIX
+## `pr-knowledge/frontend-state-and-timing/toObservable-startWith-double-emit` — SHOULD_FIX
 
 **Pattern:** `toObservable(signal).pipe(startWith(initialValue))` — `toObservable` already synchronously emits the signal's current value on subscribe. Adding `startWith` prepends a second synchronous emission, doubling downstream firing (e.g., `combineLatest` fires twice on mount, refetches data twice).
 
@@ -20,7 +20,7 @@ Read when any `.component.ts` / `.service.ts` under `apps/lfx-one/src/app/` chan
 
 ---
 
-## `bot-finds/rxjs-signals-timing/missing-distinctUntilChanged-after-id-projection` — SHOULD_FIX
+## `pr-knowledge/frontend-state-and-timing/missing-distinctUntilChanged-after-id-projection` — SHOULD_FIX
 
 **Pattern:** `toObservable(obj-signal).pipe(map(x => x.id))` — when the wrapping object can be re-emitted with the same `id` but a new object identity (e.g., context service enriches and re-sets the signal), downstream re-fires unnecessarily, triggering redundant fetches.
 
@@ -34,7 +34,7 @@ Read when any `.component.ts` / `.service.ts` under `apps/lfx-one/src/app/` chan
 
 ---
 
-## `bot-finds/rxjs-signals-timing/effect-resets-on-identity-equal-input` — SHOULD_FIX
+## `pr-knowledge/frontend-state-and-timing/effect-resets-on-identity-equal-input` — SHOULD_FIX
 
 **Pattern:** `effect()` reads a signal whose value is identity-different but semantically-equal (e.g., the same account enriched with extra metadata). The effect runs again and resets state that was set inside the effect — clobbering downstream state.
 

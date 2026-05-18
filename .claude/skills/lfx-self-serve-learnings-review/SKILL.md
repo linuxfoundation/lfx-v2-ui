@@ -32,8 +32,8 @@ This skill runs `context: fork` but with **no subagent**. The entire workflow li
 
 Each finding you emit must trace back to a quotable item in one of these files. If you cannot quote the source, drop the finding. Hallucinated rules are worse than missed ones.
 
-- **`.claude/skills/lfx-self-serve-learnings-review/references/bot-rubric.md`** — unioned CodeRabbit + GitHub Copilot review rubric: 11 categories, severity map (CodeRabbit's Critical/Major/Minor/Trivial → our CRITICAL/SHOULD_FIX/NIT), index into the `bot-finds/` files.
-- **`.claude/skills/lfx-self-serve-learnings-review/references/bot-finds/*.md`** — per-category checklists of repo-specific empirical patterns observed in past PR comments. Each pattern cites its origin PR# + file. Read conditionally per the routing table in Phase 3.
+- **`.claude/skills/lfx-self-serve-learnings-review/references/bot-rubric.md`** — unioned CodeRabbit + GitHub Copilot review rubric: 8 consolidated buckets, severity map (CodeRabbit's Critical/Major/Minor/Trivial → our CRITICAL/SHOULD_FIX/NIT), index into the `pr-knowledge/` files.
+- **`.claude/skills/lfx-self-serve-learnings-review/references/pr-knowledge/*.md`** — per-category checklists of repo-specific empirical patterns observed in past PR comments. Each pattern cites its origin PR# + file. Read conditionally per the routing table in Phase 3.
 - **`.claude/skills/lfx-self-serve-learnings-review/references/known-false-positives.md`** — applied LAST to drop findings the bots still surface that aren't real for this codebase.
 
 **If you emit findings without reading every reference relevant to the diff, your audit is invalid.**
@@ -77,32 +77,24 @@ If both are empty, abort: "No changes to audit against `<base>`."
 - `.claude/skills/lfx-self-serve-learnings-review/references/bot-rubric.md`
 - `.claude/skills/lfx-self-serve-learnings-review/references/known-false-positives.md`
 
-### Conditionally read `.claude/skills/lfx-self-serve-learnings-review/references/bot-finds/*.md` based on changed-file paths
+### Conditionally read `.claude/skills/lfx-self-serve-learnings-review/references/pr-knowledge/*.md` based on changed-file paths
 
-| Bot-find file                       | Read when                                                                                                                            |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `security.md`                       | always (secrets, sanitization, auth bypass can hit any change)                                                                       |
-| `type-safety.md`                    | any `.ts` file changed                                                                                                               |
-| `async-correctness.md`              | any `.ts` file changed                                                                                                               |
-| `rxjs-signals-timing.md`            | any `.component.ts` / `.service.ts` under `apps/lfx-one/src/app/`                                                                    |
-| `guards-interceptors-ordering.md`   | `app.config.ts`, anything under `app/shared/guards/` or `app/shared/interceptors/`, or any `*.routes.ts`                             |
-| `route-auth-surface.md`             | any new file in `apps/lfx-one/src/server/routes/`, `apps/lfx-one/src/server/server.ts`, or `middleware/auth*`                        |
-| `query-param-hardening.md`          | any file under `apps/lfx-one/src/server/controllers/` or `apps/lfx-one/src/server/services/`                                         |
-| `snowflake-rowshape-schema.md`      | `apps/lfx-one/src/server/services/snowflake.service.ts` or any file with direct Snowflake SQL                                        |
-| `template-binding-traps.md`         | any `.component.html` file                                                                                                           |
-| `sanitizer-and-public-urls.md`      | any frontend file using `[href]`, `bypassSecurityTrust*`, or non-http URL schemes (`webcal:`, `tel:`, `mailto:`)                     |
-| `accessibility.md`                  | any `.component.html` file                                                                                                           |
-| `otel-and-rate-limit-drift.md`      | `apps/lfx-one/otel.mjs`, `apps/lfx-one/src/server/middleware/rate-limit.ts`, or new route additions registered in `server.ts`        |
-| `log-metric-correctness.md`         | any file using `logger.info` / `logger.warning` / `logger.debug`                                                                     |
-| `cookie-trust.md`                   | any backend file referencing `req.cookies`                                                                                           |
-| `docs-comments-drift.md`            | any file with JSDoc, route-mounting comments, or under `docs/**`                                                                     |
-| `testing.md`                        | any new feature module/service/component without a matching `*.spec.ts`                                                              |
+| Bot-find file                      | Read when                                                                                                                                                                                                                                                                          |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `security.md`                      | always (secrets, sanitization, auth-state leakage, untrusted cookies, untrusted URLs can hit any change)                                                                                                                                                                            |
+| `typescript-correctness.md`        | any `.ts` file changed (type-soundness + async lifecycle + timer leaks)                                                                                                                                                                                                            |
+| `templates-and-accessibility.md`   | any `.component.html` file changed (ARIA, semantic HTML, class-binding clobbering, `@for` track, lens param)                                                                                                                                                                       |
+| `frontend-state-and-timing.md`     | any `.component.ts` / `.service.ts` under `apps/lfx-one/src/app/` (signals ↔ observables timing)                                                                                                                                                                                  |
+| `server-request-handling.md`       | `app.config.ts`, anything under `app/shared/guards/` or `app/shared/interceptors/`, any `*.routes.ts`, any new file under `apps/lfx-one/src/server/routes/`, `apps/lfx-one/src/server/server.ts`, `middleware/auth*`, or any file under `server/controllers/` or `server/services/` |
+| `observability-and-logging.md`     | `apps/lfx-one/otel.mjs`, `apps/lfx-one/src/server/middleware/rate-limit.ts`, new route registrations in `server.ts`, or any file using `logger.info` / `logger.warning` / `logger.debug`                                                                                            |
+| `data-and-snowflake.md`            | `apps/lfx-one/src/server/services/snowflake.service.ts` or any file with direct Snowflake SQL                                                                                                                                                                                      |
+| `code-truthiness.md`               | any JSDoc / inline comment, anything under `docs/**`, or any new feature module / service / component without a matching `*.spec.ts`                                                                                                                                              |
 
 The table is a guideline. When in doubt, read the file. Reading too much wastes context; missing a relevant pattern means a missed finding.
 
 ## Phase 4 — Knowledge-base pass
 
-For each `bot-finds/<category>.md` file loaded in Phase 3:
+For each `pr-knowledge/<category>.md` file loaded in Phase 3:
 
 1. Walk every pattern in the file against the diff (Phase 2 outputs, plus targeted `Read` of changed files for line-level detail).
 2. For each match, emit a finding:
@@ -118,11 +110,11 @@ For each `bot-finds/<category>.md` file loaded in Phase 3:
 }
 ```
 
-Each pattern's default severity is set in its bot-finds file; deviate only with reasoning (e.g., the same `any` cast might be CRITICAL in a security-sensitive path and SHOULD_FIX elsewhere).
+Each pattern's default severity is set in its pr-knowledge file; deviate only with reasoning (e.g., the same `any` cast might be CRITICAL in a security-sensitive path and SHOULD_FIX elsewhere).
 
 ## Phase 5 — Cross-check discipline
 
-Every finding must quote the specific pattern in a `bot-finds/<file>.md` file. If you cannot quote the source, drop the finding.
+Every finding must quote the specific pattern in a `pr-knowledge/<file>.md` file. If you cannot quote the source, drop the finding.
 
 If you couldn't read a reference that the Phase 3 routing said you should have, return `status: incomplete` rather than ship a partial verdict.
 
@@ -143,7 +135,7 @@ Print to terminal — no `/review` chaining, no `gh pr ...` mutation.
 
 ## Findings against the knowledge base
 
-Grouped by severity. Each finding cites its bot-finds source.
+Grouped by severity. Each finding cites its pr-knowledge source.
 
 ### 🔴 Critical (N)
 
@@ -177,7 +169,7 @@ If the user passed extra instructions after the base-branch (e.g. "focus on secu
 ## References used
 
 - **`.claude/skills/lfx-self-serve-learnings-review/references/bot-rubric.md`** — unioned CodeRabbit + Copilot rubric + severity map
-- **`.claude/skills/lfx-self-serve-learnings-review/references/bot-finds/*.md`** — 16 per-category empirical-pattern checklists (read conditionally per Phase 3 routing)
+- **`.claude/skills/lfx-self-serve-learnings-review/references/pr-knowledge/*.md`** — 8 per-category empirical-pattern checklists (read conditionally per Phase 3 routing)
 - **`.claude/skills/lfx-self-serve-learnings-review/references/known-false-positives.md`** — applied LAST to drop known false matches
 
 ## Companion skills
