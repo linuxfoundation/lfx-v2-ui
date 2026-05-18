@@ -67,3 +67,70 @@ export interface AttributionChannelRow {
   sessionsFormatted: string;
   raw: MarketingAttributionChannel;
 }
+
+/** Funnel stage identifier for the performance marketing filter. */
+export type FunnelStage = 'all' | 'tofu' | 'mofu' | 'bofu';
+
+/** Performance rating for paid project campaigns. */
+export type PaidProjectPerformance = 'EXCELLENT' | 'GOOD' | 'POOR' | 'NO REVENUE';
+
+/** View-model row for the performance marketing project table. */
+export interface PaidProjectRow {
+  name: string;
+  funnelStage: string;
+  spend: string;
+  revenue: string;
+  roas: string;
+  impressions: string;
+  performance: PaidProjectPerformance;
+  performanceClass: string;
+}
+
+/** View-model row for the email type breakdown table. */
+export interface EmailTypeRow {
+  emailType: string;
+  campaignCount: number;
+  sends: string;
+  opens: string;
+  openRate: string;
+  ctr: string;
+}
+
+/** View-model row for the top campaigns table. */
+export interface TopCampaignRow {
+  name: string;
+  type: string;
+  sends: string;
+  opens: string;
+  openRate: string;
+  ctr: string;
+}
+
+/** View-model row for the social accounts platform table. */
+export interface SocialAccountRow {
+  platform: string;
+  followers: string;
+  impressions: string;
+  engagementRate: string;
+  posts: string;
+}
+
+/** Segment data for the sentiment breakdown horizontal bar chart. */
+export interface SentimentBar {
+  positive: number;
+  neutral: number;
+  negative: number;
+  positiveLabel: string;
+  neutralLabel: string;
+  negativeLabel: string;
+}
+
+/** View-model row for the web activity domain table. */
+export interface WebActivityDomainRow {
+  domain: string;
+  sessions: string;
+  pageViews: string;
+  pagesPerSession: string;
+  sessionShare: number;
+  sessionShareFormatted: string;
+}

@@ -21,6 +21,13 @@ import type { AttributionChannelRow, AttributionModel, AttributionModelOption, M
   styleUrl: './attribution-section.component.scss',
 })
 export class AttributionSectionComponent {
+  private static readonly revenueKeyByModel: Record<AttributionModel, 'linearRevenue' | 'firstTouchRevenue' | 'lastTouchRevenue' | 'timeDecayRevenue'> = {
+    linear: 'linearRevenue',
+    firstTouch: 'firstTouchRevenue',
+    lastTouch: 'lastTouchRevenue',
+    timeDecay: 'timeDecayRevenue',
+  };
+
   // === Services ===
   private readonly analyticsService = inject(AnalyticsService);
   private readonly fb = inject(FormBuilder);
@@ -35,14 +42,6 @@ export class AttributionSectionComponent {
   });
 
   protected readonly modelOptions: AttributionModelOption[] = ATTRIBUTION_MODEL_OPTIONS;
-
-  // === Static ===
-  private static readonly revenueKeyByModel: Record<AttributionModel, 'linearRevenue' | 'firstTouchRevenue' | 'lastTouchRevenue' | 'timeDecayRevenue'> = {
-    linear: 'linearRevenue',
-    firstTouch: 'firstTouchRevenue',
-    lastTouch: 'lastTouchRevenue',
-    timeDecay: 'timeDecayRevenue',
-  };
 
   // === WritableSignals ===
   protected readonly loading = signal(false);
@@ -89,11 +88,11 @@ export class AttributionSectionComponent {
       if (!data?.channels?.length) return [];
 
       const revenueKey = this.getRevenueKey(model);
-      const total = data.channels.reduce((sum, ch) => sum + ch[revenueKey], 0);
+      const total = data.channels.reduce((sum, ch) => sum + (ch[revenueKey] ?? 0), 0);
 
       return data.channels
         .map((ch): AttributionChannelRow => {
-          const revenue = ch[revenueKey];
+          const revenue = ch[revenueKey] ?? 0;
           return {
             channel: ch.channel,
             revenue,
