@@ -414,7 +414,7 @@ If a required checklist couldn't be loaded, return `{"status": "incomplete", "fi
 ## Scope boundaries — what this agent does NOT cover
 
 - **PR-shape sanity** (branch name, JIRA reference, conventional commits, rebase, DCO + GPG signing, diff size).
-- **Behavioural / empirical pattern matching** (CR + Copilot-style review rubric, KB of past-PR patterns) — handled by `bot-rubric-agent`.
+- **Behavioural / empirical pattern matching** (CR + Copilot-style review rubric, KB of past-PR patterns) — handled by `lfx-self-serve-learnings-reviewer`.
 
 If a finding fits one of those surfaces, drop it.
 

@@ -22,10 +22,10 @@ This project has guided skills and code-review subagents for common workflows. *
 
 The two pre-commit reviews are **subagents**, not skills — they're spawned in parallel via the Agent tool with `run_in_background: true` (see the work cycle in `CLAUDE.md`).
 
-| Subagent                       | When to spawn                                                                                                                                                                                                                            |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `lfx-self-serve-code-reviewer` | Before every commit — code-convention audit (`.claude/rules/`, `docs/reviews/` checklists, architecture, upstream API contracts, protected files). Use `mode: local` for pre-commit review; `mode: pr` is reserved for `/lfx-review-pr`. |
-| `bot-rubric-agent`             | Before every commit — comprehensive code-review rubric (security, performance, code quality, architecture, testing) cross-checked against the empirical pattern KB at `.claude/pr-knowledge/`.                                           |
+| Subagent                            | When to spawn                                                                                                                                                                                                                            |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lfx-self-serve-code-reviewer`      | Before every commit — code-convention audit (`.claude/rules/`, `docs/reviews/` checklists, architecture, upstream API contracts, protected files). Use `mode: local` for pre-commit review; `mode: pr` is reserved for `/lfx-review-pr`. |
+| `lfx-self-serve-learnings-reviewer` | Before every commit — comprehensive code-review rubric (security, performance, code quality, architecture, testing) cross-checked against the empirical pattern KB at `.claude/pr-knowledge/`.                                           |
 
 Spawn both in parallel by issuing two Agent tool calls in a single message, each with `run_in_background: true`. Wait for both, address every CRITICAL, address reasonable SHOULD_FIX, rerun if material changes.
 
@@ -54,7 +54,7 @@ Spawn both in parallel by issuing two Agent tool calls in a single message, each
 - "What would CodeRabbit flag?", "What would Copilot say?", "Pre-commit review"
 - Any "is this ready" question where no PR number is given
 
-Spawn **both** `lfx-self-serve-code-reviewer` AND `bot-rubric-agent` in parallel via the Agent tool — they're the pre-commit pair and the work-cycle gate requires both before every commit.
+Spawn **both** `lfx-self-serve-code-reviewer` AND `lfx-self-serve-learnings-reviewer` in parallel via the Agent tool — they're the pre-commit pair and the work-cycle gate requires both before every commit.
 
 **`/lfx-self-serve-pr-readiness`** — pre-PR, shape focus (run once, before opening the PR). Match any of these intents:
 
@@ -81,7 +81,7 @@ Non-developer contributors use these skills as guided workflows. Follow these ru
 
 - If the user describes a feature they want to build, suggest `/develop` — it walks them through the full process step-by-step
 - If the user asks about setup or getting started, suggest `/setup`
-- **Before every commit**, remind them that you'll spawn the two pre-commit review subagents (`lfx-self-serve-code-reviewer` + `bot-rubric-agent`) in parallel — they need to wait for both and address findings.
+- **Before every commit**, remind them that you'll spawn the two pre-commit review subagents (`lfx-self-serve-code-reviewer` + `lfx-self-serve-learnings-reviewer`) in parallel — they need to wait for both and address findings.
 - **Before opening a PR**, remind them to run `/lfx-self-serve-pr-readiness`, then `/preflight`.
 - If you are unsure which workflow applies, ask the user what they're trying to accomplish.
 - When a skill or subagent references architecture docs in `docs/`, read those docs before generating code — they are the source of truth.
