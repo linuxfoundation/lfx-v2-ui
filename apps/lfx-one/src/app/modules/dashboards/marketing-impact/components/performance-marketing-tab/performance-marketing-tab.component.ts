@@ -7,7 +7,7 @@ import { FilterPillsComponent } from '@components/filter-pills/filter-pills.comp
 import { FUNNEL_STAGE_OPTIONS } from '@lfx-one/shared/constants';
 import { formatChangePct, formatCurrency, formatNumber, trendColorClass, trendDirection } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
-import { catchError, finalize, of, switchMap } from 'rxjs';
+import { catchError, of, switchMap, tap } from 'rxjs';
 
 import type {
   FilterPillOption,
@@ -87,8 +87,11 @@ export class PerformanceMarketingTabComponent {
           }
           this.loading.set(true);
           return this.analyticsService.getSocialReach(slug).pipe(
-            catchError(() => of(null)),
-            finalize(() => this.loading.set(false))
+            tap(() => this.loading.set(false)),
+            catchError(() => {
+              this.loading.set(false);
+              return of(null);
+            })
           );
         })
       ),
@@ -268,11 +271,7 @@ export class PerformanceMarketingTabComponent {
     if (PerformanceMarketingTabComponent.validPerformance.has(upper as PaidProjectPerformance)) {
       return upper as PaidProjectPerformance;
     }
-<<<<<<< HEAD
-    return 'NO REVENUE';
-=======
     return 'EMERGING';
->>>>>>> dd3fad97 (fix(dashboards): address PR #724 review feedback)
   }
 
   private getPerformanceClass(perf: PaidProjectPerformance): string {

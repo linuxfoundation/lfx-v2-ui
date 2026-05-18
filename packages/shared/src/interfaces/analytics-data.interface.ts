@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import type { ProjectTableRow } from './dashboard-metric.interface';
-import type { PaidProjectPerformance } from './marketing-impact.interface';
+/** Performance rating for paid project campaigns. */
+export type PaidProjectPerformance = 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'EMERGING';
 
 /**
  * Active Weeks Streak row from Snowflake ACTIVE_WEEKS_STREAK table
