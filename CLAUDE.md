@@ -255,21 +255,32 @@ Detailed patterns are in `.claude/rules/` and loaded contextually based on the `
 - ❌ Hard-code brand hex values (reference `lfxColors` scales)
 - ❌ Reference browser-only APIs without `isPlatformBrowser`
 - ❌ Mix module concerns in one change
-- ❌ Open a PR without first running BOTH `/lfx-self-serve-self-review` AND `/lfx-self-serve-pr-readiness` to a clean verdict — this is non-negotiable
+- ❌ Commit without first running `/lfx-self-serve-self-review` AND `/lfx-self-serve-learnings-review` to a clean verdict — both are non-negotiable pre-commit reviews
+- ❌ Open a PR without running `/lfx-self-serve-pr-readiness` to a clean verdict — also non-negotiable
 - ❌ Open a PR without DCO sign-off + GPG (`--signoff -S`)
 - ❌ Commit and claim "done" before `yarn build` passes
 - ❌ Re-introduce Figma references — design source is HTML/GitHub
 - ❌ Edit `CLAUDE.md` or other `lfx-preflight` protected files without code-owner review
 
-## Work cycle — mandatory before opening a PR
+## Work cycle — pre-commit and pre-PR reviews
 
-> **CRITICAL: both pre-PR review skills are mandatory.** Every PR opened from this repo must be preceded by `/lfx-self-serve-self-review` (code-convention audit via the `lfx-self-serve-code-reviewer` agent) AND `/lfx-self-serve-pr-readiness` (PR-shape sanity + bot-reviewer simulation). The reviewers' time is the most expensive resource in this workflow — landing a PR without both audits wastes it and is the single biggest contributor to slow review cycles. Do not skip either, do not save them for later, do not assume your changes are "small enough" to bypass them.
+> **CRITICAL: pre-commit and pre-PR reviews are both mandatory.** Every commit must be preceded by `/lfx-self-serve-self-review` (code-convention audit) AND `/lfx-self-serve-learnings-review` (knowledge-base audit against past-PR patterns + bot rubrics). Every PR open must additionally be preceded by `/lfx-self-serve-pr-readiness` (PR-shape sanity — branch, JIRA, commits, DCO + GPG, rebase, diff size). The reviewers' time is the most expensive resource in this workflow — landing a PR without these audits wastes it and is the single biggest contributor to slow review cycles. Do not skip any, do not save them for later, do not assume your changes are "small enough" to bypass them.
 
-1. **Run `/lfx-self-serve-self-review` against the target base branch.** Audits code against `.claude/rules/`, the four `docs/reviews/` code checklists, architecture docs, and validates upstream API contracts for any backend changes. Runs in a forked context using the `lfx-self-serve-code-reviewer` subagent type — diff evaluated independently of the implementation thread. If you just finished coding in this same session, this is the only way to get an unbiased audit of your own work.
-2. **Run `/lfx-self-serve-pr-readiness` against the target base branch.** Audits PR-shape (branch name, JIRA, conventional commits, rebase, DCO + GPG signing, diff size) and simulates the behavioural / correctness findings CodeRabbit and GitHub Copilot reliably catch on this repo — empirical patterns from PR-comment history plus the union of their published rubrics. Runs in a forked context with no subagent. Catches the things bots would flag *before* the PR opens.
+### Pre-commit (every commit, parallel)
+
+Spawn both reviews together so neither blocks the other — each runs `context: fork` in an independent context, and on substantial diffs the two passes can run side-by-side as parallel subagents.
+
+1. **`/lfx-self-serve-self-review` against the target base branch.** Code-convention audit via the `lfx-self-serve-code-reviewer` subagent — `.claude/rules/`, the four `docs/reviews/` code checklists, architecture docs, upstream API contracts, protected files. Diff evaluated independently of the implementation thread.
+2. **`/lfx-self-serve-learnings-review` against the target base branch.** Knowledge-base audit against accumulated patterns from past PRs (bot-flagged + human-flagged) and codebase gotchas, plus the union of CodeRabbit + Copilot's published rubrics. Catches things those bots would flag *before* the PR opens.
 3. Address every CRITICAL finding from both. Address every reasonable SHOULD_FIX finding.
-4. Rerun both skills until each returns `READY` (or remaining findings are explicitly documented in the PR description with a stated trade-off).
-5. Run `/preflight` for license / format / lint / build / protected-file mechanical checks.
-6. Only then push and open the PR. (Reviewers run `/lfx-review-pr` against the open PR — they should not be your first standards check.)
+4. Rerun if you make material changes after the first pass.
+5. Commit only after both reviews return `READY` (or remaining findings are explicitly documented in the commit body / PR description with a stated trade-off).
+
+### Pre-PR (once, before opening the PR)
+
+1. **`/lfx-self-serve-pr-readiness` against the target base branch.** PR-shape sanity: branch name, JIRA reference, conventional-commit format, rebase, DCO + GPG signing per commit, diff size. Does NOT audit code (that's done pre-commit).
+2. Address every CRITICAL finding. Rerun until it returns `READY` (or remaining findings are explicitly documented in the PR description with a stated trade-off).
+3. Run `/preflight` for license / format / lint / build / protected-file mechanical checks.
+4. Only then push and open the PR. (Reviewers run `/lfx-review-pr` against the open PR — they should not be your first standards check.)
 
 After `/compact`, re-invoke `/develop` or the relevant convention skill if continuing work that depends on it.

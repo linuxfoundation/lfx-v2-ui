@@ -1,6 +1,6 @@
 # Bot-reviewer rubric (unioned CodeRabbit + GitHub Copilot)
 
-This file is the umbrella for the bot-emulator audit that `/lfx-self-serve-pr-readiness` performs. It defines:
+This file is the umbrella for the knowledge-base audit that `/lfx-self-serve-learnings-review` performs. It defines:
 
 1. The **11 unioned review categories** that map to both CodeRabbit's wrapped tools and Copilot's documented code-reviewer instructions.
 2. The **severity vocabulary mapping** from CodeRabbit's tags to our `CRITICAL / SHOULD_FIX / NIT`.
@@ -39,7 +39,7 @@ Copilot publishes no severity vocabulary. Default Copilot findings to **SHOULD_F
 | 8 | **Documentation correctness** | `bot-finds/docs-comments-drift.md` | any JSDoc/inline-comment touched, any `docs/**` |
 | 9 | **Testing** | `bot-finds/testing.md` | any new feature without a matching `*.spec.ts` |
 | 10 | **Code quality** | `bot-finds/code-quality.md` | any source file |
-| 11 | **Framework-specific** | `bot-finds/rxjs-signals-timing.md`, `bot-finds/guards-interceptors-ordering.md`, `bot-finds/route-auth-surface.md`, `bot-finds/query-param-hardening.md`, `bot-finds/snowflake-rowshape-schema.md`, `bot-finds/template-binding-traps.md`, `bot-finds/sanitizer-and-public-urls.md`, `bot-finds/otel-and-rate-limit-drift.md`, `bot-finds/log-metric-correctness.md`, `bot-finds/cookie-trust.md` | per pr-readiness Phase 3 routing |
+| 11 | **Framework-specific** | `bot-finds/rxjs-signals-timing.md`, `bot-finds/guards-interceptors-ordering.md`, `bot-finds/route-auth-surface.md`, `bot-finds/query-param-hardening.md`, `bot-finds/snowflake-rowshape-schema.md`, `bot-finds/template-binding-traps.md`, `bot-finds/sanitizer-and-public-urls.md`, `bot-finds/otel-and-rate-limit-drift.md`, `bot-finds/log-metric-correctness.md`, `bot-finds/cookie-trust.md` | per learnings-review Phase 3 routing |
 
 (Some categories are still consolidating — performance and error-handling have empirical evidence spread across the framework-specific files; if they accumulate enough volume to warrant their own files, split out later.)
 
@@ -64,7 +64,7 @@ Copilot publishes no severity vocabulary. Default Copilot findings to **SHOULD_F
 - **Code-convention violations** (Angular component structure, logger usage, `inject()` vs constructor DI, `@if`/`@for` over `*ngIf`/`*ngFor`, etc.) → these are in `.claude/rules/` and `docs/reviews/{frontend,backend,shared-and-sql,docs}-checklist.md`, enforced by `/lfx-self-serve-self-review` via the `lfx-self-serve-code-reviewer` agent.
 - **Upstream API contract validation** → also in the `lfx-self-serve-code-reviewer` agent.
 - **Protected-files flagging** → also in the agent.
-- **PR-shape sanity** → in `docs/reviews/pr-shape.md`, walked by this skill (Phase 4) and `/lfx-review-pr` (Phase 4).
+- **PR-shape sanity** → in `.claude/skills/lfx-self-serve-pr-readiness/references/pr-shape.md`, walked by `/lfx-self-serve-pr-readiness` and `/lfx-review-pr`.
 
 This rubric covers the *behavioural / correctness* patterns that CodeRabbit and Copilot catch which our rule library doesn't — the empirical signal accumulated from watching what they flag on this codebase.
 

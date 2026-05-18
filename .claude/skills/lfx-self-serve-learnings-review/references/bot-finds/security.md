@@ -2,7 +2,7 @@
 
 Repo-specific patterns where security boundaries leak — credential disclosure, identity enumeration, public-meeting visibility, generic secrets-in-code. Sampled from CodeRabbit / GitHub Copilot PR comments 2026-03-15 → 2026-05-15.
 
-Read in every pr-readiness run (always relevant). Cross-checked by `/lfx-self-serve-pr-readiness` Phase 5 — findings without a quotable pattern below are dropped.
+Read in every learnings-review run (always relevant). Cross-checked by `/lfx-self-serve-learnings-review` Phase 4 — findings without a quotable pattern below are dropped.
 
 ---
 
