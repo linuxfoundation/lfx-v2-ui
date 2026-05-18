@@ -95,7 +95,6 @@ export class EmailTabComponent {
           yoyChange: null,
           yoyTrend: 'neutral' as const,
           yoyTrendClass: 'text-gray-500',
-          comparisonLine: '',
         },
         {
           id: 'total-opens',
@@ -109,7 +108,6 @@ export class EmailTabComponent {
           yoyChange: null,
           yoyTrend: 'neutral' as const,
           yoyTrendClass: 'text-gray-500',
-          comparisonLine: '',
         },
         {
           id: 'open-rate',
@@ -123,7 +121,6 @@ export class EmailTabComponent {
           yoyChange: null,
           yoyTrend: 'neutral' as const,
           yoyTrendClass: 'text-gray-500',
-          comparisonLine: '',
         },
         {
           id: 'ctr',
@@ -137,7 +134,6 @@ export class EmailTabComponent {
           yoyChange: null,
           yoyTrend: 'neutral' as const,
           yoyTrendClass: 'text-gray-500',
-          comparisonLine: '',
         },
       ];
     });
