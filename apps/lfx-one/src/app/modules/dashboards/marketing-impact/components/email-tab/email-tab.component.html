@@ -55,8 +55,8 @@
           <span class="flex-1 text-right text-[11px] font-semibold tracking-wide text-gray-400" role="columnheader">CTR</span>
         </div>
 
-        @for (row of emailTypeRows(); track row.emailType) {
-          <div class="flex items-center gap-3 border-b border-gray-100 py-2.5" role="row" [attr.data-testid]="'email-type-row-' + row.emailType">
+        @for (row of emailTypeRows(); track row.emailType; let idx = $index) {
+          <div class="flex items-center gap-3 border-b border-gray-100 py-2.5" role="row" [attr.data-testid]="'email-type-row-' + idx">
             <span class="w-36 truncate text-xs font-medium text-gray-700" role="cell">{{ row.emailType }}</span>
             <span class="w-20 text-right text-xs text-gray-500" role="cell">{{ row.campaignCount }}</span>
             <span class="w-24 text-right text-xs text-gray-900" role="cell">{{ row.sends }}</span>
@@ -103,8 +103,8 @@
           <span class="w-16 text-right text-[11px] font-semibold tracking-wide text-gray-400" role="columnheader">CTR</span>
         </div>
 
-        @for (row of topCampaigns(); track row.type + '|' + row.name) {
-          <div class="flex items-center gap-3 border-b border-gray-100 py-2.5" role="row" [attr.data-testid]="'email-campaign-row-' + row.name">
+        @for (row of topCampaigns(); track row.type + '|' + row.name; let idx = $index) {
+          <div class="flex items-center gap-3 border-b border-gray-100 py-2.5" role="row" [attr.data-testid]="'email-campaign-row-' + idx">
             <span class="flex-1 truncate text-xs font-medium text-gray-700" role="cell">{{ row.name }}</span>
             <span class="w-24 truncate text-[11px] text-gray-500" role="cell">{{ row.type }}</span>
             <span class="w-20 text-right text-xs text-gray-900" role="cell">{{ row.sends }}</span>

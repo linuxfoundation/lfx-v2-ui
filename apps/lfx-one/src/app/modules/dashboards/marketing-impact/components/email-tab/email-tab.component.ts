@@ -78,8 +78,8 @@ export class EmailTabComponent {
       const lastOpens = minLen > 0 ? (opens[minLen - 1] ?? 0) : 0;
       const prevOpens = minLen > 1 ? (opens[minLen - 2] ?? 0) : 0;
 
-      const currentOpenRate = lastSends && lastSends > 0 ? (lastOpens / lastSends) * 100 : 0;
-      const prevOpenRate = prevSends && prevSends > 0 ? (prevOpens / prevSends) * 100 : 0;
+      const currentOpenRate = lastSends !== undefined && lastSends > 0 ? (lastOpens / lastSends) * 100 : 0;
+      const prevOpenRate = prevSends !== undefined && prevSends > 0 ? (prevOpens / prevSends) * 100 : 0;
       const openRateMom = this.computeMomPctFromValues(currentOpenRate, prevOpenRate);
 
       return [
