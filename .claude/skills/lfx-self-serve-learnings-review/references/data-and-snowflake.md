@@ -34,6 +34,20 @@ Patterns where Snowflake query results don't match TypeScript interface declarat
 
 ---
 
+## `data-and-snowflake/missing-orderby-limit-nondeterministic` — SHOULD_FIX
+
+**Pattern:** a Snowflake SELECT documented as "top N" or "latest" doesn't include an explicit `ORDER BY ... LIMIT N`. The caller takes `rows[0]` (or expects a fixed-size set) — Snowflake's row order is unspecified without ORDER BY, so the wrong row can be returned.
+
+**Detect:** in any `apps/lfx-one/src/server/services/**.ts` with embedded Snowflake SQL, for each SELECT followed by `result.rows[0]` (or that the docs / caller bound to top-K), verify the query has `ORDER BY <col> {ASC|DESC} LIMIT <K>`. Specifically watch "latest metric date", "top N projects" patterns.
+
+**Empirical citation:** PR #259 `apps/lfx-one/src/server/services/project.service.ts:1110` — "This query selects `LAST_METRIC_DATE` but doesn't order/limit results, and the method later returns `result.rows[0]`. Add `ORDER BY LAST_METRIC_DATE DESC` + `LIMIT 1` (or otherwise guarantee a single-row result)." Same PR also flagged `organization.service.ts:467` ("returns 'top 5' projects but query has no `LIMIT 5`") and `organization.service.ts:567` (same issue on `getOrgMaintainersDistribution`).
+
+**Failure message:** Snowflake SELECT used as top-N / latest without `ORDER BY ... LIMIT` — non-deterministic row selection.
+
+**Fix:** add the explicit `ORDER BY <col> {ASC|DESC} LIMIT <K>`. If the caller expects a single row, `LIMIT 1` is non-negotiable. If the SQL is dynamic, cap with a parameterised limit and assert in the caller that `rows.length <= K`.
+
+---
+
 ## `data-and-snowflake/select-mismatch-row-interface` — SHOULD_FIX
 
 **Pattern:** the SELECT list in a Snowflake query selects columns that aren't present in the corresponding TypeScript `Row` interface — or selects fewer than the interface declares. Either case produces runtime undefined fields and type confusion.

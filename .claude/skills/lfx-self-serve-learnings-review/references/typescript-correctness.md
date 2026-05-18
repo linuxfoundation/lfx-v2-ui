@@ -20,6 +20,34 @@ TypeScript-soundness and async-lifecycle patterns CodeRabbit + Copilot flag — 
 
 ---
 
+## `typescript-correctness/snake-vs-camel-case-shared-interface` — SHOULD_FIX
+
+**Pattern:** a shared interface in `packages/shared/src/interfaces/**` mixes snake_case and camelCase field names within the same type (e.g., `votesFor` next to `created_by`), or introduces a camelCase field on an interface whose siblings are snake_case. Forces ad-hoc mapping at every consumer; high risk of silent payload-shape drift when the upstream is snake_case.
+
+**Detect:** in any modified `packages/shared/src/interfaces/**.ts`, scan each interface body for case-style mixing. The repo convention is snake_case for API-payload interfaces (to match Go service responses). Allow camelCase only for explicitly-flagged UI-only view models in a separate `ui-*.interface.ts` file.
+
+**Empirical citation:** PR #292 `packages/shared/src/interfaces/committee.interface.ts:111` — "`GroupEligibility` uses camelCase keys (`joinTier`, `chairTier`, `votingTier`) while most shared interfaces in this repo use snake_case to match API payloads." Same PR flagged `MyCommittee` at `:268` (`myRole`, `myMemberUid` mixed) and `CommitteeVote` at `:362` (`votesFor`/`votesAgainst` mixed with `created_by`).
+
+**Failure message:** Shared interface mixes snake_case and camelCase — payload mapping ambiguity.
+
+**Fix:** pick snake_case for API-contract interfaces (the repo default — matches the Go service's `json:"..."` tags). For UI-only view models, isolate in a separate file and document the boundary mapping. Don't mix in one interface.
+
+---
+
+## `typescript-correctness/date-string-utc-day-shift` — SHOULD_FIX
+
+**Pattern:** a `YYYY-MM-DD` string from Snowflake / a server API is passed into `new Date(dateStr)`, which the JS spec parses as **UTC midnight**. When converted back via `.toLocaleDateString()` (or any `getDate()`-style read) in a non-UTC browser timezone, the displayed date can be off by one day.
+
+**Detect:** find `new Date(<YYYY-MM-DD-string>)` in `.component.ts` / `.service.ts`. The fix is `new Date(year, month - 1, day)` (local midnight). Snowflake `DATE` and `TIMESTAMP_NTZ` columns are the typical input.
+
+**Empirical citation:** PR #259 `apps/lfx-one/src/app/.../organization-involvement.component.ts:530` — "The date strings from `MembershipTierResponse` are `YYYY-MM-DD` and using `new Date()` causes UTC-based day shifts; implement a private `parseLocalDate(dateStr: string): Date` function (create `Date(year, month-1, day)` to construct local date)."
+
+**Failure message:** `new Date('YYYY-MM-DD')` parses as UTC — date shifts by one day in non-UTC timezones.
+
+**Fix:** parse explicitly with `new Date(year, month - 1, day)`. Centralise as a `parseLocalDate(s: string)` helper in `@lfx-one/shared/utils/date` and use it at every API → UI boundary for date-only fields.
+
+---
+
 ## `typescript-correctness/non-null-assertion-on-async-result` — SHOULD_FIX
 
 **Pattern:** non-null assertion (`!`) on a value that's the result of an async call, an array `.find(...)`, an HTTP response field, a route param, or a `signal()` value — any of which can be undefined at runtime.

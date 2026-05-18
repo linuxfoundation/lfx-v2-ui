@@ -48,6 +48,48 @@ Patterns where new backend routes are mounted without the right auth middleware,
 
 ---
 
+## `server-request-handling/instance-state-shared-across-concurrent-requests` — CRITICAL
+
+**Pattern:** a service or controller (singleton-scoped) carries mutable instance state (counter, buffer, current-stream id) that's read / written from per-request handler methods. Two concurrent requests interleave on that state — one request sees the other's progress, or both corrupt each other.
+
+**Detect:** in `apps/lfx-one/src/server/services/**` and `apps/lfx-one/src/server/controllers/**`, find class fields of mutable primitive / map / array type that are mutated inside instance methods called from route handlers. SSE / streaming services are the highest-risk site — counters, buffers, current-status fields. Flag if state isn't per-request-scoped (local variable, or keyed by a request id).
+
+**Empirical citation:** PR #298 `apps/lfx-one/src/server/services/lens.service.ts:13` — "`runContentCount` is stored on the `LensService` instance, but `LensController` holds a single `LensService` and can serve multiple concurrent SSE requests. This counter will be shared across overlapping streams and can cause one client's stage/status to be affected by another's. Make the counter per-stream (e.g., local state inside `readUpstreamSSE`, or pass a mutable context object into `mapUpstreamEvent`) rather than an instance field."
+
+**Failure message:** Singleton-service instance state shared across concurrent requests — cross-request data leak.
+
+**Fix:** move state into the handler-local scope (`let counter = 0` inside the streaming method) or pass a per-request context object through the call chain. If keyed storage is genuinely needed, key a `Map` by request id and clean up on disconnect.
+
+---
+
+## `server-request-handling/case-sensitive-email-tag-match` — SHOULD_FIX
+
+**Pattern:** an OIDC-claim email (or other request-supplied email) is passed into a query-service lookup that does tag-based matching (`tags=email:<value>`) without lowercasing first. Query-service tag matches are case-sensitive — uppercase characters in the token email cause the lookup to silently miss the registrant / invitation.
+
+**Detect:** in `apps/lfx-one/src/server/services/**`, find paths where `req.oidc?.user?.email` (or `req.oidc?.idToken` email claim) feeds into `getMeetingRegistrantsByEmail`, `addInvitedStatusToMeeting`, or any query-service helper using email as a tag. Verify the email is `.toLowerCase()`-normalised before use. Cross-check against `user.controller.ts` where normalisation happens correctly (line 123 in the cited PR).
+
+**Empirical citation:** PR #272 `apps/lfx-one/src/server/services/meeting.service.ts:696` — "Email matching against query-service tags is case-sensitive. Here `email` is taken directly from the OIDC claims and passed into `getMeetingRegistrantsByEmail` without normalization, while other code paths lower-case emails before comparing/filtering." Also flagged in PR #249 `public-meeting.controller.ts:66` — "The email should be lowercased before passing to `addInvitedStatusToMeeting` for consistent tag matching."
+
+**Failure message:** Email used for query-service tag matching without lowercasing — uppercase characters cause silent lookup misses.
+
+**Fix:** normalise email at the boundary: `const email = req.oidc?.user?.email?.toLowerCase()`. Or push the normalisation inside `getMeetingRegistrantsByEmail` so every caller benefits.
+
+---
+
+## `server-request-handling/promise-all-vs-allsettled-fans-out` — SHOULD_FIX
+
+**Pattern:** `Promise.all([...])` over a fan-out of per-item upstream calls (per-meeting registrant fetch, per-meeting invited-status check) in a controller. A single failure rejects the entire array and returns no data to the client — even for items that succeeded. `Promise.allSettled` would degrade gracefully.
+
+**Detect:** in `apps/lfx-one/src/server/controllers/**`, find `Promise.all([...])` where the array is built from a `.map(meeting => this.x.getY(...))` (or analogous per-item fan-out). Verify whether per-item failure should fail the whole request (rare) or degrade gracefully (typical for read endpoints).
+
+**Empirical citation:** PR #247 `apps/lfx-one/src/server/controllers/meeting.controller.ts:54` (also `:77`) — "The parallel `Promise.all` on line 47 doesn't handle individual promise failures. If `getMeetingRegistrants` fails for one meeting, the entire operation fails and no meetings are returned to the client. Consider using `Promise.allSettled()` instead to handle individual failures gracefully, logging warnings for failed fetches while still returning data for successful ones."
+
+**Failure message:** `Promise.all` fan-out — one failure kills the whole list; consider `Promise.allSettled`.
+
+**Fix:** use `Promise.allSettled(...)`, partition into `fulfilled` / `rejected`, log `rejected` reasons at WARN with the item id, and return the `fulfilled` values. Document the choice so future maintainers don't accidentally re-introduce the all-or-nothing semantics.
+
+---
+
 ## `server-request-handling/replaceState-loses-history-state` — SHOULD_FIX
 
 **Pattern:** `Location.replaceState(url)` is called with only one argument, wiping `history.state`. Angular Router stores its `navigationId` in `history.state`; wiping it breaks `Router.getCurrentNavigation()` and back-button behavior.

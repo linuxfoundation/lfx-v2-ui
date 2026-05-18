@@ -1,6 +1,6 @@
 # Security
 
-Trust-boundary patterns across the stack — credential disclosure, identity enumeration, public-meeting visibility, untrusted URL binding, sanitizer bypass, and cookie-as-identity. Sampled from CodeRabbit / GitHub Copilot PR comments 2026-03-15 → 2026-05-15.
+Trust-boundary patterns across the stack — credential disclosure, identity enumeration, public-meeting visibility, untrusted URL binding, sanitizer bypass, and cookie-as-identity. Sampled from CodeRabbit / GitHub Copilot PR comments 2026-01-15 → 2026-05-15.
 
 **Read when:** always — secrets, sanitization, auth-state leakage, untrusted cookies and untrusted URLs can hit any change. Cross-checked by `/lfx-self-serve-learnings-review` Phase 4 — findings without a quotable pattern below are dropped.
 
@@ -59,6 +59,76 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 **Failure message:** Cookie payload used as identity / trusted data without shape or signature validation. Tampering exposure.
 
 **Fix:** (a) define a zod schema for the expected cookie payload and parse-or-reject; (b) if cookie is supposed to be signed, verify the signature before parsing; (c) treat the value as untrusted input and validate against a known list of acceptable account IDs from the authenticated session.
+
+---
+
+## `security/innerHTML-unsanitized-user-content` — CRITICAL
+
+**Pattern:** `[innerHTML]="userField"` binding where `userField` is user-provided content (vote description, meeting description, comment body) without sanitization. Angular doesn't auto-sanitize `[innerHTML]` for trusted-HTML; it strips at runtime but `<script>` tags / `onerror=` attributes / encoded JS payloads can survive.
+
+**Detect:** grep for `\[innerHTML\]=` in `.component.html`. For each match, trace the source to a service / API field. Verify either (a) a `DomSanitizer.sanitize(SecurityContext.HTML, ...)` pipe applied (like the `linkify` pipe pattern), or (b) the field is from a trusted-server source the team has explicitly approved.
+
+**Empirical citation:** PR #242 `apps/lfx-one/src/app/.../vote-results-drawer/vote-results-drawer.component.html:108` (also lines 120, 343) — "Using `[innerHTML]` with unsanitized user-controlled content creates a Cross-Site Scripting (XSS) vulnerability. Vote descriptions are user-provided input and should be sanitized before rendering as HTML."
+
+**Failure message:** `[innerHTML]` bound to user-provided content without sanitization — XSS exposure.
+
+**Fix:** prefer text interpolation `{{ voteData.description }}` if HTML isn't needed. If HTML is required, apply a sanitizer pipe (like the codebase's `linkify` pipe) that wraps `DomSanitizer.sanitize(SecurityContext.HTML, ...)`.
+
+---
+
+## `security/window-open-no-noopener` — CRITICAL
+
+**Pattern:** `window.open(externalUrl, '_blank')` called without `'noopener,noreferrer'` features. The opened page can access `window.opener` and navigate the originating tab (reverse-tabnabbing) — credential phishing risk.
+
+**Detect:** grep for `window\.open\(` in `.component.ts` / `.service.ts`. For each match, verify the third argument is the string `'noopener,noreferrer'` (or a superset). Also flag `<a target="_blank">` without `rel="noopener noreferrer"`.
+
+**Empirical citation:** PR #269 `apps/lfx-one/src/app/modules/meetings/components/meeting-card/meeting-card.component.ts:277` (also `dashboard-meeting-card.component.ts:96`, `meeting-join.component.ts:196`) — "`window.open(res.download_url, '_blank')` can expose the app via reverse-tabnabbing because the opened page can access `window.opener`."
+
+**Failure message:** `window.open(..., '_blank')` without `noopener,noreferrer` — reverse-tabnabbing risk.
+
+**Fix:** `window.open(url, '_blank', 'noopener,noreferrer')` (and/or set `newWindow.opener = null` after open). For anchors, add `rel="noopener noreferrer"`.
+
+---
+
+## `security/http-in-production-environment` — CRITICAL
+
+**Pattern:** `apps/lfx-one/src/environments/environment.prod.ts` (or any production-flagged env file) contains a `http://` URL for any service the browser will connect to. Mixed-content blocked or insecure traffic at runtime.
+
+**Detect:** grep `^.*=\s*['"]http://` in any file under `apps/lfx-one/src/environments/` whose name contains `prod` or `staging`. Dev / local files are exempt.
+
+**Empirical citation:** PR #233 `apps/lfx-one/src/environments/environment.prod.ts:9` — "The PCC URL in production uses HTTP instead of HTTPS, which is a security concern. All other environments (dev, staging, local) use HTTPS. Production should also use HTTPS for secure communication."
+
+**Failure message:** `http://` URL in production environment file — must be HTTPS.
+
+**Fix:** change to `https://` and verify the upstream serves HTTPS. If the upstream is HTTP-only, surface that as a blocker — don't ship insecure URLs to production.
+
+---
+
+## `security/ssrf-external-fetch-incomplete-guards` — CRITICAL
+
+**Pattern:** a server-side fetch of an external URL (user-supplied or derived from user input) without the full SSRF guard set: hostname IP-blocklist, DNS resolution + post-resolution IP check (defeats DNS rebinding), `Content-Type` allowlist on the response, request size limit, rate limit on the endpoint.
+
+**Detect:** for any new server file that calls `fetch(externalUrl)` / `axios.get(externalUrl)`, verify (a) hostname is checked against a private/loopback/link-local IP blocklist, (b) the resolved IP (post-DNS) is rechecked against the same blocklist before connecting, (c) the response Content-Type is validated, (d) the route is rate-limited.
+
+**Empirical citation:** PR #252 `apps/lfx-one/src/server/services/url-metadata.service.ts:109` — "The fetchUrlTitle flow only calls isBlockedHostname but does not resolve the hostname to an IP before fetching, leaving a DNS rebinding SSRF gap." Same PR also flagged missing rate limiting on the route (`url-metadata.route.ts:12`) and missing Content-Type validation (`url-metadata.service.ts:115`).
+
+**Failure message:** Server-side external fetch missing full SSRF guard set (DNS-rebinding / Content-Type / rate-limit).
+
+**Fix:** resolve `parsed.hostname` to IPs before fetching, validate every resolved IP against blocked CIDR ranges (loopback, RFC1918, link-local, ULA `fd00::/8`), reject non-text Content-Types, and rate-limit the route. Centralise the helper so all external-fetch sites use it.
+
+---
+
+## `security/pii-in-logs-and-identifiers` — SHOULD_FIX
+
+**Pattern:** a user email / username / other PII is passed into `logger.startOperation` / `logger.info` / `logger.debug` as a `user_id` or similar identifier, or persisted into a metadata object that the logger then serialises. The structured-log destination (Datadog / Snowflake) retains the PII indefinitely.
+
+**Detect:** grep `logger\.(startOperation|info|debug|warning)\(` for arguments containing `email`, `user_email`, `userEmail`, or destructured email fields. Also check `redact.paths` in `server-logger.ts` — verify any nested token / email paths are included. Finally, grep `LoggerService.sanitize` usage near interfaces with `user_email` fields.
+
+**Empirical citation:** PR #280 `apps/lfx-one/src/server/controllers/lens.controller.ts:14` — "The controller is forwarding raw email addresses as `user_id`. Use a stable opaque identifier instead (e.g., OIDC `sub`) or compute a salted hash before passing to `logger.startOperation` and downstream services." Also PR #285 `apps/lfx-one/src/server/server-logger.ts:81` — "`redact.paths` only covers top-level keys and misses nested `token_response.access_token`." Also PR #230 `packages/shared/src/interfaces/poll.interface.ts:245` — "`IndividualVote.user_email` contains PII and must be sanitized before logging; call `LoggerService.sanitize(metadata)` before logger calls that pass `userEmail` or objects containing `IndividualVote`."
+
+**Failure message:** PII (email / username) flowing into logs as identifier or unsanitized metadata.
+
+**Fix:** prefer OIDC `sub` (or a salted hash) as the user_id field. For metadata containing PII, call `LoggerService.sanitize(metadata)` before passing to the logger. Extend `redact.paths` in `server-logger.ts` to cover nested token / email fields.
 
 ---
 

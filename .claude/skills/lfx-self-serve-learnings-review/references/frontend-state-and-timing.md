@@ -6,6 +6,34 @@ Patterns CodeRabbit + Copilot reliably flag at the signals ↔ observables inter
 
 ---
 
+## `frontend-state-and-timing/sse-parser-overwrites-multiline-data` — CRITICAL
+
+**Pattern:** an SSE event-block parser that handles multi-line `data:` frames by overwriting the `data` variable on each `data:` line (instead of concatenating with `\n`). Per the SSE spec, multiple `data:` lines in one event block should join with newlines. Large JSON payloads split across `data:` lines silently lose all but the last fragment — runtime parse errors or truncated content.
+
+**Detect:** in any custom SSE parser (`parseUpstreamSSEBlock`, `parseSSE`, or the inline parser inside `LensService` / `SseService`), find the line-handling logic for `data:` lines. Verify it concatenates (`data = (data ? data + '\n' : '') + raw`) rather than reassigns (`data = raw`). Also verify the `TextDecoder` is `decode()`-flushed after the read loop (multibyte boundaries) and the SSE split delimiter is `\n\n` (event-block separator).
+
+**Empirical citation:** PR #280 `apps/lfx-one/src/server/services/lens.service.ts:160` — "The `parseUpstreamSSEBlock` method overwrites the `data` variable when multiple `data:` lines appear in a single SSE event block. According to the SSE specification, if an event contains multiple `data:` lines, their values should be concatenated with a newline character between them." Same PR flagged the frontend mirror at `sse.service.ts:114`, and the missing `decoder.decode()` flush at `lens.service.ts:109`.
+
+**Failure message:** SSE parser drops multi-line `data:` fragments — data corruption on large payloads.
+
+**Fix:** concatenate `data:` lines with `\n`. Flush `TextDecoder` after the read loop with a final `decoder.decode()` so trailing multibyte bytes aren't lost. Split event blocks on `\n\n`, not raw newlines.
+
+---
+
+## `frontend-state-and-timing/sse-disconnect-listener-on-req-not-res` — SHOULD_FIX
+
+**Pattern:** in an Express SSE handler, the client-disconnect listener is registered on `req.on('close', ...)` instead of `res.on('close', ...)`. `req.on('close')` fires after the request body is read — for a long-lived response, mid-stream disconnects aren't detected, and upstream fetches / AbortControllers keep running.
+
+**Detect:** in any controller that streams SSE (response with `text/event-stream` Content-Type), find the disconnect listener. Verify it's `res.on('close', ...)`. Cross-check that an `AbortController` is aborted when the listener fires.
+
+**Empirical citation:** PR #280 `apps/lfx-one/src/server/controllers/lens.controller.ts:41` — "The SSE disconnect handling currently listens on `req.on('close')` which fires after the request body is read; change the listener to `res.on('close')` so mid-response disconnects are detected."
+
+**Failure message:** SSE disconnect listener on `req.on('close')` — mid-stream disconnects undetected.
+
+**Fix:** switch to `res.on('close', ...)`. Inside the handler, set `clientDisconnected = true` and call `abortController.abort()` so the upstream fetch terminates.
+
+---
+
 ## `frontend-state-and-timing/toObservable-startWith-double-emit` — SHOULD_FIX
 
 **Pattern:** `toObservable(signal).pipe(startWith(initialValue))` — `toObservable` already synchronously emits the signal's current value on subscribe. Adding `startWith` prepends a second synchronous emission, doubling downstream firing (e.g., `combineLatest` fires twice on mount, refetches data twice).

@@ -48,6 +48,20 @@ Patterns where the code lies about itself — docstrings, inline comments, JSDoc
 
 ---
 
+## `code-truthiness/ssr-guard-claimed-but-not-implemented` — SHOULD_FIX
+
+**Pattern:** a component injects `PLATFORM_ID` and has a comment / PR description claiming an `isPlatformBrowser` SSR guard is applied — but the guard is never called. The HTTP request still fires during SSR, wasting work and producing 401 noise.
+
+**Detect:** in `.component.ts` files that inject `PLATFORM_ID`, verify `isPlatformBrowser(this.platformId)` is actually called before HTTP work. Also check adjacent comments that claim an SSR optimisation — verify the code matches. Cross-check `apps/lfx-one/src/server/server-logger.ts` for routes generating 401s that suggest the guard is missing.
+
+**Empirical citation:** PR #247 `apps/lfx-one/src/app/shared/components/sidebar/sidebar.component.ts:27` (also `:42`) — "The PR description mentions adding an `isPlatformBrowser` guard to prevent wasted SSR calls, and `PLATFORM_ID` is injected on line 27, but it's never actually used in the code. The `initProjects` method should check if it's running in the browser before making the HTTP call to properly implement the SSR optimization mentioned in the PR summary."
+
+**Failure message:** `PLATFORM_ID` injected but `isPlatformBrowser` guard never called — SSR optimisation claimed but missing.
+
+**Fix:** either add the guard (`if (isPlatformBrowser(this.platformId)) { this.initProjects(); }`) or update the comment / PR description to accurately reflect what's optimised (e.g., `shareReplay(1)` caching only).
+
+---
+
 ## `code-truthiness/helm-values-drift-vs-pr-desc` — SHOULD_FIX
 
 **Pattern:** `charts/**/values.yaml` has changes (e.g., new `startupProbe`, `livenessProbe`, resource limits) that aren't mentioned in the PR description. Reviewers approve the code change without realizing deployment behavior is also changing.
