@@ -5,10 +5,10 @@ description: >
   knowledge base of patterns this codebase has hit before — patterns
   flagged by CodeRabbit + Copilot in past PR review comments, patterns
   human reviewers have called out, and codebase gotchas. Also applies
-  the union of CodeRabbit + Copilot's published review rubrics. Runs in
-  a forked context with no subagent. Use before every commit, alongside
-  /lfx-self-serve-self-review.
+  the union of CodeRabbit + Copilot's published review rubrics. Use
+  before every commit, alongside /lfx-self-serve-self-review.
 context: fork
+agent: bot-rubric-agent
 allowed-tools: Bash, Read, Glob, Grep
 ---
 
@@ -22,21 +22,25 @@ You are checking whether **local uncommitted (or about-to-be-committed) work** m
 
 The companion skill `/lfx-self-serve-self-review` handles repo-convention code review (rules / checklists / architecture / upstream API contracts / protected files) via the `lfx-self-serve-code-reviewer` agent. Both run pre-commit per the work-cycle in `CLAUDE.md`.
 
-This skill runs `context: fork` but with **no subagent**. The entire workflow lives in this body — knowledge-base entries are consumed only by this skill, so there's no system-prompt-reuse benefit from extracting an agent. References live in `references/` and are read directly.
+The `bot-rubric-agent` system prompt provides the severity mapping, the 8-bucket category index, the behavioural guidance, and the cross-check discipline. Apply that rubric throughout the phases below.
 
 **Output:** structured findings report printed to the terminal with verdict `NOT READY | READY WITH CHANGES | READY`. No git mutations.
 
 ---
 
-## ⚠ Mandatory: read these references before any audit work
+## ⚠ Mandatory: read ONLY the pattern files relevant to the diff
 
-Each finding you emit must trace back to a quotable item in one of these files. If you cannot quote the source, drop the finding. Hallucinated rules are worse than missed ones.
+Each finding you emit must trace back to a quotable item in a pattern file. If you cannot quote the source, drop the finding. Hallucinated rules are worse than missed ones.
 
-- **`.claude/skills/lfx-self-serve-learnings-review/references/review-rubric.md`** — unioned CodeRabbit + GitHub Copilot review rubric: 8 consolidated buckets, severity map (CodeRabbit's Critical/Major/Minor/Trivial → our CRITICAL/SHOULD_FIX/NIT), index into the per-category pattern files.
-- **`.claude/skills/lfx-self-serve-learnings-review/references/*.md`** — per-category checklists of repo-specific empirical patterns observed in past PR comments. Each pattern cites its origin PR# + file. Read conditionally per the routing table in Phase 3.
+**Always read:**
+
 - **`.claude/skills/lfx-self-serve-learnings-review/references/known-false-positives.md`** — applied LAST to drop findings CodeRabbit + Copilot still surface that aren't real for this codebase.
 
-**If you emit findings without reading every reference relevant to the diff, your audit is invalid.**
+**Conditionally read** the per-category pattern files in `.claude/skills/lfx-self-serve-learnings-review/references/` — **only** the ones whose "Read when" condition matches the changed-file paths in the diff (see the routing table in Phase 3). Each pattern in those files cites its origin PR# + file.
+
+**Do NOT read pattern files whose condition does not match the diff** — that's wasted context with no audit value. If a row in the routing table doesn't apply to your diff, skip it.
+
+**If you emit findings without reading the pattern files that DO apply to the diff, your audit is invalid.**
 
 ---
 
@@ -77,10 +81,11 @@ If both are empty, abort: "No changes to audit against `<base>`."
 
 ### Always read
 
-- `.claude/skills/lfx-self-serve-learnings-review/references/review-rubric.md`
 - `.claude/skills/lfx-self-serve-learnings-review/references/known-false-positives.md`
 
-### Conditionally read `.claude/skills/lfx-self-serve-learnings-review/references/*.md` based on changed-file paths
+### Conditionally read `.claude/skills/lfx-self-serve-learnings-review/references/<category>.md` based on changed-file paths
+
+Read ONLY the rows whose condition matches the diff. If a row's condition doesn't apply, skip the file — don't read it.
 
 | Pattern file                     | Read when                                                                                                                                                                                                                                                                           |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -93,7 +98,7 @@ If both are empty, abort: "No changes to audit against `<base>`."
 | `data-and-snowflake.md`          | `apps/lfx-one/src/server/services/snowflake.service.ts` or any file with direct Snowflake SQL                                                                                                                                                                                       |
 | `code-truthiness.md`             | any JSDoc / inline comment, anything under `docs/**`, or any new feature module / service / component without a matching `*.spec.ts`                                                                                                                                                |
 
-The table is a guideline. When in doubt, read the file. Reading too much wastes context; missing a relevant pattern means a missed finding.
+When in doubt about a borderline row, lean toward reading — a missed pattern is worse than wasted context. But never blanket-read all 8 files "to be safe".
 
 ## Phase 4 — Knowledge-base pass
 
@@ -171,8 +176,8 @@ If the user passed extra instructions after the base-branch (e.g. "focus on secu
 
 ## References used
 
-- **`.claude/skills/lfx-self-serve-learnings-review/references/review-rubric.md`** — unioned CodeRabbit + Copilot rubric + severity map
-- **`.claude/skills/lfx-self-serve-learnings-review/references/*.md`** — 8 per-category empirical-pattern checklists (read conditionally per Phase 3 routing)
+- **`bot-rubric-agent` system prompt** — unioned CodeRabbit + Copilot rubric, severity map, 8-bucket category index, behavioural guidance, cross-check discipline (loaded ambiently as the agent backing this skill)
+- **`.claude/skills/lfx-self-serve-learnings-review/references/<category>.md`** — 8 per-category empirical-pattern files (read conditionally per Phase 3 routing)
 - **`.claude/skills/lfx-self-serve-learnings-review/references/known-false-positives.md`** — applied LAST to drop known false matches
 
 ## Companion skills

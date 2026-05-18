@@ -3,7 +3,7 @@ name: lfx-self-serve-self-review
 description: >
   Pre-commit self-review of local lfx-self-serve work against a target base
   branch (default origin/main). Delegates the full audit to the
-  lfx-self-serve-code-reviewer subagent in a forked context — diff
+  lfx-self-serve-code-reviewer subagent — diff
   computation, rule loading, code review, upstream API contract validation,
   protected-file flagging — and renders the agent's findings as a structured
   report with verdict `NOT READY | READY WITH CHANGES | READY`. PR-shape
@@ -18,7 +18,7 @@ allowed-tools: Bash, Read, Glob, Grep
 
 You are reviewing **local work that has not yet been opened as a PR** against LFX One standards. There is no `gh pr` to read — the audit operates on the local diff between the current branch and a target base (default `origin/main`).
 
-This skill runs in a **forked context** using the `lfx-self-serve-code-reviewer` subagent type. The agent's system prompt contains the full audit playbook (diff computation, rule loading, code review, upstream API contract validation, protected-file flagging, severity calibration, false-positive list, findings JSON format). Your job in this body is to **parse args, hand off to the agent's playbook with the right mode flag, and render the agent's JSON findings into a human-readable report.**
+The `lfx-self-serve-code-reviewer` agent's system prompt contains the full audit playbook (diff computation, rule loading, code review, upstream API contract validation, protected-file flagging, severity calibration, false-positive list, findings JSON format). Your job in this body is to **parse args, hand off to the agent's playbook with the right mode flag, and render the agent's JSON findings into a human-readable report.**
 
 **Not in scope:** PR-shape sanity (branch name, JIRA, conventional commits, rebase, DCO + GPG, diff size). That's `/lfx-self-serve-pr-readiness`. The agent returns `code | upstream-api | protected-files` categories only.
 
