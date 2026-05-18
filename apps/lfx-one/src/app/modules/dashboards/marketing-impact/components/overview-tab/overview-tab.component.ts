@@ -11,25 +11,11 @@ import { catchError, finalize, forkJoin, of, switchMap } from 'rxjs';
 import type { OverviewKpiData, PerformanceSummaryKpi } from '@lfx-one/shared/interfaces';
 
 import { AttributionSectionComponent } from '../attribution-section/attribution-section.component';
-import { EmailTabComponent } from '../email-tab/email-tab.component';
-import { PerformanceMarketingTabComponent } from '../performance-marketing-tab/performance-marketing-tab.component';
-import { SocialAccountsTabComponent } from '../social-accounts-tab/social-accounts-tab.component';
-import { SocialListeningTabComponent } from '../social-listening-tab/social-listening-tab.component';
 import { SparklineKpiCardComponent } from '../sparkline-kpi-card/sparkline-kpi-card.component';
-import { WebActivityTabComponent } from '../web-activity-tab/web-activity-tab.component';
 
 @Component({
   selector: 'lfx-overview-tab',
-  imports: [
-    ButtonComponent,
-    SparklineKpiCardComponent,
-    AttributionSectionComponent,
-    PerformanceMarketingTabComponent,
-    EmailTabComponent,
-    WebActivityTabComponent,
-    SocialAccountsTabComponent,
-    SocialListeningTabComponent,
-  ],
+  imports: [ButtonComponent, SparklineKpiCardComponent, AttributionSectionComponent],
   templateUrl: './overview-tab.component.html',
 })
 export class OverviewTabComponent {
