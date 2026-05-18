@@ -14,7 +14,7 @@ agent: lfx-self-serve-code-reviewer
 allowed-tools: Bash, Read, Glob, Grep
 ---
 
-# LFX Self-Serve Pre-PR Self-Review
+# LFX Self-Serve Pre-commit Self-Review
 
 You are reviewing **local work that has not yet been opened as a PR** against LFX One standards. There is no `gh pr` to read — the audit operates on the local diff between the current branch and a target base (default `origin/main`).
 

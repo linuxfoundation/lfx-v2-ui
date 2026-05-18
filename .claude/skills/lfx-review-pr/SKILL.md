@@ -24,7 +24,7 @@ Walk through each phase in order. Phases may short-circuit when their preconditi
 
 ---
 
-## Phase 1 — Parse arguments
+## Phase 1 — Parse arguments and fetch PR metadata
 
 Args format: `<PR number> [extra instructions]`.
 
@@ -32,9 +32,23 @@ Args format: `<PR number> [extra instructions]`.
 - Everything after is extra focus (e.g. "focus on backend", "check that previous comments were addressed").
 - If no PR number is provided, use **AskUserQuestion** to ask for one. Do not guess.
 
+Phases 3, 4, and 5 run in parallel with the background agent (Phase 2), so the skill body must fetch its own PR metadata up front — it can't depend on the agent's fetch (which doesn't return until Phase 6).
+
 ```bash
 gh repo view --json nameWithOwner --jq '.nameWithOwner'   # store as {owner}/{repo}
+
+# Fetch PR metadata the skill body needs (title, body, headRefName, baseRefName, author, size):
+gh pr view <N> --json title,body,headRefName,baseRefName,author,additions,deletions \
+  > /tmp/pr-<N>-meta.json
+
+# Pull the base + head refs so merge-base / commit log queries work locally:
+BASE_REF=$(jq -r '.baseRefName' /tmp/pr-<N>-meta.json)
+HEAD_REF=$(jq -r '.headRefName' /tmp/pr-<N>-meta.json)
+AUTHOR=$(jq -r '.author.login' /tmp/pr-<N>-meta.json)
+git fetch origin "$BASE_REF" "$HEAD_REF"
 ```
+
+Keep `BASE_REF`, `HEAD_REF`, `AUTHOR`, and the metadata file path available — Phases 3 (read file at `origin/$HEAD_REF`), 4 (PR-shape checks against `origin/$BASE_REF..origin/$HEAD_REF`), and 5 (`gh pr list --author $AUTHOR`) all need them.
 
 ## Phase 2 — Spawn the code reviewer (background)
 
@@ -74,7 +88,7 @@ Then:
 
 1. Skip trivial comments: nits, acknowledgments, "+1", bot auto-comments (CodeRabbit / Copilot — these run their own review and don't need verification), and purely informational remarks.
 2. For every **CRITICAL** or **SHOULD_FIX** comment from a human reviewer:
-   1. Read the file on the PR branch: `git show origin/<headRefName>:<file>` (use the `headRefName` from the agent's PR metadata fetch).
+   1. Read the file on the PR branch: `git show origin/$HEAD_REF:<file>` (using `$HEAD_REF` captured in Phase 1).
    2. Compare the current code against what the comment requested.
    3. Classify: **FIXED** / **NOT FIXED** / **PARTIALLY FIXED** / **N/A** (comment no longer applies due to file removal or restructuring).
 3. Build a markdown table:
@@ -92,22 +106,21 @@ If there are no previous review comments, note "No previous review comments foun
 
 Walk every check in `.claude/skills/lfx-self-serve-pr-readiness/references/pr-shape.md` against the PR data. This is the same checklist `/lfx-self-serve-pr-readiness` walks pre-PR, plus the two PR-only items (PR title format and external-refs check) that only apply once a PR exists.
 
-Fetch the additional PR-level data this needs:
+Fetch the additional PR-level data this needs (PR title / body / headRefName / baseRefName / additions come from `/tmp/pr-<N>-meta.json` captured in Phase 1):
 
 ```bash
 gh api repos/{owner}/{repo}/pulls/<N>/commits --paginate --jq '.[].commit.message'
-# (PR title and body come from `gh pr view --json title,body` in Phase 1)
 ```
 
 Then check each item from `.claude/skills/lfx-self-serve-pr-readiness/references/pr-shape.md`:
 
-- **Branch name format** → from `gh pr view --json headRefName`. Match `<type>/LFXV2-<number>`.
-- **JIRA ticket reference** → grep `LFXV2-[0-9]+` over commit subjects + bodies + PR body. None → SHOULD_FIX.
+- **Branch name format** → `jq -r .headRefName /tmp/pr-<N>-meta.json` (i.e., `$HEAD_REF`). Match `<type>/LFXV2-<number>`.
+- **JIRA ticket reference** → grep `LFXV2-[0-9]+` over commit subjects + bodies + PR body (from the metadata file). None → SHOULD_FIX.
 - **Conventional commit on every commit** → each commit subject against the regex in `pr-shape.md`. `chore` is invalid.
-- **PR title format** (PR-only) → `type(scope): description`, lowercase, no `LFXV2-XXX` in the title, `chore` invalid. → SHOULD_FIX.
-- **Branch rebased on base** → `git merge-base --is-ancestor origin/<baseRefName> origin/<headRefName>`. Non-zero → SHOULD_FIX.
-- **Diff size** → if `additions > 1000` → NIT (plus a review-body note — see Additional Rules).
-- **DCO + GPG signing** → from `git log --format='%G? %h %s' origin/<baseRefName>..origin/<headRefName>` and commit bodies. `N` / `B` / `E` codes → CRITICAL. Missing `Signed-off-by:` → CRITICAL.
+- **PR title format** (PR-only) → `jq -r .title /tmp/pr-<N>-meta.json` against `type(scope): description`, lowercase, no `LFXV2-XXX` in the title, `chore` invalid. → SHOULD_FIX.
+- **Branch rebased on base** → `git merge-base --is-ancestor origin/$BASE_REF origin/$HEAD_REF`. Non-zero → SHOULD_FIX.
+- **Diff size** → `jq -r .additions /tmp/pr-<N>-meta.json`. If > 1000 → NIT (plus a review-body note — see Additional Rules).
+- **DCO + GPG signing** → from `git log --format='%G? %h %s' origin/$BASE_REF..origin/$HEAD_REF` and commit bodies. `N` / `B` / `E` codes → CRITICAL. Missing `Signed-off-by:` → CRITICAL.
 - **PR body external refs** (PR-only) → if the diff touches `apps/lfx-one/src/server/` files calling upstream microservices and the PR body has no link to the upstream PR/commit → SHOULD_FIX.
 
 Build a `category: pr-shape` finding for each failure. Skip findings with no quotable item in `.claude/skills/lfx-self-serve-pr-readiness/references/pr-shape.md` (cross-check discipline applies here too).
@@ -115,7 +128,7 @@ Build a `category: pr-shape` finding for each failure. Skip findings with no quo
 ## Phase 5 — New contributor awareness
 
 ```bash
-gh pr list --author <author> --state merged --limit 5 --json number | jq 'length'
+gh pr list --author "$AUTHOR" --state merged --limit 5 --json number | jq 'length'
 ```
 
 If the author has fewer than 5 merged PRs to this repo, mark the review as **educational mode** — inline comments should explain the **why** behind each rule, not just the **what**, and cite the exact rule file and section so the contributor can learn the convention rather than just patch the code. Carry this flag into Phase 7.
