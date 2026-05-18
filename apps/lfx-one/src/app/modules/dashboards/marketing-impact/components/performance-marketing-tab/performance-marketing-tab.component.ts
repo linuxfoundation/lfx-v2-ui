@@ -5,7 +5,7 @@ import { Component, computed, inject, input, signal, Signal } from '@angular/cor
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { FUNNEL_STAGE_OPTIONS } from '@lfx-one/shared/constants';
-import { formatChangePct, formatCurrency, formatNumber, trendColorClass, trendDirection } from '@lfx-one/shared/utils';
+import { computeMomPct, formatChangePct, formatCurrency, formatNumber, trendColorClass, trendDirection } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { catchError, of, switchMap, tap } from 'rxjs';
 
@@ -105,7 +105,7 @@ export class PerformanceMarketingTabComponent {
       if (!data) return [];
 
       const roasMomPct = data.changePercentage;
-      const impressionsMomPct = this.computeMomPct(data.monthlyData);
+      const impressionsMomPct = computeMomPct(data.monthlyData);
 
       const cards: PerformanceSummaryKpi[] = [
         {
@@ -286,13 +286,5 @@ export class PerformanceMarketingTabComponent {
     if (roas >= 1) return 'GOOD';
     if (roas > 0) return 'AVERAGE';
     return 'EMERGING';
-  }
-
-  private computeMomPct(arr: number[] | undefined): number | null {
-    if (!arr || arr.length < 2) return null;
-    const current = arr.at(-1) ?? 0;
-    const previous = arr.at(-2) ?? 0;
-    if (previous === 0) return null;
-    return ((current - previous) / previous) * 100;
   }
 }

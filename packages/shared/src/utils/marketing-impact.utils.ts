@@ -55,3 +55,12 @@ export function formatChangePct(pct: number | null | undefined, suffix: string):
   const sign = pct > 0 ? '+' : '';
   return `${sign}${pct.toFixed(1)}% ${suffix}`;
 }
+
+/** Returns MoM percent change from the last two values of a monthly series. */
+export function computeMomPct(arr: number[] | undefined): number | null {
+  if (!arr || arr.length < 2) return null;
+  const current = arr.at(-1) ?? 0;
+  const previous = arr.at(-2) ?? 0;
+  if (previous === 0) return null;
+  return ((current - previous) / previous) * 100;
+}
