@@ -36,6 +36,8 @@ export interface ApiResponse<T = unknown> {
 export interface MicroserviceUrls {
   /** LFX V2 service base URL */
   LFX_V2_SERVICE: string;
+  /** myprofile backend base URL */
+  MYPROFILE_API: string;
 }
 
 /**

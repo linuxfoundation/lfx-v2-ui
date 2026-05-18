@@ -25,6 +25,7 @@ export class MicroserviceProxyService {
     try {
       const MICROSERVICE_URLS: MicroserviceUrls = {
         LFX_V2_SERVICE: process.env['LFX_V2_SERVICE'] || 'http://lfx-api.k8s.orb.local',
+        MYPROFILE_API: process.env['MYPROFILE_API'] || '',
       };
 
       const baseUrl = MICROSERVICE_URLS[service];
@@ -62,6 +63,7 @@ export class MicroserviceProxyService {
     try {
       const MICROSERVICE_URLS: MicroserviceUrls = {
         LFX_V2_SERVICE: process.env['LFX_V2_SERVICE'] || 'http://lfx-api.k8s.orb.local',
+        MYPROFILE_API: process.env['MYPROFILE_API'] || '',
       };
 
       const baseUrl = MICROSERVICE_URLS[service];
@@ -108,6 +110,7 @@ export class MicroserviceProxyService {
     try {
       const MICROSERVICE_URLS: MicroserviceUrls = {
         LFX_V2_SERVICE: process.env['LFX_V2_SERVICE'] || 'http://lfx-api.k8s.orb.local',
+        MYPROFILE_API: process.env['MYPROFILE_API'] || '',
       };
 
       const baseUrl = MICROSERVICE_URLS[service];
@@ -150,6 +153,7 @@ export class MicroserviceProxyService {
   ): Promise<Response> {
     const MICROSERVICE_URLS: MicroserviceUrls = {
       LFX_V2_SERVICE: process.env['LFX_V2_SERVICE'] || 'http://lfx-api.k8s.orb.local',
+      MYPROFILE_API: process.env['MYPROFILE_API'] || 'https://myprofile.platform.linuxfoundation.org',
     };
 
     const baseUrl = MICROSERVICE_URLS[service];
