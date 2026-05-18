@@ -5,7 +5,7 @@ import { Component, computed, inject, input, signal, Signal } from '@angular/cor
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { formatChangePct, formatNumber, trendColorClass, trendDirection } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
-import { catchError, of, switchMap, tap } from 'rxjs';
+import { catchError, finalize, of, switchMap } from 'rxjs';
 
 import type { BrandHealthMention, BrandHealthResponse, BrandHealthTopProject, PerformanceSummaryKpi, SentimentBar } from '@lfx-one/shared/interfaces';
 
@@ -50,11 +50,8 @@ export class SocialListeningTabComponent {
           }
           this.loading.set(true);
           return this.analyticsService.getBrandHealth(slug, true).pipe(
-            tap(() => this.loading.set(false)),
-            catchError(() => {
-              this.loading.set(false);
-              return of(null);
-            })
+            finalize(() => this.loading.set(false)),
+            catchError(() => of(null))
           );
         })
       ),
