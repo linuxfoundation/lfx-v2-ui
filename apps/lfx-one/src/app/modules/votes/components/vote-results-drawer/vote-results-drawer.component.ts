@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, input, model, signal, Signal } from '@angular/core';
+import { Component, computed, inject, input, model, output, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { TagComponent } from '@components/tag/tag.component';
-import { PollStatus, PollType } from '@lfx-one/shared';
+import { PollStatus, PollType, VoteResponseStatus } from '@lfx-one/shared';
 import {
   PollCommentResult,
   RankedQuestionView,
@@ -15,6 +15,7 @@ import {
   VoteResultsQuestion,
   VoteResultsResponse,
 } from '@lfx-one/shared/interfaces';
+import { ButtonComponent } from '@components/button/button.component';
 import { PollStatusLabelPipe } from '@pipes/poll-status-label.pipe';
 import { PollStatusSeverityPipe } from '@pipes/poll-status-severity.pipe';
 import { VoteService } from '@services/vote.service';
@@ -24,7 +25,7 @@ import { catchError, finalize, of, shareReplay, startWith, switchMap } from 'rxj
 
 @Component({
   selector: 'lfx-vote-results-drawer',
-  imports: [DrawerModule, TagComponent, DatePipe, PollStatusLabelPipe, PollStatusSeverityPipe, SkeletonModule],
+  imports: [DrawerModule, TagComponent, DatePipe, PollStatusLabelPipe, PollStatusSeverityPipe, SkeletonModule, ButtonComponent],
   templateUrl: './vote-results-drawer.component.html',
   styleUrl: './vote-results-drawer.component.scss',
 })
@@ -35,6 +36,9 @@ export class VoteResultsDrawerComponent {
   // === Inputs ===
   public readonly voteId = input<string | null>(null);
   public readonly listVote = input<Vote | null>(null);
+
+  // === Outputs ===
+  public readonly castVoteRequested = output<string>();
 
   // === Model Signals (two-way binding) ===
   public readonly visible = model<boolean>(false);
@@ -53,6 +57,12 @@ export class VoteResultsDrawerComponent {
   // === Computed Signals ===
   protected readonly isGenericPoll: Signal<boolean> = this.initIsGenericPoll();
   protected readonly isLoading: Signal<boolean> = computed(() => this.loadingVoteDetails() || this.loadingVoteResults());
+  protected readonly canCastVoteFromDrawer: Signal<boolean> = computed(() => {
+    const v = this.vote();
+    if (!v) return false;
+    if (v.status !== PollStatus.ACTIVE) return false;
+    return v.response_status === VoteResponseStatus.AWAITING_RESPONSE;
+  });
   protected readonly participationStats: Signal<VoteParticipationStats> = this.initParticipationStats();
   protected readonly isVoteClosed: Signal<boolean> = this.initIsVoteClosed();
   protected readonly questionsWithResults: Signal<VoteResultsQuestion[]> = this.initQuestionsWithResults();
@@ -63,6 +73,12 @@ export class VoteResultsDrawerComponent {
 
   // === Protected Methods ===
   protected onClose(): void {
+    this.visible.set(false);
+  }
+
+  protected onCastVote(): void {
+    const id = this.vote()?.uid;
+    if (id) this.castVoteRequested.emit(id);
     this.visible.set(false);
   }
 

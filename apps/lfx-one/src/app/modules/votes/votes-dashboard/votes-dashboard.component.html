@@ -64,6 +64,7 @@
   [(visible)]="resultsDrawerVisible"
   [voteId]="selectedVoteId()"
   [listVote]="selectedListVote()"
+  (castVoteRequested)="onCastFromResults($event)"
   data-testid="votes-results-drawer"></lfx-vote-results-drawer>
 
 <!-- Vote Cast Drawer — opens for active GENERIC votes the user has not yet responded to (Me lens). -->
