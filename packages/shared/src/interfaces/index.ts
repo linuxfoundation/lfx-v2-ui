@@ -162,3 +162,6 @@ export * from './marketing-impact.interface';
 
 // Enrollment interfaces
 export * from './enrollment.interface';
+
+// Org Memberships interfaces
+export * from './org-memberships.interface';
