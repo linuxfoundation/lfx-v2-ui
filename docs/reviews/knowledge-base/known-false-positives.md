@@ -66,14 +66,6 @@ Used by the `lfx-self-serve-learnings-reviewer` (Step 5), and also relevant filt
 
 **Why false:** premature abstraction. CLAUDE.md explicitly says "three similar lines is better than a premature abstraction" — single-use extraction violates this.
 
-### "Generated with Claude Code" attribution missing from source files
-
-**Pattern matched:** any finding stating a source file (`.ts`, `.html`, `.scss`, route module, etc.) is missing the "Generated with [Claude Code](https://claude.ai/code)" attribution header.
-
-**Why false:** in this repo, AI-assistance attribution is a **PR-description-only** convention. Source files retain only the standard copyright/SPDX header. CodeRabbit learned this in PR #259 ("In linuxfoundation/lfx-v2-ui, do not suggest or insert AI-generation attribution comments into source files") and subsequent PRs (#272, #280, #285, #298) — but it still re-fires occasionally on net-new files.
-
-**Source:** PR #259 CodeRabbit learning timestamp `2026-03-04T20:09:28.731Z`.
-
 ### `PORT=4200` in `.env.example` flagged as wrong port
 
 **Pattern matched:** any finding stating that `PORT=4200` (or related `PCC_BASE_URL=http://localhost:4200`) in `apps/lfx-one/.env.example` is incorrect because the deployment uses port 4000.

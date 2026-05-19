@@ -64,7 +64,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ## `security/innerHTML-unsanitized-user-content` — CRITICAL
 
-**Pattern:** `[innerHTML]="userField"` binding where `userField` is user-provided content (vote description, meeting description, comment body) without sanitization. Angular doesn't auto-sanitize `[innerHTML]` for trusted-HTML; it strips at runtime but `<script>` tags / `onerror=` attributes / encoded JS payloads can survive.
+**Pattern:** `[innerHTML]="userField"` binding where `userField` is user-provided content (vote description, meeting description, comment body). Angular's default HTML sanitizer (`SecurityContext.HTML`, active on `[innerHTML]`) removes `<script>` elements and the common dangerous attributes by default — so naive payloads are blocked. The risk surface this entry captures is two-step: (a) the value is later wrapped in `DomSanitizer.bypassSecurityTrustHtml(...)`, which disables sanitization entirely; or (b) user-controlled content is accepted into a code path where bypass is later added without re-reviewing every reachable input.
 
 **Detect:** grep for `\[innerHTML\]=` in `.component.html`. For each match, trace the source to a service / API field. Verify either (a) a `DomSanitizer.sanitize(SecurityContext.HTML, ...)` pipe applied (like the `linkify` pipe pattern), or (b) the field is from a trusted-server source the team has explicitly approved.
 
@@ -156,7 +156,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 **Failure message:** Non-http URL scheme in `[href]` — Angular sanitizer strips at runtime; link doesn't navigate.
 
-**Fix:** use `DomSanitizer.bypassSecurityTrustUrl(url)` to mark the URL as safe, bind via `[innerHTML]` or `[attr.href]`. Be explicit about the security trade-off; only do this for known-safe URLs you constructed (not user input).
+**Fix:** use `DomSanitizer.bypassSecurityTrustUrl(url)` to mark the URL as safe, then bind via `[href]` or `[attr.href]` — never `[innerHTML]` (that's for HTML content and pairs with `bypassSecurityTrustHtml`, not `bypassSecurityTrustUrl`). Be explicit about the security trade-off; only do this for known-safe URLs you constructed, never on user-supplied input.
 
 ---
 
@@ -178,13 +178,13 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 **Pattern:** a recursive walker reconstructs plain objects by iterating `Object.entries(input)` (or `Object.keys`) and writing each key back via `result[key] = ...`. If the input is JSON-derived (`JSON.parse` of an upstream payload, request body, or user-controlled content), it may carry an own-property literally named `__proto__`, `constructor`, or `prototype`. The dynamic-key assignment then invokes the corresponding setter on `result`'s prototype chain rather than creating an own-property, polluting `Object.prototype` for the whole process.
 
-**Detect:** function returning a fresh `{}` (or `Record<string, unknown>`) whose keys come from `Object.entries(input)` / `Object.keys(input)` and are assigned via bracket notation in a recursion. A plain-object guard on the *input* (`Object.getPrototypeOf(value) === Object.prototype`) does NOT close the hole — it limits which inputs are walked, but the dangerous keys still get copied through.
+**Detect:** function returning a fresh `{}` (or `Record<string, unknown>`) whose keys come from `Object.entries(input)` / `Object.keys(input)` and are assigned via bracket notation in a recursion. A plain-object guard on the _input_ (`Object.getPrototypeOf(value) === Object.prototype`) does NOT close the hole — it limits which inputs are walked, but the dangerous keys still get copied through.
 
 **Empirical citation:** PR #673 `packages/shared/src/utils/object.utils.ts` — Copilot: "When rebuilding plain objects, `result` is initialized as `{}` and then populated via `result[key] = ...`. If an input object contains a `__proto__` key, this assignment can mutate `result`'s prototype (prototype pollution). Consider creating the result with a null prototype (e.g. `Object.create(null)` or `Object.create(proto)` when `proto === null`) and/or safely defining dangerous keys (`__proto__`, `constructor`, `prototype`) so they become data properties instead of triggering prototype setters."
 
 **Failure message:** Recursive plain-object walker assigns keys via `result[key] = ...`; an input own-property named `__proto__`, `constructor`, or `prototype` would pollute `Object.prototype`.
 
-**Fix:** prefer `Object.defineProperty(result, key, { value, writable: true, enumerable: true, configurable: true })` — defines an own-property regardless of the key name and bypasses the dangerous setters. This is what PR #673 shipped, with the in-code rationale: *"Use defineProperty to bypass setters (e.g. `__proto__`) and prevent prototype pollution when keys come from untrusted sources like `JSON.parse`."* Alternatives: skip the three dangerous keys explicitly (`if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;`), or use `Object.create(null)` for a prototype-less result (limits downstream consumers that rely on `Object.prototype` methods).
+**Fix:** prefer `Object.defineProperty(result, key, { value, writable: true, enumerable: true, configurable: true })` — defines an own-property regardless of the key name and bypasses the dangerous setters. This is what PR #673 shipped, with the in-code rationale: _"Use defineProperty to bypass setters (e.g. `__proto__`) and prevent prototype pollution when keys come from untrusted sources like `JSON.parse`."_ Alternatives: skip the three dangerous keys explicitly (`if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;`), or use `Object.create(null)` for a prototype-less result (limits downstream consumers that rely on `Object.prototype` methods).
 
 ---
 

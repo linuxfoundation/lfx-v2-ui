@@ -44,7 +44,7 @@ TypeScript-soundness and async-lifecycle patterns CodeRabbit + Copilot flag — 
 
 **Failure message:** `new Date('YYYY-MM-DD')` parses as UTC — date shifts by one day in non-UTC timezones.
 
-**Fix:** parse explicitly with `new Date(year, month - 1, day)`. Centralise as a `parseLocalDate(s: string)` helper in `@lfx-one/shared/utils/date` and use it at every API → UI boundary for date-only fields.
+**Fix:** parse explicitly with `new Date(year, month - 1, day)`. The shared package already exposes `parseLocalDateString(dateStr: string): Date` in `packages/shared/src/utils/date-time.utils.ts` (re-exported from `@lfx-one/shared/utils`) — use it at every API → UI boundary for date-only fields rather than rolling a per-component helper.
 
 ---
 

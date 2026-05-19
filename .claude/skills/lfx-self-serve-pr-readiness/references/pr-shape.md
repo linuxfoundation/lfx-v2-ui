@@ -29,9 +29,9 @@ Regex: `^(feat|fix|docs|style|refactor|perf|test|build|ci|revert)/LFXV2-[0-9]+$`
 
 ## 3. `pr-shape/conventional-commit` — SHOULD_FIX
 
-**Check:** every commit subject matches `^(feat|fix|docs|style|refactor|perf|test|build|ci|revert)(\([a-z0-9-]+\))?: .+$`, lowercase, header ≤72 characters. `chore` is NOT valid (commitlint uses `@commitlint/config-angular`).
+**Check:** every commit subject matches `^(feat|fix|docs|style|refactor|perf|test|build|ci|revert)(\([a-z0-9-]+\))?: .+$`, lowercase, header ≤72 characters (team style; commitlint hard-fails at >100, per `@commitlint/config-angular` default). `chore` is NOT valid (commitlint uses `@commitlint/config-angular`).
 
-**Failure message** (per offending commit): `Commit '<sha>' subject '<subject>' violates conventional-commit format. Type must be one of feat/fix/docs/style/refactor/perf/test/build/ci/revert (lowercase), optional scope in parens, then ': ', then description. Header capped at 72 chars. 'chore' is not accepted.`
+**Failure message** (per offending commit): `Commit '<sha>' subject '<subject>' violates conventional-commit format. Type must be one of feat/fix/docs/style/refactor/perf/test/build/ci/revert (lowercase), optional scope in parens, then ': ', then description. Header should be ≤72 chars (team style); commitlint enforces ≤100. 'chore' is not accepted.`
 
 **Suggestion:** Reword with `git rebase -i <base>` (`reword`) or `git commit --amend` if it's the latest commit.
 
