@@ -105,7 +105,8 @@ export class PerformanceMarketingTabComponent {
       if (!data) return [];
 
       const roasMomPct = data.changePercentage;
-      const impressionsMomPct = computeMomPct(data.monthlyData);
+      const completedMonths = data.monthlyData?.slice(0, -1);
+      const impressionsMomPct = computeMomPct(completedMonths);
 
       const cards: PerformanceSummaryKpi[] = [
         {
