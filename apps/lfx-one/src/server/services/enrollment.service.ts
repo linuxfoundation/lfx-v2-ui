@@ -4,15 +4,17 @@
 // Generated with [Claude Code](https://claude.ai/code)
 
 import { TLF_INDIVIDUAL_SUPPORTER } from '@lfx-one/shared/constants';
-import { EnrollmentMembership, IndividualEnrollment } from '@lfx-one/shared/interfaces';
+import { EnrollmentMembership, IndividualEnrollment, RawMembership } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
-import { MicroserviceError } from '../errors';
 import { getApiGatewayBaseUrl } from '../helpers/api-gateway.helper';
+import { gatewayFetch } from '../helpers/gateway-fetch.helper';
 import { getUsernameFromAuth, usernameMatches } from '../utils/auth-helper';
 import { logger } from './logger.service';
 
 const DEMO_USER = 'johnlf2727';
+const ENROLLMENT_SERVICE = 'enrollment_service';
+const VALID_STATUSES = new Set<EnrollmentMembership['Status']>(['Active', 'Purchased', 'Expired']);
 
 const DEMO_ENROLLMENTS: IndividualEnrollment[] = [
   {
@@ -38,41 +40,33 @@ export class EnrollmentService {
       return DEMO_ENROLLMENTS;
     }
 
-    const baseUrl = getApiGatewayBaseUrl('get_individual_enrollments', 'enrollment_service');
+    const baseUrl = getApiGatewayBaseUrl('get_individual_enrollments', ENROLLMENT_SERVICE);
     const url = `${baseUrl}/member-service/v2/me/memberships?productID=${TLF_INDIVIDUAL_SUPPORTER.productId}&status=Purchased,Active,Expired&membershipType=Individual`;
 
     logger.debug(req, 'get_individual_enrollments', 'Fetching individual memberships from member-service');
 
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${req.apiGatewayToken}` },
-      signal: AbortSignal.timeout(10000),
+    const data = await gatewayFetch<{ Data?: RawMembership[]; data?: RawMembership[] }>(req, url, {
+      operation: 'get_individual_enrollments',
+      service: ENROLLMENT_SERVICE,
+      errorMessage: 'Individual memberships fetch failed',
+      errorCode: 'INDIVIDUAL_MEMBERSHIPS_FETCH_FAILED',
     });
 
-    if (!response.ok) {
-      const body = await response.text().catch(() => '');
-      throw new MicroserviceError(`member-service returned ${response.status}`, response.status, 'MEMBER_SERVICE_ERROR', {
-        operation: 'get_individual_enrollments',
-        service: 'enrollment_service',
-        errorBody: body.slice(0, 500),
-      });
-    }
-
-    const data = await response.json();
-    const rawMemberships: any[] = data?.Data ?? data?.data ?? [];
+    const rawMemberships: RawMembership[] = data?.Data ?? data?.data ?? [];
 
     const membershipMap = new Map<string, EnrollmentMembership>();
     for (const m of rawMemberships) {
       const productId = m.Product?.ID;
-      if (!productId) continue;
+      if (!productId || !VALID_STATUSES.has(m.Status as EnrollmentMembership['Status'])) continue;
       const existing = membershipMap.get(productId);
-      if (!existing || new Date(existing.PurchaseDate) < new Date(m.PurchaseDate)) {
+      if (!existing || new Date(existing.PurchaseDate) < new Date(m.PurchaseDate ?? '')) {
         membershipMap.set(productId, {
-          Status: m.Status,
+          Status: m.Status as EnrollmentMembership['Status'],
           AutoRenew: m.AutoRenew ?? false,
-          PurchaseDate: m.PurchaseDate,
-          EndDate: m.EndDate,
-          Price: m.Price,
-          ID: m.ID,
+          PurchaseDate: m.PurchaseDate ?? '',
+          EndDate: m.EndDate ?? '',
+          Price: m.Price ?? 0,
+          ID: m.ID ?? '',
           ExtPaymentType: m.ExtPaymentID ? m.ExtPaymentID.split(':')[0] : '',
         });
       }

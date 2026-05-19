@@ -16,6 +16,12 @@
         </lfx-card>
       }
     </div>
+  } @else if (enrollmentError()) {
+    <lfx-empty-state
+      icon="fa-light fa-circle-exclamation"
+      title="Could not load enrollment products"
+      [subtitle]="enrollmentError()!"
+      data-testid="individual-enrollment-error" />
   } @else if (enrollments()!.length === 0) {
     <lfx-empty-state
       icon="fa-light fa-id-card"
@@ -23,7 +29,7 @@
       subtitle="There are no individual enrollment products at this time."
       data-testid="individual-enrollment-empty" />
   } @else {
-    @for (item of enrollments(); track item.productId) {
+    @for (item of enrollments()!; track item.productId) {
       @let status = deriveStatus(item);
       @let severity = statusSeverity(status);
 
@@ -59,7 +65,7 @@
                 @if (item.membership.EndDate) {
                   <span>
                     {{ status === 'Expired' ? 'Expired' : 'Renews' }}:
-                    <span class="font-medium">{{ item.membership.EndDate | slice: 0 : 10 }}</span>
+                    <span class="font-medium">{{ item.membership.EndDate | date: 'mediumDate' : 'UTC' }}</span>
                   </span>
                 }
               }

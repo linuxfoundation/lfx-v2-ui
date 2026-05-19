@@ -36,3 +36,16 @@ export interface UpdateAutoRenewRequest {
 }
 
 export type EnrollmentDisplayStatus = 'Active' | 'Expiring Soon' | 'Expired' | 'Not Enrolled';
+
+export interface RawMembership {
+  Status?: string;
+  AutoRenew?: boolean;
+  PurchaseDate?: string;
+  EndDate?: string;
+  Price?: number;
+  ID?: string;
+  ExtPaymentID?: string;
+  Product?: { ID?: string };
+}
+
+export type EnrollmentsState = { kind: 'loading' } | { kind: 'loaded'; items: IndividualEnrollment[] } | { kind: 'error'; message: string };

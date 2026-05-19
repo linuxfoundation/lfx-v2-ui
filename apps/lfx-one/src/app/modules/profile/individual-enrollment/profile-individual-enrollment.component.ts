@@ -3,10 +3,10 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { SlicePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, Signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { IndividualEnrollment } from '@lfx-one/shared/interfaces';
+import { EnrollmentsState, IndividualEnrollment } from '@lfx-one/shared/interfaces';
 import { deriveEnrollmentStatus, enrollmentStatusSeverity } from '@lfx-one/shared/utils';
 
 import { environment } from '@environments/environment';
@@ -18,7 +18,7 @@ import { EnrollmentService } from '@services/enrollment.service';
 
 @Component({
   selector: 'lfx-profile-individual-enrollment',
-  imports: [ButtonComponent, CardComponent, EmptyStateComponent, TagComponent, SlicePipe],
+  imports: [ButtonComponent, CardComponent, DatePipe, EmptyStateComponent, TagComponent],
   templateUrl: './profile-individual-enrollment.component.html',
   styleUrl: './profile-individual-enrollment.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -26,9 +26,11 @@ import { EnrollmentService } from '@services/enrollment.service';
 export class ProfileIndividualEnrollmentComponent {
   private readonly enrollmentService = inject(EnrollmentService);
 
-  protected readonly enrollments: Signal<IndividualEnrollment[] | undefined> = this.initEnrollments();
+  private readonly _state: Signal<EnrollmentsState | undefined> = this.initState();
 
-  // Expose utilities to template
+  protected readonly enrollments: Signal<IndividualEnrollment[] | null | undefined> = this.initEnrollments();
+  protected readonly enrollmentError: Signal<string | null> = this.initEnrollmentError();
+
   protected readonly deriveStatus = deriveEnrollmentStatus;
   protected readonly statusSeverity = enrollmentStatusSeverity;
 
@@ -37,7 +39,23 @@ export class ProfileIndividualEnrollmentComponent {
     return `${base}${item.ctaPath}${renew ? '&renew=true' : ''}`;
   }
 
-  private initEnrollments(): Signal<IndividualEnrollment[] | undefined> {
+  private initState(): Signal<EnrollmentsState | undefined> {
     return toSignal(this.enrollmentService.getEnrollments());
+  }
+
+  private initEnrollments(): Signal<IndividualEnrollment[] | null | undefined> {
+    return computed(() => {
+      const s = this._state();
+      if (!s || s.kind === 'loading') return undefined;
+      if (s.kind === 'error') return null;
+      return s.items;
+    });
+  }
+
+  private initEnrollmentError(): Signal<string | null> {
+    return computed(() => {
+      const s = this._state();
+      return s?.kind === 'error' ? s.message : null;
+    });
   }
 }

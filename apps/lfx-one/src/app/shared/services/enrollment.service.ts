@@ -3,10 +3,10 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { IndividualEnrollment } from '@lfx-one/shared/interfaces';
-import { catchError, Observable, of } from 'rxjs';
+import { EnrollmentsState, IndividualEnrollment } from '@lfx-one/shared/interfaces';
+import { catchError, map, Observable, of } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -14,7 +14,16 @@ import { catchError, Observable, of } from 'rxjs';
 export class EnrollmentService {
   private readonly http = inject(HttpClient);
 
-  public getEnrollments(): Observable<IndividualEnrollment[]> {
-    return this.http.get<IndividualEnrollment[]>('/api/enrollments').pipe(catchError(() => of([])));
+  public getEnrollments(): Observable<EnrollmentsState> {
+    return this.http.get<IndividualEnrollment[]>('/api/enrollments').pipe(
+      map((items): EnrollmentsState => ({ kind: 'loaded', items })),
+      catchError(
+        (err: HttpErrorResponse): Observable<EnrollmentsState> =>
+          of({
+            kind: 'error',
+            message: err.error?.message ?? 'We could not load your enrollment products. Please retry.',
+          })
+      )
+    );
   }
 }
