@@ -6,7 +6,7 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { EnrollmentsState, IndividualEnrollment } from '@lfx-one/shared/interfaces';
-import { catchError, map, Observable, of } from 'rxjs';
+import { catchError, map, Observable, of, startWith } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -17,6 +17,7 @@ export class EnrollmentService {
   public getEnrollments(): Observable<EnrollmentsState> {
     return this.http.get<IndividualEnrollment[]>('/api/enrollments').pipe(
       map((items): EnrollmentsState => ({ kind: 'loaded', items })),
+      startWith<EnrollmentsState>({ kind: 'loading' }),
       catchError(
         (err: HttpErrorResponse): Observable<EnrollmentsState> =>
           of({

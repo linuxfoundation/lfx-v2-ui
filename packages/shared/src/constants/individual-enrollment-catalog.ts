@@ -3,6 +3,8 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
+import { IndividualEnrollment } from '../interfaces';
+
 export const TLF_INDIVIDUAL_SUPPORTER = {
   projectName: 'The Linux Foundation',
   projectSlug: 'tlf',
@@ -23,6 +25,7 @@ export const TLF_INDIVIDUAL_SUPPORTER = {
   productSFID: 'a0I2M00000PQymQUAT',
   productId: '01t2M000005wBb0QAE',
   ctaPath: '?product=01t2M000005wBb0QAE&project=tlf',
-  activeButtonText: '' as string,
-  activeButtonURL: '' as string,
-};
+  activeButtonText: '',
+  activeButtonURL: '',
+  membership: null,
+} satisfies IndividualEnrollment;
