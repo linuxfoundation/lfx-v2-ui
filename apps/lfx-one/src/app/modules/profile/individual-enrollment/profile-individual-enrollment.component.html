@@ -16,11 +16,11 @@
         </lfx-card>
       }
     </div>
-  } @else if (enrollmentError()) {
+  } @else if (enrollmentError() !== null) {
     <lfx-empty-state
       icon="fa-light fa-circle-exclamation"
       title="Could not load enrollment products"
-      [subtitle]="enrollmentError()!"
+      [subtitle]="enrollmentError() || 'We could not load your enrollment products. Please retry.'"
       data-testid="individual-enrollment-error" />
   } @else if (enrollments()!.length === 0) {
     <lfx-empty-state

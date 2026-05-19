@@ -24,10 +24,15 @@ export interface GatewayFetchOptions {
  */
 export async function gatewayFetch<T>(req: Request, url: string, options: GatewayFetchOptions): Promise<T> {
   if (!req.apiGatewayToken) {
-    throw new MicroserviceError('API Gateway token not available — check API_GW_AUDIENCE env var and auth logs', 503, 'API_GATEWAY_UNAVAILABLE', {
-      service: options.service,
-      operation: options.operation,
-    });
+    throw new MicroserviceError(
+      'API Gateway token not available — check API_GW_AUDIENCE env var, auth middleware config, and server logs for M2M token failures',
+      503,
+      'API_GATEWAY_UNAVAILABLE',
+      {
+        service: options.service,
+        operation: options.operation,
+      }
+    );
   }
 
   let upstream: Response;

@@ -59,7 +59,10 @@ export class EnrollmentService {
       const productId = m.Product?.ID;
       if (!productId || !VALID_STATUSES.has(m.Status as EnrollmentMembership['Status'])) continue;
       const existing = membershipMap.get(productId);
-      if (!existing || new Date(existing.PurchaseDate) < new Date(m.PurchaseDate ?? '')) {
+      const existingTs = existing ? Date.parse(existing.PurchaseDate) : NaN;
+      const candidateTs = Date.parse(m.PurchaseDate ?? '');
+      const shouldReplace = !existing || (isNaN(existingTs) && !isNaN(candidateTs)) || (!isNaN(existingTs) && !isNaN(candidateTs) && existingTs < candidateTs);
+      if (shouldReplace) {
         membershipMap.set(productId, {
           Status: m.Status as EnrollmentMembership['Status'],
           AutoRenew: m.AutoRenew ?? false,

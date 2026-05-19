@@ -14,7 +14,16 @@ export function deriveEnrollmentStatus(item: IndividualEnrollment): EnrollmentDi
   if (price === null || price === undefined) return 'Active';
   if (membership.AutoRenew && membership.ExtPaymentType === 'stripe') return 'Active';
   const endDateString = membership.EndDate.length >= 10 ? membership.EndDate.slice(0, 10) : membership.EndDate;
-  const endDate = /^\d{4}-\d{2}-\d{2}$/.test(endDateString) ? parseLocalDateString(endDateString) : new Date(membership.EndDate);
+  let endDate: Date;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(endDateString)) {
+    try {
+      endDate = parseLocalDateString(endDateString);
+    } catch {
+      endDate = new Date(membership.EndDate);
+    }
+  } else {
+    endDate = new Date(membership.EndDate);
+  }
   const now = new Date();
   if (endDate < now) return 'Expired';
   const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
