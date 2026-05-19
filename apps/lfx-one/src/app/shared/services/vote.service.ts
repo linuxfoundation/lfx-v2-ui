@@ -11,9 +11,13 @@ import {
   QueryServiceCountResponse,
   UpdateVoteRequest,
   Vote,
+  VoteAnswerInput,
   VoteResultsResponse,
 } from '@lfx-one/shared/interfaces';
-import { catchError, map, Observable, of, take, tap, throwError } from 'rxjs';
+import { catchError, map, Observable, of, switchMap, take, tap, throwError } from 'rxjs';
+
+/** Sentinel thrown by `submitMyResponse` when the user has no pre-allocated vote_response row. */
+export const INVITATION_NOT_FOUND = 'INVITATION_NOT_FOUND';
 
 @Injectable({
   providedIn: 'root',
@@ -131,6 +135,29 @@ export class VoteService {
 
   public createVoteResponse(payload: CreateVoteResponseRequest): Observable<void> {
     return this.http.post<void>('/api/votes/responses', payload).pipe(take(1));
+  }
+
+  /**
+   * Submits the current user's response for a vote.
+   *
+   * Looks up the pre-allocated invitation row via `getMyVoteResponse`, then POSTs the answer payload
+   * to `createVoteResponse` reusing that uid (the voting service requires it). Throws
+   * `Error(INVITATION_NOT_FOUND)` if no invitation row exists so callers can surface a specific toast.
+   */
+  public submitMyResponse(voteUid: string, params: { abstain: boolean; userVoteContent: VoteAnswerInput[] | undefined }): Observable<void> {
+    return this.getMyVoteResponse(voteUid).pipe(
+      take(1),
+      switchMap((myResponse) => {
+        if (!myResponse?.uid) return throwError(() => new Error(INVITATION_NOT_FOUND));
+        const payload: CreateVoteResponseRequest = {
+          vote_response_uid: myResponse.uid,
+          vote_uid: voteUid,
+          abstain: params.abstain,
+          user_vote_content: params.userVoteContent,
+        };
+        return this.createVoteResponse(payload);
+      })
+    );
   }
 
   public getMyVoteResponse(voteUid: string): Observable<MyVoteResponse | null> {

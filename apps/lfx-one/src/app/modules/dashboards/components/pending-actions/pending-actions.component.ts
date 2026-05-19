@@ -186,7 +186,6 @@ export class PendingActionsComponent {
         const vote = item.voteUid ? (cacheV[item.voteUid] ?? null) : null;
         const isVoteLoading = !!item.voteUid && loadingVoteUid === item.voteUid;
         const isVoteInlineExpanded = isVoteInline && expandedVoteKey === rowKey;
-        const voteQuestionCount = vote ? (vote.poll_questions?.length ?? 0) : null;
         const voteUsesDrawerVal = !!vote && this.voteUsesDrawer(vote);
         let rowClass: string;
         if (dismissing.has(rowKey)) {
@@ -209,7 +208,6 @@ export class PendingActionsComponent {
           vote,
           isVoteLoading,
           isVoteInlineExpanded,
-          voteQuestionCount,
           voteUsesDrawer: voteUsesDrawerVal,
         };
       });
@@ -227,6 +225,10 @@ export class PendingActionsComponent {
       this.dispatchLoadedVote(cached);
       return;
     }
+
+    // Idempotency guard: a fetch for this voteUid is already in flight — let it complete
+    // rather than firing a second GET that would also re-emit castVoteRequested on success.
+    if (this.loadingVoteUid() === voteUid) return;
 
     this.loadingVoteUid.set(voteUid);
     this.voteService

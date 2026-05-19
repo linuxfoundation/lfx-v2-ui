@@ -102,17 +102,8 @@
                       [label]="item.buttonText"
                       icon="fa-light fa-spinner-third fa-spin"
                       data-testid="dashboard-pending-actions-vote-loading" />
-                  } @else if (item.voteUsesDrawer) {
-                    <!-- Loaded a drawer-bound vote: dispatchLoadedVote will collapse this and open the drawer. This branch renders only during the brief tick before that signal update lands. -->
-                    <lfx-button
-                      size="small"
-                      severity="secondary"
-                      [outlined]="true"
-                      (onClick)="handleActionClick(item)"
-                      [label]="item.buttonText"
-                      data-testid="dashboard-pending-actions-vote-button" />
                   }
-                  <!-- else: inline ballot is rendering below; action column intentionally empty -->
+                  <!-- else: inline ballot is rendering below (action column intentionally empty); drawer-bound votes collapse expandedVoteKey synchronously in dispatchLoadedVote so no branch is needed here -->
                 </div>
               } @else if (item.buttonLink) {
                 <lfx-button
@@ -132,7 +123,7 @@
           </div>
           <!-- Expanded inline ballot (full-width row below the 3-column section) -->
           @if (item.isVoteInlineExpanded && item.vote && !item.voteUsesDrawer) {
-            <lfx-vote-ballot-inline [vote]="item.vote!" (voteSubmitted)="handleVoteSubmitted(item)" (cancelled)="handleVoteCancelled(item)" />
+            <lfx-vote-ballot-inline [vote]="item.vote" (voteSubmitted)="handleVoteSubmitted(item)" (cancelled)="handleVoteCancelled(item)" />
           }
         </div>
       }

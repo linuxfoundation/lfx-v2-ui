@@ -532,8 +532,6 @@ export interface DecoratedPendingAction extends PendingActionItem {
   isVoteLoading: boolean;
   /** True when the Vote row is currently expanded inline (mirrors isExpanded but scoped to votes). */
   isVoteInlineExpanded: boolean;
-  /** Number of poll_questions on the loaded vote (null while not loaded). Drives the drawer-vs-inline branch. */
-  voteQuestionCount: number | null;
   /** True when this Vote row should use the drawer instead of inline (multi-question or ranked poll). */
   voteUsesDrawer: boolean;
 }

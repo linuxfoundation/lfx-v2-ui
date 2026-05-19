@@ -7,13 +7,11 @@ import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-i
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { RadioButtonComponent } from '@components/radio-button/radio-button.component';
-import { CreateVoteResponseRequest, PollQuestion, Vote, VoteAnswerInput } from '@lfx-one/shared/interfaces';
-import { VoteService } from '@services/vote.service';
+import { PollQuestion, Vote, VoteAnswerInput } from '@lfx-one/shared/interfaces';
+import { INVITATION_NOT_FOUND, VoteService } from '@services/vote.service';
 import { MessageService } from 'primeng/api';
 import { CheckboxModule } from 'primeng/checkbox';
-import { finalize, switchMap, take, throwError } from 'rxjs';
-
-const INVITATION_NOT_FOUND = 'INVITATION_NOT_FOUND';
+import { finalize } from 'rxjs';
 
 @Component({
   selector: 'lfx-vote-ballot-inline',
@@ -38,6 +36,7 @@ export class VoteBallotInlineComponent {
 
   // === Writable Signals ===
   protected readonly submitting = signal(false);
+  // Reactive dependency for submitDisabled — rebuildForm uses { emitEvent: false }, so statusChanges is silent.
   private readonly formVersion = signal(0);
 
   // === Computed / Derived Signals ===
@@ -46,24 +45,14 @@ export class VoteBallotInlineComponent {
   protected readonly allowAbstain = computed(() => !!this.vote().allow_abstain);
   protected readonly abstain: Signal<boolean> = toSignal(this.abstainControl.valueChanges, { initialValue: this.abstainControl.value });
   protected readonly submitDisabled: Signal<boolean> = computed(() => {
-    this.formVersion();
+    this.formVersion(); // re-evaluate when controls are added/removed/disabled via { emitEvent: false }
     if (this.submitting()) return true;
     if (this.abstain()) return false;
     return !this.form.valid;
   });
 
   public constructor() {
-    toObservable(this.question)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((q) => this.rebuildForm(q));
-
-    this.form.statusChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.formVersion.update((v) => v + 1));
-
-    this.abstainControl.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((isAbstaining) => {
-      if (isAbstaining) this.form.disable({ emitEvent: false });
-      else this.form.enable({ emitEvent: false });
-      this.formVersion.update((v) => v + 1);
-    });
+    this.setupFormReactions();
   }
 
   // === Protected Methods ===
@@ -78,19 +67,8 @@ export class VoteBallotInlineComponent {
     this.submitting.set(true);
 
     this.voteService
-      .getMyVoteResponse(vote.uid)
+      .submitMyResponse(vote.uid, { abstain: isAbstain, userVoteContent })
       .pipe(
-        take(1),
-        switchMap((myResponse) => {
-          if (!myResponse?.uid) return throwError(() => new Error(INVITATION_NOT_FOUND));
-          const payload: CreateVoteResponseRequest = {
-            vote_response_uid: myResponse.uid,
-            vote_uid: vote.uid,
-            abstain: isAbstain,
-            user_vote_content: userVoteContent,
-          };
-          return this.voteService.createVoteResponse(payload);
-        }),
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.submitting.set(false))
       )
@@ -116,6 +94,21 @@ export class VoteBallotInlineComponent {
           });
         },
       });
+  }
+
+  // === Private Initializers ===
+  private setupFormReactions(): void {
+    toObservable(this.question)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((q) => this.rebuildForm(q));
+
+    this.form.statusChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.formVersion.update((v) => v + 1));
+
+    this.abstainControl.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((isAbstaining) => {
+      if (isAbstaining) this.form.disable({ emitEvent: false });
+      else this.form.enable({ emitEvent: false });
+      this.formVersion.update((v) => v + 1);
+    });
   }
 
   // === Private Helpers ===
