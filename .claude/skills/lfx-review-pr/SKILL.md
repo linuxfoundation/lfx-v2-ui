@@ -37,26 +37,32 @@ Phases 3, 4, and 5 run in parallel with the background agent (Phase 2), so the s
 ```bash
 gh repo view --json nameWithOwner --jq '.nameWithOwner'   # store as {owner}/{repo}
 
-# Fetch PR metadata the skill body needs (title, body, refs, author, size, changed files):
-gh pr view <N> --json title,body,headRefName,baseRefName,author,additions,deletions,files \
+# Fetch PR metadata the skill body needs (title, body, refs, author, size, changed files,
+# fork flag):
+gh pr view <N> --json title,body,headRefName,baseRefName,isCrossRepository,author,additions,deletions,files \
   > /tmp/pr-<N>-meta.json
 
-# Pull the base + head refs so merge-base / commit log queries work locally:
+# Pull the base ref locally + the PR head via GitHub's `pull/<N>/head` refspec. The
+# `pull/...` refspec is mirrored into the upstream repo even for PRs opened from forks,
+# so subsequent `git show` / `git log` / `git merge-base` calls do NOT need to know
+# whether the PR came from a fork. The result is a local ref at `refs/pr/<N>/head`.
 BASE_REF=$(jq -r '.baseRefName' /tmp/pr-<N>-meta.json)
-HEAD_REF=$(jq -r '.headRefName' /tmp/pr-<N>-meta.json)
-git fetch origin "$BASE_REF" "$HEAD_REF"
+git fetch origin "$BASE_REF"
+git fetch origin "+pull/<N>/head:refs/pr/<N>/head"
 ```
 
 **Shell-state caveat:** the Bash tool runs each invocation in an isolated shell — `cwd` persists, but environment variables do **not** survive across calls. Every later phase that needs `$BASE_REF` / `$HEAD_REF` / `$AUTHOR` must re-derive them at the top of its own Bash invocation:
 
 ```bash
 BASE_REF=$(jq -r '.baseRefName' /tmp/pr-<N>-meta.json)
-HEAD_REF=$(jq -r '.headRefName' /tmp/pr-<N>-meta.json)
+HEAD_REF=$(jq -r '.headRefName' /tmp/pr-<N>-meta.json)   # branch name (needed only for the branch-name regex check)
 AUTHOR=$(jq -r   '.author.login' /tmp/pr-<N>-meta.json)
-# ... use $BASE_REF / $HEAD_REF / $AUTHOR inside the same call
+# Git operations on the PR head use the local ref refs/pr/<N>/head (created in Phase 1
+# via the pull-refspec fetch — same path regardless of whether the PR is from a fork).
+# ... use $BASE_REF / $HEAD_REF / $AUTHOR + refs/pr/<N>/head inside the same call
 ```
 
-The metadata file path (`/tmp/pr-<N>-meta.json`) is stable across phases because it's on disk, not in shell state.
+The metadata file path (`/tmp/pr-<N>-meta.json`) and the local PR-head ref (`refs/pr/<N>/head`) are both stable across phases because they're on disk, not in shell state.
 
 ## Phase 2 — Spawn the code reviewer (background)
 
@@ -96,7 +102,7 @@ Then:
 
 1. Skip trivial comments: nits, acknowledgments, "+1", bot auto-comments (CodeRabbit / Copilot — these run their own review and don't need verification), and purely informational remarks.
 2. For every **CRITICAL** or **SHOULD_FIX** comment from a human reviewer:
-   1. Read the file on the PR branch via a single Bash call that re-derives `HEAD_REF` from the metadata file: `HEAD_REF=$(jq -r '.headRefName' /tmp/pr-<N>-meta.json) && git show "origin/$HEAD_REF:<file>"`.
+   1. Read the file on the PR branch via `git show "refs/pr/<N>/head:<file>"` (the local ref created in Phase 1 — works uniformly for fork PRs and same-repo PRs).
    2. Compare the current code against what the comment requested.
    3. Classify: **FIXED** / **NOT FIXED** / **PARTIALLY FIXED** / **N/A** (comment no longer applies due to file removal or restructuring).
 3. Build a markdown table:
@@ -118,24 +124,23 @@ Fetch the additional PR-level data this needs (PR title / body / headRefName / b
 
 ```bash
 BASE_REF=$(jq -r '.baseRefName' /tmp/pr-<N>-meta.json)
-HEAD_REF=$(jq -r '.headRefName' /tmp/pr-<N>-meta.json)
-git log --format='%H %s' "origin/$BASE_REF..origin/$HEAD_REF"   # commit subjects with SHAs
-git log --format=%B      "origin/$BASE_REF..origin/$HEAD_REF"   # commit bodies (for Signed-off-by trailers + JIRA refs)
-git log --format='%G? %h %s' "origin/$BASE_REF..origin/$HEAD_REF"  # GPG status per commit
+git log --format='%H %s' "origin/$BASE_REF..refs/pr/<N>/head"   # commit subjects with SHAs
+git log --format=%B      "origin/$BASE_REF..refs/pr/<N>/head"   # commit bodies (for Signed-off-by trailers + JIRA refs)
+git log --format='%G? %h %s' "origin/$BASE_REF..refs/pr/<N>/head"  # GPG status per commit
 ```
 
 Use `git log --format='%H %s'` (not `gh api .../commits --jq '.[].commit.message'`) because the regex check is per-subject — `.commit.message` includes the body and would false-fail on newlines.
 
-Then check each item from `.claude/skills/lfx-self-serve-pr-readiness/references/pr-shape.md` (inside Bash calls that re-derive `$BASE_REF`/`$HEAD_REF` as shown above):
+Then check each item from `.claude/skills/lfx-self-serve-pr-readiness/references/pr-shape.md` (inside Bash calls that re-derive `$BASE_REF` and reference the PR head as `refs/pr/<N>/head`):
 
 - **Branch name format** → `jq -r .headRefName /tmp/pr-<N>-meta.json`. Match `<type>/LFXV2-<number>`.
 - **JIRA ticket reference** → grep `LFXV2-[0-9]+` over commit subjects + bodies + PR body. None → SHOULD_FIX.
 - **Conventional commit on every commit** → each commit subject (from `git log --format='%H %s'`) against the regex in `pr-shape.md`. `chore` is invalid.
 - **PR title format** (PR-only) → `jq -r .title /tmp/pr-<N>-meta.json` against `type(scope): description`, lowercase, no `LFXV2-XXX` in the title, `chore` invalid. → SHOULD_FIX.
-- **Branch rebased on base** → `git merge-base --is-ancestor "origin/$BASE_REF" "origin/$HEAD_REF"`. Non-zero → SHOULD_FIX.
+- **Branch rebased on base** → `git merge-base --is-ancestor "origin/$BASE_REF" "refs/pr/<N>/head"`. Non-zero → SHOULD_FIX.
 - **Diff size** → `jq -r .additions /tmp/pr-<N>-meta.json`. If > 1000 → NIT (plus a review-body note — see Additional Rules).
 - **DCO + GPG signing** → from `git log --format='%G? %h %s'` and commit bodies. `N` / `B` / `E` codes → CRITICAL. Missing `Signed-off-by:` → CRITICAL.
-- **PR body external refs** (PR-only) → check `jq -r '.files[].path' /tmp/pr-<N>-meta.json` for paths under `apps/lfx-one/src/server/`; for each, `git show "origin/$HEAD_REF:<file>" | grep -q 'proxyRequest'` to confirm it calls an upstream microservice. If any do AND the PR body has no link to the upstream PR/commit → SHOULD_FIX.
+- **PR body external refs** (PR-only) → check `jq -r '.files[].path' /tmp/pr-<N>-meta.json` for paths under `apps/lfx-one/src/server/`; for each, `git show "refs/pr/<N>/head:<file>" | grep -q 'proxyRequest'` to confirm it calls an upstream microservice. If any do AND the PR body has no link to the upstream PR/commit → SHOULD_FIX.
 
 Build a `category: pr-shape` finding for each failure. Skip findings with no quotable item in `.claude/skills/lfx-self-serve-pr-readiness/references/pr-shape.md` (cross-check discipline applies here too).
 
