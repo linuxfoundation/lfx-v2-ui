@@ -12,6 +12,8 @@ LFX One is a Turborepo monorepo containing an Angular 20 SSR application with st
 
 You have full file-edit authority in this session — different from a Cowork session where you generate prompts for someone else to execute. For pre-edit hygiene checks (re-read files, type-check after multi-file changes, etc.) invoke the `/develop` skill.
 
+**Lean on subagents.** Use the `Agent` tool for broad searches (`Explore`), independent parallel investigations (multiple Agent calls in one message), context-heavy reads that would bloat the main thread, and the LFX post-commit audit (`lfx-self-serve-code-reviewer` + `lfx-self-serve-learnings-reviewer` — Work cycle scope rules). Fresh forked context per call; `run_in_background: true` keeps them off the critical path. Default to delegating when the task is wide, parallel, or read-heavy.
+
 ## Domain language
 
 Use these naturally — do not paraphrase:
@@ -255,8 +257,8 @@ Detailed patterns are in `.claude/rules/` and loaded contextually based on the `
 - ❌ Hard-code brand hex values (reference `lfxColors` scales)
 - ❌ Reference browser-only APIs without `isPlatformBrowser`
 - ❌ Mix module concerns in one change
-- ❌ Open a PR without spawning the post-commit review pair (`lfx-self-serve-code-reviewer` + `lfx-self-serve-learnings-reviewer`, parallel, `run_in_background: true`) after every commit on the branch and draining the queue clean — both reviews are non-negotiable
-- ❌ Push to the remote before the latest in-flight review pair has returned and every CRITICAL finding is addressed (the queue must be drained at the PR boundary, not the commit boundary)
+- ❌ Open a PR without spawning the post-commit review pair (`lfx-self-serve-code-reviewer` + `lfx-self-serve-learnings-reviewer`, parallel, `run_in_background: true`) after every pre-PR commit and draining the queue clean — both reviews are non-negotiable pre-PR
+- ❌ Push the pre-PR queue before the latest in-flight review pair has returned and every CRITICAL finding is addressed (the queue must be drained at the PR boundary; once the PR is open, the bots become the audit surface and the pair is no longer spawned)
 - ❌ Open a PR without running `/lfx-self-serve-pr-readiness` to a clean verdict — also non-negotiable
 - ❌ Open a PR without DCO sign-off + GPG (`--signoff -S`)
 - ❌ Commit and claim "done" before `yarn build` passes
@@ -265,9 +267,11 @@ Detailed patterns are in `.claude/rules/` and loaded contextually based on the `
 
 ## Work cycle — post-commit and pre-PR reviews
 
-> **CRITICAL: post-commit and pre-PR reviews are both mandatory.** After every commit, spawn the `lfx-self-serve-code-reviewer` AND `lfx-self-serve-learnings-reviewer` subagents in parallel via the Agent tool with `run_in_background: true`, then keep working on the next commit while they run. Before opening a PR, the latest in-flight review pair must return clean (or remaining findings explicitly documented as trade-offs), AND `/lfx-self-serve-pr-readiness` must pass (branch / JIRA / commits / DCO + GPG / rebase / diff size). The reviewers' time is the most expensive resource in this workflow — landing a PR without their audits wastes it and is the single biggest contributor to slow review cycles. Do not skip them, do not save them for later, do not assume your changes are "small enough" to bypass them.
+> **CRITICAL — while the branch is pre-PR, post-commit reviews are mandatory.** After every commit on the local branch, spawn the `lfx-self-serve-code-reviewer` AND `lfx-self-serve-learnings-reviewer` subagents in parallel via the Agent tool with `run_in_background: true`, then keep working while they run. Before opening a PR, the latest in-flight pair must return clean (or remaining findings explicitly documented as trade-offs), AND `/lfx-self-serve-pr-readiness` must pass (branch / JIRA / commits / DCO + GPG / rebase / diff size). The reviewers' time is the most expensive resource in this workflow — never skip, save for later, or assume changes are "small enough" to bypass.
+>
+> **Once the PR is open, do NOT spawn the subagent pair on iteration commits.** CodeRabbit + Copilot auto-trigger on every push and own the audit surface from that point — stacking subagent audits on top adds latency without proportional signal. The pair is pre-PR insurance only. (For substantive new work pushed to an open PR, judgment applies; default is still to skip.)
 
-### Post-commit (after every commit, parallel, asynchronous)
+### Post-commit (pre-PR phase, after every commit, parallel, asynchronous)
 
 1. **Commit your work.** `git commit --signoff -S`. Do not wait for any prior review to finish.
 2. **Immediately spawn both subagents in parallel** — issue two **Agent tool calls in a single message**, each with `run_in_background: true`:
@@ -275,8 +279,7 @@ Detailed patterns are in `.claude/rules/` and loaded contextually based on the `
    - `subagent_type: lfx-self-serve-learnings-reviewer`, prompt: `"base: origin/main\nextra: <any focus>"`. Senior-engineer review rubric (security / performance / code quality / architecture / testing) cross-checked against `docs/reviews/knowledge-base/` — empirical patterns sampled from past PR review comments. Renders a markdown review.
 3. **Keep working.** Start the next commit while the reviewers run. Do not block on them.
 4. **When a review pair returns:** read both reports. Roll every CRITICAL finding and every reasonable SHOULD_FIX into the next commit (a separate `fix(review): address findings` commit is fine; squashing is not required — the history shows review-driven iteration).
-5. **Multiple in-flight pairs is normal.** If you've committed N+1 before the review for N returns, the review for N+1 will diff cumulatively against `origin/main` and supersede the older one automatically. The latest returned pair is authoritative.
-6. **Spawn after every commit, no skipping.** Even on small commits — the marginal cost is a background pair; the benefit is removing the judgment call. The cumulative diff means a small commit's review is just a fast confirmation that the prior findings stayed addressed.
+5. **Multiple in-flight pairs is normal.** If you've committed N+1 before the review for N returns, the review for N+1 diffs cumulatively against `origin/main` and supersedes the older one. The latest returned pair is authoritative — small commits get a fast confirmation that prior findings stayed addressed.
 
 ### Pre-PR (drain the queue, then open)
 
@@ -288,6 +291,11 @@ When the work is "done" — no more code commits planned:
 4. **Run `/preflight`** for license / format / lint / build / protected-file mechanical checks.
 5. **Only then push and open the PR.** (Reviewers run `/lfx-review-pr` against the open PR — that should not be your first standards check.)
 
-The two reviewer subagents run in fully fresh forked contexts — no dev-thread bias — and `run_in_background: true` keeps them off the critical path. The cost of an extra fix commit is small; the cost of opening a PR without their audits is wasted reviewer time.
+### Post-PR iteration (responding to bot feedback on an open PR)
+
+1. Wait for CodeRabbit + Copilot to comment after each push.
+2. Triage every CRITICAL and reasonable SHOULD_FIX — verify each against current code (bots can quote stale paths or APIs).
+3. Roll fixes into a single `fix(review): ...` commit. Reply + resolve each thread (`gh api repos/<owner>/<repo>/pulls/<N>/comments/<id>/replies` + the `resolveReviewThread` GraphQL mutation).
+4. Push. Repeat until clean.
 
 After `/compact`, re-invoke `/develop` or the relevant convention skill if continuing work that depends on it.

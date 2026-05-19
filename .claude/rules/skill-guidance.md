@@ -20,14 +20,16 @@ This project has guided skills and code-review subagents for common workflows. *
 
 ## Post-commit review subagents (spawn via the Agent tool)
 
-The two post-commit reviews are **subagents**, not skills — they're spawned in parallel via the Agent tool with `run_in_background: true` immediately after each commit, while you keep working on the next commit. The latest in-flight pair is drained and addressed at the PR boundary, not the commit boundary (see the work cycle in `CLAUDE.md`).
+The two post-commit reviews are **subagents**, not skills — they're spawned in parallel via the Agent tool with `run_in_background: true` immediately after each commit **while the branch is pre-PR**, while you keep working on the next commit. The latest in-flight pair is drained and addressed at the PR boundary, not the commit boundary (see the work cycle in `CLAUDE.md`).
 
-| Subagent                            | When to spawn                                                                                                                                                                                                                                                      |
+**Scope: pre-PR only.** Once the PR is open and you're iterating on CodeRabbit / Copilot feedback, do NOT spawn the pair on iteration commits — the bots auto-trigger on every push and become the live audit surface from that point. Stacking subagent reviews on top of bot reviews makes the iteration loop too slow without adding signal.
+
+| Subagent                            | When to spawn (pre-PR only)                                                                                                                                                                                                                                        |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `lfx-self-serve-code-reviewer`      | Immediately after every commit — code-convention audit (`.claude/rules/`, `docs/reviews/` checklists, architecture, upstream API contracts, protected files). Use `mode: local` for the in-branch post-commit review; `mode: pr` is reserved for `/lfx-review-pr`. |
 | `lfx-self-serve-learnings-reviewer` | Immediately after every commit — comprehensive code-review rubric (security, performance, code quality, architecture, testing) cross-checked against the empirical pattern KB at `docs/reviews/knowledge-base/`.                                                   |
 
-Spawn both in parallel by issuing two Agent tool calls in a single message, each with `run_in_background: true`. Keep working on the next commit while they run. When the pair returns, roll every CRITICAL and reasonable SHOULD_FIX into the next commit. Drain the queue before opening a PR.
+Spawn both in parallel by issuing two Agent tool calls in a single message, each with `run_in_background: true`. Keep working on the next commit while they run. When the pair returns, roll every CRITICAL and reasonable SHOULD_FIX into the next commit. Drain the queue before opening a PR; after the PR is open, switch to the bot-iteration loop and stop spawning the pair.
 
 ## Trigger Phrases
 
@@ -54,7 +56,7 @@ Spawn both in parallel by issuing two Agent tool calls in a single message, each
 - "What would CodeRabbit flag?", "What would Copilot say?", "Post-commit review"
 - Any "is this ready" question where no PR number is given
 
-Spawn **both** `lfx-self-serve-code-reviewer` AND `lfx-self-serve-learnings-reviewer` in parallel via the Agent tool with `run_in_background: true` — they're the post-commit pair and the work-cycle gate requires both after every commit, drained clean before any PR opens.
+Spawn **both** `lfx-self-serve-code-reviewer` AND `lfx-self-serve-learnings-reviewer` in parallel via the Agent tool with `run_in_background: true` — they're the post-commit pair and the work-cycle gate requires both after every commit **while the branch is pre-PR**, drained clean before any PR opens. Once a PR is open, the bots are the audit surface — do not spawn the pair on iteration commits.
 
 **`/lfx-self-serve-pr-readiness`** — pre-PR, shape focus (run once, before opening the PR). Match any of these intents:
 
@@ -81,7 +83,8 @@ Non-developer contributors use these skills as guided workflows. Follow these ru
 
 - If the user describes a feature they want to build, suggest `/develop` — it walks them through the full process step-by-step
 - If the user asks about setup or getting started, suggest `/setup`
-- **After every commit**, spawn the two post-commit review subagents (`lfx-self-serve-code-reviewer` + `lfx-self-serve-learnings-reviewer`) in parallel with `run_in_background: true` — keep working on the next commit while they run. When the pair returns, roll findings into the next commit.
+- **After every commit while the branch is pre-PR**, spawn the two post-commit review subagents (`lfx-self-serve-code-reviewer` + `lfx-self-serve-learnings-reviewer`) in parallel with `run_in_background: true` — keep working on the next commit while they run. When the pair returns, roll findings into the next commit. **Stop spawning the pair once the PR is open** — CodeRabbit + Copilot auto-trigger on every push and own the audit surface from that point.
 - **Before opening a PR**, drain the post-commit review queue (wait for the latest in-flight pair, address findings), then run `/lfx-self-serve-pr-readiness`, then `/preflight`.
+- **After the PR is open**, address bot feedback iteratively: wait for the bots, triage findings, push a `fix(review): ...` commit, repeat until clean. No subagent pair on these commits.
 - If you are unsure which workflow applies, ask the user what they're trying to accomplish.
 - When a skill or subagent references architecture docs in `docs/`, read those docs before generating code — they are the source of truth.
