@@ -31,11 +31,17 @@ export enum VoteResponseStatus {
   AWAITING_RESPONSE = 'awaiting_response',
 }
 
-/**
- * Individual vote status from query service
- * @description Status values as stored in lfx.index.individual_vote
- */
+/** Status values as stored in `lfx.index.individual_vote`. */
 export enum IndividualVoteStatus {
   AWAITING_RESPONSE = 'awaiting response',
   RESPONDED = 'responded',
+}
+
+/** Raw `vote_status` values written by the legacy ITX system into `vote_response` rows.
+ *  `lfx-v2-voting-service` forwards these unchanged. */
+export enum IndexedVoteResponseStatus {
+  AWAITING_RESPONSE = 'awaiting_response',
+  RESPONDED = 'responded',
+  ENDED = 'ended',
+  AWAITING_RESPONSE_BUT_POLL_ENDED = 'awaiting_response_but_poll_ended',
 }

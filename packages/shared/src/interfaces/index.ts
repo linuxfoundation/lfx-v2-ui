@@ -159,3 +159,6 @@ export * from './object.interface';
 
 // Marketing Impact interfaces
 export * from './marketing-impact.interface';
+
+// Enrollment interfaces
+export * from './enrollment.interface';
