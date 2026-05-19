@@ -46,7 +46,7 @@
           </div>
 
           <!-- Price + auto-renew info -->
-          @if (item.price) {
+          @if (item.price !== null && item.price !== undefined) {
             <div class="flex flex-wrap items-center gap-4 text-sm text-gray-600" data-testid="individual-enrollment-details">
               <span
                 ><span class="font-medium">${{ item.price }}</span> / year</span

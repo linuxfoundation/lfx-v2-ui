@@ -8,7 +8,7 @@ import { EnrollmentMembership, IndividualEnrollment } from '@lfx-one/shared/inte
 import { Request } from 'express';
 
 import { getApiGatewayBaseUrl } from '../helpers/api-gateway.helper';
-import { getUsernameFromAuth } from '../utils/auth-helper';
+import { getUsernameFromAuth, usernameMatches } from '../utils/auth-helper';
 import { logger } from './logger.service';
 
 const DEMO_USER = 'johnlf2727';
@@ -32,7 +32,7 @@ export class EnrollmentService {
   public async getIndividualEnrollments(req: Request): Promise<IndividualEnrollment[]> {
     const username = await getUsernameFromAuth(req);
 
-    if (username === DEMO_USER) {
+    if (username && usernameMatches(username, DEMO_USER)) {
       logger.debug(req, 'get_individual_enrollments', 'Returning demo data for test user');
       return DEMO_ENROLLMENTS;
     }
@@ -44,6 +44,7 @@ export class EnrollmentService {
 
     const response = await fetch(url, {
       headers: { Authorization: `Bearer ${req.bearerToken}` },
+      signal: AbortSignal.timeout(10000),
     });
 
     if (!response.ok) {

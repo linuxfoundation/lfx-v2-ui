@@ -9,8 +9,8 @@ import { EnrollmentDisplayStatus, IndividualEnrollment } from '../interfaces/enr
 export function deriveEnrollmentStatus(item: IndividualEnrollment): EnrollmentDisplayStatus {
   const { membership, price } = item;
   if (!membership) return 'Not Enrolled';
-  if (!price) return 'Active';
   if (membership.Status === 'Expired') return 'Expired';
+  if (price === null || price === undefined) return 'Active';
   if (membership.AutoRenew && membership.ExtPaymentType === 'stripe') return 'Active';
   const endDate = new Date(membership.EndDate);
   const now = new Date();
