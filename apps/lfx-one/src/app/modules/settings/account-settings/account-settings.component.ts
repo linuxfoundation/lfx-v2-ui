@@ -492,7 +492,7 @@ export class AccountSettingsComponent {
     const intersecting = new Set<string>();
     const lastSectionId = sectionIds[sectionIds.length - 1];
 
-    this.scrollSpyObserver = new IntersectionObserver(
+    const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           const id = headingByElement.get(entry.target);
@@ -505,8 +505,9 @@ export class AccountSettingsComponent {
       },
       { rootMargin: '-80px 0px -70% 0px', threshold: 0 }
     );
+    this.scrollSpyObserver = observer;
 
-    headingByElement.forEach((_, heading) => this.scrollSpyObserver!.observe(heading));
+    headingByElement.forEach((_, heading) => observer.observe(heading));
 
     // End-of-scroll override: the last section is short enough that its heading
     // never enters the activation band, so the observer alone leaves the highlight
