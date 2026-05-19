@@ -1,9 +1,13 @@
 ---
-name: lfx-self-serve-code-reviewer
-description: "Audits recently written or modified lfx-self-serve code against the project's CLAUDE.md rules, conventions, architecture docs, and referenced documentation. Covers Angular patterns, Express.js backend patterns, upstream API contract validation, SSR, Tailwind, TypeScript conventions, and protected files. Spawn post-commit in the background (mode:local) to render a markdown review report of the branch state, or against an opened PR (mode:pr) to return JSON findings for a post-PR review flow to compose."
-model: inherit
-color: red
-memory: none
+name: lfx-self-serve-code-review
+description: "Audits recently written or modified lfx-self-serve code against the project's CLAUDE.md rules, conventions, architecture docs, and referenced documentation. Covers Angular patterns, Express.js backend patterns, upstream API contract validation, SSR, Tailwind, TypeScript conventions, and protected files. Invoke post-commit (mode:local) to render a markdown review report of the branch state, or against an opened PR (mode:pr) to return JSON findings for a post-PR review flow to compose. The skill body launches a general-purpose subagent in the background with the full review playbook."
+allowed-tools: Agent
+---
+
+Launch a subagent in the background (`subagent_type: general-purpose`, `run_in_background: true`) with the **entire content below** as the Agent `prompt` parameter.
+
+**Launcher discipline — non-negotiable:** pass the playbook **verbatim**. Do not summarize, condense, paraphrase, or pre-route based on the diff you happen to know about. The playbook contains the subagent's own routing logic (Step 2 picks which checklists / architecture docs to load based on changed paths); if you trim it, the subagent cannot quote rules that aren't in its prompt — that collapses Step 4 cross-check discipline, drifts severity calibration, and breaks the documented output templates in Step 8. Append the caller's runtime args (`mode`, `base`, `number`, `extra`) at the end of the prompt so the subagent sees both the playbook and its inputs.
+
 ---
 
 # LFX Self-Serve Code Reviewer
@@ -417,10 +421,10 @@ For protected-files findings, `file` may be set but `line` is typically `null` (
 
 If a required checklist couldn't be loaded, return `{"status": "incomplete", "findings": [...]}` instead.
 
-## Scope boundaries — what this agent does NOT cover
+## Scope boundaries — what this review does NOT cover
 
 - **PR-shape sanity** (branch name, JIRA reference, conventional commits, rebase, DCO + GPG signing, diff size).
-- **Behavioural / empirical pattern matching** (CR + Copilot-style review rubric, KB of past-PR patterns) — handled by `lfx-self-serve-learnings-reviewer`.
+- **Behavioural / empirical pattern matching** (CR + Copilot-style review rubric, KB of past-PR patterns) — handled by the `lfx-self-serve-learnings-review` skill.
 
 If a finding fits one of those surfaces, drop it.
 
