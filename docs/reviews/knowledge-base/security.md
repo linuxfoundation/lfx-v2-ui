@@ -174,6 +174,20 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ---
 
+## `security/prototype-pollution-via-dynamic-key-assignment` — SHOULD_FIX
+
+**Pattern:** a recursive walker reconstructs plain objects by iterating `Object.entries(input)` (or `Object.keys`) and writing each key back via `result[key] = ...`. If the input is JSON-derived (`JSON.parse` of an upstream payload, request body, or user-controlled content), it may carry an own-property literally named `__proto__`, `constructor`, or `prototype`. The dynamic-key assignment then invokes the corresponding setter on `result`'s prototype chain rather than creating an own-property, polluting `Object.prototype` for the whole process.
+
+**Detect:** function returning a fresh `{}` (or `Record<string, unknown>`) whose keys come from `Object.entries(input)` / `Object.keys(input)` and are assigned via bracket notation in a recursion. A plain-object guard on the *input* (`Object.getPrototypeOf(value) === Object.prototype`) does NOT close the hole — it limits which inputs are walked, but the dangerous keys still get copied through.
+
+**Empirical citation:** PR #673 `packages/shared/src/utils/object.utils.ts:32` — Copilot: "When rebuilding plain objects, `result` is initialized as `{}` and then populated via `result[key] = ...`. If an input object contains a `__proto__` key, that key gets reassigned by `result[key] = ...`."
+
+**Failure message:** Recursive plain-object walker assigns keys via `result[key] = ...`; an input own-property named `__proto__`, `constructor`, or `prototype` would pollute `Object.prototype`.
+
+**Fix:** skip the three dangerous keys before writing — `if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;`. Alternatives: `Object.create(null)` for a prototype-less result (works only if downstream consumers don't rely on `Object.prototype` methods), or `Object.defineProperty(result, key, { value, enumerable: true, writable: true, configurable: true })` (defines an own-property regardless of key name). Prefer the explicit-skip variant in shared utilities — it preserves the standard `{}` shape and the security gate is one obvious line.
+
+---
+
 ## `security/cookie-payload-bigger-than-headers` — NIT
 
 **Pattern:** cookie payload contains a large object (>1KB) that's pushed on every request. Network overhead; also can hit reverse-proxy header size limits.
