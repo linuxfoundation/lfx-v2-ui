@@ -512,10 +512,18 @@ export class AccountSettingsComponent {
     // The last section is short enough that its heading never enters the activation
     // band. Observe an invisible sentinel at the bottom of the content column so we
     // can snap to the last section without a scroll listener or magic pixel values.
-    const sentinel = document.querySelector('[data-testid="scroll-end-sentinel"]');
+    const sentinel = document.getElementById('scroll-end-sentinel');
+    const lastHeading = document.getElementById(`${lastSectionId}-heading`);
     const endObserver = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) this.activeSection.set(lastSectionId);
+        // Only override when the user has actually scrolled past the last heading
+        // (its bottom has cleared the 80px header offset). On viewports tall enough
+        // to show the whole page without scrolling the sentinel is already intersecting
+        // from initial paint — this guard prevents pinning the TOC to the last section
+        // before the user has reached it.
+        if (entry.isIntersecting && lastHeading && lastHeading.getBoundingClientRect().bottom <= 80) {
+          this.activeSection.set(lastSectionId);
+        }
       },
       { threshold: 0 }
     );
