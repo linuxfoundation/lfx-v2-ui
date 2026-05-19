@@ -2252,6 +2252,9 @@ export class ProjectService {
     `;
 
       // Block 6: Platform-level performance breakdown (aggregated by CHANNEL)
+      // Uses LINEAR_REVENUE (same model as Block 5 project breakdown) so platform
+      // and project drill-downs are internally consistent. KPI headline ROAS
+      // (Blocks 1–2) uses first-touch — intentional attribution model split.
       // Also used to derive channelGroups (impressions by channel) — eliminates a separate query
       const platformPerfQuery = `
       SELECT
