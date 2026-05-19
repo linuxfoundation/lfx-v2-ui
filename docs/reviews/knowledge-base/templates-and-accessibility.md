@@ -100,7 +100,7 @@ Patterns CodeRabbit + Copilot flag in Angular templates — ARIA roles, focus ma
 
 **Failure message:** Navigation to lens-aware route missing `lens=` query param — wrong lens on landing.
 
-**Fix:** add `queryParams: { lens: this.activeLens() }` to the navigation call, or include it in the routerLink expression. Use `LensService.getCurrentLens()` to fetch the active lens.
+**Fix:** add `queryParams: { lens: this.activeLens() }` to the navigation call, or include it in the routerLink expression. `activeLens` is a `Signal<Lens>` exposed by `LensService` (`apps/lfx-one/src/app/shared/services/lens.service.ts`) — read it by calling `lensService.activeLens()`.
 
 ---
 

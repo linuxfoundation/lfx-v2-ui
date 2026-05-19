@@ -128,7 +128,7 @@ Patterns where new backend routes are mounted without the right auth middleware,
 
 **Failure message:** Raw query-param cast bypasses input hardening; can yield arrays from repeated keys; loses runtime safety.
 
-**Fix:** use `getStringQueryParam(req, 'name')` from `apps/lfx-one/src/server/helpers/validation.ts`. Project-wide convention. Same applies to `getNumberQueryParam`, `getBooleanQueryParam`, etc.
+**Fix:** use `getStringQueryParam(req, 'name')` from `apps/lfx-one/src/server/helpers/validation.helper.ts`. Project-wide convention. Same applies to `getNumberQueryParam`, `getBooleanQueryParam`, etc.
 
 ---
 
@@ -150,7 +150,7 @@ Patterns where new backend routes are mounted without the right auth middleware,
 
 **Pattern:** `validateRequiredParameter(req.params.id, 'id')` (or analogous validator) only checks presence, not type. If a route accepts repeated keys or the helper doesn't narrow type, downstream code may receive an array where it expects a string.
 
-**Detect:** review `validateRequiredParameter` / `validateRequiredField` consumers. Verify the validator (in `apps/lfx-one/src/server/helpers/validation.ts`) narrows to `string`, not just `any`.
+**Detect:** review `validateRequiredParameter` / `validateRequiredField` consumers. Verify the validator (in `apps/lfx-one/src/server/helpers/validation.helper.ts`) narrows to `string`, not just `any`.
 
 **Empirical citation:** general pattern from CodeRabbit on multiple PRs; called out as a recurring gap in the validation-helper coverage.
 
