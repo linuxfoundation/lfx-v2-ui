@@ -37,15 +37,15 @@ Phases 3, 4, and 5 run in parallel with the background agent (Phase 2), so the s
 ```bash
 gh repo view --json nameWithOwner --jq '.nameWithOwner'   # store as {owner}/{repo}
 
-# Fetch PR metadata the skill body needs (title, body, refs, author, size, changed files,
-# fork flag):
-gh pr view <N> --json title,body,headRefName,baseRefName,isCrossRepository,author,additions,deletions,files \
+# Fetch PR metadata the skill body needs (title, body, refs, author, size, changed files):
+gh pr view <N> --json title,body,headRefName,baseRefName,author,additions,deletions,files \
   > /tmp/pr-<N>-meta.json
 
 # Pull the base ref locally + the PR head via GitHub's `pull/<N>/head` refspec. The
 # `pull/...` refspec is mirrored into the upstream repo even for PRs opened from forks,
 # so subsequent `git show` / `git log` / `git merge-base` calls do NOT need to know
-# whether the PR came from a fork. The result is a local ref at `refs/pr/<N>/head`.
+# whether the PR came from a fork. The local destination `refs/pr/<N>/head` is a
+# private ref namespace — no collision with `refs/heads/` or `refs/remotes/origin/`.
 BASE_REF=$(jq -r '.baseRefName' /tmp/pr-<N>-meta.json)
 git fetch origin "$BASE_REF"
 git fetch origin "+pull/<N>/head:refs/pr/<N>/head"

@@ -40,7 +40,7 @@ Regex: `^(feat|fix|docs|style|refactor|perf|test|build|ci|revert)/LFXV2-[0-9]+$`
 **Check:** the base branch is an ancestor of the head branch.
 
 - Pre-PR: `git merge-base --is-ancestor <base> HEAD` (typically `<base>` = `origin/main`).
-- Post-PR: `git merge-base --is-ancestor origin/<baseRefName> origin/<headRefName>`.
+- Post-PR: `git merge-base --is-ancestor origin/<baseRefName> refs/pr/<N>/head` — the head ref is fetched via `git fetch origin "+pull/<N>/head:refs/pr/<N>/head"` so the check works uniformly for PRs from forks. (`origin/<headRefName>` is fork-broken; the caller `/lfx-review-pr` already mediates this — see `.claude/skills/lfx-review-pr/SKILL.md` Phase 1.)
 
 Non-zero exit → fail.
 

@@ -79,10 +79,16 @@ Run these in parallel:
 gh repo view --json nameWithOwner --jq '.nameWithOwner'   # store as {owner}/{repo}
 gh pr view <N> --json title,body,headRefName,baseRefName,author,files,additions,deletions,state,number
 gh pr diff <N>
-git fetch origin <baseRefName> <headRefName>
+# Fetch the base ref + the PR head via GitHub's `pull/<N>/head` refspec. The
+# refspec is mirrored into the upstream repo regardless of whether the PR came
+# from a fork, so subsequent `git show` reads work uniformly via the local ref
+# `refs/pr/<N>/head` (private namespace — no collision with refs/heads/ or
+# refs/remotes/origin/).
+git fetch origin <baseRefName>
+git fetch origin "+pull/<N>/head:refs/pr/<N>/head"
 ```
 
-If the diff is too large, save to `/tmp/pr-<N>.diff` and Read only the changed `.ts`, `.html`, `.scss`, `.md`, `.sql` files using `git show origin/<headRefName>:<path>`.
+If the diff is too large, save to `/tmp/pr-<N>.diff` and Read only the changed `.ts`, `.html`, `.scss`, `.md`, `.sql` files using `git show "refs/pr/<N>/head:<path>"`.
 
 NOTE: prior review comments AND commit-level data (subjects, signatures, sign-off trailers) on the PR are NOT your concern — the caller handles those. You audit code only.
 
