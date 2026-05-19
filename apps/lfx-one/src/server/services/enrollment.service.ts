@@ -7,6 +7,7 @@ import { TLF_INDIVIDUAL_SUPPORTER } from '@lfx-one/shared/constants';
 import { EnrollmentMembership, IndividualEnrollment } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
+import { MicroserviceError } from '../errors';
 import { getApiGatewayBaseUrl } from '../helpers/api-gateway.helper';
 import { getUsernameFromAuth, usernameMatches } from '../utils/auth-helper';
 import { logger } from './logger.service';
@@ -37,19 +38,23 @@ export class EnrollmentService {
       return DEMO_ENROLLMENTS;
     }
 
-    const baseUrl = getApiGatewayBaseUrl('get_individual_enrollments', 'member-service');
+    const baseUrl = getApiGatewayBaseUrl('get_individual_enrollments', 'enrollment_service');
     const url = `${baseUrl}/member-service/v2/me/memberships?productID=${TLF_INDIVIDUAL_SUPPORTER.productId}&status=Purchased,Active,Expired&membershipType=Individual`;
 
     logger.debug(req, 'get_individual_enrollments', 'Fetching individual memberships from member-service');
 
     const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${req.bearerToken}` },
+      headers: { Authorization: `Bearer ${req.apiGatewayToken}` },
       signal: AbortSignal.timeout(10000),
     });
 
     if (!response.ok) {
       const body = await response.text().catch(() => '');
-      throw new Error(`member-service returned ${response.status}: ${body}`);
+      throw new MicroserviceError(`member-service returned ${response.status}`, response.status, 'MEMBER_SERVICE_ERROR', {
+        operation: 'get_individual_enrollments',
+        service: 'enrollment_service',
+        errorBody: body.slice(0, 500),
+      });
     }
 
     const data = await response.json();

@@ -84,17 +84,11 @@
           <!-- CTA -->
           <div class="flex" data-testid="individual-enrollment-cta">
             @if (!item.membership) {
-              <a [href]="enrollUrl(item)" target="_blank" rel="noopener noreferrer">
-                <lfx-button [label]="item.enrollButton || 'Enroll'" severity="primary" />
-              </a>
+              <lfx-button [label]="item.enrollButton || 'Enroll'" severity="primary" [href]="enrollUrl(item)" target="_blank" rel="noopener noreferrer" />
             } @else if (status === 'Expiring Soon') {
-              <a [href]="enrollUrl(item, true)" target="_blank" rel="noopener noreferrer">
-                <lfx-button label="Renew My Enrollment" severity="primary" />
-              </a>
+              <lfx-button label="Renew My Enrollment" severity="primary" [href]="enrollUrl(item, true)" target="_blank" rel="noopener noreferrer" />
             } @else if (status === 'Expired') {
-              <a [href]="enrollUrl(item)" target="_blank" rel="noopener noreferrer">
-                <lfx-button label="Repurchase" severity="primary" />
-              </a>
+              <lfx-button label="Repurchase" severity="primary" [href]="enrollUrl(item)" target="_blank" rel="noopener noreferrer" />
             } @else {
               <lfx-button [label]="item.activeButtonText || 'Active'" severity="secondary" [disabled]="true" />
             }

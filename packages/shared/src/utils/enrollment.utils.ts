@@ -3,6 +3,7 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
+import { parseLocalDateString } from './date-time.utils';
 import { EnrollmentDisplayStatus, IndividualEnrollment } from '../interfaces/enrollment.interface';
 
 // Status derivation mirrors enrollment.plugin.js:197–226 from myprofile
@@ -12,7 +13,8 @@ export function deriveEnrollmentStatus(item: IndividualEnrollment): EnrollmentDi
   if (membership.Status === 'Expired') return 'Expired';
   if (price === null || price === undefined) return 'Active';
   if (membership.AutoRenew && membership.ExtPaymentType === 'stripe') return 'Active';
-  const endDate = new Date(membership.EndDate);
+  const endDateString = membership.EndDate.length >= 10 ? membership.EndDate.slice(0, 10) : membership.EndDate;
+  const endDate = /^\d{4}-\d{2}-\d{2}$/.test(endDateString) ? parseLocalDateString(endDateString) : new Date(membership.EndDate);
   const now = new Date();
   if (endDate < now) return 'Expired';
   const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
