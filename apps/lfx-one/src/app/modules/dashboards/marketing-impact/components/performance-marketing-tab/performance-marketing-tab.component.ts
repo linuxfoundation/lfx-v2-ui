@@ -244,7 +244,8 @@ export class PerformanceMarketingTabComponent {
         { spend: 0, revenue: 0, clicks: 0, impressions: 0, conversions: 0 }
       );
 
-      const totalRoas = totals.spend > 0 ? totals.revenue / totals.spend : 0;
+      const totalRoasRaw = totals.spend > 0 ? totals.revenue / totals.spend : 0;
+      const totalRoas = Math.round(totalRoasRaw * 100) / 100;
       const totalCtr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0;
       const totalCpc = totals.clicks > 0 ? totals.spend / totals.clicks : 0;
       const totalConvRate = totals.clicks > 0 ? (totals.conversions / totals.clicks) * 100 : 0;
