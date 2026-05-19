@@ -21,7 +21,7 @@ export class EnrollmentService {
         (err: HttpErrorResponse): Observable<EnrollmentsState> =>
           of({
             kind: 'error',
-            message: err.error?.message ?? 'We could not load your enrollment products. Please retry.',
+            message: err.error?.error ?? err.error?.message ?? 'We could not load your enrollment products. Please retry.',
           })
       )
     );

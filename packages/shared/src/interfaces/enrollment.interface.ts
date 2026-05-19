@@ -19,7 +19,7 @@ export interface IndividualEnrollment {
   ProductName: string;
   projectDesc: string;
   enrollButton: string;
-  price: number;
+  price?: number;
   projectLogo: string;
   benefits: string[];
   projectId: string;
