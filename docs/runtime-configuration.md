@@ -193,7 +193,7 @@ docker run \
   -e DD_RUM_CLIENT_ID=prod-rum-token \
   -e DD_RUM_APPLICATION_ID=prod-rum-app-id \
   -e INTERCOM_APP_ID=your-intercom-app-id \
-  ghcr.io/linuxfoundation/lfx-v2-ui:latest
+  ghcr.io/linuxfoundation/lfx-self-serve:latest
 ```
 
 ### Kubernetes Deployment

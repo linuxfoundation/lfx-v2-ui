@@ -1,0 +1,67 @@
+# Copyright The Linux Foundation and each contributor to LFX.
+# SPDX-License-Identifier: MIT
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "lfx-self-serve.fullname" . }}
+  labels:
+    {{- include "lfx-self-serve.labels" . | nindent 4 }}
+  {{- with (include "lfx-self-serve.annotations" .) }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "lfx-self-serve.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- include "lfx-self-serve.podAnnotations" . | nindent 8 }}
+      labels:
+        {{- include "lfx-self-serve.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ .Values.serviceAccount.name | default (include "lfx-self-serve.serviceAccountName" .) }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ include "lfx-self-serve.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+          {{- range $name, $config := .Values.environment }}
+          - name: {{ $name }}
+            {{- if $config.value }}
+            value: {{ $config.value | quote }}
+            {{- else if $config.valueFrom }}
+            valueFrom:
+              {{- toYaml $config.valueFrom | nindent 14 }}
+            {{- end }}
+          {{- end }}
+          {{- with .Values.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}

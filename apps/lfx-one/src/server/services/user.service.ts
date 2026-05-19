@@ -9,11 +9,12 @@ import {
   QUERY_SERVICE_FILTERS_OR_BATCH_SIZE,
   TSHIRT_SIZES,
 } from '@lfx-one/shared/constants';
-import { NatsSubjects, PollStatus } from '@lfx-one/shared/enums';
+import { IndexedVoteResponseStatus, NatsSubjects, PollStatus } from '@lfx-one/shared/enums';
 import {
   ActiveWeeksStreakResponse,
   ActiveWeeksStreakRow,
   ApiGatewayUserProfile,
+  IndexedVote,
   IndexedVoteResponse,
   Meeting,
   MeetingOccurrence,
@@ -1078,7 +1079,7 @@ export class UserService {
    * OpenSearch to exactly this user's rows. When `projectUid` is provided it is pushed
    * server-side to drop out-of-scope rows before pagination; when omitted, the unscoped Me-lens
    * call already gets exactly the user's vote_response rows across all their projects via
-   * `filter_grants=direct`. The remaining `vote_status !== 'submitted'` and `!voter_removed`
+   * `filter_grants=direct`. The remaining `vote_status === IndexedVoteResponseStatus.AWAITING_RESPONSE` and `!voter_removed`
    * checks stay client-side. Caveat: the FGA tuple is only emitted when the invitee has a
    * non-empty `Username`, so users invited by email but without an Auth0 username won't appear
    * here. We accept this trade-off — meetings already work the same way and FGA is the source
@@ -1108,7 +1109,7 @@ export class UserService {
     const pendingVoteUids = Array.from(
       new Set(
         responses
-          .filter((r) => r.vote_status !== 'submitted' && !r.voter_removed)
+          .filter((r) => r.vote_status === IndexedVoteResponseStatus.AWAITING_RESPONSE && !r.voter_removed)
           .map((r) => r.vote_uid ?? r.vote_id ?? r.poll_id)
           .filter((uid): uid is string => !!uid)
       )
@@ -1307,6 +1308,8 @@ export class UserService {
         month: 'short',
         day: 'numeric',
       });
+      // fetchPendingVotes returns raw indexer-shaped docs typed as Vote — at runtime they carry vote_uid, not uid. Fall back so voteUid is always populated.
+      const voteUid = vote.uid ?? (vote as unknown as IndexedVote).vote_uid;
       return {
         type: 'Vote',
         badge,
@@ -1314,7 +1317,9 @@ export class UserService {
         icon: 'fa-regular fa-check-to-slot',
         severity: PENDING_ACTION_SEVERITY.Vote,
         buttonText: 'Cast Vote',
+        // Inline launch is the active path (template branches on isVoteInline when voteUid is set); buttonLink kept for the older Survey/Agenda code path and any future caller that hasn't migrated.
         buttonLink: '/votes',
+        voteUid,
         date: `Closes ${formattedEnd}`,
       };
     });
