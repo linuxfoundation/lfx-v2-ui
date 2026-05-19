@@ -1,12 +1,13 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { DatePipe } from '@angular/common';
+import { DatePipe, formatDate } from '@angular/common';
 import { Component, computed, inject, input, model, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { TagComponent } from '@components/tag/tag.component';
-import { PollStatus, PollType } from '@lfx-one/shared';
+import { PollStatus, PollType, VoteResponseStatus } from '@lfx-one/shared';
 import {
+  MyVoteResponse,
   PollCommentResult,
   RankedQuestionView,
   Vote,
@@ -20,11 +21,12 @@ import { PollStatusSeverityPipe } from '@pipes/poll-status-severity.pipe';
 import { VoteService } from '@services/vote.service';
 import { DrawerModule } from 'primeng/drawer';
 import { SkeletonModule } from 'primeng/skeleton';
-import { catchError, finalize, of, shareReplay, startWith, switchMap } from 'rxjs';
+import { TooltipModule } from 'primeng/tooltip';
+import { catchError, combineLatest, finalize, of, shareReplay, startWith, switchMap } from 'rxjs';
 
 @Component({
   selector: 'lfx-vote-results-drawer',
-  imports: [DrawerModule, TagComponent, DatePipe, PollStatusLabelPipe, PollStatusSeverityPipe, SkeletonModule],
+  imports: [DrawerModule, TagComponent, DatePipe, PollStatusLabelPipe, PollStatusSeverityPipe, SkeletonModule, TooltipModule],
   templateUrl: './vote-results-drawer.component.html',
   styleUrl: './vote-results-drawer.component.scss',
 })
@@ -35,6 +37,8 @@ export class VoteResultsDrawerComponent {
   // === Inputs ===
   public readonly voteId = input<string | null>(null);
   public readonly listVote = input<Vote | null>(null);
+  /** Selects the voter-blind panel (B/C/D states, no live tallies, no creator note) when 'voter'; defaults to the unchanged creator UI. The /me/votes dashboard passes 'voter'. */
+  public readonly audience = input<'voter' | 'creator'>('creator');
 
   // === Model Signals (two-way binding) ===
   public readonly visible = model<boolean>(false);
@@ -49,6 +53,8 @@ export class VoteResultsDrawerComponent {
   // === Derived Signals (from API) ===
   protected readonly vote: Signal<Vote | null> = this.initVote();
   protected readonly voteResults: Signal<VoteResultsResponse | null> = this.initVoteResults();
+  /** Voter-scope only: indexed vote_response row for the current user. Used to detect access-denied (null/voter_removed) and confirm the submitted state on top of vote.response_status. */
+  protected readonly myResponse: Signal<MyVoteResponse | null> = this.initMyResponse();
 
   // === Computed Signals ===
   protected readonly isGenericPoll: Signal<boolean> = this.initIsGenericPoll();
@@ -60,6 +66,23 @@ export class VoteResultsDrawerComponent {
   protected readonly commentResults: Signal<PollCommentResult[]> = this.initCommentResults();
   protected readonly votingMethodText: Signal<string> = this.initVotingMethodText();
   protected readonly rankedMethodDescription: Signal<string> = this.initRankedMethodDescription();
+
+  // === Voter-state helpers ===
+  /** Strict voter "closed" — uses only PollStatus.ENDED, intentionally ignoring the 100%-participation
+   * heuristic in isVoteClosed (that's a creator monitoring shortcut, not a governance signal). */
+  protected readonly isVoteClosedStrict: Signal<boolean> = computed(() => this.vote()?.status === PollStatus.ENDED);
+  protected readonly voterState: Signal<'not_voted' | 'submitted' | 'closed' | 'access_denied'> = this.initVoterState();
+  protected readonly hasZeroVotes: Signal<boolean> = computed(() => {
+    const qs = this.questionsWithResults();
+    if (!qs.length) return true;
+    return qs.every((q) => q.totalVotes === 0);
+  });
+  /** Header close-date treatment — countdown chip at ≤ 7 days, absolute date otherwise. */
+  protected readonly closeDateDisplay: Signal<{ chip: string; absolute: string; isCountdown: boolean }> = this.initCloseDateDisplay();
+  /** One-line plain-English explainer for each vote type, shown on hover of the voter header pill. */
+  protected readonly voteTypeTooltip: Signal<string> = this.initVoteTypeTooltip();
+  /** Voter submission timestamp — falls back to vote.last_modified_time since the indexed vote_response row has no timestamp field today. */
+  protected readonly submittedAt: Signal<string | null> = computed(() => this.vote()?.last_modified_time ?? null);
 
   // === Protected Methods ===
   protected onClose(): void {
@@ -274,6 +297,75 @@ export class VoteResultsDrawerComponent {
           return 'Voters ranked the choices in order of preference. Meek STV is a multi-winner single-transferable-vote method that elects candidates as they meet a quota and proportionally redistributes surplus and eliminated ballots.';
         default:
           return 'Voters ranked the choices in order of preference. The configured ranked-choice algorithm determines the winner (or winners).';
+      }
+    });
+  }
+
+  /** Voter-scope only: fetches the indexed vote_response row to detect access-denied (null → not_participant)
+   * and confirm submission state. Creator-side calls skip the round-trip entirely. */
+  private initMyResponse(): Signal<MyVoteResponse | null> {
+    return toSignal(
+      combineLatest([this.voteId$, toObservable(this.audience)]).pipe(
+        switchMap(([id, audience]) => {
+          if (!id || audience !== 'voter') return of(null);
+          return this.voteService.getMyVoteResponse(id).pipe(catchError(() => of(null)));
+        })
+      ),
+      { initialValue: null }
+    );
+  }
+
+  /** Maps the (vote, my-response) tuple to one of the four voter panel states. The drawer's live
+   * vote() fetch is a pass-through to upstream and does NOT carry response_status — only the
+   * parent-supplied listVote() (decorated by /api/votes/my-votes) does. Prefer the indexer's
+   * vote_status (most authoritative), then listVote.response_status, then live vote.response_status. */
+  private initVoterState(): Signal<'not_voted' | 'submitted' | 'closed' | 'access_denied'> {
+    return computed(() => {
+      const v = this.vote();
+      if (!v) return 'not_voted';
+      const my = this.myResponse();
+      // Access-denied wins over everything else — if the user isn't a participant we don't reveal results.
+      if (my?.voter_removed) return 'access_denied';
+      const closed = v.status === PollStatus.ENDED;
+      const decoratedResponseStatus = this.listVote()?.response_status ?? v.response_status;
+      const submitted = my?.vote_status === 'responded' || decoratedResponseStatus === VoteResponseStatus.RESPONDED;
+      if (closed) return 'closed';
+      if (submitted) return 'submitted';
+      return 'not_voted';
+    });
+  }
+
+  private initCloseDateDisplay(): Signal<{ chip: string; absolute: string; isCountdown: boolean }> {
+    return computed(() => {
+      const v = this.vote();
+      if (!v?.end_time) return { chip: '', absolute: '', isCountdown: false };
+      const end = new Date(v.end_time);
+      const absolute = formatDate(end, 'MMM d, y', 'en-US');
+      const msLeft = end.getTime() - Date.now();
+      const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
+      if (daysLeft >= 0 && daysLeft <= 7) {
+        let chip: string;
+        if (daysLeft === 0) chip = 'Closes today';
+        else if (daysLeft === 1) chip = 'Closes tomorrow';
+        else chip = `Closes in ${daysLeft} days`;
+        return { chip, absolute, isCountdown: true };
+      }
+      return { chip: `Closes ${absolute}`, absolute, isCountdown: false };
+    });
+  }
+
+  private initVoteTypeTooltip(): Signal<string> {
+    return computed(() => {
+      const pollType = this.vote()?.poll_type ?? PollType.GENERIC;
+      switch (pollType) {
+        case PollType.GENERIC:
+          return 'Each voter picks one option; the option with the most votes wins.';
+        case PollType.CONDORCET_IRV:
+          return 'Voters rank options; a candidate that beats all others head-to-head wins, else IRV elimination decides.';
+        case PollType.INSTANT_RUNOFF_VOTE:
+          return 'Voters rank options; the lowest-ranked is eliminated each round until a candidate has a majority.';
+        case PollType.MEEK_STV:
+          return 'Voters rank options; multi-winner proportional method that transfers surplus and eliminated ballots.';
       }
     });
   }
