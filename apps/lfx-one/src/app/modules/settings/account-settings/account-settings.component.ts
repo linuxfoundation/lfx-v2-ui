@@ -483,7 +483,7 @@ export class AccountSettingsComponent {
     const sectionIds = ['email-settings', 'password', 'developer-settings'];
     const headingByElement = new Map<Element, string>();
     for (const id of sectionIds) {
-      const heading = document.querySelector(`[data-testid="${id}-heading"]`);
+      const heading = document.getElementById(`${id}-heading`);
       if (heading) headingByElement.set(heading, id);
     }
 
@@ -509,19 +509,20 @@ export class AccountSettingsComponent {
 
     headingByElement.forEach((_, heading) => observer.observe(heading));
 
-    // End-of-scroll override: the last section is short enough that its heading
-    // never enters the activation band, so the observer alone leaves the highlight
-    // on the previous section. Snap to the last section when reaching the bottom.
-    const isAtBottom = () =>
-      document.documentElement.scrollHeight > window.innerHeight && window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
-    const onScroll = () => {
-      if (isAtBottom()) this.activeSection.set(lastSectionId);
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
+    // The last section is short enough that its heading never enters the activation
+    // band. Observe an invisible sentinel at the bottom of the content column so we
+    // can snap to the last section without a scroll listener or magic pixel values.
+    const sentinel = document.querySelector('[data-testid="scroll-end-sentinel"]');
+    const endObserver = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) this.activeSection.set(lastSectionId);
+      },
+      { threshold: 0 }
+    );
+    if (sentinel) endObserver.observe(sentinel);
 
     this.destroyRef.onDestroy(() => {
-      window.removeEventListener('scroll', onScroll);
+      endObserver.disconnect();
       this.scrollSpyObserver?.disconnect();
     });
   }
