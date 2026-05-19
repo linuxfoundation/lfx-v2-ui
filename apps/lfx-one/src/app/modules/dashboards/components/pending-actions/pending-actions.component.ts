@@ -156,6 +156,12 @@ export class PendingActionsComponent {
           isLoading: !!item.meetingUid && loadingUid === item.meetingUid,
           meeting,
           rowClass,
+          // Vote inline state — stubbed here; Step 3 wires the real signal-driven values.
+          vote: null,
+          isVoteLoading: false,
+          isVoteInlineExpanded: false,
+          voteQuestionCount: null,
+          voteUsesDrawer: false,
         };
       });
     });
