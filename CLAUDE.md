@@ -267,10 +267,6 @@ Detailed patterns are in `.claude/rules/` and loaded contextually based on the `
 
 > **CRITICAL: post-commit and pre-PR reviews are both mandatory.** After every commit, spawn the `lfx-self-serve-code-reviewer` AND `lfx-self-serve-learnings-reviewer` subagents in parallel via the Agent tool with `run_in_background: true`, then keep working on the next commit while they run. Before opening a PR, the latest in-flight review pair must return clean (or remaining findings explicitly documented as trade-offs), AND `/lfx-self-serve-pr-readiness` must pass (branch / JIRA / commits / DCO + GPG / rebase / diff size). The reviewers' time is the most expensive resource in this workflow — landing a PR without their audits wastes it and is the single biggest contributor to slow review cycles. Do not skip them, do not save them for later, do not assume your changes are "small enough" to bypass them.
 
-### Why post-commit, not pre-commit
-
-The reviewers diff the cumulative branch state (`<base>...HEAD`), so a later review pair sees the full state and **supersedes** any earlier in-flight one. Commit first, fire the pair off in the background, keep building. The safety bound is the **PR boundary**, not the commit boundary — nothing leaves the branch without a clean final review, but the branch itself can hold "reviewed-and-pending-fix" state transiently. That's fine; it's a feature branch.
-
 ### Post-commit (after every commit, parallel, asynchronous)
 
 1. **Commit your work.** `git commit --signoff -S`. Do not wait for any prior review to finish.
