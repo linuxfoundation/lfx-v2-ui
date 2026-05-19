@@ -1,17 +1,29 @@
 # Permission, Persona, and Navigation Model
 
-Meeting preread for aligning how LFX One decides where users can go, what they see, and what they can do.
+Alignment record for how LFX One decides where users can go, what they see, and what they can do.
 
 Tracking epic: LFXV2-1654 - https://linuxfoundation.atlassian.net/browse/LFXV2-1654
 
 ## How to Read This
 
-This document is meant to drive one team conversation:
+This document started as a preread and now records the agreed model plus the implementation work that remains:
 
 1. Agree on the product/security contract.
 2. Confirm where the current code already follows that contract.
 3. Decide what work belongs under the epic.
 4. Sequence the remaining implementation work by risk and priority.
+
+## Where We Are Now
+
+Updated May 19, 2026.
+
+| Area | Current state | Implication |
+| --- | --- | --- |
+| Team agreement | The meeting agreement is captured below: view permission controls context eligibility, persona/role controls visible experience, and manage/write permission controls actions. | The model is no longer just a proposal; remaining work should implement and test the agreed contract. |
+| Jira tracking | Epic [LFXV2-1654](https://linuxfoundation.atlassian.net/browse/LFXV2-1654) exists, with individual work items [LFXV2-1655](https://linuxfoundation.atlassian.net/browse/LFXV2-1655) through [LFXV2-1662](https://linuxfoundation.atlassian.net/browse/LFXV2-1662) mapped in this document. | Engineering work can be planned and reviewed independently by decision boundary. |
+| GitHub document branch | The standalone docs branch `docs/permission-persona-preread` exists and is scoped to this markdown file plus the DOCX version. | The document work remains independent from unrelated feature branches. |
+| Pull request | No PR is open yet for `docs/permission-persona-preread`. | Next operational step is to open the docs-only PR for review. |
+| Slack signal | The notification channel has GitHub bot activity but no visible discussion for `LFXV2-1654`, the preread branch, or the document filename. Nirav separately raised the hybrid persona/lens simplification question: nested project dropdown under foundation, ideally three lenses rather than four. | The doc still matches the direction: simplify persona/lens presentation without using persona as the access-control mechanism. |
 
 ## Purpose
 
