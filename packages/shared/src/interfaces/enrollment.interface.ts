@@ -48,4 +48,11 @@ export interface RawMembership {
   Product?: { ID?: string };
 }
 
+export interface DisplayEnrollment extends IndividualEnrollment {
+  displayStatus: EnrollmentDisplayStatus;
+  severity: 'success' | 'warn' | 'danger' | 'secondary';
+  enrollHref: string;
+  renewHref: string;
+}
+
 export type EnrollmentsState = { kind: 'loading' } | { kind: 'loaded'; items: IndividualEnrollment[] } | { kind: 'error'; message: string };

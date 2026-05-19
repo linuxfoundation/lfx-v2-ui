@@ -6,7 +6,7 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { EnrollmentsState, IndividualEnrollment } from '@lfx-one/shared/interfaces';
+import { DisplayEnrollment, EnrollmentsState } from '@lfx-one/shared/interfaces';
 import { deriveEnrollmentStatus, enrollmentStatusSeverity } from '@lfx-one/shared/utils';
 
 import { environment } from '@environments/environment';
@@ -28,27 +28,29 @@ export class ProfileIndividualEnrollmentComponent {
 
   private readonly _state: Signal<EnrollmentsState | undefined> = this.initState();
 
-  protected readonly enrollments: Signal<IndividualEnrollment[] | null | undefined> = this.initEnrollments();
+  protected readonly enrollments: Signal<DisplayEnrollment[] | null | undefined> = this.initEnrollments();
   protected readonly enrollmentError: Signal<string | null> = this.initEnrollmentError();
-
-  protected readonly deriveStatus = deriveEnrollmentStatus;
-  protected readonly statusSeverity = enrollmentStatusSeverity;
-
-  protected enrollUrl(item: IndividualEnrollment, renew = false): string {
-    const base = environment.urls.enrollment;
-    return `${base}${item.ctaPath}${renew ? '&renew=true' : ''}`;
-  }
 
   private initState(): Signal<EnrollmentsState | undefined> {
     return toSignal(this.enrollmentService.getEnrollments());
   }
 
-  private initEnrollments(): Signal<IndividualEnrollment[] | null | undefined> {
+  private initEnrollments(): Signal<DisplayEnrollment[] | null | undefined> {
     return computed(() => {
       const s = this._state();
       if (!s || s.kind === 'loading') return undefined;
       if (s.kind === 'error') return null;
-      return s.items;
+      const base = environment.urls.enrollment;
+      return s.items.map((item): DisplayEnrollment => {
+        const displayStatus = deriveEnrollmentStatus(item);
+        return {
+          ...item,
+          displayStatus,
+          severity: enrollmentStatusSeverity(displayStatus),
+          enrollHref: `${base}${item.ctaPath}`,
+          renewHref: `${base}${item.ctaPath}&renew=true`,
+        };
+      });
     });
   }
 
