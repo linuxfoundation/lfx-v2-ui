@@ -4,25 +4,29 @@
 import { Component, computed, DestroyRef, inject, input, output, signal, Signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RsvpButtonGroupComponent } from '@app/modules/meetings/components/rsvp-button-group/rsvp-button-group.component';
+import { VoteBallotInlineComponent } from '@app/modules/votes/components/vote-ballot-inline/vote-ballot-inline.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { TagComponent } from '@components/tag/tag.component';
+import { PollType } from '@lfx-one/shared/enums';
 import { stableKeyParity } from '@lfx-one/shared/utils';
 import { MeetingService } from '@services/meeting.service';
+import { VoteService } from '@services/vote.service';
 import { HiddenActionsService } from '@shared/services/hidden-actions.service';
 import { MessageService } from 'primeng/api';
 import { timer } from 'rxjs';
 
-import type { DecoratedPendingAction, Meeting, PendingActionItem } from '@lfx-one/shared/interfaces';
+import type { DecoratedPendingAction, Meeting, PendingActionItem, Vote } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-pending-actions',
-  imports: [ButtonComponent, TagComponent, RsvpButtonGroupComponent],
+  imports: [ButtonComponent, TagComponent, RsvpButtonGroupComponent, VoteBallotInlineComponent],
   templateUrl: './pending-actions.component.html',
   styleUrl: './pending-actions.component.scss',
 })
 export class PendingActionsComponent {
   private readonly hiddenActionsService = inject(HiddenActionsService);
   private readonly meetingService = inject(MeetingService);
+  private readonly voteService = inject(VoteService);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -36,9 +40,12 @@ export class PendingActionsComponent {
   // Cookie-backed dismissals live outside the signal graph; bumping forces the computed to recompute.
   private readonly hiddenActionsVersion = signal(0);
   protected readonly expandedRsvpKey = signal<string | null>(null);
+  protected readonly expandedVoteKey = signal<string | null>(null);
   protected readonly dismissingRowKeys = signal<ReadonlySet<string>>(new Set());
   private readonly loadingMeetingUid = signal<string | null>(null);
+  private readonly loadingVoteUid = signal<string | null>(null);
   private readonly rsvpMeetingCache = signal<Record<string, Meeting>>({});
+  private readonly voteCache = signal<Record<string, Vote>>({});
   // Pinned through the 1.5s post-RSVP cue window so a parent re-emit can't filter the row out
   // before the confirmation tint renders.
   private readonly frozenDismissingKeys = signal<ReadonlySet<string>>(new Set());
@@ -62,8 +69,7 @@ export class PendingActionsComponent {
     }
 
     if (this.isVoteInline(item) && item.voteUid) {
-      // Vote rows: just open the drawer; hide-on-success happens via the parent dashboard's handleVoteSubmitted path, so cancel/error leaves the row in place.
-      this.castVoteRequested.emit(item.voteUid);
+      this.loadVoteForRow(item);
       return;
     }
 
@@ -107,6 +113,42 @@ export class PendingActionsComponent {
       });
   }
 
+  protected handleVoteSubmitted(item: DecoratedPendingAction): void {
+    this.hiddenActionsService.hideAction(item);
+    const rowKey = this.getRowKey(item);
+    this.dismissingRowKeys.update((keys) => new Set(keys).add(rowKey));
+    this.frozenDismissingKeys.update((keys) => new Set(keys).add(rowKey));
+    timer(1500)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (this.expandedVoteKey() === rowKey) {
+          this.expandedVoteKey.set(null);
+        }
+        this.frozenDismissingKeys.update((keys) => {
+          if (!keys.has(rowKey)) return keys;
+          const next = new Set(keys);
+          next.delete(rowKey);
+          return next;
+        });
+        const wasDismissing = this.dismissingRowKeys().has(rowKey);
+        this.dismissingRowKeys.update((keys) => {
+          if (!keys.has(rowKey)) return keys;
+          const next = new Set(keys);
+          next.delete(rowKey);
+          return next;
+        });
+        if (wasDismissing) {
+          this.hiddenActionsVersion.update((v) => v + 1);
+        }
+      });
+  }
+
+  protected handleVoteCancelled(item: DecoratedPendingAction): void {
+    if (this.expandedVoteKey() === this.getRowKey(item)) {
+      this.expandedVoteKey.set(null);
+    }
+  }
+
   private isRsvpInline(item: PendingActionItem): boolean {
     return item.type === 'RSVP' && !!item.meetingUid;
   }
@@ -132,12 +174,20 @@ export class PendingActionsComponent {
       const loadingUid = this.loadingMeetingUid();
       const cache = this.rsvpMeetingCache();
       const dismissing = this.dismissingRowKeys();
+      const cacheV = this.voteCache();
+      const loadingVoteUid = this.loadingVoteUid();
+      const expandedVoteKey = this.expandedVoteKey();
 
       return this.visibleActions().map((item) => {
         const rowKey = this.getRowKey(item);
         const isRsvpInline = this.isRsvpInline(item);
         const isVoteInline = this.isVoteInline(item);
         const meeting = item.meetingUid ? (cache[item.meetingUid] ?? null) : null;
+        const vote = item.voteUid ? (cacheV[item.voteUid] ?? null) : null;
+        const isVoteLoading = !!item.voteUid && loadingVoteUid === item.voteUid;
+        const isVoteInlineExpanded = isVoteInline && expandedVoteKey === rowKey;
+        const voteQuestionCount = vote ? (vote.poll_questions?.length ?? 0) : null;
+        const voteUsesDrawerVal = !!vote && this.voteUsesDrawer(vote);
         let rowClass: string;
         if (dismissing.has(rowKey)) {
           rowClass = 'bg-emerald-50/60';
@@ -156,15 +206,71 @@ export class PendingActionsComponent {
           isLoading: !!item.meetingUid && loadingUid === item.meetingUid,
           meeting,
           rowClass,
-          // Vote inline state — stubbed here; Step 3 wires the real signal-driven values.
-          vote: null,
-          isVoteLoading: false,
-          isVoteInlineExpanded: false,
-          voteQuestionCount: null,
-          voteUsesDrawer: false,
+          vote,
+          isVoteLoading,
+          isVoteInlineExpanded,
+          voteQuestionCount,
+          voteUsesDrawer: voteUsesDrawerVal,
         };
       });
     });
+  }
+
+  private loadVoteForRow(item: PendingActionItem): void {
+    const voteUid = item.voteUid;
+    if (!voteUid) return;
+
+    this.expandedVoteKey.set(this.getRowKey(item));
+
+    const cached = this.voteCache()[voteUid];
+    if (cached) {
+      this.dispatchLoadedVote(cached, item);
+      return;
+    }
+
+    this.loadingVoteUid.set(voteUid);
+    this.voteService
+      .getVote(voteUid)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (vote) => {
+          if (this.loadingVoteUid() === voteUid) {
+            this.loadingVoteUid.set(null);
+          }
+          this.voteCache.update((cache) => ({ ...cache, [voteUid]: vote }));
+          if (this.expandedVoteKey() === this.getRowKey(item)) {
+            this.dispatchLoadedVote(vote, item);
+          }
+        },
+        error: () => {
+          if (this.loadingVoteUid() === voteUid) {
+            this.loadingVoteUid.set(null);
+          }
+          if (this.expandedVoteKey() === this.getRowKey(item)) {
+            this.expandedVoteKey.set(null);
+          }
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Could not load vote',
+            detail: 'Please try again or open it from the My Votes page.',
+            life: 4000,
+          });
+        },
+      });
+  }
+
+  private dispatchLoadedVote(vote: Vote, item: PendingActionItem): void {
+    if (this.voteUsesDrawer(vote)) {
+      this.expandedVoteKey.set(null);
+      this.castVoteRequested.emit(vote.uid);
+    }
+    // Otherwise the row stays expanded and the template renders VoteBallotInlineComponent.
+  }
+
+  private voteUsesDrawer(vote: Vote): boolean {
+    const questions = vote.poll_questions ?? [];
+    const isRanked = (vote.poll_type ?? PollType.GENERIC) !== PollType.GENERIC;
+    return questions.length > 1 || isRanked;
   }
 
   private loadMeetingForRsvp(item: PendingActionItem): void {
