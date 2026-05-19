@@ -5,9 +5,10 @@ description: >
   sanity (branch name, JIRA reference, conventional-commit format,
   rebase status, DCO + GPG signing per commit, total diff size)
   against the target base branch. Does NOT audit code — code audits
-  run pre-commit via the lfx-self-serve-code-reviewer and
-  lfx-self-serve-learnings-reviewer subagents. Use once before opening a PR, after
-  pre-commit reviews pass.
+  run post-commit via the lfx-self-serve-code-reviewer and
+  lfx-self-serve-learnings-reviewer subagents, drained before this
+  check. Use once before opening a PR, after the post-commit review
+  queue has returned clean.
 context: fork
 allowed-tools: Bash, Read, Glob, Grep
 ---
@@ -16,7 +17,7 @@ allowed-tools: Bash, Read, Glob, Grep
 
 You are checking whether **local commits are shaped correctly to open as a PR** — branch name, JIRA references in commit messages, conventional-commit format, rebase status, DCO + GPG signing on every commit, total diff size.
 
-This skill does NOT audit code. Code audits run pre-commit via two parallel subagents (`lfx-self-serve-code-reviewer` and `lfx-self-serve-learnings-reviewer`), spawned per the work cycle in `CLAUDE.md`. By the time you run, those should already be clean.
+This skill does NOT audit code. Code audits run post-commit via two parallel subagents (`lfx-self-serve-code-reviewer` and `lfx-self-serve-learnings-reviewer`), spawned in the background after every commit per the work cycle in `CLAUDE.md`. By the time you run, the latest in-flight pair must have returned and any CRITICAL / reasonable SHOULD_FIX findings must already be addressed in a fix commit.
 
 The PR-shape checklist lives in `references/pr-shape.md` and is walked directly in this body.
 
@@ -123,6 +124,6 @@ Every finding must quote an item in `references/pr-shape.md`. Drop hallucinated 
 
 ## Companion skills
 
-- `lfx-self-serve-code-reviewer` + `lfx-self-serve-learnings-reviewer` subagents — pre-commit reviews. Should be clean before this check.
+- `lfx-self-serve-code-reviewer` + `lfx-self-serve-learnings-reviewer` subagents — post-commit reviews spawned in the background after every commit. The queue must be drained and the latest pair returned clean before this check.
 - `/preflight` — mechanical checks (license, format, lint, build, protected files). Run after this passes.
 - `/lfx-review-pr` — post-PR reviewer. Not part of pre-PR.
