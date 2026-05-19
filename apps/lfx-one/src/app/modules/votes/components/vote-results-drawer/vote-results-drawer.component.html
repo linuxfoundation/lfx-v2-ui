@@ -204,7 +204,9 @@
                   </div>
                 </div>
               }
-              @if (hasZeroVotes()) {
+              @if (voteResultsError()) {
+                <p class="text-sm text-rose-700" data-testid="vote-results-voter-error">Couldn't load final results. Try reopening this vote.</p>
+              } @else if (hasZeroVotes()) {
                 <p class="text-sm text-slate-500" data-testid="vote-results-voter-zero-responses">No votes were submitted.</p>
               }
             </div>
@@ -241,7 +243,9 @@
                   </div>
                 </div>
               }
-              @if (rankedQuestions().length === 0) {
+              @if (voteResultsError()) {
+                <p class="text-sm text-rose-700" data-testid="vote-results-voter-error">Couldn't load final results. Try reopening this vote.</p>
+              } @else if (rankedQuestions().length === 0) {
                 <p class="text-sm text-slate-500" data-testid="vote-results-voter-zero-responses">No votes were submitted.</p>
               }
             </div>

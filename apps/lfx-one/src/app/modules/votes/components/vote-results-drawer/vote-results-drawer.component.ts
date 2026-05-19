@@ -22,7 +22,7 @@ import { VoteService } from '@services/vote.service';
 import { DrawerModule } from 'primeng/drawer';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
-import { catchError, combineLatest, finalize, of, shareReplay, startWith, switchMap } from 'rxjs';
+import { catchError, combineLatest, distinctUntilChanged, finalize, map, of, shareReplay, startWith, switchMap } from 'rxjs';
 
 @Component({
   selector: 'lfx-vote-results-drawer',
@@ -46,6 +46,8 @@ export class VoteResultsDrawerComponent {
   // === Writable Signals ===
   protected readonly loadingVoteDetails = signal<boolean>(false);
   protected readonly loadingVoteResults = signal<boolean>(false);
+  /** True when the most recent getVoteResults call failed — voter State C uses this to distinguish "0 responses recorded" from "couldn't load results". */
+  protected readonly voteResultsError = signal<boolean>(false);
   /** Distinguishes "my-response request in flight" from "my-response loaded with no row"; without this, a non-participant deep-linking a closed vote would briefly route to State C instead of access-denied. */
   protected readonly myResponseLoading = signal<boolean>(false);
 
@@ -60,7 +62,10 @@ export class VoteResultsDrawerComponent {
 
   // === Computed Signals ===
   protected readonly isGenericPoll: Signal<boolean> = this.initIsGenericPoll();
-  protected readonly isLoading: Signal<boolean> = computed(() => this.loadingVoteDetails() || this.loadingVoteResults());
+  /** Voter scope also waits on my-response so State C never renders to a non-participant during a race between voteResults and my-response. */
+  protected readonly isLoading: Signal<boolean> = computed(
+    () => this.loadingVoteDetails() || this.loadingVoteResults() || (this.audience() === 'voter' && this.myResponseLoading())
+  );
   protected readonly participationStats: Signal<VoteParticipationStats> = this.initParticipationStats();
   protected readonly isVoteClosed: Signal<boolean> = this.initIsVoteClosed();
   protected readonly questionsWithResults: Signal<VoteResultsQuestion[]> = this.initQuestionsWithResults();
@@ -106,20 +111,28 @@ export class VoteResultsDrawerComponent {
     );
   }
 
-  /** Voter scope skips the results call until vote.status === ENDED so aggregate tallies never land in the browser before close — blind-results policy at the data layer, not just the template. */
+  /** Voter scope skips the results call until vote.status === ENDED so aggregate tallies never land in the browser before close — blind-results policy at the data layer, not just the template. distinctUntilChanged on the fetch key suppresses the duplicate trigger caused by initVote's startWith(listVote) → live emit. */
   private initVoteResults(): Signal<VoteResultsResponse | null> {
     return toSignal(
       combineLatest([this.voteId$, toObservable(this.audience), toObservable(this.vote)]).pipe(
-        switchMap(([id, audience, vote]) => {
+        map(([id, audience, vote]) => {
           const canFetch = !!id && (audience === 'creator' || vote?.status === PollStatus.ENDED);
-          if (!canFetch) {
+          return canFetch ? (id as string) : null;
+        }),
+        distinctUntilChanged(),
+        switchMap((id) => {
+          if (!id) {
             this.loadingVoteResults.set(false);
+            this.voteResultsError.set(false);
             return of(null);
           }
-
           this.loadingVoteResults.set(true);
-          return this.voteService.getVoteResults(id as string).pipe(
-            catchError(() => of(null)),
+          this.voteResultsError.set(false);
+          return this.voteService.getVoteResults(id).pipe(
+            catchError(() => {
+              this.voteResultsError.set(true);
+              return of(null);
+            }),
             finalize(() => this.loadingVoteResults.set(false))
           );
         })
