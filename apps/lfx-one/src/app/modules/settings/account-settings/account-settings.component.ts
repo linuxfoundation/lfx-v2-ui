@@ -477,18 +477,28 @@ export class AccountSettingsComponent {
   private setupScrollSpy(): void {
     if (!isPlatformBrowser(this.platformId)) return;
 
+    // Observe the section heading rows (sentinels) rather than the full section divs.
+    // A heading is short enough that at most one fits in the activation band, which
+    // avoids two sections being considered active during the transition.
     const sectionIds = ['email-settings', 'password', 'developer-settings'];
-    const sections = sectionIds.map((id) => document.getElementById(id)).filter((el): el is HTMLElement => el !== null);
+    const headingByElement = new Map<Element, string>();
+    for (const id of sectionIds) {
+      const heading = document.querySelector(`[data-testid="${id}-heading"]`);
+      if (heading) headingByElement.set(heading, id);
+    }
 
-    if (sections.length === 0) return;
+    if (headingByElement.size === 0) return;
 
     const intersecting = new Set<string>();
+    const lastSectionId = sectionIds[sectionIds.length - 1];
 
     this.scrollSpyObserver = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          if (entry.isIntersecting) intersecting.add(entry.target.id);
-          else intersecting.delete(entry.target.id);
+          const id = headingByElement.get(entry.target);
+          if (!id) continue;
+          if (entry.isIntersecting) intersecting.add(id);
+          else intersecting.delete(id);
         }
         const activeId = sectionIds.find((id) => intersecting.has(id));
         if (activeId) this.activeSection.set(activeId);
@@ -496,9 +506,21 @@ export class AccountSettingsComponent {
       { rootMargin: '-80px 0px -70% 0px', threshold: 0 }
     );
 
-    sections.forEach((section) => this.scrollSpyObserver!.observe(section));
+    headingByElement.forEach((_, heading) => this.scrollSpyObserver!.observe(heading));
+
+    // End-of-scroll override: the last section is short enough that its heading
+    // never enters the activation band, so the observer alone leaves the highlight
+    // on the previous section. Snap to the last section when reaching the bottom.
+    const isAtBottom = () =>
+      document.documentElement.scrollHeight > window.innerHeight && window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+    const onScroll = () => {
+      if (isAtBottom()) this.activeSection.set(lastSectionId);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
 
     this.destroyRef.onDestroy(() => {
+      window.removeEventListener('scroll', onScroll);
       this.scrollSpyObserver?.disconnect();
     });
   }
