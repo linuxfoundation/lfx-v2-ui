@@ -48,6 +48,7 @@ export class VoteBallotInlineComponent {
     this.formVersion(); // re-evaluate when controls are added/removed/disabled via { emitEvent: false }
     if (this.submitting()) return true;
     if (this.abstain()) return false;
+    if (!this.question()) return true;
     return !this.form.valid;
   });
 
@@ -62,6 +63,10 @@ export class VoteBallotInlineComponent {
 
     const isAbstain = this.abstain();
     const question = this.question();
+    if (!isAbstain && (!question || this.form.invalid)) {
+      this.form.markAllAsTouched();
+      return;
+    }
     const userVoteContent = isAbstain || !question ? undefined : this.buildAnswers(question);
 
     this.submitting.set(true);

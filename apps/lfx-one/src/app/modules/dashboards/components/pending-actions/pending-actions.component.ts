@@ -43,7 +43,7 @@ export class PendingActionsComponent {
   protected readonly expandedVoteKey = signal<string | null>(null);
   protected readonly dismissingRowKeys = signal<ReadonlySet<string>>(new Set());
   private readonly loadingMeetingUid = signal<string | null>(null);
-  private readonly loadingVoteUid = signal<string | null>(null);
+  private readonly loadingVoteUids = signal<ReadonlySet<string>>(new Set());
   private readonly rsvpMeetingCache = signal<Record<string, Meeting>>({});
   private readonly voteCache = signal<Record<string, Vote>>({});
   // Pinned through the 1.5s post-RSVP cue window so a parent re-emit can't filter the row out
@@ -175,7 +175,7 @@ export class PendingActionsComponent {
       const cache = this.rsvpMeetingCache();
       const dismissing = this.dismissingRowKeys();
       const cacheV = this.voteCache();
-      const loadingVoteUid = this.loadingVoteUid();
+      const loadingVoteUids = this.loadingVoteUids();
       const expandedVoteKey = this.expandedVoteKey();
 
       return this.visibleActions().map((item) => {
@@ -184,7 +184,7 @@ export class PendingActionsComponent {
         const isVoteInline = this.isVoteInline(item);
         const meeting = item.meetingUid ? (cache[item.meetingUid] ?? null) : null;
         const vote = item.voteUid ? (cacheV[item.voteUid] ?? null) : null;
-        const isVoteLoading = !!item.voteUid && loadingVoteUid === item.voteUid;
+        const isVoteLoading = !!item.voteUid && loadingVoteUids.has(item.voteUid);
         const isVoteInlineExpanded = isVoteInline && expandedVoteKey === rowKey;
         const voteUsesDrawerVal = !!vote && this.voteUsesDrawer(vote);
         let rowClass: string;
@@ -228,26 +228,30 @@ export class PendingActionsComponent {
 
     // Idempotency guard: a fetch for this voteUid is already in flight — let it complete
     // rather than firing a second GET that would also re-emit castVoteRequested on success.
-    if (this.loadingVoteUid() === voteUid) return;
+    if (this.loadingVoteUids().has(voteUid)) return;
 
-    this.loadingVoteUid.set(voteUid);
+    this.loadingVoteUids.update((s) => new Set(s).add(voteUid));
     this.voteService
       .getVote(voteUid)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (vote) => {
-          if (this.loadingVoteUid() === voteUid) {
-            this.loadingVoteUid.set(null);
-          }
+          this.loadingVoteUids.update((s) => {
+            const next = new Set(s);
+            next.delete(voteUid);
+            return next;
+          });
           this.voteCache.update((cache) => ({ ...cache, [voteUid]: vote }));
           if (this.expandedVoteKey() === this.getRowKey(item)) {
             this.dispatchLoadedVote(vote);
           }
         },
         error: () => {
-          if (this.loadingVoteUid() === voteUid) {
-            this.loadingVoteUid.set(null);
-          }
+          this.loadingVoteUids.update((s) => {
+            const next = new Set(s);
+            next.delete(voteUid);
+            return next;
+          });
           if (this.expandedVoteKey() === this.getRowKey(item)) {
             this.expandedVoteKey.set(null);
           }
@@ -272,7 +276,12 @@ export class PendingActionsComponent {
   private voteUsesDrawer(vote: Vote): boolean {
     const questions = vote.poll_questions ?? [];
     const isRanked = (vote.poll_type ?? PollType.GENERIC) !== PollType.GENERIC;
-    return questions.length > 1 || isRanked;
+    // Inline ballot supports exactly one single/multiple-choice question; everything else
+    // (zero questions, multiple questions, ranked/unsupported types) falls back to the drawer.
+    if (questions.length !== 1) return true;
+    const type = questions[0]?.type;
+    if (type !== 'single_choice' && type !== 'multiple_choice') return true;
+    return isRanked;
   }
 
   private loadMeetingForRsvp(item: PendingActionItem): void {
