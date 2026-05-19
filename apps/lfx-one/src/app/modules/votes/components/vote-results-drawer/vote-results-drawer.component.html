@@ -19,8 +19,9 @@
             type="button"
             (click)="onClose()"
             class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-colors flex-shrink-0"
+            aria-label="Close panel"
             data-testid="vote-results-drawer-close">
-            <i class="fa-light fa-xmark text-xl"></i>
+            <i class="fa-light fa-xmark text-xl pointer-events-none"></i>
           </button>
         </div>
 
@@ -56,15 +57,7 @@
             } @else {
               <span data-testid="vote-results-drawer-voter-close-date">{{ closeDateDisplay().chip }}</span>
             }
-            <span class="text-slate-400">•</span>
-            <!-- Vote-type pill: outline chip with tooltip explainer per type. -->
-            <span
-              class="border border-slate-200 text-slate-700 text-xs px-2.5 py-1 rounded font-medium"
-              [pTooltip]="voteTypeTooltip()"
-              tooltipPosition="top"
-              data-testid="vote-results-drawer-voter-method">
-              {{ votingMethodText() }}
-            </span>
+            <!-- Vote-type pill intentionally omitted in voter scope — voters cast in the cast drawer where the ballot UX is self-evident; the method label is creator-side metadata. -->
           </div>
         } @else {
           <div class="flex flex-wrap items-center gap-2 text-sm text-slate-600">
