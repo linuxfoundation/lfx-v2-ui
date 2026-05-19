@@ -1,6 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import type { BrandReachResponse, EmailCtrResponse, MarketingAttributionChannel, RevenueImpactResponse } from './analytics-data.interface';
+
 /** Month option for the Marketing Impact page month picker. */
 export interface MarketingImpactMonthOption {
   /** Display label (e.g., "April 2026") */
@@ -21,6 +23,13 @@ export type MarketingImpactFocusProgram = 'all' | 'events' | 'newsletters' | 'su
 /** Tab identifiers for the Marketing Impact section tabs. */
 export type MarketingImpactTab = 'overview' | 'attribution' | 'performance-marketing' | 'email' | 'web-activity' | 'social-accounts' | 'social-listening';
 
+/** Aggregated KPI source data fetched for the Marketing Impact overview tab. */
+export interface OverviewKpiData {
+  revenueImpact: RevenueImpactResponse | null;
+  brandReach: BrandReachResponse | null;
+  emailCtr: EmailCtrResponse | null;
+}
+
 /** Pre-formatted KPI card data for the Marketing Impact performance summary. */
 export interface PerformanceSummaryKpi {
   id: string;
@@ -28,8 +37,100 @@ export interface PerformanceSummaryKpi {
   icon: string;
   iconClass: string;
   value: string;
-  momChange: string;
-  trend: 'up' | 'down' | 'neutral';
-  trendClass: string;
-  previousLabel: string;
+  momChange: string | null;
+  momTrend: 'up' | 'down' | 'neutral';
+  momTrendClass: string;
+  yoyChange: string | null;
+  yoyTrend: 'up' | 'down' | 'neutral';
+  yoyTrendClass: string;
+  comparisonLine?: string;
+  /** Optional badge text (e.g., "Needs review") shown when metric requires attention. */
+  badge?: string;
+}
+
+/** Attribution model identifier for the model selector dropdown. */
+export type AttributionModel = 'linear' | 'firstTouch' | 'lastTouch' | 'timeDecay';
+
+/** Option shape for the attribution model dropdown. */
+export interface AttributionModelOption {
+  label: string;
+  value: AttributionModel;
+}
+
+/** View-model row for the attribution channel table. */
+export interface AttributionChannelRow {
+  channel: string;
+  revenue: number;
+  revenueFormatted: string;
+  sharePercent: number;
+  sessions: number;
+  sessionsFormatted: string;
+  raw: MarketingAttributionChannel;
+}
+
+/** Funnel stage identifier for the performance marketing filter. */
+export type FunnelStage = 'all' | 'tofu' | 'mofu' | 'bofu';
+
+/** Performance rating for paid project campaigns. */
+export type PaidProjectPerformance = 'EXCELLENT' | 'GOOD' | 'POOR' | 'NO REVENUE';
+
+/** View-model row for the performance marketing project table. */
+export interface PaidProjectRow {
+  name: string;
+  funnelStage: string;
+  spend: string;
+  revenue: string;
+  roas: string;
+  impressions: string;
+  performance: PaidProjectPerformance;
+  performanceClass: string;
+}
+
+/** View-model row for the email type breakdown table. */
+export interface EmailTypeRow {
+  emailType: string;
+  campaignCount: number;
+  sends: string;
+  opens: string;
+  openRate: string;
+  ctr: string;
+}
+
+/** View-model row for the top campaigns table. */
+export interface TopCampaignRow {
+  name: string;
+  type: string;
+  sends: string;
+  opens: string;
+  openRate: string;
+  ctr: string;
+}
+
+/** View-model row for the social accounts platform table. */
+export interface SocialAccountRow {
+  platform: string;
+  followers: string;
+  impressions: string;
+  engagementRate: string;
+  posts: string;
+}
+
+/** Segment data for the sentiment breakdown horizontal bar chart. */
+export interface SentimentBar {
+  positive: number;
+  neutral: number;
+  negative: number;
+  positiveLabel: string;
+  neutralLabel: string;
+  negativeLabel: string;
+}
+
+/** View-model row for the web activity domain table. */
+export interface WebActivityDomainRow {
+  domain: string;
+  sessions: string;
+  pageViews: string;
+  pagesPerSession: string;
+  sessionShare: number;
+  sessionShareFormatted: string;
 }
