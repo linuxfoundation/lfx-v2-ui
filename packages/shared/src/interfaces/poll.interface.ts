@@ -215,6 +215,8 @@ export interface Vote {
   total_voting_request_invitations?: number;
   /** Number of responses received */
   num_response_received?: number;
+  /** The current user's vote_response UID for this poll (only present on getMyVotes results) */
+  my_vote_response_uid?: string;
 }
 
 /**
@@ -610,6 +612,17 @@ export interface VoteAnswerInput {
   choice_ids?: string[];
   /** Ranked choices for ranked-choice voting questions */
   ranked_choices?: RankedChoiceInput[];
+}
+
+/**
+ * Payload emitted by VoteBallotComponent when the user submits their ballot.
+ * Contains only the voter's choices — consumer adds vote/response UIDs before sending to the API.
+ */
+export interface VoteBallotPayload {
+  /** Whether the voter is abstaining */
+  abstain: boolean;
+  /** Voter's answers — present when not abstaining */
+  user_vote_content?: VoteAnswerInput[];
 }
 
 /**

@@ -331,16 +331,25 @@ export class VoteService {
     }
 
     // Query vote_response records using filters_or (OR logic on data fields)
-    const responses = await fetchAllQueryResources<{ vote_uid: string }>(req, (pageToken) =>
-      this.microserviceProxy.proxyRequest<QueryServiceResponse<{ vote_uid: string }>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+    const responses = await fetchAllQueryResources<IndexedVoteResponse>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<IndexedVoteResponse>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'vote_response',
         filters_or: filtersOr,
         ...(pageToken && { page_token: pageToken }),
       })
     );
 
-    // Extract unique vote UIDs
-    const voteUids = [...new Set(responses.filter((r) => r.vote_uid).map((r) => r.vote_uid))];
+    // Map vote_uid → the ballot's own uid so we can attach it to the fetched vote.
+    // Only include pending responses — submitted/removed ones shouldn't enable inline voting.
+    const responseUidByVoteUid = new Map<string, string>(
+      responses
+        .filter((r): r is IndexedVoteResponse & { uid: string } => !!r.uid && r.vote_status !== 'submitted' && !r.voter_removed)
+        .map((r) => [r.vote_uid ?? r.vote_id ?? r.poll_id ?? '', r.uid] as [string, string])
+        .filter(([voteKey]) => !!voteKey)
+    );
+
+    // Extract unique vote UIDs (fall back to vote_id/poll_id for v1 rows)
+    const voteUids = [...new Set(responses.map((r) => r.vote_uid ?? r.vote_id ?? r.poll_id).filter((uid): uid is string => !!uid))];
 
     if (voteUids.length === 0) {
       return [];
@@ -355,7 +364,12 @@ export class VoteService {
     const votes = await Promise.all(
       voteUids.map(async (uid) => {
         try {
-          return await this.microserviceProxy.proxyRequest<Vote>(req, 'LFX_V2_SERVICE', `/votes/${uid}`, 'GET');
+          const vote = await this.microserviceProxy.proxyRequest<Vote>(req, 'LFX_V2_SERVICE', `/votes/${uid}`, 'GET');
+          const responseUid = responseUidByVoteUid.get(uid);
+          if (responseUid) {
+            vote.my_vote_response_uid = responseUid;
+          }
+          return vote;
         } catch (error) {
           logger.warning(req, 'get_my_votes', 'Failed to fetch vote details, skipping', {
             vote_uid: uid,

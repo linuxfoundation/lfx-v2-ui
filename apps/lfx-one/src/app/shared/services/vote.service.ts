@@ -3,7 +3,15 @@
 
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
-import { CreateVoteRequest, PaginatedResponse, QueryServiceCountResponse, UpdateVoteRequest, Vote, VoteResultsResponse } from '@lfx-one/shared/interfaces';
+import {
+  CreateVoteRequest,
+  CreateVoteResponseRequest,
+  PaginatedResponse,
+  QueryServiceCountResponse,
+  UpdateVoteRequest,
+  Vote,
+  VoteResultsResponse,
+} from '@lfx-one/shared/interfaces';
 import { catchError, map, Observable, of, take, tap } from 'rxjs';
 
 @Injectable({
@@ -118,5 +126,9 @@ export class VoteService {
 
   public enableVote(voteUid: string): Observable<Vote> {
     return this.http.put<Vote>(`/api/votes/${voteUid}/enable`, {}).pipe(take(1));
+  }
+
+  public submitVoteResponse(payload: CreateVoteResponseRequest): Observable<void> {
+    return this.http.post<void>('/api/votes/responses', payload).pipe(take(1));
   }
 }

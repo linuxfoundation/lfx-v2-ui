@@ -19,7 +19,7 @@ import { getHttpErrorDetail } from '@shared/utils/http-error.utils';
 import { MessageService } from 'primeng/api';
 import { DialogService } from 'primeng/dynamicdialog';
 import { SkeletonModule } from 'primeng/skeleton';
-import { catchError, filter, finalize, forkJoin, of, switchMap, take } from 'rxjs';
+import { catchError, filter, finalize, forkJoin, map, of, switchMap, take } from 'rxjs';
 
 import { DashboardMeetingCardComponent } from '../../../dashboards/components/dashboard-meeting-card/dashboard-meeting-card.component';
 import { VoteResultsDrawerComponent } from '../../../votes/components/vote-results-drawer/vote-results-drawer.component';
@@ -59,6 +59,8 @@ export class CommitteeOverviewComponent {
   public voteDrawerVisible = signal(false);
   public selectedVoteId = signal<string | null>(null);
   public selectedVote = signal<Vote | null>(null);
+  public myVoteResponseUids: Signal<Record<string, string>> = this.initMyVoteResponseUids();
+  public selectedUserResponseUid: Signal<string | null> = computed(() => this.myVoteResponseUids()[this.selectedVoteId() ?? ''] ?? null);
 
   // Loading states for stats
   public meetingsLoading = signal(true);
@@ -401,6 +403,23 @@ export class CommitteeOverviewComponent {
         })
       ),
       { initialValue: [] }
+    );
+  }
+
+  private initMyVoteResponseUids(): Signal<Record<string, string>> {
+    return toSignal(
+      this.voteService.getMyVotes().pipe(
+        map((votes) =>
+          votes.reduce<Record<string, string>>((acc, v) => {
+            if (v.uid && v.my_vote_response_uid) {
+              acc[v.uid] = v.my_vote_response_uid;
+            }
+            return acc;
+          }, {})
+        ),
+        catchError(() => of({} as Record<string, string>))
+      ),
+      { initialValue: {} }
     );
   }
 }

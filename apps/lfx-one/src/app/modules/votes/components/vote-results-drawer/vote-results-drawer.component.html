@@ -79,7 +79,7 @@
           </div>
         </div>
       } @else if (!isGenericPoll()) {
-        <!-- Non-Generic Poll - Redirect to PCC -->
+        <!-- Non-Generic Poll — always redirect to PCC (ranked-choice not supported inline) -->
         <div class="flex flex-col items-center justify-center py-12 px-6 text-center" data-testid="vote-results-pcc-redirect">
           <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-6">
             <i class="fa-light fa-arrow-up-right-from-square text-2xl text-blue-600"></i>
@@ -97,10 +97,9 @@
               label="View in Project Control Center"
               icon="fa-light fa-arrow-up-right-from-square"
               severity="primary"
-              data-testid="vote-results-pcc-link"></lfx-button>
+              data-testid="vote-results-pcc-link" />
           </a>
 
-          <!-- Vote Details Section for non-generic polls -->
           @if (voteData.description) {
             <div class="w-full mt-8 pt-6 border-t border-slate-200 text-left" data-testid="vote-results-details">
               <h3 class="text-base font-semibold text-slate-900 mb-2">Vote Details</h3>
@@ -112,6 +111,28 @@
       } @else if (!isVoteClosed()) {
         <!-- Live/Active Vote - Simplified Layout -->
         <div class="flex flex-col gap-6">
+          <!-- Inline ballot for eligible voters (generic polls) -->
+          @if (canCastVote()) {
+            <div class="flex flex-col gap-3" data-testid="vote-results-ballot-section">
+              <lfx-vote-ballot
+                [vote]="voteData"
+                [submitting]="submittingBallot()"
+                (voteSubmitted)="handleBallotSubmitted($event)"
+                (voteCancelled)="onClose()"
+                data-testid="vote-results-ballot" />
+              @if (pccVotingUrl()) {
+                <a
+                  [href]="pccVotingUrl()"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-xs text-slate-500 hover:text-slate-700 underline self-center"
+                  data-testid="vote-results-pcc-fallback-link">
+                  Cast in PCC instead
+                </a>
+              }
+            </div>
+          }
+
           <!-- Vote Details Section (at top for live votes) -->
           @if (voteData.description) {
             <div class="flex flex-col gap-4" data-testid="vote-results-details">
@@ -343,6 +364,21 @@
             <div class="vote-description text-sm text-slate-700 leading-relaxed" [innerHTML]="voteData.description"></div>
           </div>
         }
+      }
+    </div>
+  } @else if (voteLoadError()) {
+    <!-- Vote load error — reachable when no listVote fallback exists and the API call failed -->
+    <div class="flex flex-col items-center justify-center py-12 px-6 text-center gap-4" data-testid="vote-results-load-error">
+      <i class="fa-light fa-triangle-exclamation text-3xl text-slate-400"></i>
+      <p class="text-sm text-slate-600">Could not load vote details. Please try again or check back later.</p>
+      @if (pccVotingUrl()) {
+        <a [href]="pccVotingUrl()" target="_blank" rel="noopener noreferrer" class="inline-block">
+          <lfx-button
+            label="Open in Project Control Center"
+            icon="fa-light fa-arrow-up-right-from-square"
+            severity="secondary"
+            data-testid="vote-results-pcc-error-link" />
+        </a>
       }
     </div>
   }

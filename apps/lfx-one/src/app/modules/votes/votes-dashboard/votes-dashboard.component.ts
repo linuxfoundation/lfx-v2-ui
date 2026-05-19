@@ -78,6 +78,7 @@ export class VotesDashboardComponent {
   protected readonly foundationOptions: Signal<{ label: string; value: string | null }[]> = this.initializeFoundationOptions();
   protected readonly projectOptions: Signal<{ label: string; value: string | null }[]> = this.initializeProjectOptions();
   protected readonly filteredMyVotes: Signal<Vote[]> = this.initFilteredMyVotes();
+  protected readonly selectedUserResponseUid: Signal<string | null> = computed(() => this.selectedListVote()?.my_vote_response_uid ?? null);
   // True when any server-side filter is active; drives dashboard empty-state vs. table empty-state routing.
   // Trims `search` so whitespace-only input doesn't count as an active filter.
   protected readonly hasActiveFilters: Signal<boolean> = computed(() => {
