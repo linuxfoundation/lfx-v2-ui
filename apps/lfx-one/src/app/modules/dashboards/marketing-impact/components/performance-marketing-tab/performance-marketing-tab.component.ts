@@ -7,7 +7,7 @@ import { FilterPillsComponent } from '@components/filter-pills/filter-pills.comp
 import { FUNNEL_STAGE_OPTIONS } from '@lfx-one/shared/constants';
 import { computeMomPct, formatChangePct, formatCurrency, formatNumber, trendColorClass, trendDirection } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
-import { catchError, of, switchMap, tap } from 'rxjs';
+import { catchError, finalize, of, switchMap } from 'rxjs';
 
 import type {
   FilterPillOption,
@@ -87,11 +87,8 @@ export class PerformanceMarketingTabComponent {
           }
           this.loading.set(true);
           return this.analyticsService.getSocialReach(slug).pipe(
-            tap(() => this.loading.set(false)),
-            catchError(() => {
-              this.loading.set(false);
-              return of(null);
-            })
+            catchError(() => of(null)),
+            finalize(() => this.loading.set(false))
           );
         })
       ),
