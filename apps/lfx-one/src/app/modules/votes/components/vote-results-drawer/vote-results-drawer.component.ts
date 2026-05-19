@@ -46,6 +46,8 @@ export class VoteResultsDrawerComponent {
   // === Writable Signals ===
   protected readonly loadingVoteDetails = signal<boolean>(false);
   protected readonly loadingVoteResults = signal<boolean>(false);
+  /** Distinguishes "my-response request in flight" from "my-response loaded with no row"; without this, a non-participant deep-linking a closed vote would briefly route to State C instead of access-denied. */
+  protected readonly myResponseLoading = signal<boolean>(false);
 
   // === Shared Observables ===
   private readonly voteId$ = toObservable(this.voteId).pipe(shareReplay({ bufferSize: 1, refCount: true }));
@@ -53,7 +55,7 @@ export class VoteResultsDrawerComponent {
   // === Derived Signals (from API) ===
   protected readonly vote: Signal<Vote | null> = this.initVote();
   protected readonly voteResults: Signal<VoteResultsResponse | null> = this.initVoteResults();
-  /** Voter-scope only: indexed vote_response row for the current user. Used to detect access-denied (null/voter_removed) and confirm the submitted state on top of vote.response_status. */
+  /** Voter-scope vote_response row; null+loaded means non-participant (access-denied), null+loading means request in flight. */
   protected readonly myResponse: Signal<MyVoteResponse | null> = this.initMyResponse();
 
   // === Computed Signals ===
@@ -68,21 +70,12 @@ export class VoteResultsDrawerComponent {
   protected readonly rankedMethodDescription: Signal<string> = this.initRankedMethodDescription();
 
   // === Voter-state helpers ===
-  /** Strict voter "closed" — uses only PollStatus.ENDED, intentionally ignoring the 100%-participation
-   * heuristic in isVoteClosed (that's a creator monitoring shortcut, not a governance signal). */
-  protected readonly isVoteClosedStrict: Signal<boolean> = computed(() => this.vote()?.status === PollStatus.ENDED);
   protected readonly voterState: Signal<'not_voted' | 'submitted' | 'closed' | 'access_denied'> = this.initVoterState();
-  protected readonly hasZeroVotes: Signal<boolean> = computed(() => {
-    const qs = this.questionsWithResults();
-    if (!qs.length) return true;
-    return qs.every((q) => q.totalVotes === 0);
-  });
+  protected readonly hasZeroVotes: Signal<boolean> = this.initHasZeroVotes();
   /** Header close-date treatment — countdown chip at ≤ 7 days, absolute date otherwise. */
   protected readonly closeDateDisplay: Signal<{ chip: string; absolute: string; isCountdown: boolean }> = this.initCloseDateDisplay();
   /** One-line plain-English explainer for each vote type, shown on hover of the voter header pill. */
   protected readonly voteTypeTooltip: Signal<string> = this.initVoteTypeTooltip();
-  /** Voter submission timestamp — falls back to vote.last_modified_time since the indexed vote_response row has no timestamp field today. */
-  protected readonly submittedAt: Signal<string | null> = computed(() => this.vote()?.last_modified_time ?? null);
 
   // === Protected Methods ===
   protected onClose(): void {
@@ -113,17 +106,19 @@ export class VoteResultsDrawerComponent {
     );
   }
 
+  /** Voter scope skips the results call until vote.status === ENDED so aggregate tallies never land in the browser before close — blind-results policy at the data layer, not just the template. */
   private initVoteResults(): Signal<VoteResultsResponse | null> {
     return toSignal(
-      this.voteId$.pipe(
-        switchMap((id) => {
-          if (!id) {
+      combineLatest([this.voteId$, toObservable(this.audience), toObservable(this.vote)]).pipe(
+        switchMap(([id, audience, vote]) => {
+          const canFetch = !!id && (audience === 'creator' || vote?.status === PollStatus.ENDED);
+          if (!canFetch) {
             this.loadingVoteResults.set(false);
             return of(null);
           }
 
           this.loadingVoteResults.set(true);
-          return this.voteService.getVoteResults(id).pipe(
+          return this.voteService.getVoteResults(id as string).pipe(
             catchError(() => of(null)),
             finalize(() => this.loadingVoteResults.set(false))
           );
@@ -301,37 +296,50 @@ export class VoteResultsDrawerComponent {
     });
   }
 
-  /** Voter-scope only: fetches the indexed vote_response row to detect access-denied (null → not_participant)
-   * and confirm submission state. Creator-side calls skip the round-trip entirely. */
+  /** Fetches the current user's vote_response row in voter scope; tracks loading separately so initVoterState can distinguish "loaded null" (access-denied) from "still pending". */
   private initMyResponse(): Signal<MyVoteResponse | null> {
     return toSignal(
       combineLatest([this.voteId$, toObservable(this.audience)]).pipe(
         switchMap(([id, audience]) => {
-          if (!id || audience !== 'voter') return of(null);
-          return this.voteService.getMyVoteResponse(id).pipe(catchError(() => of(null)));
+          if (!id || audience !== 'voter') {
+            this.myResponseLoading.set(false);
+            return of(null);
+          }
+          this.myResponseLoading.set(true);
+          return this.voteService.getMyVoteResponse(id).pipe(
+            catchError(() => of(null)),
+            finalize(() => this.myResponseLoading.set(false))
+          );
         })
       ),
       { initialValue: null }
     );
   }
 
-  /** Maps the (vote, my-response) tuple to one of the four voter panel states. The drawer's live
-   * vote() fetch is a pass-through to upstream and does NOT carry response_status — only the
-   * parent-supplied listVote() (decorated by /api/votes/my-votes) does. Prefer the indexer's
-   * vote_status (most authoritative), then listVote.response_status, then live vote.response_status. */
+  /** Derives the four-state panel value; for voter scope, a loaded-null my-response means non-participant and routes to access_denied (otherwise a deep-link to a closed vote would leak results). */
   private initVoterState(): Signal<'not_voted' | 'submitted' | 'closed' | 'access_denied'> {
     return computed(() => {
       const v = this.vote();
       if (!v) return 'not_voted';
       const my = this.myResponse();
-      // Access-denied wins over everything else — if the user isn't a participant we don't reveal results.
+      const isVoter = this.audience() === 'voter';
+      // Access-denied: voter_removed wins; voter with loaded-null row is a non-participant deep-link.
       if (my?.voter_removed) return 'access_denied';
+      if (isVoter && !this.myResponseLoading() && !my) return 'access_denied';
       const closed = v.status === PollStatus.ENDED;
       const decoratedResponseStatus = this.listVote()?.response_status ?? v.response_status;
       const submitted = my?.vote_status === 'responded' || decoratedResponseStatus === VoteResponseStatus.RESPONDED;
       if (closed) return 'closed';
       if (submitted) return 'submitted';
       return 'not_voted';
+    });
+  }
+
+  private initHasZeroVotes(): Signal<boolean> {
+    return computed(() => {
+      const qs = this.questionsWithResults();
+      if (!qs.length) return true;
+      return qs.every((q) => q.totalVotes === 0);
     });
   }
 

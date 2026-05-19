@@ -128,16 +128,13 @@
                 <span class="text-sm font-semibold text-emerald-900">Your vote has been recorded</span>
               }
             </div>
-            @if (submittedAt(); as ts) {
-              <p class="text-xs text-emerald-800" data-testid="vote-results-voter-submitted-at">Submitted {{ ts | date: 'medium' }}</p>
-            }
             <p class="text-xs text-emerald-800">Results will be available after the vote closes.</p>
           </div>
           <!-- TODO LFXV2-1917 follow-up: "View your ballot" disclosure when upstream surfaces the submitted ballot content -->
         } @else if (voterState() === 'closed') {
           <!-- State C — final results, no stats card. -->
-          @if (myResponse() && !voteData.pseudo_anonymity && submittedAt(); as ts) {
-            <p class="text-sm text-slate-700" data-testid="vote-results-voter-you-voted">You voted on {{ ts | date: 'mediumDate' }}.</p>
+          @if (myResponse()?.vote_status === 'responded' && !voteData.pseudo_anonymity) {
+            <p class="text-sm text-slate-700" data-testid="vote-results-voter-you-voted">You voted on this motion.</p>
           }
           @if (isGenericPoll()) {
             <div class="flex flex-col gap-6" data-testid="vote-results-voter-final">
