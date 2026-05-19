@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { isPlatformBrowser, NgClass } from '@angular/common';
-import { Component, computed, DestroyRef, inject, PLATFORM_ID, Signal, signal } from '@angular/core';
+import { afterNextRender, Component, computed, DestroyRef, inject, PLATFORM_ID, Signal, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { BadgeComponent } from '@components/badge/badge.component';
@@ -43,6 +43,7 @@ export class AccountSettingsComponent {
 
   // ── TOC active section ──
   public activeSection = signal('email-settings');
+  private scrollSpyObserver?: IntersectionObserver;
 
   // ══════════════════════════════════════════
   // EMAIL SETTINGS
@@ -141,6 +142,10 @@ export class AccountSettingsComponent {
       });
 
     this.loadDeveloperToken();
+
+    afterNextRender(() => {
+      this.setupScrollSpy();
+    });
   }
 
   // ══════════════════════════════════════════
@@ -467,5 +472,34 @@ export class AccountSettingsComponent {
       if (!newPassword || !confirmPassword || !confirmPassword.value) return null;
       return newPassword.value !== confirmPassword.value ? { passwordMismatch: true } : null;
     };
+  }
+
+  private setupScrollSpy(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+
+    const sectionIds = ['email-settings', 'password', 'developer-settings'];
+    const sections = sectionIds.map((id) => document.getElementById(id)).filter((el): el is HTMLElement => el !== null);
+
+    if (sections.length === 0) return;
+
+    const intersecting = new Set<string>();
+
+    this.scrollSpyObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) intersecting.add(entry.target.id);
+          else intersecting.delete(entry.target.id);
+        }
+        const activeId = sectionIds.find((id) => intersecting.has(id));
+        if (activeId) this.activeSection.set(activeId);
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 }
+    );
+
+    sections.forEach((section) => this.scrollSpyObserver!.observe(section));
+
+    this.destroyRef.onDestroy(() => {
+      this.scrollSpyObserver?.disconnect();
+    });
   }
 }
