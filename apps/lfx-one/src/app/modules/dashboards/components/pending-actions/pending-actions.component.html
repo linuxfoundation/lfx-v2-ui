@@ -132,10 +132,7 @@
           </div>
           <!-- Expanded inline ballot (full-width row below the 3-column section) -->
           @if (item.isVoteInlineExpanded && item.vote && !item.voteUsesDrawer) {
-            <lfx-vote-ballot-inline
-              [vote]="item.vote!"
-              (voteSubmitted)="handleVoteSubmitted(item)"
-              (cancelled)="handleVoteCancelled(item)" />
+            <lfx-vote-ballot-inline [vote]="item.vote!" (voteSubmitted)="handleVoteSubmitted(item)" (cancelled)="handleVoteCancelled(item)" />
           }
         </div>
       }

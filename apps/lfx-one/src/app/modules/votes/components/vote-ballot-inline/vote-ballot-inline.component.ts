@@ -141,7 +141,12 @@ export class VoteBallotInlineComponent {
 
   private buildAnswers(question: PollQuestion): VoteAnswerInput[] {
     const raw = this.form.get(question.question_id)?.value as string | string[] | null;
-    const choice_ids = Array.isArray(raw) ? raw : raw ? [raw] : [];
-    return [{ question_id: question.question_id, choice_ids }];
+    let choiceIds: string[];
+    if (Array.isArray(raw)) {
+      choiceIds = raw;
+    } else {
+      choiceIds = raw ? [raw] : [];
+    }
+    return [{ question_id: question.question_id, choice_ids: choiceIds }];
   }
 }

@@ -224,7 +224,7 @@ export class PendingActionsComponent {
 
     const cached = this.voteCache()[voteUid];
     if (cached) {
-      this.dispatchLoadedVote(cached, item);
+      this.dispatchLoadedVote(cached);
       return;
     }
 
@@ -239,7 +239,7 @@ export class PendingActionsComponent {
           }
           this.voteCache.update((cache) => ({ ...cache, [voteUid]: vote }));
           if (this.expandedVoteKey() === this.getRowKey(item)) {
-            this.dispatchLoadedVote(vote, item);
+            this.dispatchLoadedVote(vote);
           }
         },
         error: () => {
@@ -259,7 +259,7 @@ export class PendingActionsComponent {
       });
   }
 
-  private dispatchLoadedVote(vote: Vote, item: PendingActionItem): void {
+  private dispatchLoadedVote(vote: Vote): void {
     if (this.voteUsesDrawer(vote)) {
       this.expandedVoteKey.set(null);
       this.castVoteRequested.emit(vote.uid);
