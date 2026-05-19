@@ -5,7 +5,7 @@ import { Component, computed, inject, input, signal, Signal } from '@angular/cor
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { FUNNEL_STAGE_OPTIONS } from '@lfx-one/shared/constants';
-import { formatChangePct, formatCurrency, formatNumber, trendColorClass, trendDirection } from '@lfx-one/shared/utils';
+import { computeMomPct, formatChangePct, formatCurrency, formatNumber, trendColorClass, trendDirection } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { catchError, finalize, of, switchMap } from 'rxjs';
 
@@ -15,6 +15,7 @@ import type {
   PaidProjectPerformance,
   PaidProjectRow,
   PerformanceSummaryKpi,
+  PlatformPerformanceRow,
   SocialReachResponse,
 } from '@lfx-one/shared/interfaces';
 
@@ -28,20 +29,20 @@ import { SparklineKpiCardComponent } from '../sparkline-kpi-card/sparkline-kpi-c
 })
 export class PerformanceMarketingTabComponent {
   private static readonly performanceClassMap: Record<PaidProjectPerformance, string> = {
-    EXCELLENT: 'bg-green-50 text-green-700',
+    EXCELLENT: 'bg-emerald-50 text-emerald-700',
     GOOD: 'bg-blue-50 text-blue-700',
-    POOR: 'bg-amber-100 text-amber-700',
-    'NO REVENUE': 'bg-gray-100 text-gray-600',
+    AVERAGE: 'bg-gray-100 text-gray-600',
+    EMERGING: 'bg-gray-100 text-gray-500',
   };
 
   private static readonly performanceOrderMap: Record<PaidProjectPerformance, number> = {
     EXCELLENT: 0,
     GOOD: 1,
-    POOR: 2,
-    'NO REVENUE': 3,
+    AVERAGE: 2,
+    EMERGING: 3,
   };
 
-  private static readonly validPerformance = new Set<PaidProjectPerformance>(['EXCELLENT', 'GOOD', 'POOR', 'NO REVENUE']);
+  private static readonly validPerformance = new Set<PaidProjectPerformance>(['EXCELLENT', 'GOOD', 'AVERAGE', 'EMERGING']);
 
   // === Services ===
   private readonly analyticsService = inject(AnalyticsService);
@@ -61,7 +62,10 @@ export class PerformanceMarketingTabComponent {
   protected readonly socialReachData: Signal<SocialReachResponse | null> = this.initSocialReachData();
   protected readonly kpiCards: Signal<PerformanceSummaryKpi[]> = this.initKpiCards();
   protected readonly projectRows: Signal<PaidProjectRow[]> = this.initProjectRows();
+  protected readonly platformRows: Signal<PlatformPerformanceRow[]> = this.initPlatformRows();
+  protected readonly platformTotals: Signal<PlatformPerformanceRow | null> = this.initPlatformTotals();
   protected readonly hasProjects = computed(() => this.projectRows().length > 0);
+  protected readonly hasPlatforms = computed(() => this.platformRows().length > 0);
 
   // === Protected Methods ===
   protected onFunnelChange(funnelId: string): void {
@@ -98,7 +102,8 @@ export class PerformanceMarketingTabComponent {
       if (!data) return [];
 
       const roasMomPct = data.changePercentage;
-      const impressionsMomPct = this.computeMomPct(data.monthlyData);
+      const completedMonths = data.monthlyData?.slice(0, -1);
+      const impressionsMomPct = computeMomPct(completedMonths);
 
       const cards: PerformanceSummaryKpi[] = [
         {
@@ -169,11 +174,11 @@ export class PerformanceMarketingTabComponent {
         .filter((p) => {
           if (funnel === 'all') return true;
           const stage = p.funnelStage?.toLowerCase() ?? '';
-          if (stage === 'unknown') return false;
+          if (!stage || stage === 'unknown') return false;
           if (funnel === 'tofu') return stage.startsWith('tofu');
           if (funnel === 'mofu') return stage === 'mofu';
           if (funnel === 'bofu') return stage === 'bofu';
-          return true;
+          return false;
         })
         .map(
           (p): PaidProjectRow => ({
@@ -196,24 +201,88 @@ export class PerformanceMarketingTabComponent {
     });
   }
 
+  private initPlatformRows(): Signal<PlatformPerformanceRow[]> {
+    return computed(() => {
+      const data = this.socialReachData();
+      if (!data?.platformBreakdown?.length) return [];
+
+      return data.platformBreakdown.map((p): PlatformPerformanceRow => {
+        const perf = this.normalizePerformance(p.performance);
+        return {
+          platform: p.platform,
+          spend: formatCurrency(p.spend),
+          revenue: formatCurrency(p.revenue),
+          roas: `${(p.roas ?? 0).toFixed(2)}x`,
+          clicks: formatNumber(p.clicks),
+          impressions: formatNumber(p.impressions),
+          ctr: `${(p.ctr ?? 0).toFixed(2)}%`,
+          cpc: formatCurrency(p.cpc),
+          convRate: `${(p.convRate ?? 0).toFixed(2)}%`,
+          conversions: formatNumber(p.conversions),
+          performance: perf,
+          performanceClass: this.getPerformanceClass(perf),
+        };
+      });
+    });
+  }
+
+  private initPlatformTotals(): Signal<PlatformPerformanceRow | null> {
+    return computed(() => {
+      const data = this.socialReachData();
+      if (!data?.platformBreakdown?.length) return null;
+
+      const totals = data.platformBreakdown.reduce(
+        (acc, p) => ({
+          spend: acc.spend + (p.spend ?? 0),
+          revenue: acc.revenue + (p.revenue ?? 0),
+          clicks: acc.clicks + (p.clicks ?? 0),
+          impressions: acc.impressions + (p.impressions ?? 0),
+          conversions: acc.conversions + (p.conversions ?? 0),
+        }),
+        { spend: 0, revenue: 0, clicks: 0, impressions: 0, conversions: 0 }
+      );
+
+      const totalRoasRaw = totals.spend > 0 ? totals.revenue / totals.spend : 0;
+      const totalRoas = Math.round(totalRoasRaw * 100) / 100;
+      const totalCtr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0;
+      const totalCpc = totals.clicks > 0 ? totals.spend / totals.clicks : 0;
+      const totalConvRate = totals.clicks > 0 ? (totals.conversions / totals.clicks) * 100 : 0;
+
+      const totalPerf = this.getRoasPerformance(totalRoas);
+      return {
+        platform: 'TOTAL',
+        spend: formatCurrency(totals.spend),
+        revenue: formatCurrency(totals.revenue),
+        roas: `${totalRoas.toFixed(2)}x`,
+        clicks: formatNumber(totals.clicks),
+        impressions: formatNumber(totals.impressions),
+        ctr: `${totalCtr.toFixed(2)}%`,
+        cpc: formatCurrency(totalCpc),
+        convRate: `${totalConvRate.toFixed(2)}%`,
+        conversions: formatNumber(totals.conversions),
+        performance: totalPerf,
+        performanceClass: this.getPerformanceClass(totalPerf),
+      };
+    });
+  }
+
   // === Private Helpers ===
   private normalizePerformance(value: string | null | undefined): PaidProjectPerformance {
     const upper = (value ?? '').toUpperCase().trim();
     if (PerformanceMarketingTabComponent.validPerformance.has(upper as PaidProjectPerformance)) {
       return upper as PaidProjectPerformance;
     }
-    return 'NO REVENUE';
+    return 'EMERGING';
   }
 
   private getPerformanceClass(perf: PaidProjectPerformance): string {
     return PerformanceMarketingTabComponent.performanceClassMap[perf] ?? 'bg-gray-50 text-gray-700';
   }
 
-  private computeMomPct(arr: number[] | undefined): number | null {
-    if (!arr || arr.length < 2) return null;
-    const current = arr.at(-1) ?? 0;
-    const previous = arr.at(-2) ?? 0;
-    if (previous === 0) return null;
-    return ((current - previous) / previous) * 100;
+  private getRoasPerformance(roas: number): PaidProjectPerformance {
+    if (roas >= 2) return 'EXCELLENT';
+    if (roas >= 1) return 'GOOD';
+    if (roas > 0) return 'AVERAGE';
+    return 'EMERGING';
   }
 }
