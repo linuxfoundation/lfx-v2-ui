@@ -137,7 +137,7 @@ If `extra` was passed, prioritise those areas. Don't suppress other findings —
 Print to terminal — no git mutations.
 
 ```markdown
-# Pre-commit code review (learnings-reviewer)
+# Post-commit code review (learnings-reviewer)
 
 **Branch:** `<current-branch>` → `<base>`
 **Files changed:** N | **Additions:** +A | **Deletions:** -D

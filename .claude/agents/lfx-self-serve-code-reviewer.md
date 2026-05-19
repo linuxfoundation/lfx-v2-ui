@@ -46,7 +46,7 @@ These four checklists are **the single most important source you consult**. Each
 
 ### `mode: local` — fields: `base: <ref>` (default `origin/main`), `extra: <free text>`
 
-This mode runs **pre-commit**, so audit the union of (a) commits since the base and (b) staged-but-uncommitted changes. The staged diff is exactly what the user is about to commit; missing it would make the skill useless for a first commit on a new branch.
+This mode runs **post-commit** (typically), so audit the union of (a) commits since the base and (b) any staged-but-uncommitted changes. In the typical post-commit invocation the staged diff is empty and the cumulative committed diff against `<base>` is the full audit scope. The staged-diff handling also covers the mid-edit case (e.g., the very first commit on a new branch where the user has staged but not yet committed) — if both diffs are non-empty, treat them as a single combined audit.
 
 **Normalize `<base>` first:** if it contains no `/` (e.g., bare `main`), prefix with `origin/` so the comparison runs against the freshly-fetched remote ref rather than a possibly-stale local branch. `origin/main`, `upstream/develop`, etc. stay as-is.
 
@@ -347,7 +347,7 @@ Parse `.claude/hooks/guard-protected-files.sh` (loaded in Step 2) and check each
 Print to terminal:
 
 ```markdown
-# LFX Self-Serve Code Review (pre-commit)
+# LFX Self-Serve Code Review (post-commit)
 
 **Branch:** `<current-branch>` → `<base>`
 **Files changed:** N | **Additions:** +A | **Deletions:** -D
