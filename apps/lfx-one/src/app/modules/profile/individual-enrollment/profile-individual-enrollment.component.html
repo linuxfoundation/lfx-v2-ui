@@ -21,8 +21,7 @@
       icon="fa-light fa-id-card"
       title="No enrollment products available"
       subtitle="There are no individual enrollment products at this time."
-      data-testid="individual-enrollment-empty"
-    />
+      data-testid="individual-enrollment-empty" />
   } @else {
     @for (item of enrollments(); track item.productId) {
       @let status = deriveStatus(item);
@@ -49,7 +48,9 @@
           <!-- Price + auto-renew info -->
           @if (item.price) {
             <div class="flex flex-wrap items-center gap-4 text-sm text-gray-600" data-testid="individual-enrollment-details">
-              <span><span class="font-medium">${{ item.price }}</span> / year</span>
+              <span
+                ><span class="font-medium">${{ item.price }}</span> / year</span
+              >
               @if (item.membership) {
                 <span>
                   Auto-renew:
