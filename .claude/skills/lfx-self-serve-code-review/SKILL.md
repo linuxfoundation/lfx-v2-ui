@@ -171,7 +171,7 @@ Parse `.claude/hooks/guard-protected-files.sh` (loaded in Step 2) — extract pa
 For each changed file matching the parsed list, emit:
 
 ```text
-severity: Important
+severity: Nit
 category: protected-files
 rule: protected-files/<path>
 message: "Part of core infrastructure — requires extra review scrutiny. Surface in PR description and tag a code owner."
@@ -204,7 +204,7 @@ Single JSON array. One object per finding. No prose around it — the caller com
   {
     "file": "apps/lfx-one/src/server/services/foo.service.ts",
     "line": 42,
-    "severity": "Critical | Important",
+    "severity": "Critical | Important | Nit",
     "category": "code | upstream-api | protected-files",
     "rule": "<source-file>:<section>",
     "message": "What's wrong, in 1–2 sentences.",
@@ -214,14 +214,17 @@ Single JSON array. One object per finding. No prose around it — the caller com
 ]
 ```
 
-`category: protected-files` and `category: upstream-api` findings emit regardless of the confidence floor (deterministic flags, not quality judgments). Set `severity: Important` and `line: null` for protected-files. Set `severity: Important` for unverified upstream contracts.
+`category: protected-files` and `category: upstream-api` findings emit regardless of the confidence floor (deterministic flags, not quality judgments). Set `severity: Nit` and `line: null` for protected-files (awareness flag). Set `severity: Important` for unverified upstream contracts (manual verification needed).
 
 If a required checklist couldn't be loaded, return `{"status": "incomplete", "findings": [...]}` instead of the array.
 
 ## Severity calibration
 
+The examples below are illustrative, not exhaustive — apply the same severity bucket to any violation that fits the same pattern of impact, not just the specific cases listed.
+
 - **Critical** (confidence 90-100) — runtime bugs, security issues, M2M misuse in protected routes, SQL bind mismatches, upstream contract violations that will fail at runtime, `as unknown as` casts, raw `new Error()` / manual `res.status().json()` for errors, bypassed user authorization, missing `getEffectiveEmail(req)`.
-- **Important** (confidence 80-89) — documented style / structure violations (component section order, logger usage, license headers, PrimeNG wrappers, `@if`/`@for` over `*ngIf`/`*ngFor`, `inject()` over constructor DI, `page_size` over `limit`), unverified upstream contracts, protected-file modifications.
+- **Important** (confidence 80-89) — documented style / structure violations (component section order, logger usage, license headers, PrimeNG wrappers, `@if`/`@for` over `*ngIf`/`*ngFor`, `inject()` over constructor DI, `page_size` over `limit`), unverified upstream contracts.
+- **Nit** (confidence below 80) — preferences, minor improvements, file naming, comment phrasing, protected-file awareness. Suppressed from the report by the ≥80 floor **except** for `category: protected-files` and `category: upstream-api` deterministic flags, which bypass the floor.
 
 ## Known false positives — DO NOT emit
 

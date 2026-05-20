@@ -70,7 +70,7 @@ Read ONLY the rows whose condition matches. Do NOT blanket-read — wasted conte
 Each pattern entry uses this format:
 
 ```text
-## `<category>/<pattern-id>` — CRITICAL | SHOULD_FIX | NIT
+## `<category>/<pattern-id>` — Critical | Important | Nit
 
 **Pattern:** what it looks like.
 **Detect:** how to spot it.
@@ -87,7 +87,7 @@ For each pattern entry in every loaded pattern file (excluding `known-false-posi
 
 1. **Check `**Detect:**`** — use grep / file reads as the entry directs. Don't infer the match from the `**Pattern:**` description alone; the `**Detect:**` clause is the operational rule.
 2. **If matched, emit a finding** with:
-   - **Confidence** derived from the entry's severity header: `CRITICAL` → 90-100, `SHOULD_FIX` → 80-89, `NIT` → below 80 (suppressed by the floor in Step 6).
+   - **Confidence** derived from the entry's severity header: `Critical` → 90-100, `Important` → 80-89, `Nit` → below 80 (suppressed by the floor in Step 6).
    - **Rule:** the entry's full ID (e.g., `security/secrets-in-diff`).
    - **Message:** the entry's `**Failure message:**`, scoped to the specific file + line.
    - **Fix:** the entry's `**Fix:**`.

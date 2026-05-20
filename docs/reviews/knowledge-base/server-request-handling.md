@@ -6,7 +6,7 @@ Patterns where new backend routes are mounted without the right auth middleware,
 
 ---
 
-## `server-request-handling/interceptor-order-breaks-ssr-cookies` — CRITICAL
+## `server-request-handling/interceptor-order-breaks-ssr-cookies` — Critical
 
 **Pattern:** in `app.config.ts`'s `withInterceptors([...])` array, a URL-rewriting interceptor (e.g., `ssrBaseUrlInterceptor` that absolutizes paths for SSR loopback) is placed BEFORE the authentication interceptor that adds session cookies based on URL prefix. The auth interceptor only matches `/api/` or `/public/api/` prefixes; once the URL is rewritten to `http://127.0.0.1:PORT/...`, the prefix match fails and cookies are dropped.
 
@@ -20,7 +20,7 @@ Patterns where new backend routes are mounted without the right auth middleware,
 
 ---
 
-## `server-request-handling/guard-runs-before-its-prerequisite` — CRITICAL
+## `server-request-handling/guard-runs-before-its-prerequisite` — Critical
 
 **Pattern:** in a route's `canActivate: [guardA, guardB]` array, a context-mutating guard (e.g., `projectQueryParamGuard` which looks up + sets the active project) runs BEFORE an access-control guard (e.g., `executiveDirectorGuard`). Non-authorized users hitting the route with the relevant query param still trigger the context mutation before being redirected away — leaking work AND mutating state for unauthenticated requests.
 
@@ -34,7 +34,7 @@ Patterns where new backend routes are mounted without the right auth middleware,
 
 ---
 
-## `server-request-handling/new-api-route-no-auth-middleware` — CRITICAL
+## `server-request-handling/new-api-route-no-auth-middleware` — Critical
 
 **Pattern:** a new `/api/<X>` route prefix is mounted in `server.ts` (via `app.use('/api/<X>', router)`) but no `authMiddleware` is applied — either at the prefix mount point or inside the router itself. Anyone hitting the endpoint without a session can access it.
 
@@ -48,7 +48,7 @@ Patterns where new backend routes are mounted without the right auth middleware,
 
 ---
 
-## `server-request-handling/instance-state-shared-across-concurrent-requests` — CRITICAL
+## `server-request-handling/instance-state-shared-across-concurrent-requests` — Critical
 
 **Pattern:** a service or controller (singleton-scoped) carries mutable instance state (counter, buffer, current-stream id) that's read / written from per-request handler methods. Two concurrent requests interleave on that state — one request sees the other's progress, or both corrupt each other.
 
@@ -62,7 +62,7 @@ Patterns where new backend routes are mounted without the right auth middleware,
 
 ---
 
-## `server-request-handling/case-sensitive-email-tag-match` — SHOULD_FIX
+## `server-request-handling/case-sensitive-email-tag-match` — Important
 
 **Pattern:** an OIDC-claim email (or other request-supplied email) is passed into a query-service lookup that does tag-based matching (`tags=email:<value>`) without lowercasing first. Query-service tag matches are case-sensitive — uppercase characters in the token email cause the lookup to silently miss the registrant / invitation.
 
@@ -76,7 +76,7 @@ Patterns where new backend routes are mounted without the right auth middleware,
 
 ---
 
-## `server-request-handling/promise-all-vs-allsettled-fans-out` — SHOULD_FIX
+## `server-request-handling/promise-all-vs-allsettled-fans-out` — Important
 
 **Pattern:** `Promise.all([...])` over a fan-out of per-item upstream calls (per-meeting registrant fetch, per-meeting invited-status check) in a controller. A single failure rejects the entire array and returns no data to the client — even for items that succeeded. `Promise.allSettled` would degrade gracefully.
 
@@ -90,7 +90,7 @@ Patterns where new backend routes are mounted without the right auth middleware,
 
 ---
 
-## `server-request-handling/replaceState-loses-history-state` — SHOULD_FIX
+## `server-request-handling/replaceState-loses-history-state` — Important
 
 **Pattern:** `Location.replaceState(url)` is called with only one argument, wiping `history.state`. Angular Router stores its `navigationId` in `history.state`; wiping it breaks `Router.getCurrentNavigation()` and back-button behavior.
 
@@ -104,7 +104,7 @@ Patterns where new backend routes are mounted without the right auth middleware,
 
 ---
 
-## `server-request-handling/router-navigate-re-evaluates-guards` — SHOULD_FIX
+## `server-request-handling/router-navigate-re-evaluates-guards` — Important
 
 **Pattern:** `this.router.navigate([...], {...})` is called with an accompanying comment claiming "no navigation" or "no guard re-evaluation". This is wrong — `router.navigate` ALWAYS triggers a navigation event and ALWAYS re-runs guards on the target route. Side effects in those guards (project context mutation, telemetry, fetches) will re-fire.
 
@@ -118,7 +118,7 @@ Patterns where new backend routes are mounted without the right auth middleware,
 
 ---
 
-## `server-request-handling/raw-query-string-cast` — SHOULD_FIX
+## `server-request-handling/raw-query-string-cast` — Important
 
 **Pattern:** `req.query['name'] as string` cast instead of using the project's `getStringQueryParam(req, 'name')` helper. Bypasses input hardening; can yield an array when the client sends repeated keys (`?name=a&name=b`). Also loses runtime type safety.
 
@@ -132,7 +132,7 @@ Patterns where new backend routes are mounted without the right auth middleware,
 
 ---
 
-## `server-request-handling/untrimmed-query-value` — SHOULD_FIX
+## `server-request-handling/untrimmed-query-value` — Important
 
 **Pattern:** a query parameter is fetched via `getStringQueryParam(...)` (good) but not trimmed (bad). A whitespace-only value (`?name=%20`) is then treated as an active search/filter.
 
@@ -146,7 +146,7 @@ Patterns where new backend routes are mounted without the right auth middleware,
 
 ---
 
-## `server-request-handling/missing-typeof-string-validation` — SHOULD_FIX
+## `server-request-handling/missing-typeof-string-validation` — Important
 
 **Pattern:** `validateRequiredParameter(req.params.id, 'id')` (or analogous validator) only checks presence, not type. If a route accepts repeated keys or the helper doesn't narrow type, downstream code may receive an array where it expects a string.
 
@@ -160,7 +160,7 @@ Patterns where new backend routes are mounted without the right auth middleware,
 
 ---
 
-## `server-request-handling/regex-too-loose-for-id-format` — SHOULD_FIX
+## `server-request-handling/regex-too-loose-for-id-format` — Important
 
 **Pattern:** a regex used to validate an identifier (account ID, project UID, slug, UUID) is too permissive — accepts lengths or character classes the upstream spec doesn't.
 

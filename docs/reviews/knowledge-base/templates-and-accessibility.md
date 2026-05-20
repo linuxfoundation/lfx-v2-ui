@@ -6,7 +6,7 @@ Patterns CodeRabbit + Copilot flag in Angular templates — ARIA roles, focus ma
 
 ---
 
-## `templates-and-accessibility/nested-interactive-elements` — SHOULD_FIX
+## `templates-and-accessibility/nested-interactive-elements` — Important
 
 **Pattern:** an interactive element (`role="button"`, `tabindex="0"`, anchor, button) contains another interactive element. Invalid HTML; breaks screen-reader navigation; keyboard focus order is unpredictable.
 
@@ -20,7 +20,7 @@ Patterns CodeRabbit + Copilot flag in Angular templates — ARIA roles, focus ma
 
 ---
 
-## `templates-and-accessibility/icon-only-button-no-aria-label` — SHOULD_FIX
+## `templates-and-accessibility/icon-only-button-no-aria-label` — Important
 
 **Pattern:** a button whose only visible content is an icon (`<svg>`, `<i class="fa-...">`, `<fa-icon>`) without an `aria-label` attribute. Screen readers will announce "button" with no description.
 
@@ -34,7 +34,7 @@ Patterns CodeRabbit + Copilot flag in Angular templates — ARIA roles, focus ma
 
 ---
 
-## `templates-and-accessibility/missing-aria-pressed-on-toggle` — SHOULD_FIX
+## `templates-and-accessibility/missing-aria-pressed-on-toggle` — Important
 
 **Pattern:** a button representing a binary on/off state (toggle, filter chip, tab, selection) without `[attr.aria-pressed]` bound to the active state. State is invisible to assistive tech.
 
@@ -48,7 +48,7 @@ Patterns CodeRabbit + Copilot flag in Angular templates — ARIA roles, focus ma
 
 ---
 
-## `templates-and-accessibility/click-without-keydown` — SHOULD_FIX
+## `templates-and-accessibility/click-without-keydown` — Important
 
 **Pattern:** custom `(click)="..."` on a non-button element (`<div>`, `<span>`, `<tr>`) without a corresponding `(keydown.enter)` / `(keydown.space)` handler. Mouse-only interaction; keyboard users are excluded.
 
@@ -62,7 +62,7 @@ Patterns CodeRabbit + Copilot flag in Angular templates — ARIA roles, focus ma
 
 ---
 
-## `templates-and-accessibility/class-binding-clobbers-static-class` — SHOULD_FIX
+## `templates-and-accessibility/class-binding-clobbers-static-class` — Important
 
 **Pattern:** an element has both `[class]="boundExpression"` and `class="static classes"` attributes. Angular replaces (clobbers) the static class string with the bound expression's result — the static classes silently disappear at runtime.
 
@@ -76,7 +76,7 @@ Patterns CodeRabbit + Copilot flag in Angular templates — ARIA roles, focus ma
 
 ---
 
-## `templates-and-accessibility/for-track-not-stable-identity` — SHOULD_FIX
+## `templates-and-accessibility/for-track-not-stable-identity` — Important
 
 **Pattern:** `@for (item of items(); track item.id)` is fine if items have a stable `id`. But `track $index` (or `track item.name`) for an array that can reorder breaks Angular's diff and produces wrong DOM updates (animations skip, focus jumps, etc.).
 
@@ -90,7 +90,7 @@ Patterns CodeRabbit + Copilot flag in Angular templates — ARIA roles, focus ma
 
 ---
 
-## `templates-and-accessibility/missing-lens-query-param-on-link` — SHOULD_FIX
+## `templates-and-accessibility/missing-lens-query-param-on-link` — Important
 
 **Pattern:** a router link or navigation in templates omits the `lens=` query param when navigating to a lens-aware route. Users navigating land on the wrong lens (or get redirected unexpectedly).
 
@@ -104,7 +104,7 @@ Patterns CodeRabbit + Copilot flag in Angular templates — ARIA roles, focus ma
 
 ---
 
-## `templates-and-accessibility/style-binding-vs-class-utility` — NIT
+## `templates-and-accessibility/style-binding-vs-class-utility` — Nit
 
 **Pattern:** `[style.color]="..."` inline style binding when an equivalent Tailwind utility class exists. Violates the project's "Tailwind first" rule per `.claude/rules/styling.md`.
 

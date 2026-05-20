@@ -6,7 +6,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ---
 
-## `security/secrets-in-diff` — CRITICAL
+## `security/secrets-in-diff` — Critical
 
 **Pattern:** hardcoded tokens, API keys, `Bearer ey...`, `sk_live_`, `sk_test_`, AWS keys, or any other credential committed to the diff.
 
@@ -20,7 +20,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ---
 
-## `security/public-meeting-visibility-filter` — CRITICAL
+## `security/public-meeting-visibility-filter` — Critical
 
 **Pattern:** a public endpoint serving meeting/event data must filter by `visibility: 'public'` before pagination — otherwise the page response can contain private items.
 
@@ -34,7 +34,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ---
 
-## `security/href-from-untrusted-source` — CRITICAL
+## `security/href-from-untrusted-source` — Critical
 
 **Pattern:** an element's `[href]` is bound to a value sourced from user input or an external API response without validation. Risk of `javascript:` URL injection.
 
@@ -48,7 +48,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ---
 
-## `security/cookie-as-identity-no-validation` — CRITICAL
+## `security/cookie-as-identity-no-validation` — Critical
 
 **Pattern:** a cookie value is parsed as JSON or destructured as an identity/account/session object, and the resulting data is used to drive authorization, queries, or UI state — without validating the shape or verifying a signature.
 
@@ -62,7 +62,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ---
 
-## `security/innerHTML-unsanitized-user-content` — CRITICAL
+## `security/innerHTML-unsanitized-user-content` — Critical
 
 **Pattern:** `[innerHTML]="userField"` binding where `userField` is user-provided content (vote description, meeting description, comment body). Angular's default HTML sanitizer (`SecurityContext.HTML`, active on `[innerHTML]`) removes `<script>` elements and the common dangerous attributes by default — so naive payloads are blocked. The risk surface this entry captures is two-step: (a) the value is later wrapped in `DomSanitizer.bypassSecurityTrustHtml(...)`, which disables sanitization entirely; or (b) user-controlled content is accepted into a code path where bypass is later added without re-reviewing every reachable input.
 
@@ -76,7 +76,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ---
 
-## `security/window-open-no-noopener` — CRITICAL
+## `security/window-open-no-noopener` — Critical
 
 **Pattern:** `window.open(externalUrl, '_blank')` called without `'noopener,noreferrer'` features. The opened page can access `window.opener` and navigate the originating tab (reverse-tabnabbing) — credential phishing risk.
 
@@ -90,7 +90,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ---
 
-## `security/http-in-production-environment` — CRITICAL
+## `security/http-in-production-environment` — Critical
 
 **Pattern:** `apps/lfx-one/src/environments/environment.prod.ts` (or any production-flagged env file) contains a `http://` URL for any service the browser will connect to. Mixed-content blocked or insecure traffic at runtime.
 
@@ -104,7 +104,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ---
 
-## `security/ssrf-external-fetch-incomplete-guards` — CRITICAL
+## `security/ssrf-external-fetch-incomplete-guards` — Critical
 
 **Pattern:** a server-side fetch of an external URL (user-supplied or derived from user input) without the full SSRF guard set: hostname IP-blocklist, DNS resolution + post-resolution IP check (defeats DNS rebinding), `Content-Type` allowlist on the response, request size limit, rate limit on the endpoint.
 
@@ -118,7 +118,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ---
 
-## `security/pii-in-logs-and-identifiers` — SHOULD_FIX
+## `security/pii-in-logs-and-identifiers` — Important
 
 **Pattern:** a user email / username / other PII is passed into `logger.startOperation` / `logger.info` / `logger.debug` as a `user_id` or similar identifier, or persisted into a metadata object that the logger then serialises. The structured-log destination (Datadog / Snowflake) retains the PII indefinitely.
 
@@ -132,7 +132,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ---
 
-## `security/error-message-identity-leak` — SHOULD_FIX
+## `security/error-message-identity-leak` — Important
 
 **Pattern:** error messages that disclose whether a username/email/identifier matched (timing or content-based account enumeration). The denial response differs based on which lookup failed. Applies to both unauthenticated lookups and authenticated endpoints whose error payloads vary by which lookup failed (user vs. registrant vs. permission check).
 
@@ -146,7 +146,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ---
 
-## `security/non-http-scheme-stripped` — SHOULD_FIX
+## `security/non-http-scheme-stripped` — Important
 
 **Pattern:** a non-http URL scheme (`webcal:`, `tel:`, `mailto:`, `sms:`) bound to `[href]` (or interpolated into a template-bound `href`) is silently stripped by Angular's `DomSanitizer` to `unsafe:...`. The link looks present in source but doesn't navigate at runtime.
 
@@ -160,13 +160,13 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ---
 
-## `security/missing-encodeURIComponent-on-slug` — SHOULD_FIX
+## `security/missing-encodeURIComponent-on-slug` — Important
 
 **Pattern:** a template-literal URL or query-param construction interpolates a user-input or variable value (slug, search term, ID) into the URL without `encodeURIComponent`. Special characters break the URL or enable injection.
 
 **Detect:** grep for template literals containing `https?://` or `/api/` with `${...}` interpolations. Verify the interpolated values are wrapped in `encodeURIComponent(...)`.
 
-**Empirical citation:** general pattern from CodeRabbit + Copilot in multiple PRs; not always specific to one but a recurring NIT-to-SHOULD-FIX.
+**Empirical citation:** general pattern from CodeRabbit + Copilot in multiple PRs; not always specific to one but a recurring Nit-to-SHOULD-FIX.
 
 **Failure message:** User input in URL slug/query without encoding — breaks on special characters; potential injection.
 
@@ -174,7 +174,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ---
 
-## `security/prototype-pollution-via-dynamic-key-assignment` — SHOULD_FIX
+## `security/prototype-pollution-via-dynamic-key-assignment` — Important
 
 **Pattern:** a recursive walker reconstructs plain objects by iterating `Object.entries(input)` (or `Object.keys`) and writing each key back via `result[key] = ...`. If the input is JSON-derived (`JSON.parse` of an upstream payload, request body, or user-controlled content), it may carry an own-property literally named `__proto__`, `constructor`, or `prototype`. The dynamic-key assignment then invokes the corresponding setter on `result`'s prototype chain rather than creating an own-property, polluting `Object.prototype` for the whole process.
 
@@ -188,7 +188,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 ---
 
-## `security/cookie-payload-bigger-than-headers` — NIT
+## `security/cookie-payload-bigger-than-headers` — Nit
 
 **Pattern:** cookie payload contains a large object (>1KB) that's pushed on every request. Network overhead; also can hit reverse-proxy header size limits.
 

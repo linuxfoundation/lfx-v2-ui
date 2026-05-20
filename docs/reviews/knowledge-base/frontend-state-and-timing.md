@@ -6,7 +6,7 @@ Patterns CodeRabbit + Copilot reliably flag at the signals ↔ observables inter
 
 ---
 
-## `frontend-state-and-timing/sse-parser-overwrites-multiline-data` — CRITICAL
+## `frontend-state-and-timing/sse-parser-overwrites-multiline-data` — Critical
 
 **Pattern:** an SSE event-block parser that handles multi-line `data:` frames by overwriting the `data` variable on each `data:` line (instead of concatenating with `\n`). Per the SSE spec, multiple `data:` lines in one event block should join with newlines. Large JSON payloads split across `data:` lines silently lose all but the last fragment — runtime parse errors or truncated content.
 
@@ -20,7 +20,7 @@ Patterns CodeRabbit + Copilot reliably flag at the signals ↔ observables inter
 
 ---
 
-## `frontend-state-and-timing/sse-disconnect-listener-on-req-not-res` — SHOULD_FIX
+## `frontend-state-and-timing/sse-disconnect-listener-on-req-not-res` — Important
 
 **Pattern:** in an Express SSE handler, the client-disconnect listener is registered on `req.on('close', ...)` instead of `res.on('close', ...)`. `req.on('close')` fires after the request body is read — for a long-lived response, mid-stream disconnects aren't detected, and upstream fetches / AbortControllers keep running.
 
@@ -34,7 +34,7 @@ Patterns CodeRabbit + Copilot reliably flag at the signals ↔ observables inter
 
 ---
 
-## `frontend-state-and-timing/toObservable-startWith-double-emit` — SHOULD_FIX
+## `frontend-state-and-timing/toObservable-startWith-double-emit` — Important
 
 **Pattern:** `toObservable(signal).pipe(startWith(initialValue))` — `toObservable` already synchronously emits the signal's current value on subscribe. Adding `startWith` prepends a second synchronous emission, doubling downstream firing (e.g., `combineLatest` fires twice on mount, refetches data twice).
 
@@ -48,7 +48,7 @@ Patterns CodeRabbit + Copilot reliably flag at the signals ↔ observables inter
 
 ---
 
-## `frontend-state-and-timing/missing-distinctUntilChanged-after-id-projection` — SHOULD_FIX
+## `frontend-state-and-timing/missing-distinctUntilChanged-after-id-projection` — Important
 
 **Pattern:** `toObservable(obj-signal).pipe(map(x => x.id))` — when the wrapping object can be re-emitted with the same `id` but a new object identity (e.g., context service enriches and re-sets the signal), downstream re-fires unnecessarily, triggering redundant fetches.
 
@@ -62,7 +62,7 @@ Patterns CodeRabbit + Copilot reliably flag at the signals ↔ observables inter
 
 ---
 
-## `frontend-state-and-timing/effect-resets-on-identity-equal-input` — SHOULD_FIX
+## `frontend-state-and-timing/effect-resets-on-identity-equal-input` — Important
 
 **Pattern:** `effect()` reads a signal whose value is identity-different but semantically-equal (e.g., the same account enriched with extra metadata). The effect runs again and resets state that was set inside the effect — clobbering downstream state.
 
