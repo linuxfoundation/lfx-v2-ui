@@ -4,7 +4,9 @@ description: "Post-commit empirical-pattern review for lfx-self-serve. Audits th
 allowed-tools: Agent
 ---
 
-Launch a subagent in the background (`subagent_type: general-purpose`, `run_in_background: true`) with the **entire content below** as the Agent `prompt` parameter. Append the caller's runtime args (`extra`, `pr`) at the end so the subagent sees both the playbook and its inputs.
+Launch a subagent in the background (`subagent_type: general-purpose`, `model: "opus"`, `run_in_background: true`) with the **entire content below** as the Agent `prompt` parameter. Append the caller's runtime args (`extra`, `pr`) at the end so the subagent sees both the playbook and its inputs.
+
+The explicit `model: "opus"` pins the review to Opus (currently 4.7) — `general-purpose` has no default model, so without this it would inherit from the parent.
 
 **Launcher discipline — non-negotiable:** pass the playbook **verbatim**. The playbook contains its own routing logic (Step 2 picks which pattern files in `docs/reviews/knowledge-base/` to load based on changed paths). Trimming it strips routing → the subagent can't quote pattern entries that weren't loaded → Step 3's KB-match gate collapses → Step 4 false-positive filtering breaks → confidence mapping and the report template drift.
 

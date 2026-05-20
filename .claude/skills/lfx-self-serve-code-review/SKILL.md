@@ -4,7 +4,9 @@ description: "Audits the latest commit on the local branch against this repo's d
 allowed-tools: Agent
 ---
 
-Launch a subagent in the background (`subagent_type: code-reviewer`, `run_in_background: true`) with the **entire content below** as the Agent `prompt` parameter. Append the caller's runtime args (`extra`, `pr`) at the end so the subagent sees both the playbook and its inputs.
+Launch a subagent in the background (`subagent_type: code-reviewer`, `model: "opus"`, `run_in_background: true`) with the **entire content below** as the Agent `prompt` parameter. Append the caller's runtime args (`extra`, `pr`) at the end so the subagent sees both the playbook and its inputs.
+
+The explicit `model: "opus"` pins the review to Opus (currently 4.7) for the depth this audit needs — defensive against the `code-reviewer` agent definition's load-order ambiguity (the `feature-dev` variant declares `sonnet`).
 
 **Launcher discipline — non-negotiable:** pass the playbook **verbatim**. The playbook contains its own routing logic (Step 2 picks which checklists / architecture docs to load based on changed paths). Trimming it strips routing → the subagent can't quote rules that weren't loaded → Step 3 cross-check collapses → severity calibration and the report template drift.
 
