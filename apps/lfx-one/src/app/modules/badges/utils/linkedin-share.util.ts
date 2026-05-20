@@ -1,20 +1,12 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { LINKEDIN_ISSUER_ORG_IDS } from '@lfx-one/shared/constants';
 import { EnrichedBadge } from '@lfx-one/shared/interfaces';
-
-import { LINKEDIN_ISSUER_ORG_IDS } from '../config/linkedin-issuer-map';
 
 const LINKEDIN_ADD_TO_PROFILE_BASE = 'https://www.linkedin.com/profile/add';
 
-/**
- * Builds the LinkedIn "Add to profile" deep link prefilled with the badge's
- * certification metadata. Opens LinkedIn's Certifications form in a new tab
- * with the org, issue date, expiration, and credential URL/ID pre-populated.
- *
- * Per LFXV2-1925: issuers in LINKEDIN_ISSUER_ORG_IDS get organizationId for
- * verified-org rendering; unknown issuers fall back to organizationName.
- */
+/** Builds the LinkedIn "Add to profile" deep link prefilled with the badge's certification metadata (LFXV2-1925). */
 export function buildLinkedInAddToProfileUrl(badge: EnrichedBadge): string {
   const params = new URLSearchParams();
   params.set('startTask', 'CERTIFICATION_NAME');

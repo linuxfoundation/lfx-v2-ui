@@ -7,13 +7,11 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal, Signal } from '@angular/core';
 import { CardComponent } from '@components/card/card.component';
 import { MenuComponent } from '@components/menu/menu.component';
-import { EnrichedBadge } from '@lfx-one/shared/interfaces';
+import { EnrichedBadge, ShareChannel } from '@lfx-one/shared/interfaces';
 import { PlausibleService } from '@services/plausible.service';
 import { MenuItem, MessageService } from 'primeng/api';
 
 import { buildLinkedInAddToProfileUrl } from '../../../utils/linkedin-share.util';
-
-type ShareChannel = 'linkedin' | 'native_share' | 'copy_link';
 
 @Component({
   selector: 'lfx-badge-card',
