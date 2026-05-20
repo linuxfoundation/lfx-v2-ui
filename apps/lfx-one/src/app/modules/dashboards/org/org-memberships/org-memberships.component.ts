@@ -19,6 +19,7 @@ import type {
   OrgDiscoverOpportunitiesResponse,
   OrgExpiredMembershipsResponse,
 } from '@lfx-one/shared/interfaces';
+import { foundationInitials, foundationLogoSquareClasses } from '../components/org-overview-foundations-and-projects/helpers/foundation-logo.helper';
 
 type PageState = 'loading' | 'error' | 'ready' | 'empty';
 type MembershipTab = 'active' | 'expired' | 'discover';
@@ -47,16 +48,14 @@ export class OrgMembershipsComponent {
     { id: 'discover' as const, label: 'Discover', icon: 'fa-light fa-magnifying-glass' },
   ];
 
-  protected readonly tierOptions: DropdownOption[] = [
-    { label: 'All Membership Levels', value: '' },
-    { label: 'Platinum', value: 'Platinum Member' },
-    { label: 'Gold', value: 'Gold Member' },
-    { label: 'Silver', value: 'Silver Member' },
-    { label: 'Premier', value: 'Premier Member' },
-    { label: 'General', value: 'General Member' },
-    { label: 'Contributor', value: 'Contributor Member' },
-    { label: 'Steering', value: 'Steering Member' },
-  ];
+  private readonly allTiers = signal<string[]>([]);
+
+  protected readonly tierOptions = computed<DropdownOption[]>(() => {
+    return [
+      { label: 'All Membership Levels', value: '' },
+      ...this.allTiers().map((t) => ({ label: t, value: t })),
+    ];
+  });
 
   protected readonly renewalOptions: DropdownOption[] = [
     { label: 'All Renewals', value: '' },
@@ -99,7 +98,13 @@ export class OrgMembershipsComponent {
         })
       )
     ),
-    tap(() => this.fetchLoading.set(false))
+    tap((response) => {
+      this.fetchLoading.set(false);
+      if (response && !this.selectedTier()) {
+        const tiers = [...new Set(response.memberships.map((m) => m.membershipTier))].sort();
+        this.allTiers.set(tiers);
+      }
+    })
   );
 
   protected readonly activeData = toSignal<OrgActiveMembershipsResponse | null>(this.activeResponse$, { initialValue: null });
@@ -181,6 +186,24 @@ export class OrgMembershipsComponent {
 
   protected formatTierRange(membership: OrgActiveMembership): string {
     return `${this.formatDateShort(membership.tierStartDate)} – ${this.formatDateShort(membership.tierEndDate)}`;
+  }
+
+  protected getInitials(name: string): string {
+    return foundationInitials(name);
+  }
+
+  protected getLogoClasses(foundationId: string): string {
+    return foundationLogoSquareClasses(foundationId);
+  }
+
+  protected getRenewUrl(foundationId: string): string {
+    const slug = this.accountContext.selectedAccount()?.accountSlug ?? '';
+    return `https://myorg.lfx.dev/${slug}/project/project-group-membership/${foundationId}`;
+  }
+
+  protected getJoinUrl(foundationId: string): string {
+    const slug = this.accountContext.selectedAccount()?.accountSlug ?? '';
+    return `https://myorg.lfx.dev/${slug}/project/${foundationId}/membership`;
   }
 
   private fetchExpired(accountId: string): void {
