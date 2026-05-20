@@ -1,10 +1,10 @@
 ---
 name: lfx-self-serve-code-review
-description: "Audits the latest commit on the local branch against this repo's documented rule surface — `.claude/rules/`, the four `docs/reviews/` checklists, architecture docs, the protected-files hook, and upstream API contracts. Operates in constrained-audit mode: every finding must quote a loaded source. Optionally audits a full PR diff if `pr: <N>` is passed. Renders a markdown review. Skill body launches a code-reviewer subagent in the background."
+description: "Audits the latest commit on the local branch against this repo's documented rule surface — `.claude/rules/`, the four `docs/reviews/` checklists, architecture docs, the protected-files hook, and upstream API contracts. Operates in constrained-audit mode: every finding must quote a loaded source. Optionally audits the cumulative diff against a base via `base: <ref>` (used for the pre-PR full-branch sweep on multi-commit branches, and by `/lfx-review-pr`). Renders a markdown review. Skill body launches a code-reviewer subagent in the background."
 allowed-tools: Agent
 ---
 
-Launch a subagent in the background (`subagent_type: code-reviewer`, `model: "opus"`, `run_in_background: true`) with the **entire content below** as the Agent `prompt` parameter. Append the caller's runtime args (`extra`, `pr`) at the end so the subagent sees both the playbook and its inputs.
+Launch a subagent in the background (`subagent_type: code-reviewer`, `model: "opus"`, `run_in_background: true`) with the **entire content below** as the Agent `prompt` parameter. Append the caller's runtime args (`extra`, `base`) at the end so the subagent sees both the playbook and its inputs.
 
 The explicit `model: "opus"` pins the review to Opus (currently 4.7) for the depth this audit needs — defensive against the `code-reviewer` agent definition's load-order ambiguity (the `feature-dev` variant declares `sonnet`).
 
@@ -21,7 +21,7 @@ You audit the latest commit on the LFX Self-Serve branch against this repo's doc
 Parse the caller's prompt for:
 
 - **`extra: <free text>`** — optional priority hint.
-- **`pr: <N>`** — OPTIONAL. If passed, audit the full diff of PR #N instead of the latest local commit (use case: `/lfx-review-pr` reviewing an open PR).
+- **`base: <ref>`** — OPTIONAL. If passed, audit the cumulative diff between `<ref>` and HEAD (`<ref>...HEAD`) instead of the latest commit. Used for the pre-PR full-branch sweep on multi-commit branches AND by `/lfx-review-pr` (which passes `base: origin/<baseRefName>`).
 
 ## Step 1 — Compute the diff
 
@@ -37,16 +37,19 @@ With `--stat -p`, the stat block at the top of `git show`'s output is followed b
 
 If no `N files changed,` shortstat line appears in the output (empty commit), abort: `No changes to review in the latest commit.`
 
-If `pr: <N>` was provided, audit the PR's full diff instead:
+If `base: <ref>` was provided, audit the cumulative diff between `<ref>` and HEAD instead — used for the pre-PR full-branch sweep on multi-commit branches, and by `/lfx-review-pr`:
 
 ```bash
-gh repo view --json nameWithOwner --jq '.nameWithOwner'
-gh pr view <N> --json title,headRefName,baseRefName,additions,deletions
-git fetch origin "+pull/<N>/head:refs/pr/<N>/head"
-gh pr diff <N>
+git fetch origin                                          # ensure base is fresh
+git rev-parse --abbrev-ref HEAD                           # current branch
+git log <ref>..HEAD --format='%H %s'                      # commits being reviewed
+git diff --stat <ref>...HEAD                              # file list + counts (three-dot computes merge-base)
+git diff <ref>...HEAD                                     # full diff
 ```
 
-For per-file reads in PR mode: `git show "refs/pr/<N>/head:<path>"`. For per-file reads in the default mode: `git show "HEAD:<path>"`. If the diff is too large to hold in context, save to `/tmp/code-review-diff.patch` and Read changed source files individually.
+Normalize `<ref>` first: if it contains no `/` (e.g., bare `main`), prefix with `origin/` so the comparison runs against the freshly-fetched remote ref. If no commits exist between `<ref>` and HEAD, abort: `No commits between <ref> and HEAD.`
+
+For per-file reads in any mode: `git show "HEAD:<path>"`. If the diff is too large to hold in context, save to `/tmp/code-review-diff.patch` and Read changed source files individually.
 
 Commit-level data (signatures, sign-off trailers) and prior PR review comments are NOT your concern — `/lfx-review-pr` handles those.
 
@@ -156,7 +159,7 @@ For each changed file matching the parsed list, surface it in Step 6's "Protecte
 
 ## Step 6 — Render the report
 
-Lead with what you're reviewing — `<commit-sha> — <subject>` for the default case, or `PR #<N> — <title>` if `pr: <N>` was passed. Then files changed and additions / deletions.
+Lead with what you're reviewing — `<commit-sha> — <subject>` for the default case, or `<base>...HEAD (<branch-name>, N commits)` if `base: <ref>` was passed. Then files changed and additions / deletions.
 
 Render findings in three sections:
 

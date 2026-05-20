@@ -1,10 +1,10 @@
 ---
 name: lfx-self-serve-learnings-review
-description: "Post-commit empirical-pattern review for lfx-self-serve. Audits the latest commit against `docs/reviews/knowledge-base/` — patterns extracted from past PR review comments on this repo. Findings are gated by KB matches: every finding must quote a pattern entry; unsourced findings are dropped. Optionally audits a full PR diff if `pr: <N>` is passed. Renders a markdown review. Skill body launches a general-purpose subagent in the background."
+description: "Post-commit empirical-pattern review for lfx-self-serve. Audits the latest commit against `docs/reviews/knowledge-base/` — patterns extracted from past PR review comments on this repo. Findings are gated by KB matches: every finding must quote a pattern entry; unsourced findings are dropped. Optionally audits the cumulative diff against a base via `base: <ref>` (used for the pre-PR full-branch sweep on multi-commit branches, and by `/lfx-review-pr`). Renders a markdown review. Skill body launches a general-purpose subagent in the background."
 allowed-tools: Agent
 ---
 
-Launch a subagent in the background (`subagent_type: general-purpose`, `model: "opus"`, `run_in_background: true`) with the **entire content below** as the Agent `prompt` parameter. Append the caller's runtime args (`extra`, `pr`) at the end so the subagent sees both the playbook and its inputs.
+Launch a subagent in the background (`subagent_type: general-purpose`, `model: "opus"`, `run_in_background: true`) with the **entire content below** as the Agent `prompt` parameter. Append the caller's runtime args (`extra`, `base`) at the end so the subagent sees both the playbook and its inputs.
 
 The explicit `model: "opus"` pins the review to Opus (currently 4.7) — `general-purpose` has no default model, so without this it would inherit from the parent.
 
@@ -23,7 +23,7 @@ Generic-rubric findings (security / performance / quality / architecture / testi
 Parse the caller's prompt for:
 
 - **`extra: <free text>`** — optional priority hint.
-- **`pr: <N>`** — OPTIONAL. If passed, audit the full diff of PR #N instead of the latest local commit.
+- **`base: <ref>`** — OPTIONAL. If passed, audit the cumulative diff between `<ref>` and HEAD (`<ref>...HEAD`) instead of the latest commit. Used for the pre-PR full-branch sweep on multi-commit branches AND by `/lfx-review-pr`.
 
 ## Step 1 — Compute the diff
 
@@ -39,13 +39,17 @@ With `--stat -p`, the stat block at the top of `git show`'s output is followed b
 
 If no `N files changed,` shortstat line appears in the output (empty commit), abort: `No changes to review in the latest commit.`
 
-If `pr: <N>` was provided, audit the PR's full diff instead:
+If `base: <ref>` was provided, audit the cumulative diff between `<ref>` and HEAD instead — used for the pre-PR full-branch sweep on multi-commit branches, and by `/lfx-review-pr`:
 
 ```bash
-git fetch origin "+pull/<N>/head:refs/pr/<N>/head"
-gh pr view <N> --json title,baseRefName,additions,deletions
-gh pr diff <N>
+git fetch origin                                          # ensure base is fresh
+git rev-parse --abbrev-ref HEAD                           # current branch
+git log <ref>..HEAD --format='%H %s'                      # commits being reviewed
+git diff --stat <ref>...HEAD                              # file list + counts (three-dot computes merge-base)
+git diff <ref>...HEAD                                     # full diff
 ```
+
+Normalize `<ref>` first: if it contains no `/` (e.g., bare `main`), prefix with `origin/` so the comparison runs against the freshly-fetched remote ref. If no commits exist between `<ref>` and HEAD, abort: `No commits between <ref> and HEAD.`
 
 If the diff is too large to hold in context, save to `/tmp/learnings-reviewer-diff.patch` and Read changed source files individually.
 
@@ -109,7 +113,7 @@ If `extra` was passed, prioritise those areas when ordering the report. Don't su
 
 ## Step 6 — Render the report
 
-Lead with what you're reviewing — `<commit-sha> — <subject>` for the default case, or `PR #<N> — <title>` if `pr: <N>` was passed. Then files changed, additions / deletions, and pattern files loaded.
+Lead with what you're reviewing — `<commit-sha> — <subject>` for the default case, or `<base>...HEAD (<branch-name>, N commits)` if `base: <ref>` was passed. Then files changed, additions / deletions, and pattern files loaded.
 
 Group findings under `### Critical (N)` (confidence 90-100) and `### Important (N)` (confidence 80-89). Each finding is a bullet of this form (parser-friendly for downstream consumers):
 

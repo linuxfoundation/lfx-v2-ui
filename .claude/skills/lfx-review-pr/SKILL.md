@@ -1,11 +1,14 @@
 ---
 name: lfx-review-pr
 description: >
-  Review a pull request against LFX architecture standards. Invokes the
-  `/lfx-self-serve-code-review` skill with `pr: <N>` (skill body launches
-  a background subagent that audits the full PR diff and renders a
+  Review a pull request against LFX architecture standards. Requires the
+  reviewer's HEAD to be the PR's branch (author scenarios are natural;
+  external reviewers run `gh pr checkout <N>` first). Fetches the PR's
+  base ref fresh, then invokes the `/lfx-self-serve-code-review` skill
+  with `base: origin/<baseRefName>` — the skill body launches a
+  background subagent that audits the cumulative diff and renders a
   markdown review covering rules, checklists, upstream API contracts,
-  and protected files). This skill body adds what only a post-PR skill
+  and protected files. This skill body adds what only a post-PR skill
   can do: verifying prior review comments are addressed, walking the
   PR-shape checklist (branch/JIRA/commits/DCO+GPG/rebase/diff-size/
   PR-title/external-refs), applying new-contributor educational tone,
@@ -19,7 +22,7 @@ allowed-tools: Bash, Read, Glob, Grep, Agent, AskUserQuestion, Skill
 
 # LFX PR Review
 
-You are reviewing an opened pull request against LFX standards. The code audit — diff computation, rule loading, code review, upstream API contract validation, protected-file flagging — is performed by the `/lfx-self-serve-code-review` skill invoked in Phase 2 with `pr: <N>`; its skill body launches a background subagent that returns a markdown review report. PR-shape sanity is NOT the review subagent's concern — this skill body walks it in Phase 4. This skill also handles **what only a post-PR skill can do:** verifying that prior review comments were addressed, applying new-contributor educational tone, compiling the subagent's report into a draft review, and posting via `/review` only after the user explicitly approves.
+You are reviewing an opened pull request against LFX standards. **Pre-requisite:** the reviewer's HEAD must be the PR's branch — author scenarios are natural (you're already on it); external reviewers run `gh pr checkout <N>` first (commit/stash uncommitted work first; `gh pr checkout` switches branches). Phase 1 verifies this. The code audit — diff computation, rule loading, code review, upstream API contract validation, protected-file flagging — is performed by the `/lfx-self-serve-code-review` skill invoked in Phase 2 with `base: origin/<baseRefName>`; its skill body launches a background subagent that audits the cumulative diff between the PR's base and HEAD, returning a markdown review report. PR-shape sanity is NOT the review subagent's concern — this skill body walks it in Phase 4. This skill also handles **what only a post-PR skill can do:** verifying that prior review comments were addressed, applying new-contributor educational tone, compiling the subagent's report into a draft review, and posting via `/review` only after the user explicitly approves.
 
 Walk through each phase in order. Phases may short-circuit when their preconditions are not met (noted inline) but none should be skipped outright.
 
@@ -42,14 +45,19 @@ gh repo view --json nameWithOwner --jq '.nameWithOwner'   # store as {owner}/{re
 gh pr view <N> --json title,body,headRefName,baseRefName,author,additions,deletions,files \
   > /tmp/pr-<N>-meta.json
 
-# Pull the base ref locally + the PR head via GitHub's `pull/<N>/head` refspec. The
-# `pull/...` refspec is mirrored into the upstream repo even for PRs opened from forks,
-# so subsequent `git show` / `git log` / `git merge-base` calls do NOT need to know
-# whether the PR came from a fork. The local destination `refs/pr/<N>/head` is a
-# private ref namespace — no collision with `refs/heads/` or `refs/remotes/origin/`.
+# Pull the base ref locally (used by Phase 2 as `base: origin/<baseRefName>`) + the PR
+# head via GitHub's `pull/<N>/head` refspec (mirrored even for fork PRs, so subsequent
+# `git show` reads work uniformly via the local ref `refs/pr/<N>/head`).
 BASE_REF=$(jq -r '.baseRefName' /tmp/pr-<N>-meta.json)
 git fetch origin "$BASE_REF"
 git fetch origin "+pull/<N>/head:refs/pr/<N>/head"
+
+# Verify HEAD is the PR's branch (required for Phase 2's `base: origin/<baseRefName>`
+# diff to be the PR's diff). Author scenarios pass naturally; external reviewers need
+# to run `gh pr checkout <N>` first (will switch branches; commit/stash first).
+HEAD_REF=$(jq -r '.headRefName' /tmp/pr-<N>-meta.json)
+CURRENT=$(git rev-parse --abbrev-ref HEAD)
+[ "$CURRENT" = "$HEAD_REF" ] || { echo "HEAD is '$CURRENT' but PR head is '$HEAD_REF'. Run: gh pr checkout <N>"; exit 1; }
 ```
 
 **Shell-state caveat:** the Bash tool runs each invocation in an isolated shell — `cwd` persists, but environment variables do **not** survive across calls. Every later phase that needs `$BASE_REF` / `$HEAD_REF` / `$AUTHOR` must re-derive them at the top of its own Bash invocation:
@@ -67,9 +75,9 @@ The metadata file path (`/tmp/pr-<N>-meta.json`) and the local PR-head ref (`ref
 
 ## Phase 2 — Invoke the code review skill (launches background subagent)
 
-Invoke the `/lfx-self-serve-code-review` skill via the Skill tool. Its body instructs you to launch a `code-reviewer` subagent with `run_in_background: true` — follow that launcher instruction. Pass `pr: <N>` so the subagent audits the full PR diff rather than just the latest local commit. Do **not** wait — proceed to Phases 3–5 immediately so the reviewer's work overlaps with the skill-side audits.
+Invoke the `/lfx-self-serve-code-review` skill via the Skill tool. Its body instructs you to launch a `code-reviewer` subagent with `run_in_background: true` — follow that launcher instruction. Pass `base: origin/<baseRefName>` (read from `/tmp/pr-<N>-meta.json`; typically `origin/main`) so the subagent audits the cumulative diff between the PR's base and HEAD. Do **not** wait — proceed to Phases 3–5 immediately so the reviewer's work overlaps with the skill-side audits.
 
-> pr: \<N\>
+> base: origin/\<baseRefName-from-pr-meta\>
 > extra: \<extra focus from args, or empty\>
 
 The launched subagent returns a **markdown review report** with three sections:
