@@ -13,10 +13,9 @@ import { getEffectiveSub } from '../utils/auth-helper';
 export class CopilotController {
   private readonly copilotService = new CopilotService();
   private readonly activeStreams = new Set<Response>();
-  private readonly removeShutdownHook: () => void;
 
   public constructor() {
-    this.removeShutdownHook = addShutdownHook(() => this.closeAllStreams());
+    addShutdownHook(() => this.closeAllStreams());
   }
 
   public async chat(req: Request, res: Response, next: NextFunction): Promise<void> {
