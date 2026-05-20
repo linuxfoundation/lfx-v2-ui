@@ -1,24 +1,25 @@
 ---
 name: lfx-review-pr
 description: >
-  Review a pull request against LFX architecture standards. Spawns the
-  lfx-self-serve-code-reviewer subagent in `mode: pr` to compute the diff,
-  load rules and checklists, validate upstream API contracts, flag
-  protected files, and run the code review. This skill body adds what
-  only a post-PR skill can do: verifying prior review comments are
-  addressed, walking the PR-shape checklist (branch/JIRA/commits/DCO+GPG/
-  rebase/diff-size/PR-title/external-refs), applying new-contributor
-  educational tone, presenting a draft for explicit approval, and posting
-  via /review only after user go-ahead. NEVER auto-posts comments or
-  submits reviews. Use when reviewing PRs, checking PR quality, validating
-  code changes, or when the user says "review", "check this PR", "audit
-  code", or mentions /review.
+  Review a pull request against LFX architecture standards. Invokes the
+  `/lfx-self-serve-code-review` skill with `pr: <N>` (skill body launches
+  a background subagent that audits the full PR diff and renders a
+  markdown review covering rules, checklists, upstream API contracts,
+  and protected files). This skill body adds what only a post-PR skill
+  can do: verifying prior review comments are addressed, walking the
+  PR-shape checklist (branch/JIRA/commits/DCO+GPG/rebase/diff-size/
+  PR-title/external-refs), applying new-contributor educational tone,
+  presenting a draft for explicit approval, and posting via /review only
+  after user go-ahead. NEVER auto-posts comments or submits reviews. Use
+  when reviewing PRs, checking PR quality, validating code changes, or
+  when the user says "review", "check this PR", "audit code", or
+  mentions /review.
 allowed-tools: Bash, Read, Glob, Grep, Agent, AskUserQuestion, Skill
 ---
 
 # LFX PR Review
 
-You are reviewing an opened pull request against LFX standards. The code audit — diff computation, rule loading, code review, upstream API contract validation, protected-file flagging — is performed by the `lfx-self-serve-code-reviewer` agent spawned in Phase 2 (agent returns `code | upstream-api | protected-files` categories only). PR-shape sanity is NOT the agent's concern — this skill body walks it in Phase 4. This skill also handles **what only a post-PR skill can do:** verifying that prior review comments were addressed, applying new-contributor educational tone, compiling the agent's findings into a draft review, and posting via `/review` only after the user explicitly approves.
+You are reviewing an opened pull request against LFX standards. The code audit — diff computation, rule loading, code review, upstream API contract validation, protected-file flagging — is performed by the `/lfx-self-serve-code-review` skill invoked in Phase 2 with `pr: <N>`; its skill body launches a background subagent that returns a markdown review report. PR-shape sanity is NOT the review subagent's concern — this skill body walks it in Phase 4. This skill also handles **what only a post-PR skill can do:** verifying that prior review comments were addressed, applying new-contributor educational tone, compiling the subagent's report into a draft review, and posting via `/review` only after the user explicitly approves.
 
 Walk through each phase in order. Phases may short-circuit when their preconditions are not met (noted inline) but none should be skipped outright.
 
@@ -64,30 +65,24 @@ AUTHOR=$(jq -r   '.author.login' /tmp/pr-<N>-meta.json)
 
 The metadata file path (`/tmp/pr-<N>-meta.json`) and the local PR-head ref (`refs/pr/<N>/head`) are both stable across phases because they're on disk, not in shell state.
 
-## Phase 2 — Spawn the code reviewer (background)
+## Phase 2 — Invoke the code review skill (launches background subagent)
 
-Spawn a **lfx-self-serve-code-reviewer** Agent with `run_in_background: true`. Do **not** wait — proceed to Phases 3–4 immediately so the reviewer's work overlaps with the skill-side audits.
+Invoke the `/lfx-self-serve-code-review` skill via the Skill tool. Its body instructs you to launch a `code-reviewer` subagent with `run_in_background: true` — follow that launcher instruction. Pass `pr: <N>` so the subagent audits the full PR diff rather than just the latest local commit. Do **not** wait — proceed to Phases 3–5 immediately so the reviewer's work overlaps with the skill-side audits.
 
-The agent's system prompt contains the full code-review playbook. Pass minimal context — anything you list here that's already in its playbook is duplicate signal. The agent fetches the PR diff and metadata itself.
-
-> mode: pr
-> number: \<N\>
+> pr: \<N\>
 > extra: \<extra focus from args, or empty\>
 
-The agent will:
+The launched subagent returns a **markdown review report** with three sections:
 
-1. Fetch PR metadata + diff (Step 1, `mode: pr` branch).
-2. Load CLAUDE.md, `.claude/rules/*.md`, the protected-files hook, architecture docs, and the four `docs/reviews/` code checklists (Step 2).
-3. Audit each changed file against all applicable rules (Steps 3–5).
-4. Validate upstream API contracts (Step 6).
-5. Flag protected files (Step 7).
-6. Return a JSON array of findings with categories `code`, `upstream-api`, `protected-files` (Step 8).
+1. **Protected files touched** — files matching the protected-files hook.
+2. **Upstream API validation** — backend contract checks (or "Skipped — no backend changes").
+3. **Findings** — code-review findings grouped under `### Critical (N)` and `### Important (N)`, each as a bullet of the form `- **<file>:<line>** (conf <N>) — <issue>. _Source:_ <rule>. _Fix:_ <suggestion>.`
 
-NOTE: the agent does NOT do PR-shape and does NOT fetch prior review comments — both are this skill's job (Phases 3 and 4).
+NOTE: the review subagent does NOT do PR-shape and does NOT fetch prior review comments — both are this skill's job (Phases 3 and 4).
 
 ## Phase 3 — Verify prior review comments (parallel with Phase 2)
 
-While the enforcer runs, verify whether prior review comments were actually addressed. **Do NOT trust "resolved" status or contributor claims. Read the actual code.**
+While the review subagent runs, verify whether prior review comments were actually addressed. **Do NOT trust "resolved" status or contributor claims. Read the actual code.**
 
 ### Process
 
@@ -153,9 +148,9 @@ gh pr list --author "$AUTHOR" --state merged --limit 5 --json number | jq 'lengt
 
 If the author has fewer than 5 merged PRs to this repo, mark the review as **educational mode** — inline comments should explain the **why** behind each rule, not just the **what**, and cite the exact rule file and section so the contributor can learn the convention rather than just patch the code. Carry this flag into Phase 7.
 
-## Phase 6 — Wait for the enforcer
+## Phase 6 — Wait for the review subagent
 
-Wait for the `lfx-self-serve-code-reviewer` Agent from Phase 2 to complete. It returns a JSON array of findings with categories: `code`, `upstream-api`, `protected-files`.
+Wait for the background subagent launched by `/lfx-self-serve-code-review` in Phase 2 to complete. It returns a markdown review report (Protected files / Upstream API validation / Findings).
 
 ## Phase 7 — Compile context for `/review`
 
@@ -163,12 +158,10 @@ Assemble a single text block containing:
 
 1. **PR summary** — number, title, author, additions/deletions, branch
 2. **Previous-comment verification table** (Phase 3) — or "No previous review comments found"
-3. **PR-shape findings** (Phase 4, `category: pr-shape`) — pre-PR checks plus PR-title and external-refs
-4. **Upstream API validation** (`category: upstream-api`) — or "No backend changes — skipped"
-5. **Protected files touched** (`category: protected-files`) — list with hook reasons, or "None modified"
-6. **Code findings** (`category: code`)
-7. **Educational mode flag** (Phase 5) — if set, instruct `/review` to cite rule files inline and explain the _why_
-8. **Extra user instructions** (Phase 1) — relay as-is
+3. **PR-shape findings** (Phase 4) — pre-PR checks plus PR-title and external-refs
+4. **Code review report** (Phase 6) — embed the markdown report from the code-review subagent verbatim. The report already contains Protected files touched, Upstream API validation, and Findings sections.
+5. **Educational mode flag** (Phase 5) — if set, instruct `/review` to cite rule files inline and explain the _why_
+6. **Extra user instructions** (Phase 1) — relay as-is
 
 ## Phase 8 — Present the draft for approval (NEVER auto-post)
 
@@ -180,13 +173,12 @@ Print the compiled context as a structured draft:
 
 1. **PR summary** — number, title, author, size, branch
 2. **Phase 3 table** — previous comments and whether they were addressed
-3. **PR-shape sanity** — table from `category: pr-shape` findings
-4. **Upstream API validation** — results from `category: upstream-api` (or "skipped")
-5. **Protected files touched** — list with hook reasons
-6. **Proposed inline comments** — one numbered block per finding: file:line, severity, rule citation, message, suggested fix
-7. **Proposed review body** — the summary text that would appear at the top of the review
-8. **Proposed review verdict** — COMMENT / APPROVE / REQUEST_CHANGES, with reasoning
-9. **Educational mode note** (if Phase 4 flagged it) — "First-time contributor — review tone will be educational; rule citations included inline."
+3. **PR-shape sanity** — table from Phase 4 findings
+4. **Code review report** — the markdown report from the code-review subagent (Protected files / Upstream API / Findings)
+5. **Proposed inline comments** — derived from PR-shape findings + the Findings bullets in the code review report (parse `- **<file>:<line>** (conf <N>) — <message>. _Source:_ <rule>. _Fix:_ <suggestion>.`). One numbered block per: file:line, severity, rule citation, message, suggested fix.
+6. **Proposed review body** — the summary text that would appear at the top of the review
+7. **Proposed review verdict** — COMMENT / APPROVE / REQUEST_CHANGES, with reasoning
+8. **Educational mode note** (if Phase 5 flagged it) — "First-time contributor — review tone will be educational; rule citations included inline."
 
 ### Step 2 — Ask for approval
 
@@ -209,8 +201,8 @@ Once the user has approved (with or without edits), apply their requested edits 
 Include in the args:
 
 - The PR number
-- The compiled context block (previous-comment verification, PR-shape findings, upstream validation, protected-files touched, code findings, educational-mode flag, extra instructions)
-- A reminder to use the enforcer findings as the primary finding source
+- The compiled context block (previous-comment verification, PR-shape findings, code review report, educational-mode flag, extra instructions)
+- A reminder to use the code review report's Findings bullets as the primary finding source
 
 If the user said "don't post", stop here and leave the draft in the terminal for their reference — do not invoke `/review` or any PR-mutating `gh` command.
 
@@ -232,9 +224,9 @@ If the user passed extra instructions after the PR number, prioritize those area
 
 ---
 
-## References used by the agent
+## References used by the review subagent
 
-The agent's playbook reads these files from disk in Step 2. They're listed here for transparency; you do not Read them directly in this skill body:
+The launched subagent's playbook reads these files from disk in Step 2. They're listed here for transparency; you do not Read them directly in this skill body:
 
 - `CLAUDE.md` (project + global)
 - `.claude/rules/*.md` (every rule file, globbed dynamically)

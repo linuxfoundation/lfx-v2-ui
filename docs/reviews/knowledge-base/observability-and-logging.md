@@ -6,7 +6,7 @@ Patterns where renaming routes or adding new health endpoints causes drift in Op
 
 ---
 
-## `observability-and-logging/otel-ignore-list-drift` — SHOULD_FIX
+## `observability-and-logging/otel-ignore-list-drift` — Important
 
 **Pattern:** when health/probe routes are renamed (e.g., `/health` → `/livez`, `/readyz`), the `ignoreIncomingRequestHook` in `apps/lfx-one/otel.mjs` must be updated or the new probe paths generate spans on every k8s probe (typically every 5 seconds = ~17,000 spans/day per pod, all useless).
 
@@ -20,7 +20,7 @@ Patterns where renaming routes or adding new health endpoints causes drift in Op
 
 ---
 
-## `observability-and-logging/health-endpoint-inside-rate-limiter` — SHOULD_FIX
+## `observability-and-logging/health-endpoint-inside-rate-limiter` — Important
 
 **Pattern:** liveness / readiness / health endpoints (`/livez`, `/readyz`, `/healthz`) are mounted INSIDE the `/api` rate-limit middleware. Kubernetes probes fire on a fixed cadence; under load (or with multiple pods), probe traffic can exhaust the rate-limit budget and cause probes to fail, triggering pod restarts.
 
@@ -34,7 +34,7 @@ Patterns where renaming routes or adding new health endpoints causes drift in Op
 
 ---
 
-## `observability-and-logging/count-variable-mismatch` — SHOULD_FIX
+## `observability-and-logging/count-variable-mismatch` — Important
 
 **Pattern:** a `logger.info({ count: ... })` (or similar metric field) is logged with the wrong variable — typically `Set.size` of a related-but-different set, or array length of the un-deduped collection rather than the deduped one.
 
@@ -48,7 +48,7 @@ Patterns where renaming routes or adding new health endpoints causes drift in Op
 
 ---
 
-## `observability-and-logging/info-for-high-frequency-fetch` — SHOULD_FIX
+## `observability-and-logging/info-for-high-frequency-fetch` — Important
 
 **Pattern:** `logger.info` used in a code path that runs frequently (per-page-load, per-signal-change, per-keystroke), producing log noise. `logger.info` is for significant business operations; high-frequency ops should be `logger.debug`.
 
@@ -62,7 +62,7 @@ Patterns where renaming routes or adding new health endpoints causes drift in Op
 
 ---
 
-## `observability-and-logging/err-field-vs-error-message` — SHOULD_FIX
+## `observability-and-logging/err-field-vs-error-message` — Important
 
 **Pattern:** error logged as `{ error: error.message }` instead of `{ err: error }`. The `error.message` form loses the stack trace and any custom error properties; the `err` field with the Error object preserves both.
 
@@ -76,7 +76,7 @@ Patterns where renaming routes or adding new health endpoints causes drift in Op
 
 ---
 
-## `observability-and-logging/missing-route-in-tracer-config` — NIT
+## `observability-and-logging/missing-route-in-tracer-config` — Nit
 
 **Pattern:** a new high-traffic Express route is added without checking whether its span attributes are being captured correctly by `server-tracer.ts`. Custom span attributes (route name, user ID) might not propagate.
 
