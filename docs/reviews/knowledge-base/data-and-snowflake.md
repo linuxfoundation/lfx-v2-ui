@@ -2,7 +2,7 @@
 
 Patterns where Snowflake query results don't match TypeScript interface declarations, or where dev / per-engineer schema paths leak into production code. Critical-severity for the dev-schema leak and placeholder-bind-count mismatch; row-shape drift is Important (causes runtime null bugs).
 
-**Read when:** `apps/lfx-one/src/server/services/snowflake.service.ts` or any file containing direct Snowflake SQL changed. Cross-checked by Phase 5.
+**Read when:** `apps/lfx-one/src/server/services/snowflake.service.ts` or any file containing direct Snowflake SQL changed. Cross-checked in Steps 3-4 of the learnings-review playbook (KB-match gate in Step 3, false-positive filter in Step 4).
 
 ---
 

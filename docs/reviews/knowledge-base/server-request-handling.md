@@ -2,7 +2,7 @@
 
 Patterns where new backend routes are mounted without the right auth middleware, guards / interceptors are ordered wrong, history state is wiped on URL updates, or Express query / body / route params are consumed without the project's hardening helpers. CodeRabbit's strongest signal on this codebase — auth and ordering bugs are runtime security bugs.
 
-**Read when:** `app.config.ts`, anything under `app/shared/guards/` or `app/shared/interceptors/`, any `*.routes.ts`, any new file under `apps/lfx-one/src/server/routes/`, `apps/lfx-one/src/server/server.ts`, `middleware/auth*`, or any file under `apps/lfx-one/src/server/controllers/` or `apps/lfx-one/src/server/services/`. Cross-checked by Phase 5.
+**Read when:** `app.config.ts`, anything under `app/shared/guards/` or `app/shared/interceptors/`, any `*.routes.ts`, any new file under `apps/lfx-one/src/server/routes/`, `apps/lfx-one/src/server/server.ts`, `middleware/auth*`, or any file under `apps/lfx-one/src/server/controllers/` or `apps/lfx-one/src/server/services/`. Cross-checked in Steps 3-4 of the learnings-review playbook (KB-match gate in Step 3, false-positive filter in Step 4).
 
 ---
 

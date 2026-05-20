@@ -2,7 +2,7 @@
 
 Patterns where the code lies about itself — docstrings, inline comments, JSDoc tags, hard-coded duplicates of config, PR descriptions diverging from shipped behavior, and entirely-new services / components shipped without tests. The highest-volume bucket in the research (~35 docs-drift finds + 6 testing finds across CodeRabbit + Copilot). Copilot is the strongest reviewer for this — it cross-correlates across files and notices when one file claims behavior another file actually implements.
 
-**Read when:** any JSDoc / inline comment, anything under `docs/**`, or any new feature module / service / component without a matching `*.spec.ts`. Cross-checked by Phase 5; findings without a quotable pattern below are dropped.
+**Read when:** any JSDoc / inline comment, anything under `docs/**`, or any new feature module / service / component without a matching `*.spec.ts`. Cross-checked in Steps 3-4 of the learnings-review playbook (KB-match gate in Step 3, false-positive filter in Step 4); findings without a quotable pattern below are dropped.
 
 ---
 

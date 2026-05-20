@@ -2,7 +2,7 @@
 
 TypeScript-soundness and async-lifecycle patterns CodeRabbit + Copilot flag — generics whose return types lie, non-null assertions on async results, deep imports that route around the barrel, timer leaks, and observable readiness races.
 
-**Read when:** any `.ts` file changed. Cross-checked by Phase 5; findings without a quotable pattern below are dropped.
+**Read when:** any `.ts` file changed. Cross-checked in Steps 3-4 of the learnings-review playbook (KB-match gate in Step 3, false-positive filter in Step 4); findings without a quotable pattern below are dropped.
 
 ---
 

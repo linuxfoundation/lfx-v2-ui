@@ -40,7 +40,7 @@ Args format: `<PR number> [extra instructions]`.
 Phases 3, 4, and 5 run in parallel with the background agent (Phase 2), so the skill body must fetch its own PR metadata up front — it can't depend on the agent's fetch (which doesn't return until Phase 6).
 
 ```bash
-gh repo view --json nameWithOwner --jq '.nameWithOwner'   # store as {owner}/{repo}
+gh repo view --json nameWithOwner --jq '.nameWithOwner'   # sanity check; later phases re-derive `$REPO` inline as needed
 
 # Fetch PR metadata the skill body needs (title, body, refs, author, size, changed files):
 gh pr view <N> --json title,body,headRefName,baseRefName,author,additions,deletions,files \
@@ -64,9 +64,10 @@ git fetch origin "+pull/<N>/head:refs/pr/<N>/head"
 [ "$(git rev-parse HEAD)" = "$(git rev-parse refs/pr/<N>/head)" ] || { echo "HEAD is not at the PR's tip commit. Run: gh pr checkout <N>"; exit 1; }
 ```
 
-**Shell-state caveat:** the Bash tool runs each invocation in an isolated shell — `cwd` persists, but environment variables do **not** survive across calls. Every later phase that needs `$BASE_REF` / `$HEAD_REF` / `$AUTHOR` must re-derive them at the top of its own Bash invocation:
+**Shell-state caveat:** the Bash tool runs each invocation in an isolated shell — `cwd` persists, but environment variables do **not** survive across calls. Every later phase that needs `$REPO` / `$BASE_REF` / `$HEAD_REF` / `$AUTHOR` must re-derive them at the top of its own Bash invocation:
 
 ```bash
+REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')   # `<owner>/<repo>` for `gh api repos/$REPO/...`
 BASE_REF=$(jq -r '.baseRefName' /tmp/pr-<N>-meta.json)   # PR's actual base ref (Phase 4's rebase check uses this; code-review hardcodes main)
 HEAD_REF=$(jq -r '.headRefName' /tmp/pr-<N>-meta.json)   # branch name (needed only for the branch-name regex check)
 AUTHOR=$(jq -r   '.author.login' /tmp/pr-<N>-meta.json)
@@ -97,11 +98,12 @@ While the review subagent runs, verify whether prior review comments were actual
 
 ### Process
 
-First, fetch inline comments and review bodies in parallel:
+First, fetch inline comments and review bodies in parallel (derive `$REPO` inline; the Bash tool runs each call in a fresh shell, so re-derive in any later phase that needs it):
 
 ```bash
-gh api repos/{owner}/{repo}/pulls/<N>/comments --paginate
-gh api repos/{owner}/{repo}/pulls/<N>/reviews --paginate
+REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
+gh api "repos/$REPO/pulls/<N>/comments" --paginate
+gh api "repos/$REPO/pulls/<N>/reviews"  --paginate
 ```
 
 Then:

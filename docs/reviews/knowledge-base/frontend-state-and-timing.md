@@ -2,7 +2,7 @@
 
 Patterns CodeRabbit + Copilot reliably flag at the signals ↔ observables interface — double-emissions from `toObservable + startWith`, missing `distinctUntilChanged` after primitive projections, and identity-equal-object re-emissions triggering redundant downstream work.
 
-**Read when:** any `.component.ts` / `.service.ts` under `apps/lfx-one/src/app/` changed. Cross-checked by Phase 5; findings without a quotable pattern below are dropped.
+**Read when:** any `.component.ts` / `.service.ts` under `apps/lfx-one/src/app/` changed. Cross-checked in Steps 3-4 of the learnings-review playbook (KB-match gate in Step 3, false-positive filter in Step 4); findings without a quotable pattern below are dropped.
 
 ---
 

@@ -2,7 +2,7 @@
 
 Patterns CodeRabbit + Copilot flag in Angular templates — ARIA roles, focus management, keyboard parity, semantic HTML, class-binding clobbering, wrong `@for` track keys, missing `lens=` query params, and inline-style misuse. Heavily concentrated in `.component.html` files for table rows, custom toggle buttons, and icon-only buttons.
 
-**Read when:** any `.component.html` file changed. Cross-checked by Phase 5; findings without a quotable pattern below are dropped.
+**Read when:** any `.component.html` file changed. Cross-checked in Steps 3-4 of the learnings-review playbook (KB-match gate in Step 3, false-positive filter in Step 4); findings without a quotable pattern below are dropped.
 
 ---
 
