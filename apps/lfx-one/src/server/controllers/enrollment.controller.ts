@@ -39,7 +39,7 @@ export class EnrollmentController {
       return;
     }
 
-    const { autorenew } = req.body as { autorenew?: unknown };
+    const autorenew = (req.body as { autorenew?: unknown } | null | undefined)?.autorenew;
 
     if (typeof autorenew !== 'boolean') {
       next(

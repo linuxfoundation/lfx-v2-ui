@@ -21,9 +21,11 @@ export interface GatewayFetchOptions {
 }
 
 /**
- * Fetches a URL via the API gateway using req.apiGatewayToken.
+ * Fetches a URL via the API gateway. Uses req.apiGatewayToken by default;
+ * pass options.bearerToken to override (e.g. for user-token-authenticated calls).
  * Handles timeout (504), network failure (502), non-OK upstream responses,
- * empty bodies, and invalid JSON — all surfaced as MicroserviceError.
+ * and invalid JSON — all surfaced as MicroserviceError.
+ * 204 responses return null without error; all other empty bodies are errors.
  */
 export async function gatewayFetch<T>(req: Request, url: string, options: GatewayFetchOptions): Promise<T> {
   const token = options.bearerToken ?? req.apiGatewayToken;
@@ -95,7 +97,7 @@ export async function gatewayFetch<T>(req: Request, url: string, options: Gatewa
   const rawBody = await upstream.text();
 
   if (!rawBody.trim()) {
-    if (upstream.status === 204 || options.method === 'PATCH' || options.method === 'DELETE') {
+    if (upstream.status === 204) {
       return null as T;
     }
 

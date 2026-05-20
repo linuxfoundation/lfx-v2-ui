@@ -102,7 +102,7 @@ export class EnrollmentService {
     }
 
     const baseUrl = getApiGatewayBaseUrl('update_individual_enrollment_auto_renew', ENROLLMENT_SERVICE);
-    const url = `${baseUrl}/member-service/v2/memberships/${membershipId}`;
+    const url = `${baseUrl}/member-service/v2/memberships/${encodeURIComponent(membershipId)}`;
 
     const today = new Date().toISOString().slice(0, 10);
     const payload = {

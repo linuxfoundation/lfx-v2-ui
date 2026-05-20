@@ -70,8 +70,12 @@
               @if (item.membership.ExtPaymentType === 'stripe') {
                 @if (item.displayStatus !== 'Expired') {
                   <span class="flex items-center gap-2" data-testid="individual-enrollment-auto-renew-toggle">
-                    <p-toggleSwitch [ngModel]="item.membership!.AutoRenew" (onChange)="onToggleAutoRenew(item, $event.checked)" [disabled]="isPending(item)" />
-                    <span class="font-medium">Auto Renew</span>
+                    <p-toggleSwitch
+                      [inputId]="'auto-renew-' + item.membership!.ID"
+                      [ngModel]="item.membership!.AutoRenew"
+                      (onChange)="onToggleAutoRenew(item, $event.checked)"
+                      [disabled]="isPending(item)" />
+                    <label class="font-medium" [attr.for]="'auto-renew-' + item.membership!.ID">Auto Renew</label>
                   </span>
                 } @else {
                   <span>

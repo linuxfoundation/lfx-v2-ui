@@ -28,12 +28,13 @@ import { EnrollmentService } from '@services/enrollment.service';
   templateUrl: './profile-individual-enrollment.component.html',
   styleUrl: './profile-individual-enrollment.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [ConfirmationService, MessageService],
+  providers: [ConfirmationService, MessageService, DatePipe],
 })
 export class ProfileIndividualEnrollmentComponent {
   private readonly enrollmentService = inject(EnrollmentService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
+  private readonly datePipe = inject(DatePipe);
 
   protected readonly enrollments = signal<DisplayEnrollment[] | null | undefined>(undefined);
   protected readonly enrollmentError = signal<string | null>(null);
@@ -82,6 +83,7 @@ export class ProfileIndividualEnrollmentComponent {
     if (!item.membership || this.isPending(item)) return;
 
     const membershipId = item.membership.ID;
+    const originalValue = item.membership.AutoRenew;
 
     // Optimistically apply new value so the toggle does not flicker back
     this.autoRenewOverrides.update((m) => {
@@ -90,9 +92,7 @@ export class ProfileIndividualEnrollmentComponent {
       return next;
     });
 
-    const endDate = item.membership.EndDate
-      ? new Date(item.membership.EndDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
-      : '';
+    const endDate = item.membership.EndDate ? (this.datePipe.transform(item.membership.EndDate, 'mediumDate', 'UTC') ?? '') : '';
     const message = newValue
       ? `This will Enable auto renew for your membership, your next payment will be charged on ${endDate}.`
       : `This will Disable auto renew for your membership, your current membership will expire on ${endDate}.`;
@@ -104,12 +104,12 @@ export class ProfileIndividualEnrollmentComponent {
       rejectLabel: 'Cancel',
       acceptButtonStyleClass: 'p-button-primary p-button-sm',
       rejectButtonStyleClass: 'p-button-text p-button-sm',
-      accept: () => void this.performAutoRenewUpdate(membershipId, newValue),
-      reject: () => this.revertAutoRenewOverride(membershipId, !newValue),
+      accept: () => void this.performAutoRenewUpdate(membershipId, newValue, originalValue),
+      reject: () => this.revertAutoRenewOverride(membershipId, originalValue),
     });
   }
 
-  private performAutoRenewUpdate(membershipId: string, newValue: boolean): void {
+  private performAutoRenewUpdate(membershipId: string, newValue: boolean, originalValue: boolean): void {
     this.pendingIds.update((s) => new Set([...s, membershipId]));
 
     this.enrollmentService
@@ -138,7 +138,7 @@ export class ProfileIndividualEnrollmentComponent {
             summary: 'Error',
             detail: 'Failed to update membership, please try again',
           });
-          this.revertAutoRenewOverride(membershipId, !newValue);
+          this.revertAutoRenewOverride(membershipId, originalValue);
         },
       });
   }
