@@ -365,13 +365,13 @@ async function gracefulShutdown(signal: string): Promise<void> {
   if (isShuttingDown()) return;
   markShuttingDown(); // flip /readyz to 503 synchronously before anything async runs
 
-  const startTime = logger.startOperation(undefined, 'shutdown_initiated', { signal });
+  const startTime = logger.startOperation(undefined, 'graceful_shutdown', { signal });
 
   // Run registered hooks (closes SSE streams).
   await runShutdownHooks();
 
   if (!httpServer) {
-    logger.success(undefined, 'shutdown_complete', startTime, { reason: 'no_http_server' });
+    logger.success(undefined, 'graceful_shutdown', startTime, { reason: 'no_http_server' });
     process.exit(0);
     return;
   }
@@ -400,18 +400,20 @@ async function gracefulShutdown(signal: string): Promise<void> {
 
   await Promise.allSettled([
     raceDrain(
-      NatsService.shutdownAll().then(() => {
-        logger.info(undefined, 'shutdown_nats_drained', 'NATS connections drained', {});
-      })
+      NatsService.shutdownAll().then(
+        () => { logger.info(undefined, 'shutdown_nats_drained', 'NATS connections drained', {}); },
+        (err) => { logger.warning(undefined, 'shutdown_nats_drain_failed', 'NATS drain failed', { err }); }
+      )
     ),
     raceDrain(
-      SnowflakeService.shutdownIfInitialized().then(() => {
-        logger.info(undefined, 'shutdown_snowflake_drained', 'Snowflake pool drained', {});
-      })
+      SnowflakeService.shutdownIfInitialized().then(
+        () => { logger.info(undefined, 'shutdown_snowflake_drained', 'Snowflake pool drained', {}); },
+        (err) => { logger.warning(undefined, 'shutdown_snowflake_drain_failed', 'Snowflake drain failed', { err }); }
+      )
     ),
   ]);
 
-  logger.success(undefined, 'shutdown_complete', startTime, {});
+  logger.success(undefined, 'graceful_shutdown', startTime, {});
   process.exit(0);
 }
 
