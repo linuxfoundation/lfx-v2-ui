@@ -14,7 +14,10 @@ export interface GatewayFetchOptions {
   service: string;
   errorMessage: string;
   errorCode: string;
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  body?: unknown;
+  /** When provided, overrides req.apiGatewayToken as the Authorization token. */
+  bearerToken?: string;
 }
 
 /**
@@ -23,7 +26,9 @@ export interface GatewayFetchOptions {
  * empty bodies, and invalid JSON — all surfaced as MicroserviceError.
  */
 export async function gatewayFetch<T>(req: Request, url: string, options: GatewayFetchOptions): Promise<T> {
-  if (!req.apiGatewayToken) {
+  const token = options.bearerToken ?? req.apiGatewayToken;
+
+  if (!token) {
     throw new MicroserviceError(
       'API Gateway token not available — check API_GW_AUDIENCE env var, auth middleware config, and server logs for M2M token failures',
       503,
@@ -35,11 +40,16 @@ export async function gatewayFetch<T>(req: Request, url: string, options: Gatewa
     );
   }
 
+  const hasBody = options.body !== undefined;
   let upstream: Response;
   try {
     upstream = await fetch(url, {
       method: options.method ?? 'GET',
-      headers: { Authorization: `Bearer ${req.apiGatewayToken}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+      },
+      ...(hasBody ? { body: JSON.stringify(options.body) } : {}),
       signal: AbortSignal.timeout(API_GW_TIMEOUT_MS),
     });
   } catch (error: unknown) {
@@ -85,6 +95,10 @@ export async function gatewayFetch<T>(req: Request, url: string, options: Gatewa
   const rawBody = await upstream.text();
 
   if (!rawBody.trim()) {
+    if (upstream.status === 204 || options.method === 'PATCH' || options.method === 'DELETE') {
+      return null as T;
+    }
+
     logger.warning(req, options.operation, 'Upstream returned empty response body', {
       status: upstream.status,
       status_text: upstream.statusText,
