@@ -55,12 +55,13 @@ git fetch origin main
 [ "$BASE_REF" = "main" ] || git fetch origin "$BASE_REF"
 git fetch origin "+pull/<N>/head:refs/pr/<N>/head"
 
-# Verify HEAD is the PR's branch (required so Phase 2's `branch` mode diff against
-# main is the PR's diff). Author scenarios pass naturally; external reviewers need
-# to run `gh pr checkout <N>` first (will switch branches; commit/stash first).
-HEAD_REF=$(jq -r '.headRefName' /tmp/pr-<N>-meta.json)
-CURRENT=$(git rev-parse --abbrev-ref HEAD)
-[ "$CURRENT" = "$HEAD_REF" ] || { echo "HEAD is '$CURRENT' but PR head is '$HEAD_REF'. Run: gh pr checkout <N>"; exit 1; }
+# Verify HEAD points at the PR's tip commit (required so Phase 2's `branch` mode diff
+# against main is the PR's diff). Compare HEAD's commit SHA to the fetched
+# refs/pr/<N>/head — works whether the reviewer is on the PR's branch, on a
+# differently-named local branch (gh pr checkout collisions), or in detached HEAD.
+# If commits differ, external reviewers run `gh pr checkout <N>` first (commit/stash
+# any uncommitted work first; `gh pr checkout` switches branches).
+[ "$(git rev-parse HEAD)" = "$(git rev-parse refs/pr/<N>/head)" ] || { echo "HEAD is not at the PR's tip commit. Run: gh pr checkout <N>"; exit 1; }
 ```
 
 **Shell-state caveat:** the Bash tool runs each invocation in an isolated shell — `cwd` persists, but environment variables do **not** survive across calls. Every later phase that needs `$BASE_REF` / `$HEAD_REF` / `$AUTHOR` must re-derive them at the top of its own Bash invocation:
@@ -160,7 +161,7 @@ If the author has fewer than 5 merged PRs to this repo, mark the review as **edu
 
 ## Phase 6 — Wait for the review subagent
 
-Wait for the background subagent launched by `/lfx-self-serve-code-review` in Phase 2 to complete. It returns a markdown review report (Protected files / Upstream API validation / Findings).
+Wait for the background subagent launched by `/lfx-self-serve-code-review` in Phase 2 to complete. It returns a markdown review report with three sections: General review / Upstream API validation / Repo conventions.
 
 ## Phase 7 — Compile context for `/review`
 
@@ -169,7 +170,7 @@ Assemble a single text block containing:
 1. **PR summary** — number, title, author, additions/deletions, branch
 2. **Previous-comment verification table** (Phase 3) — or "No previous review comments found"
 3. **PR-shape findings** (Phase 4) — pre-PR checks plus PR-title and external-refs
-4. **Code review report** (Phase 6) — embed the markdown report from the code-review subagent verbatim. The report already contains Protected files touched, Upstream API validation, and Findings sections.
+4. **Code review report** (Phase 6) — embed the markdown report from the code-review subagent verbatim. The report contains General review, Upstream API validation, and Repo conventions sections.
 5. **Educational mode flag** (Phase 5) — if set, instruct `/review` to cite rule files inline and explain the _why_
 6. **Extra user instructions** (Phase 1) — relay as-is
 
@@ -184,8 +185,8 @@ Print the compiled context as a structured draft:
 1. **PR summary** — number, title, author, size, branch
 2. **Phase 3 table** — previous comments and whether they were addressed
 3. **PR-shape sanity** — table from Phase 4 findings
-4. **Code review report** — the markdown report from the code-review subagent (Protected files / Upstream API / Findings)
-5. **Proposed inline comments** — derived from PR-shape findings + the Findings bullets in the code review report (parse `- **<file>:<line>** (conf <N>) — <message>. _Source:_ <rule>. _Fix:_ <suggestion>.`). One numbered block per: file:line, severity, rule citation, message, suggested fix.
+4. **Code review report** — the markdown report from the code-review subagent (General review / Upstream API / Repo conventions)
+5. **Proposed inline comments** — derived from PR-shape findings + the General-review and Repo-conventions bullets in the code review report. General-review bullets follow `- **<file>:<line>** (conf <N>) — <message>. _Fix:_ <suggestion>.`; Repo-conventions bullets add a `_Source:_ <rule citation>` clause. One numbered block per: file:line, severity, rule citation (when present), message, suggested fix.
 6. **Proposed review body** — the summary text that would appear at the top of the review
 7. **Proposed review verdict** — COMMENT / APPROVE / REQUEST_CHANGES, with reasoning
 8. **Educational mode note** (if Phase 5 flagged it) — "First-time contributor — review tone will be educational; rule citations included inline."
@@ -212,7 +213,7 @@ Include in the args:
 
 - The PR number
 - The compiled context block (previous-comment verification, PR-shape findings, code review report, educational-mode flag, extra instructions)
-- A reminder to use the code review report's Findings bullets as the primary finding source
+- A reminder to use the code review report's General-review + Repo-conventions bullets as the primary finding source
 
 If the user said "don't post", stop here and leave the draft in the terminal for their reference — do not invoke `/review` or any PR-mutating `gh` command.
 
@@ -240,6 +241,7 @@ The launched subagent's playbook reads these files from disk in Step 2. They're 
 
 - `CLAUDE.md` (project + global)
 - `.claude/rules/*.md` (every rule file, globbed dynamically)
-- `.claude/hooks/guard-protected-files.sh` (parsed for protected paths)
 - **`docs/reviews/{backend,frontend,shared-and-sql,docs}-checklist.md`** — the primary audit surface; the agent treats these as mandatory reading whenever the matching path type is in the diff
 - `docs/architecture/**` (routed conditionally by changed-file paths)
+
+(Protected-file detection lives in `/lfx-self-serve-pr-readiness`, walked by this skill body in Phase 4 — not by the code-review subagent.)

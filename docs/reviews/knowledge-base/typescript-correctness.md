@@ -22,15 +22,15 @@ TypeScript-soundness and async-lifecycle patterns CodeRabbit + Copilot flag — 
 
 ## `typescript-correctness/snake-vs-camel-case-shared-interface` — Important
 
-**Pattern:** a shared interface in `packages/shared/src/interfaces/**` mixes snake_case and camelCase field names within the same type (e.g., `votesFor` next to `created_by`), or introduces a camelCase field on an interface whose siblings are snake_case. Forces ad-hoc mapping at every consumer; high risk of silent payload-shape drift when the upstream is snake_case.
+**Pattern:** a shared interface in `packages/shared/src/interfaces/**` introduces a camelCase field whose name implies it's part of the upstream API payload (e.g., `votesFor`, `joinTier`, `myRole`) but the rest of the interface uses snake_case to match Go service responses. The risk is silent payload-shape drift: the camelCase field is on the response-shape interface but never arrives in the response, so consumers read `undefined` at runtime.
 
-**Detect:** in any modified `packages/shared/src/interfaces/**.ts`, scan each interface body for case-style mixing. The repo convention is snake_case for API-payload interfaces (to match Go service responses). Allow camelCase only for explicitly-flagged UI-only view models in a separate `ui-*.interface.ts` file.
+**Detect:** in any modified `packages/shared/src/interfaces/**.ts`, scan each interface body for case-style mixing. Treat as a finding only when the camelCase field LOOKS like an API-payload field. **Exception:** camelCase fields are allowed when JSDoc on the field explicitly documents them as UI-populated / view-only (the convention seen on `Committee.behavioralClass` + `Committee.classDisplay` — populated by the UI before binding, never sent by the server). Findings without a JSDoc UI-only marker on the camelCase field are flagged.
 
 **Empirical citation:** PR #292 `packages/shared/src/interfaces/committee.interface.ts:111` — "`GroupEligibility` uses camelCase keys (`joinTier`, `chairTier`, `votingTier`) while most shared interfaces in this repo use snake_case to match API payloads." Same PR flagged `MyCommittee` at `:268` (`myRole`, `myMemberUid` mixed) and `CommitteeVote` at `:362` (`votesFor`/`votesAgainst` mixed with `created_by`).
 
-**Failure message:** Shared interface mixes snake_case and camelCase — payload mapping ambiguity.
+**Failure message:** Shared interface mixes snake_case and camelCase without a UI-only JSDoc marker on the camelCase field — payload mapping ambiguity.
 
-**Fix:** pick snake_case for API-contract interfaces (the repo default — matches the Go service's `json:"..."` tags). For UI-only view models, isolate in a separate file and document the boundary mapping. Don't mix in one interface.
+**Fix:** either rename the camelCase field to snake_case (if it's part of the API payload), or add a JSDoc marker on the field explaining it's UI-populated/view-only (matches the `behavioralClass` / `classDisplay` convention).
 
 ---
 
