@@ -11,7 +11,6 @@ export interface OrgActiveMembership {
   foundationId: string;
   foundationName: string;
   foundationLogo: string | null;
-  foundationInitials: string;
   projectCount: number;
   memberCount: number;
   membershipTier: string;
@@ -32,8 +31,7 @@ export interface OrgActiveMembershipsResponse {
 export interface OrgExpiredMembership {
   foundationId: string;
   foundationName: string;
-  foundationInitials: string;
-  foundationColor: string;
+  foundationLogo: string | null;
   membershipTier: string;
   tierStartDate: string;
   tierEndDate: string;
@@ -49,8 +47,7 @@ export interface OrgExpiredMembershipsResponse {
 export interface OrgDiscoverOpportunity {
   foundationId: string;
   foundationName: string;
-  foundationInitials: string;
-  foundationColor: string;
+  foundationLogo: string | null;
   category: string;
   suggestedTier: string;
   relevantProjects: number;

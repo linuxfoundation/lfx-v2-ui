@@ -39,7 +39,7 @@ export class OrgLensMembershipsController {
       const tier = req.query['tier'] as string | undefined;
       const renewal = req.query['renewal'] as string | undefined;
 
-      const response = this.service.getActiveMemberships(accountId, search, tier, renewal);
+      const response = await this.service.getActiveMemberships(accountId, search, tier, renewal);
 
       logger.success(req, 'get_org_lens_memberships_active', startTime, {
         account_id: accountId,
@@ -74,7 +74,7 @@ export class OrgLensMembershipsController {
 
       const search = req.query['search'] as string | undefined;
 
-      const response = this.service.getExpiredMemberships(accountId, search);
+      const response = await this.service.getExpiredMemberships(accountId, search);
 
       logger.success(req, 'get_org_lens_memberships_expired', startTime, {
         account_id: accountId,
@@ -107,7 +107,7 @@ export class OrgLensMembershipsController {
         });
       }
 
-      const response = this.service.getDiscoverOpportunities(accountId);
+      const response = await this.service.getDiscoverOpportunities(accountId);
 
       logger.success(req, 'get_org_lens_memberships_discover', startTime, {
         account_id: accountId,
