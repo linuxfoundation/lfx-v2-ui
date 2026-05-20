@@ -1,12 +1,12 @@
 ---
 name: lfx-self-serve-learnings-review
-description: "Post-commit empirical-pattern review for lfx-self-serve. Matches the diff against `docs/reviews/knowledge-base/` — patterns extracted from past PR review comments on this repo. Findings are gated by KB matches: every finding must quote a pattern entry; unsourced findings are dropped. Skill body launches a code-reviewer subagent in the background that renders a markdown review of the cumulative branch state."
+description: "Post-commit empirical-pattern review for lfx-self-serve. Matches the diff against `docs/reviews/knowledge-base/` — patterns extracted from past PR review comments on this repo. Findings are gated by KB matches: every finding must quote a pattern entry; unsourced findings are dropped. Skill body launches a general-purpose subagent in the background that renders a markdown review of the cumulative branch state."
 allowed-tools: Agent
 ---
 
-Launch a subagent in the background (`subagent_type: code-reviewer`, `run_in_background: true`) with the **entire content below** as the Agent `prompt` parameter. Append the caller's runtime args (`base`, `extra`) at the end so the subagent sees both the playbook and its inputs.
+Launch a subagent in the background (`subagent_type: general-purpose`, `run_in_background: true`) with the **entire content below** as the Agent `prompt` parameter. Append the caller's runtime args (`base`, `extra`) at the end so the subagent sees both the playbook and its inputs.
 
-**Launcher discipline — non-negotiable:** pass the playbook **verbatim**. The playbook contains its own routing logic (Step 2 picks which pattern files in `docs/reviews/knowledge-base/` to load based on changed paths). Trimming it strips routing → the subagent can't quote pattern entries that weren't loaded → Step 3's KB-match gate collapses → Step 4 false-positive filtering breaks → severity (taken per-entry) and the report template drift.
+**Launcher discipline — non-negotiable:** pass the playbook **verbatim**. The playbook contains its own routing logic (Step 2 picks which pattern files in `docs/reviews/knowledge-base/` to load based on changed paths). Trimming it strips routing → the subagent can't quote pattern entries that weren't loaded → Step 3's KB-match gate collapses → Step 4 false-positive filtering breaks → confidence mapping and the report template drift.
 
 ---
 
@@ -79,15 +79,15 @@ Each pattern entry uses this format:
 **Fix:** how to fix.
 ```
 
-If a routed pattern file fails to load, mark the verdict **INCOMPLETE** in Step 6.
+If a routed pattern file fails to load, mark the report **INCOMPLETE** in Step 6.
 
 ## Step 3 — KB match pass
 
 For each pattern entry in every loaded pattern file (excluding `known-false-positives.md`):
 
 1. **Check `**Detect:**`** — use grep / file reads as the entry directs. Don't infer the match from the `**Pattern:**` description alone; the `**Detect:**` clause is the operational rule.
-2. **If matched, emit a finding:**
-   - **Severity:** taken from the entry header (CRITICAL / SHOULD_FIX / NIT) — don't promote, don't demote.
+2. **If matched, emit a finding** with:
+   - **Confidence** derived from the entry's severity header: `CRITICAL` → 90-100, `SHOULD_FIX` → 80-89, `NIT` → below 80 (suppressed by the floor in Step 6).
    - **Rule:** the entry's full ID (e.g., `security/secrets-in-diff`).
    - **Message:** the entry's `**Failure message:**`, scoped to the specific file + line.
    - **Fix:** the entry's `**Fix:**`.
@@ -106,42 +106,26 @@ If `extra` was passed, prioritise those areas when ordering the report. Don't su
 
 ## Step 6 — Render the report
 
-Print to terminal — no git mutations.
+Lead with what you're reviewing (branch, files changed, additions / deletions, pattern files loaded). Group findings by severity:
 
-```markdown
-# Post-commit learnings review (KB-matched)
+- **Critical** (confidence 90-100)
+- **Important** (confidence 80-89)
 
-**Branch:** `<current-branch>` → `<base>`
-**Files changed:** N | **Additions:** +A | **Deletions:** -D
-**Pattern files loaded:** <comma-separated short list>
-**Verdict:** NOT READY | READY WITH CHANGES | READY | INCOMPLETE
+Findings with confidence below 80 are suppressed.
 
-## Findings
+For each finding, include:
 
-Each finding cites its KB rule ID and quotes the pattern entry it matched.
+- Description scoped to file + line.
+- Confidence score.
+- File path and line number.
+- **Source:** the KB rule ID (e.g., `security/secrets-in-diff`) AND the quoted `**Pattern:**` or `**Detect:**` phrase that matched.
+- **Fix:** the KB entry's `**Fix:**` directly.
 
-### 🔴 Critical (N)
-- `<file>:<line>` — <message>. Source: `<rule>` ("<quoted Pattern: or Detect: phrase>"). Fix: <suggestion>.
+If no findings at or above the ≥80 confidence floor exist, confirm the code meets the empirical-pattern bar with a brief summary.
 
-### 🟡 Should fix (N)
-- ...
+If a routed pattern file couldn't be loaded, lead with `INCOMPLETE — couldn't load <file>` and recommend a re-run after the underlying issue is resolved.
 
-### 🔵 Nit (N)
-- ...
-
-## Verdict reasoning
-
-<one line per CRITICAL plus a roll-up>
-```
-
-If `extra` was applied, note it in the header.
-
-## Verdict rules
-
-- **NOT READY** — any CRITICAL.
-- **READY WITH CHANGES** — zero CRITICAL; SHOULD_FIX present.
-- **READY** — zero CRITICAL, zero SHOULD_FIX. NITs are fine to carry forward.
-- **INCOMPLETE** — a routed pattern file couldn't be loaded; re-run once resolved.
+If `extra` was applied, note it.
 
 ## Scope boundaries — NOT this skill's job
 
@@ -153,6 +137,6 @@ If `extra` was applied, note it in the header.
 
 - Be specific — every finding cites file + line.
 - Be actionable — quote the entry's `**Fix:**` directly.
-- Be fair — severity is what the entry says; don't promote NITs to CRITICAL.
+- Be fair — confidence is derived from the KB entry's severity header (per Step 3); don't bump it up or down based on intuition.
 - Don't invent pattern matches — quote the entry's exact phrase or drop the finding.
 - Don't blanket-read all pattern files — read ONLY the routed rows.

@@ -12,7 +12,7 @@ LFX One is a Turborepo monorepo containing an Angular 20 SSR application with st
 
 You have full file-edit authority in this session — different from a Cowork session where you generate prompts for someone else to execute. For pre-edit hygiene checks (re-read files, type-check after multi-file changes, etc.) invoke the `/develop` skill.
 
-**Lean on subagents.** Use the `Agent` tool for broad searches (`Explore`), independent parallel investigations (multiple Agent calls in one message), and context-heavy reads that would bloat the main thread. For the LFX post-commit audit, invoke the `lfx-self-serve-code-review` and `lfx-self-serve-learnings-review` skills in parallel — each skill body launches a `code-reviewer` subagent in the background with the full review playbook (see Work cycle scope rules). Default to delegating when the task is wide, parallel, or read-heavy.
+**Lean on subagents.** Use the `Agent` tool for broad searches (`Explore`), independent parallel investigations (multiple Agent calls in one message), and context-heavy reads that would bloat the main thread. For the LFX post-commit audit, invoke the `lfx-self-serve-code-review` and `lfx-self-serve-learnings-review` skills in parallel — each skill body launches a background subagent with the full review playbook (code-review uses `code-reviewer`; learnings-review uses `general-purpose` to keep the KB-only gate uncontested — see Work cycle scope rules). Default to delegating when the task is wide, parallel, or read-heavy.
 
 ## Domain language
 
@@ -274,7 +274,7 @@ Detailed patterns are in `.claude/rules/` and loaded contextually based on the `
 ### Post-commit (pre-PR phase, after every commit, parallel, asynchronous)
 
 1. **Commit your work.** `git commit --signoff -S`. Do not wait for any prior review to finish.
-2. **Immediately invoke both review skills in parallel** — issue two **Skill tool calls in a single message** (each skill body launches its `code-reviewer` subagent with `run_in_background: true`):
+2. **Immediately invoke both review skills in parallel** — issue two **Skill tool calls in a single message** (each skill body launches its background subagent with `run_in_background: true` — code-review uses `code-reviewer`, learnings-review uses `general-purpose`):
    - `lfx-self-serve-code-review`, args: `"mode: local\nbase: origin/main\nextra: <any focus>"`. Documented rule-surface audit against `.claude/rules/`, the four `docs/reviews/` checklists, architecture docs, upstream API contracts, and protected files. Constrained-audit mode — every finding quotes a loaded source. Renders a markdown review.
    - `lfx-self-serve-learnings-review`, args: `"base: origin/main\nextra: <any focus>"`. Empirical-pattern matching against `docs/reviews/knowledge-base/` — patterns sampled from past PR review comments on this repo. KB-gated — every finding quotes a pattern entry. Renders a markdown review.
 

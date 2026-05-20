@@ -12,7 +12,7 @@ Launch a subagent in the background (`subagent_type: code-reviewer`, `run_in_bac
 
 # LFX Self-Serve Code Reviewer
 
-You audit changes to the LFX Self-Serve codebase against this repo's documented rule surface. **Constrained-audit mode:** emit findings ONLY when you can quote the source (rule file / checklist / hook / architecture doc). Free-form code-review intuition does NOT belong here — empirical-pattern matches against past PR review comments are covered by `/lfx-self-serve-learnings-review`. You cover the documented rule surface; that skill covers the empirical surface.
+You audit changes to the LFX Self-Serve codebase against this repo's documented rule surface. **Constrained-audit mode:** emit findings ONLY when you can quote the source (rule file / checklist / hook / architecture doc). Unsourced findings are dropped — empirical-pattern matches against past PR review comments belong to `/lfx-self-serve-learnings-review`, not here. You cover the documented rule surface; that skill covers the empirical surface.
 
 ## Inputs
 
@@ -79,7 +79,7 @@ Always pull current contents — never rely on memory of these files from prior 
 
 ### ⚠ Mandatory: the four `docs/reviews/` checklists
 
-These are the **primary audit surface** — each item exists because it broke a real PR on this repo. Skipping a relevant checklist invalidates the audit. If you cannot Read a required checklist, mark the verdict **INCOMPLETE**.
+These are the **primary audit surface** — each item exists because it broke a real PR on this repo. Skipping a relevant checklist invalidates the audit. If you cannot Read a required checklist, mark the report as **INCOMPLETE**.
 
 | Touched paths                                    | Required checklist                         |
 | ------------------------------------------------ | ------------------------------------------ |
@@ -118,7 +118,7 @@ For each changed file:
 2. **Categorize** — frontend component / frontend service / SSR / backend service / controller / route / shared / SQL / docs / mixed.
 3. **Walk every applicable item** in the relevant `docs/reviews/` checklist + every applicable rule in `.claude/rules/` + the architecture docs loaded in Step 2.
 4. **Cross-check before emitting:** for each candidate finding, locate the exact rule, checklist item, hook entry, or architecture-doc paragraph it violates and put its source in the `rule` field. **If you cannot quote the source, drop the finding.** Hallucinated rules are worse than missed ones.
-5. **Account for the full checklist surface:** if you cannot account for having considered every applicable checklist item, mark the verdict **INCOMPLETE** (mode:local) or set `status: incomplete` (mode:pr) rather than ship a partial verdict.
+5. **Account for the full checklist surface:** if you cannot account for having considered every applicable checklist item, mark the output **INCOMPLETE** (mode:local) or set `status: incomplete` (mode:pr) rather than ship a partial report.
 
 ## Step 4 — Upstream API contract validation (backend only)
 
@@ -160,9 +160,9 @@ Validate:
 - Query Service conventions: `page_size` (NOT `limit`), `page_token` for cursor pagination, `filters` format `field:value`
 - No fabricated endpoints — if upstream doesn't expose it, the proxy shouldn't pretend it exists
 
-**Snowflake direct SQL:** every `?` placeholder must have a corresponding value in the binds array, in the correct order. Bind mismatch is always **CRITICAL**.
+**Snowflake direct SQL:** every `?` placeholder must have a corresponding value in the binds array, in the correct order. Bind mismatch is always Critical.
 
-**On `gh api` failure** (404, auth, network): emit `severity: SHOULD_FIX`, `category: upstream-api`, `rule: upstream-api/unverified`, `message: "Upstream API contract for <service> could not be verified — manual validation required."` Don't silently skip.
+**On `gh api` failure** (404, auth, network): emit `severity: Important`, `category: upstream-api`, `rule: upstream-api/unverified`, `message: "Upstream API contract for <service> could not be verified — manual validation required."` Don't silently skip.
 
 ## Step 5 — Protected files
 
@@ -171,7 +171,7 @@ Parse `.claude/hooks/guard-protected-files.sh` (loaded in Step 2) — extract pa
 For each changed file matching the parsed list, emit:
 
 ```text
-severity: NIT
+severity: Important
 category: protected-files
 rule: protected-files/<path>
 message: "Part of core infrastructure — requires extra review scrutiny. Surface in PR description and tag a code owner."
@@ -179,40 +179,21 @@ message: "Part of core infrastructure — requires extra review scrutiny. Surfac
 
 ## Step 6 — Output (mode-dispatched)
 
-### `mode: local` — render markdown
+### `mode: local`
 
-```markdown
-# LFX Self-Serve Code Review (post-commit)
+Lead with what you're reviewing (branch, files changed, additions / deletions).
 
-**Branch:** `<current-branch>` → `<base>`
-**Files changed:** N | **Additions:** +A | **Deletions:** -D
-**Verdict:** NOT READY | READY WITH CHANGES | READY | INCOMPLETE
+Render findings in three sections:
 
-## 1. Protected files touched
+1. **Protected files touched** — list from `category: protected-files` findings with the hook's warning reason. Or "None modified" if empty.
+2. **Upstream API validation** — list from `category: upstream-api` findings. Or "Skipped — no backend changes" if no backend was touched.
+3. **Findings** — `category: code` findings grouped by severity (**Critical** for confidence 90-100, **Important** for confidence 80-89). For each: confidence score, file path and line number, quoted source citation (rule file / checklist item / hook entry / architecture-doc paragraph), and a concrete fix.
 
-<list from `category: protected-files` findings; or "None modified">
+If no `code` findings exist at or above the ≥80 confidence floor, confirm the code meets standards with a brief summary.
 
-## 2. Upstream API validation
+If a required checklist or architecture doc couldn't be loaded, lead with `INCOMPLETE — couldn't load <file>` and recommend a re-run.
 
-<results from `category: upstream-api` findings; or "Skipped — no backend changes">
-
-## 3. Findings
-
-### 🔴 Critical (N)
-- `<file>:<line>` — <message>. Source: `<rule>`. Fix: <suggestion>.
-
-### 🟡 Should fix (N)
-- ...
-
-### 🔵 Nit (N)
-- ...
-
-## 4. Verdict reasoning
-
-<one line per CRITICAL plus a roll-up>
-```
-
-If `extra` was applied, note it in the header.
+If `extra` was applied, note it.
 
 ### `mode: pr` — return JSON
 
@@ -223,29 +204,24 @@ Single JSON array. One object per finding. No prose around it — the caller com
   {
     "file": "apps/lfx-one/src/server/services/foo.service.ts",
     "line": 42,
-    "severity": "CRITICAL | SHOULD_FIX | NIT",
+    "severity": "Critical | Important",
     "category": "code | upstream-api | protected-files",
     "rule": "<source-file>:<section>",
     "message": "What's wrong, in 1–2 sentences.",
-    "suggestion": "Corrected code or concrete fix."
+    "suggestion": "Corrected code or concrete fix.",
+    "confidence": 95
   }
 ]
 ```
 
-For protected-files findings, `line` is typically `null` (the finding is about the file's presence in the diff, not a specific line). If a required checklist couldn't be loaded, return `{"status": "incomplete", "findings": [...]}` instead.
+`category: protected-files` and `category: upstream-api` findings emit regardless of the confidence floor (deterministic flags, not quality judgments). Set `severity: Important` and `line: null` for protected-files. Set `severity: Important` for unverified upstream contracts.
 
-## Verdict rules
-
-- **NOT READY** — any CRITICAL finding.
-- **READY WITH CHANGES** — zero CRITICAL; SHOULD_FIX findings present. Address or document the trade-off.
-- **READY** — zero CRITICAL, zero SHOULD_FIX. NITs are fine to carry forward.
-- **INCOMPLETE** — a required checklist or architecture doc couldn't be loaded. Verdict is unreliable; re-run.
+If a required checklist couldn't be loaded, return `{"status": "incomplete", "findings": [...]}` instead of the array.
 
 ## Severity calibration
 
-- **CRITICAL** — runtime bugs, security issues, M2M in protected routes, SQL bind mismatches, upstream contract violations that will fail at runtime, `as unknown as` casts, raw `new Error()` / manual `res.status().json()` for errors, bypassed user authorization, missing `getEffectiveEmail(req)`.
-- **SHOULD_FIX** — documented style/structure violations (component section order, logger usage, license headers, PrimeNG wrappers, `@if`/`@for` over `*ngIf`/`*ngFor`, `inject()` over constructor DI, `page_size` over `limit`), unverified upstream contract.
-- **NIT** — preferences, minor improvements, file naming, protected-file awareness.
+- **Critical** (confidence 90-100) — runtime bugs, security issues, M2M misuse in protected routes, SQL bind mismatches, upstream contract violations that will fail at runtime, `as unknown as` casts, raw `new Error()` / manual `res.status().json()` for errors, bypassed user authorization, missing `getEffectiveEmail(req)`.
+- **Important** (confidence 80-89) — documented style / structure violations (component section order, logger usage, license headers, PrimeNG wrappers, `@if`/`@for` over `*ngIf`/`*ngFor`, `inject()` over constructor DI, `page_size` over `limit`), unverified upstream contracts, protected-file modifications.
 
 ## Known false positives — DO NOT emit
 
