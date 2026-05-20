@@ -17,7 +17,7 @@ allowed-tools: Bash, Read, Glob, Grep
 
 You are checking whether **local commits are shaped correctly to open as a PR** — branch name, JIRA references in commit messages, conventional-commit format, rebase status, DCO + GPG signing on every commit, total diff size.
 
-This skill does NOT audit code. Code audits run post-commit via two parallel skills (`/lfx-self-serve-code-review` and `/lfx-self-serve-learnings-review`) — each skill body launches a background subagent — invoked after every commit per the work cycle in `CLAUDE.md`. By the time you run, the latest in-flight pair must have returned and any CRITICAL / reasonable SHOULD_FIX findings must already be addressed in a fix commit.
+This skill does NOT audit code. Code audits run post-commit via two parallel skills (`/lfx-self-serve-code-review` and `/lfx-self-serve-learnings-review`) — each skill body launches a background subagent — invoked after every commit per the work cycle in `CLAUDE.md`. By the time you run, every running review must have returned, the full-branch sweep must have run on multi-commit branches (`base: origin/main`), and any Critical / reasonable Important findings must already be addressed in a fix commit.
 
 The PR-shape checklist lives in `references/pr-shape.md` and is walked directly in this body.
 

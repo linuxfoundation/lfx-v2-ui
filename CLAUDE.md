@@ -258,7 +258,7 @@ Detailed patterns are in `.claude/rules/` and loaded contextually based on the `
 - ❌ Reference browser-only APIs without `isPlatformBrowser`
 - ❌ Mix module concerns in one change
 - ❌ Open a PR without invoking the post-commit review pair (`lfx-self-serve-code-review` + `lfx-self-serve-learnings-review` skills, in parallel) after every pre-PR commit and draining the queue clean — both reviews are non-negotiable pre-PR
-- ❌ Push the pre-PR queue before every in-flight review pair has returned and every Critical finding is addressed (the queue must be drained at the PR boundary; once the PR is open, the bots become the audit surface and the pair is no longer invoked)
+- ❌ Push the pre-PR queue before every running review has returned and every Critical finding is addressed (the queue must be drained at the PR boundary; once the PR is open, the bots become the audit surface and the pair is no longer invoked)
 - ❌ Open a multi-commit PR without running the pre-PR full-branch sweep (`base: origin/main`) — per-commit reviews can miss cross-commit drift
 - ❌ Open a PR without running `/lfx-self-serve-pr-readiness` to a clean verdict — also non-negotiable
 - ❌ Open a PR without DCO sign-off + GPG (`--signoff -S`)
@@ -268,29 +268,33 @@ Detailed patterns are in `.claude/rules/` and loaded contextually based on the `
 
 ## Work cycle — post-commit and pre-PR reviews
 
-> **CRITICAL — while the branch is pre-PR, post-commit reviews are mandatory.** After every commit on the local branch, invoke the `lfx-self-serve-code-review` AND `lfx-self-serve-learnings-review` skills in parallel via the Skill tool — each skill body launches its background subagent — then keep working while they run. Before opening a PR, every in-flight pair must return clean (or remaining findings explicitly documented as trade-offs), the **full-branch sweep** must run clean if the branch has more than one commit (`base: origin/main`), AND `/lfx-self-serve-pr-readiness` must pass (branch / JIRA / commits / DCO + GPG / rebase / diff size). The reviewers' time is the most expensive resource in this workflow — never skip, save for later, or assume changes are "small enough" to bypass.
+> **CRITICAL — while the branch is pre-PR, post-commit reviews are mandatory.** After every commit on the local branch, invoke the `lfx-self-serve-code-review` AND `lfx-self-serve-learnings-review` skills in parallel via the Skill tool — each skill body launches its background subagent — then keep working while they run. Before opening a PR, every running review must return clean (or remaining findings explicitly documented as trade-offs), the **full-branch sweep** must run clean if the branch has more than one commit (`base: origin/main`), AND `/lfx-self-serve-pr-readiness` must pass (branch / JIRA / commits / DCO + GPG / rebase / diff size). The reviewers' time is the most expensive resource in this workflow — never skip, save for later, or assume changes are "small enough" to bypass.
 >
 > **Once the PR is open, do NOT invoke the review skill pair on iteration commits.** CodeRabbit + Copilot auto-trigger on every push and own the audit surface from that point — stacking skill-launched audits on top adds latency without proportional signal. The pair is pre-PR insurance only. (For substantive new work pushed to an open PR, judgment applies; default is still to skip.)
 
 ### Post-commit (pre-PR phase, after every commit, parallel, asynchronous)
 
 1. **Commit your work.** `git commit --signoff -S`. Do not wait for any prior review to finish.
-2. **Immediately invoke both review skills in parallel** — issue two **Skill tool calls in a single message** (each skill body launches its background subagent with `run_in_background: true` — code-review uses `code-reviewer`, learnings-review uses `general-purpose`). Each audits **only the latest commit** by default; pass `base: <ref>` (e.g., `origin/main`) to audit the cumulative diff against that base — used for the pre-PR full-branch sweep:
-   - `lfx-self-serve-code-review`, args: `"extra: <any focus>"` (or empty). Documented rule-surface audit against `.claude/rules/`, the four `docs/reviews/` checklists, architecture docs, upstream API contracts, and protected files. Constrained-audit mode — every finding quotes a loaded source. Renders a markdown review.
-   - `lfx-self-serve-learnings-review`, args: `"extra: <any focus>"` (or empty). Empirical-pattern matching against `docs/reviews/knowledge-base/` — patterns sampled from past PR review comments on this repo. KB-gated — every finding quotes a pattern entry. Renders a markdown review.
+2. **Immediately invoke both review skills in parallel — no args.** The default audits the commit you just made. Issue two **Skill tool calls in a single message**:
+   - **`lfx-self-serve-code-review`** — documented rule-surface audit (`.claude/rules/`, the four `docs/reviews/` checklists, architecture docs, upstream API contracts, protected files). Skill body launches a `code-reviewer` subagent with `run_in_background: true`. Renders a markdown review.
+   - **`lfx-self-serve-learnings-review`** — empirical-pattern matching against `docs/reviews/knowledge-base/` (patterns sampled from past PR review comments on this repo). Skill body launches a `general-purpose` subagent with `run_in_background: true`. Renders a markdown review.
 
-   **Launcher discipline — non-negotiable:** when each skill body loads, pass it **verbatim** as the Agent `prompt` parameter (the body itself spells this out at the top). Do not summarize, condense, paraphrase, or pre-route based on the diff — the playbook contains the subagent's own routing logic, and trimming it collapses the cross-check discipline (subagent can't quote rules not in its prompt), drifts severity calibration, and breaks the documented output template. Append the args (`extra`, `base`) at the end of the prompt so the subagent sees both the playbook and its inputs.
+   **Launcher discipline — non-negotiable:** pass each skill body **verbatim** as the Agent `prompt` parameter. The playbook contains the subagent's own routing logic; trimming or summarizing it breaks the cross-check discipline (subagent can't quote rules not in its prompt) and drifts severity calibration.
 3. **Keep working.** Start the next commit while the reviewers run. Do not block on them.
 4. **When a review pair returns:** read both reports. Roll every Critical finding and every reasonable Important finding into the next commit (a separate `fix(review): address findings` commit is fine; squashing is not required — the history shows review-driven iteration).
-5. **Multiple in-flight pairs is normal.** Each pair audits its own commit (not cumulative). If you've committed N+1 before the review for N returns, you'll get two separate reports — one for commit N, one for N+1. Read both as they arrive and address findings in subsequent commits.
+5. **It's fine to keep committing while reviews are still running.** Each pair audits its own commit (not cumulative). If you've committed N+1 before the review for N returns, you'll get two separate reports — one per commit. Read both as they arrive and address findings in subsequent commits.
 
 ### Pre-PR (drain the queue, sweep cumulative state, then open)
 
 When the work is "done" — no more code commits planned:
 
-1. **Wait for every in-flight review pair** invoked by recent commits — each pair audits one commit, so all of them need to have returned. Do not push while any pair is still running.
+1. **Wait for every running review to complete.** Each pair audits one commit, so the pair invoked by every recent commit needs to have returned before you continue.
 2. **If any returned pair flags Critical or reasonable Important:** add a fix commit, invoke the pair again on the new state, wait. Loop until the pair returns clean (or remaining findings are explicitly documented in the PR description with a stated trade-off).
-3. **Full-branch sweep — only if the branch has more than one commit.** Invoke the pair one more time with `base: origin/main` (or whichever ref your branch targets) to audit the cumulative diff across all commits on the branch. Per-commit reviews can miss cross-commit drift — an issue introduced in commit N and only made dangerous by changes in commit N+2 wouldn't surface in either commit's individual review. This sweep catches it. Single-commit branches skip this step (the post-commit pair already audited the full content). Address any new findings, then re-run the sweep until clean.
+3. **Full-branch sweep — only if the branch has more than one commit.** Invoke both review skills again in parallel via the Skill tool, with the `base` arg pointing at your target ref so each audits the cumulative diff across all commits on the branch:
+   - **`lfx-self-serve-code-review`**, args: `"base: origin/main"`.
+   - **`lfx-self-serve-learnings-review`**, args: `"base: origin/main"`.
+
+   Same **launcher discipline** as post-commit: pass each skill body verbatim, args appended at the end. Per-commit reviews can miss cross-commit drift (an issue introduced in commit N and only made dangerous by commit N+2's changes wouldn't surface in either's individual review); the sweep catches it. Single-commit branches skip — already covered by the post-commit pair. Address any new findings, then re-run the sweep until clean.
 4. **Run `/lfx-self-serve-pr-readiness`** against the target base branch. PR-shape sanity: branch name, JIRA, conventional commits, rebase, DCO + GPG per commit, diff size. Does NOT audit code (covered by the post-commit pair and the full-branch sweep). Address every Critical. Rerun until clean.
 5. **Run `/preflight`** for license / format / lint / build / protected-file mechanical checks.
 6. **Only then push and open the PR.** (Reviewers run `/lfx-review-pr` against the open PR — that should not be your first standards check.)
