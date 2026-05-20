@@ -60,12 +60,29 @@ export class MainLayoutComponent {
     switch (this.activeLens()) {
       case 'foundation':
         return this.foundationLensItems();
-      case 'project':
+      case 'project': {
         // Governance (Votes / Surveys / Permissions) is always surfaced under Project lens —
         // matching Foundation lens behavior. Authorization for write actions (add user,
         // edit role, remove, etc.) is enforced server-side and by per-page UI gating where
         // implemented; pre-existing gaps in those gates are tracked separately.
-        return this.projectLensItemsWithGovernance;
+        const projectItems = [...this.projectLensItemsWithGovernance];
+        if (this.personaService.currentPersona() === 'executive-director') {
+          projectItems.push({
+            label: 'Communications',
+            isSection: true,
+            expanded: true,
+            items: [
+              {
+                label: 'Newsletters',
+                icon: 'fa-light fa-paper-plane',
+                routerLink: '/project/newsletters',
+                testId: 'sidebar-project-newsletters',
+              },
+            ],
+          });
+        }
+        return projectItems;
+      }
       case 'org':
         return this.isOrgLensEnabled() ? this.orgLensItems : this.meLensItems;
       default:
@@ -266,6 +283,20 @@ export class MainLayoutComponent {
     );
 
     if (this.personaService.currentPersona() === 'executive-director') {
+      items.push({
+        label: 'Communications',
+        isSection: true,
+        expanded: true,
+        items: [
+          {
+            label: 'Newsletters',
+            icon: 'fa-light fa-paper-plane',
+            routerLink: '/foundation/newsletters',
+            testId: 'sidebar-foundation-newsletters',
+          },
+        ],
+      });
+
       items.push({
         label: 'Metrics',
         isSection: true,
