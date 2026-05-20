@@ -31,15 +31,7 @@ interface DropdownOption {
 @Component({
   selector: 'lfx-org-memberships',
   standalone: true,
-  imports: [
-    FormsModule,
-    TableComponent,
-    TooltipModule,
-    SelectModule,
-    InputTextModule,
-    CardComponent,
-    EmptyStateComponent,
-  ],
+  imports: [FormsModule, TableComponent, TooltipModule, SelectModule, InputTextModule, CardComponent, EmptyStateComponent],
   templateUrl: './org-memberships.component.html',
 })
 export class OrgMembershipsComponent {
@@ -79,9 +71,7 @@ export class OrgMembershipsComponent {
   protected readonly selectedRenewal = signal('');
   protected readonly expiredSearchTerm = signal('');
 
-  private readonly selectedAccountId$ = toObservable(
-    computed(() => this.accountContext.selectedAccount()?.accountId)
-  );
+  private readonly selectedAccountId$ = toObservable(computed(() => this.accountContext.selectedAccount()?.accountId));
 
   private readonly fetchError = signal(false);
   private readonly fetchLoading = signal(true);
@@ -133,7 +123,7 @@ export class OrgMembershipsComponent {
     if (!data) return [];
     const search = this.expiredSearchTerm().toLowerCase();
     if (!search) return data.memberships;
-    return data.memberships.filter(m => m.foundationName.toLowerCase().includes(search));
+    return data.memberships.filter((m) => m.foundationName.toLowerCase().includes(search));
   });
 
   protected readonly expiredState = computed<PageState>(() => {

@@ -121,12 +121,7 @@
             subtitle="This organization does not have any active memberships.">
           </lfx-empty-state>
         } @else {
-          <lfx-table
-            [value]="memberships()"
-            [loading]="pageState() === 'loading'"
-            sortField="foundationName"
-            [sortOrder]="1"
-            [skeletonColumns]="6">
+          <lfx-table [value]="memberships()" [loading]="pageState() === 'loading'" sortField="foundationName" [sortOrder]="1" [skeletonColumns]="6">
             <ng-template #header>
               <tr>
                 <th>Name</th>
@@ -199,26 +194,13 @@
 
       <div class="px-5 pb-5">
         @if (expiredState() === 'error') {
-          <lfx-empty-state
-            [withCard]="false"
-            icon="fa-light fa-triangle-exclamation"
-            title="Failed to load expired memberships"
-            subtitle="Please try again.">
+          <lfx-empty-state [withCard]="false" icon="fa-light fa-triangle-exclamation" title="Failed to load expired memberships" subtitle="Please try again.">
           </lfx-empty-state>
         } @else if (expiredState() === 'empty') {
-          <lfx-empty-state
-            [withCard]="false"
-            icon="fa-light fa-clock-rotate-left"
-            title="No expired memberships"
-            subtitle="All your memberships are current!">
+          <lfx-empty-state [withCard]="false" icon="fa-light fa-clock-rotate-left" title="No expired memberships" subtitle="All your memberships are current!">
           </lfx-empty-state>
         } @else {
-          <lfx-table
-            [value]="expiredMemberships()"
-            [loading]="expiredState() === 'loading'"
-            sortField="foundationName"
-            [sortOrder]="1"
-            [skeletonColumns]="4">
+          <lfx-table [value]="expiredMemberships()" [loading]="expiredState() === 'loading'" sortField="foundationName" [sortOrder]="1" [skeletonColumns]="4">
             <ng-template #header>
               <tr>
                 <th>Name</th>
@@ -231,7 +213,8 @@
               <tr>
                 <td>
                   <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-semibold text-white flex-shrink-0"
+                    <div
+                      class="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-semibold text-white flex-shrink-0"
                       [class]="membership.foundationColor">
                       {{ membership.foundationInitials }}
                     </div>
@@ -258,11 +241,7 @@
                       Renew
                     </button>
                   } @else {
-                    <button
-                      type="button"
-                      class="text-sm text-gray-600 hover:text-gray-900 transition-colors"
-                      pTooltip="Coming soon"
-                      tooltipPosition="top">
+                    <button type="button" class="text-sm text-gray-600 hover:text-gray-900 transition-colors" pTooltip="Coming soon" tooltipPosition="top">
                       Contact Us
                     </button>
                   }
@@ -316,7 +295,8 @@
               <tr>
                 <td>
                   <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-semibold text-white flex-shrink-0"
+                    <div
+                      class="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-semibold text-white flex-shrink-0"
                       [class]="opportunity.foundationColor">
                       {{ opportunity.foundationInitials }}
                     </div>

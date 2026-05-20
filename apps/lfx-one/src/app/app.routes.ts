@@ -64,8 +64,7 @@ export const routes: Routes = [
       {
         path: 'org/memberships',
         data: { lens: 'org' },
-        loadComponent: () =>
-          import('./modules/dashboards/org/org-memberships/org-memberships.component').then((m) => m.OrgMembershipsComponent),
+        loadComponent: () => import('./modules/dashboards/org/org-memberships/org-memberships.component').then((m) => m.OrgMembershipsComponent),
       },
       {
         path: 'org/projects',

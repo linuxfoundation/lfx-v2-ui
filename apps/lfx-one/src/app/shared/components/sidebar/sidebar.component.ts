@@ -29,7 +29,17 @@ const PERSONA_ICONS: Partial<Record<PersonaType, string>> = {
 
 @Component({
   selector: 'lfx-sidebar',
-  imports: [NgClass, NgTemplateOutlet, RouterModule, AvatarComponent, BadgeComponent, OrgSelectorComponent, ProjectSelectorComponent, SkeletonModule, TooltipModule],
+  imports: [
+    NgClass,
+    NgTemplateOutlet,
+    RouterModule,
+    AvatarComponent,
+    BadgeComponent,
+    OrgSelectorComponent,
+    ProjectSelectorComponent,
+    SkeletonModule,
+    TooltipModule,
+  ],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss',
 })
