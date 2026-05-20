@@ -30,33 +30,13 @@ Parse the caller's prompt for:
 
 ## Step 1 — Compute the diff
 
-Default: audit **only the latest commit** on the current branch. Do not include unstaged or staged work-in-progress — review HEAD's diff, nothing else.
+Default: `git show --stat -p HEAD` — audits only the latest commit (not staged / unstaged work). Use the stat block as the canonical changed-file list; abort if empty.
 
-```bash
-git rev-parse --abbrev-ref HEAD                # current branch
-git log -1 --format='%H %s'                    # commit SHA + subject (the commit under review)
-git show --stat -p HEAD                        # stat header + full patch (one shot)
-```
+If `base: <ref>` was provided, use `git fetch origin && git diff --stat <ref>...HEAD && git diff <ref>...HEAD` instead (cumulative across all commits between `<ref>` and HEAD). Normalize bare branch names like `main` to `origin/main` so the comparison runs against the fresh remote ref.
 
-With `--stat -p`, the stat block at the top of `git show`'s output is followed by the full patch. The stat block is the canonical changed-file list — use those paths to drive Step 3.1's path-conditional document loads and Step 3.2's per-file audit. The shortstat line (e.g., "2 files changed, 12 insertions(+), 3 deletions(-)") feeds the Step 5 report header.
+For per-file reads: `git show "HEAD:<path>"`. If the diff is too big for context, save to `/tmp/code-review-diff.patch` and Read changed files individually.
 
-If no `N files changed,` shortstat line appears in the output (empty commit), abort: `No changes to review in the latest commit.`
-
-If `base: <ref>` was provided, audit the cumulative diff between `<ref>` and HEAD instead — used for the pre-PR full-branch sweep on multi-commit branches, and by `/lfx-review-pr`:
-
-```bash
-git fetch origin                                          # ensure base is fresh
-git rev-parse --abbrev-ref HEAD                           # current branch
-git log <ref>..HEAD --format='%H %s'                      # commits being reviewed
-git diff --stat <ref>...HEAD                              # file list + counts (three-dot computes merge-base)
-git diff <ref>...HEAD                                     # full diff
-```
-
-Normalize `<ref>` first: if it contains no `/` (e.g., bare `main`), prefix with `origin/` so the comparison runs against the freshly-fetched remote ref. If no commits exist between `<ref>` and HEAD, abort: `No commits between <ref> and HEAD.`
-
-For per-file reads in any mode: `git show "HEAD:<path>"`. If the diff is too large to hold in context, save to `/tmp/code-review-diff.patch` and Read changed source files individually.
-
-Commit-level data (signatures, sign-off trailers) and prior PR review comments are NOT your concern — `/lfx-review-pr` handles those.
+Commit-level data (signatures, prior PR review comments) is not your concern — `/lfx-review-pr` handles that.
 
 ## Step 2 — General review
 
@@ -165,35 +145,23 @@ Validate:
 
 ## Step 5 — Render the report
 
-Lead with what you're reviewing — `<commit-sha> — <subject>` for the default case, or `<base>...HEAD (<branch-name>, N commits)` if `base: <ref>` was passed. Then files changed and additions / deletions.
+Header: `<commit-sha> — <subject>` (default) or `<base>...HEAD (<branch>, N commits)` (base mode), plus files changed and additions / deletions.
 
-Render findings in three sections, in this order:
+Three sections, in order. Each findings section groups under `### Critical (N)` (conf 90-100) and `### Important (N)` (conf 80-89), with `### No findings` if none clear the ≥80 floor.
 
-1. **General review** — findings from Step 2 (native disposition, no source citation). Group under `### Critical (N)` (confidence 90-100) and `### Important (N)` (confidence 80-89). Each finding is a bullet of this form (parser-friendly for downstream consumers):
+1. **General review** (Step 2): `- **<file>:<line>** (conf <0-100>) — <issue>. _Fix:_ <suggestion>.`
+2. **Upstream API validation** (Step 4): verified paths, "manual validation required" flags, or "Skipped — no backend changes".
+3. **Repo conventions** (Step 3.2): `- **<file>:<line>** (conf <0-100>) — <issue>. _Source:_ <quoted rule citation>. _Fix:_ <suggestion>.`
 
-   `- **<file>:<line>** (conf <0-100>) — <issue, 1-2 sentences>. _Fix:_ <concrete suggestion>.`
-
-   If no findings at or above the ≥80 floor, render: "No issues found."
-
-2. **Upstream API validation** — Step 4 results: paths verified, or unverified contracts flagged with the "manual validation required" message. Or "Skipped — no backend changes" if no backend was touched. Always rendered.
-
-3. **Repo conventions** — findings from Step 3.2 (sourced from rule files, checklists, architecture docs). Group under `### Critical (N)` and `### Important (N)`. Each finding:
-
-   `- **<file>:<line>** (conf <0-100>) — <issue, 1-2 sentences>. _Source:_ <quoted rule citation>. _Fix:_ <concrete suggestion>.`
-
-   If no findings at or above the ≥80 floor, render: "No convention violations found."
-
-If a required checklist or architecture doc couldn't be loaded, lead with `INCOMPLETE — couldn't load <file>` and recommend a re-run.
-
-If `extra` was applied, note it.
+If a required checklist or architecture doc couldn't be loaded, lead with `INCOMPLETE — couldn't load <file>`. If `extra` was applied, note it.
 
 ## Severity calibration
 
-Both layers share the same Critical / Important / Nit buckets and the same ≥80 confidence floor. Examples below are illustrative, not exhaustive, and weighted toward convention findings — general-review findings inherit the same buckets via your native calibration.
+Both layers share the same buckets and ≥80 floor. Examples illustrative, not exhaustive — general-review findings inherit the buckets via your native calibration.
 
-- **Critical** (confidence 90-100) — runtime bugs, security issues, M2M misuse in protected routes, SQL bind mismatches, upstream contract violations that will fail at runtime, `as unknown as` casts, raw `new Error()` / manual `res.status().json()` for errors, bypassed user authorization, missing `getEffectiveEmail(req)`.
-- **Important** (confidence 80-89) — documented style / structure violations (component section order, logger usage, license headers, PrimeNG wrappers, `@if`/`@for` over `*ngIf`/`*ngFor`, `inject()` over constructor DI, `page_size` over `limit`), unverified upstream contracts.
-- **Nit** (confidence below 80) — preferences, minor improvements, file naming, comment phrasing. Suppressed from the report by the ≥80 floor, except `category: upstream-api` deterministic flags which bypass the floor.
+- **Critical** (90-100) — runtime bugs, security, SQL bind mismatches, upstream contract violations, bypassed user authorization, M2M misuse, raw `new Error()` / manual `res.status().json()`.
+- **Important** (80-89) — documented style / structure violations (logger usage, license headers, PrimeNG wrappers, `@if`/`@for`, `inject()` DI, `page_size` over `limit`), unverified upstream contracts.
+- **Nit** (below 80) — preferences, minor improvements, file naming. Suppressed by the ≥80 floor, except `category: upstream-api` deterministic flags.
 
 ## Known false positives — DO NOT emit
 
