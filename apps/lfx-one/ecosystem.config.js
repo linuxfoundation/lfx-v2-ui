@@ -19,7 +19,7 @@ module.exports = {
       stop_exit_codes: [0], // Do not restart on clean shutdown — process.exit(0) in gracefulShutdown
       instances: 1, // Number of instances to run
       exec_mode: 'cluster', // Enable cluster mode for load balancing
-      kill_timeout: 45000, // 25s HTTP drain + 15s service drain (budget-capped) + 5s margin; terminationGracePeriodSeconds (75s) must exceed preStop (10s, inside grace period) + kill_timeout (45s) = 55s
+      kill_timeout: 60000, // 15s LB sleep + 25s HTTP drain + 15s service drain (budget-capped) + 5s margin; terminationGracePeriodSeconds (75s) must exceed preStop (10s, inside grace period) + kill_timeout (60s) = 70s
       shutdown_with_message: false, // Use real SIGTERM, not PM2 IPC message
     },
   ],

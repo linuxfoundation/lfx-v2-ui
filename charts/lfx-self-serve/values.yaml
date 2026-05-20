@@ -16,11 +16,12 @@ strategy:
 # IMPORTANT: preStop runs *inside* the grace period — the clock starts when the pod enters
 # Terminating (before preStop executes), not after it finishes.
 # Timing breakdown after pod enters Terminating:
-#   10s  preStop sleep  — kube-proxy / Traefik endpoint removal propagation (inside grace period)
-#   25s  HTTP drain     — in-flight requests complete (httpServer.close 25s window)
-#   15s  service drain  — NATS drain + Snowflake pool drain in parallel (budget-capped)
+#   10s  preStop sleep    — kube-proxy / Traefik endpoint removal propagation (inside grace period)
+#   15s  LB drain sleep   — in-process wait (1.5× readyz periodSeconds) for LB to act on 503
+#   25s  HTTP drain       — in-flight requests complete (httpServer.close 25s window)
+#   15s  service drain    — NATS + Snowflake pool drain in parallel (budget-capped)
 #    5s  margin
-# Active time = 10s + 45s (PM2 kill_timeout) = 55s. 75s provides a 20s safety margin.
+# Active time = 10s + 60s (PM2 kill_timeout) = 70s. 75s provides a 5s safety margin.
 terminationGracePeriodSeconds: 75
 
 # lifecycle hooks run inside the container before SIGTERM is sent.

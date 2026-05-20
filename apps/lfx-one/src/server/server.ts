@@ -367,26 +367,24 @@ async function gracefulShutdown(signal: string): Promise<void> {
 
   const startTime = logger.startOperation(undefined, 'graceful_shutdown', { signal });
 
-  // Run registered hooks (closes SSE streams) with a 5s budget.
-  // Without a budget, a single blocked SSE write (backpressure) can stall
-  // hook execution and push the total shutdown time past PM2 kill_timeout.
-  // The `hooksCompleted` flag mirrors the `completed` guard in `raceDrain` to
-  // suppress a spurious timeout warning when hooks finish before the budget.
+  // Mandatory LB drain window: after readyz flips to 503, the load balancer
+  // continues routing requests until its next probe fires (readyz periodSeconds: 10s).
+  // Wait 1.5× that interval before closing the HTTP listener so no new requests
+  // land on an already-closed server. SSE shutdown hooks run concurrently so
+  // clients are notified and can reconnect within this window.
+  // Promise.all (not race) ensures the full 15s always elapses even if hooks
+  // finish early — short-circuiting would defeat the purpose of the wait.
+  const LB_DRAIN_MS = 15_000; // 1.5 × readyz periodSeconds (10s)
   let hooksCompleted = false;
-  const HOOK_BUDGET_MS = 5_000;
-  await Promise.race([
+  await Promise.all([
+    new Promise<void>((resolve) => setTimeout(resolve, LB_DRAIN_MS)),
     runShutdownHooks().then(() => {
       hooksCompleted = true;
     }),
-    new Promise<void>((resolve) =>
-      setTimeout(() => {
-        if (!hooksCompleted) {
-          logger.warning(undefined, 'shutdown_hooks_timeout', 'Shutdown hooks exceeded budget', { budget_ms: HOOK_BUDGET_MS });
-        }
-        resolve();
-      }, HOOK_BUDGET_MS)
-    ),
   ]);
+  if (!hooksCompleted) {
+    logger.warning(undefined, 'shutdown_hooks_slow', 'Shutdown hooks exceeded LB drain window', { budget_ms: LB_DRAIN_MS });
+  }
 
   if (!httpServer) {
     logger.success(undefined, 'graceful_shutdown', startTime, { reason: 'no_http_server' });
@@ -410,7 +408,9 @@ async function gracefulShutdown(signal: string): Promise<void> {
 
   logger.info(undefined, 'shutdown_http_drained', 'HTTP server drained', {});
 
-  // Drain NATS and Snowflake concurrently; a failure in one must not block the other.
+  // Drain NATS and Snowflake *after* HTTP is fully closed. This ordering ensures any
+  // in-flight HTTP request that issues a NATS request/reply can complete before the
+  // connection is torn down — draining NATS before HTTP would break those requests.
   // Each drain is race'd against a 15s budget so a hung drain cannot exceed PM2's kill_timeout.
   // SnowflakeService.shutdownIfInitialized() skips pool creation for pods that never used Snowflake.
   const SERVICE_DRAIN_BUDGET_MS = 15_000;
