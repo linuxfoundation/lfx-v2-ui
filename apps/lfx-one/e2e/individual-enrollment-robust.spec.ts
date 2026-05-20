@@ -60,6 +60,15 @@ test.describe('Individual Enrollment — Structural Tests', () => {
     });
   });
 
+  test.describe('Confirm dialog testid hook', () => {
+    test('should have confirm dialog attached in DOM (not visible until triggered)', async ({ page }) => {
+      await page.getByTestId('individual-enrollment-card').first().waitFor({ state: 'visible', timeout: DATA_LOAD_TIMEOUT });
+      await expect(page.getByTestId('individual-enrollment-confirm-dialog')).toBeAttached();
+    });
+  });
+});
+
+test.describe('Individual Enrollment — Mocked State Tests', () => {
   test.describe('Empty / error states', () => {
     test('should show empty state when no enrollments exist', async ({ page }) => {
       await page.route('**/api/enrollments', async (route) => {
@@ -77,13 +86,6 @@ test.describe('Individual Enrollment — Structural Tests', () => {
       await page.goto(ENROLLMENT_URL, { waitUntil: 'domcontentloaded' });
       await expect(page).not.toHaveURL(/auth0\.com/);
       await expect(page.getByTestId('individual-enrollment-error')).toBeVisible({ timeout: DATA_LOAD_TIMEOUT });
-    });
-  });
-
-  test.describe('Confirm dialog testid hook', () => {
-    test('should have confirm dialog attached in DOM (not visible until triggered)', async ({ page }) => {
-      await page.getByTestId('individual-enrollment-card').first().waitFor({ state: 'visible', timeout: DATA_LOAD_TIMEOUT });
-      await expect(page.getByTestId('individual-enrollment-confirm-dialog')).toBeAttached();
     });
   });
 });

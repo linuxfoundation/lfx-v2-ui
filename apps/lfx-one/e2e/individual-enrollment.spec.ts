@@ -31,8 +31,8 @@ const stripeActiveMembership = [
     membership: {
       Status: 'Active',
       AutoRenew: true,
-      PurchaseDate: '2024-06-01',
-      EndDate: '2025-06-01',
+      PurchaseDate: '2025-06-01',
+      EndDate: '2027-06-01',
       Price: 99,
       ID: MEMBERSHIP_ID,
       ExtPaymentType: 'stripe',
@@ -143,7 +143,10 @@ test.describe('Individual Enrollment — Content Tests', () => {
       await expect(page.locator('.p-confirmdialog')).toBeVisible({ timeout: 5000 });
 
       // Click the Disable button (acceptLabel)
-      await page.locator('.p-confirmdialog').getByRole('button', { name: /Disable/i }).click();
+      await page
+        .locator('.p-confirmdialog')
+        .getByRole('button', { name: /Disable/i })
+        .click();
 
       // Toast should appear
       await expect(page.locator('.p-toast')).toContainText('Auto renew disabled successfully', { timeout: 10_000 });
@@ -157,7 +160,10 @@ test.describe('Individual Enrollment — Content Tests', () => {
       const toggle = page.getByTestId('individual-enrollment-auto-renew-toggle').locator('input[type="checkbox"]');
       await toggle.click();
       await expect(page.locator('.p-confirmdialog')).toBeVisible({ timeout: 5000 });
-      await page.locator('.p-confirmdialog').getByRole('button', { name: /Disable/i }).click();
+      await page
+        .locator('.p-confirmdialog')
+        .getByRole('button', { name: /Disable/i })
+        .click();
 
       await expect(page.locator('.p-confirmdialog')).not.toBeVisible({ timeout: 5000 });
     });
@@ -172,7 +178,10 @@ test.describe('Individual Enrollment — Content Tests', () => {
       await toggle.click();
       await expect(page.locator('.p-confirmdialog')).toBeVisible({ timeout: 5000 });
 
-      await page.locator('.p-confirmdialog').getByRole('button', { name: /Cancel/i }).click();
+      await page
+        .locator('.p-confirmdialog')
+        .getByRole('button', { name: /Cancel/i })
+        .click();
 
       await expect(page.locator('.p-confirmdialog')).not.toBeVisible({ timeout: 5000 });
       await expect(page.locator('.p-toast')).not.toBeVisible();
@@ -188,7 +197,10 @@ test.describe('Individual Enrollment — Content Tests', () => {
       await input.click(); // uncheck (optimistic)
       await expect(page.locator('.p-confirmdialog')).toBeVisible({ timeout: 5000 });
 
-      await page.locator('.p-confirmdialog').getByRole('button', { name: /Cancel/i }).click();
+      await page
+        .locator('.p-confirmdialog')
+        .getByRole('button', { name: /Cancel/i })
+        .click();
       await expect(page.locator('.p-confirmdialog')).not.toBeVisible({ timeout: 5000 });
 
       // After cancel, toggle should be back to checked
@@ -205,7 +217,10 @@ test.describe('Individual Enrollment — Content Tests', () => {
       const toggle = page.getByTestId('individual-enrollment-auto-renew-toggle').locator('input[type="checkbox"]');
       await toggle.click();
       await expect(page.locator('.p-confirmdialog')).toBeVisible({ timeout: 5000 });
-      await page.locator('.p-confirmdialog').getByRole('button', { name: /Disable/i }).click();
+      await page
+        .locator('.p-confirmdialog')
+        .getByRole('button', { name: /Disable/i })
+        .click();
 
       await expect(page.locator('.p-toast')).toContainText('Failed to update membership', { timeout: 10_000 });
     });
@@ -220,7 +235,10 @@ test.describe('Individual Enrollment — Content Tests', () => {
 
       await input.click();
       await expect(page.locator('.p-confirmdialog')).toBeVisible({ timeout: 5000 });
-      await page.locator('.p-confirmdialog').getByRole('button', { name: /Disable/i }).click();
+      await page
+        .locator('.p-confirmdialog')
+        .getByRole('button', { name: /Disable/i })
+        .click();
 
       // After error, toggle should revert to original checked state
       await expect(input).toBeChecked({ timeout: 10_000 });
