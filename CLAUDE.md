@@ -250,22 +250,6 @@ Detailed patterns are in `.claude/rules/` and loaded contextually based on the `
 | [E2E Testing](docs/architecture/testing/e2e-testing.md)                        | Dual architecture testing                                        |
 | [Testing Best Practices](docs/architecture/testing/testing-best-practices.md)  | Testing patterns and guide                                       |
 
-## What NOT to do
-
-- ❌ Edit a file without re-reading it if 5+ turns have passed
-- ❌ Replace components in place — for full component replacements use DELETE → CREATE (in-place edits remain fine for non-breaking changes; see `.claude/rules/component-organization.md`)
-- ❌ Hard-code brand hex values (reference `lfxColors` scales)
-- ❌ Reference browser-only APIs without `isPlatformBrowser`
-- ❌ Mix module concerns in one change
-- ❌ Open a PR without invoking the post-commit review pair (`lfx-self-serve-code-review` + `lfx-self-serve-learnings-review` skills, in parallel) after every pre-PR commit and draining the queue clean — both reviews are non-negotiable pre-PR
-- ❌ Push the pre-PR queue before every running review has returned and every Critical finding is addressed (the queue must be drained at the PR boundary; once the PR is open, the bots become the audit surface and the pair is no longer invoked)
-- ❌ Open a multi-commit PR without running the pre-PR full-branch sweep (`base: origin/main`) — per-commit reviews can miss cross-commit drift
-- ❌ Open a PR without running `/lfx-self-serve-pr-readiness` to a clean verdict — also non-negotiable
-- ❌ Open a PR without DCO sign-off + GPG (`--signoff -S`)
-- ❌ Commit and claim "done" before `yarn build` passes
-- ❌ Re-introduce Figma references — design source is HTML/GitHub
-- ❌ Edit `CLAUDE.md` or other `lfx-preflight` protected files without code-owner review
-
 ## Work cycle — post-commit and pre-PR reviews
 
 > **CRITICAL — while the branch is pre-PR, post-commit reviews are mandatory.** After every commit on the local branch, invoke the `lfx-self-serve-code-review` AND `lfx-self-serve-learnings-review` skills in parallel via the Skill tool — each skill body launches its background subagent — then keep working while they run. Before opening a PR, every running review must return clean (or remaining findings explicitly documented as trade-offs), the **full-branch sweep** must run clean if the branch has more than one commit (`base: origin/main`), AND `/lfx-self-serve-pr-readiness` must pass (branch / JIRA / commits / DCO + GPG / rebase / diff size). The reviewers' time is the most expensive resource in this workflow — never skip, save for later, or assume changes are "small enough" to bypass.
@@ -280,6 +264,7 @@ Detailed patterns are in `.claude/rules/` and loaded contextually based on the `
    - **`lfx-self-serve-learnings-review`** — empirical-pattern matching against `docs/reviews/knowledge-base/` (patterns sampled from past PR review comments on this repo). Skill body launches a `general-purpose` subagent with `run_in_background: true`. Renders a markdown review.
 
    **Launcher discipline — non-negotiable:** pass each skill body **verbatim** as the Agent `prompt` parameter. The playbook contains the subagent's own routing logic; trimming or summarizing it breaks the cross-check discipline (subagent can't quote rules not in its prompt) and drifts severity calibration.
+
 3. **Keep working.** Start the next commit while the reviewers run. Do not block on them.
 4. **When a review pair returns:** read both reports. Roll every Critical finding and every reasonable Important finding into the next commit (a separate `fix(review): address findings` commit is fine; squashing is not required — the history shows review-driven iteration).
 5. **It's fine to keep committing while reviews are still running.** Each pair audits its own commit (not cumulative). If you've committed N+1 before the review for N returns, you'll get two separate reports — one per commit. Read both as they arrive and address findings in subsequent commits.
@@ -295,6 +280,7 @@ When the work is "done" — no more code commits planned:
    - **`lfx-self-serve-learnings-review`**, args: `"base: origin/main"`.
 
    Same **launcher discipline** as post-commit: pass each skill body verbatim, args appended at the end. Per-commit reviews can miss cross-commit drift (an issue introduced in commit N and only made dangerous by commit N+2's changes wouldn't surface in either's individual review); the sweep catches it. Single-commit branches skip — already covered by the post-commit pair. Address any new findings, then re-run the sweep until clean.
+
 4. **Run `/lfx-self-serve-pr-readiness`** against the target base branch. PR-shape sanity: branch name, JIRA, conventional commits, rebase, DCO + GPG per commit, diff size. Does NOT audit code (covered by the post-commit pair and the full-branch sweep). Address every Critical. Rerun until clean.
 5. **Run `/preflight`** for license / format / lint / build / protected-file mechanical checks.
 6. **Only then push and open the PR.** (Reviewers run `/lfx-review-pr` against the open PR — that should not be your first standards check.)
@@ -307,3 +293,19 @@ When the work is "done" — no more code commits planned:
 4. Push. Repeat until clean.
 
 After `/compact`, re-invoke `/develop` or the relevant convention skill if continuing work that depends on it.
+
+## What NOT to do
+
+- ❌ Edit a file without re-reading it if 5+ turns have passed
+- ❌ Replace components in place — for full component replacements use DELETE → CREATE (in-place edits remain fine for non-breaking changes; see `.claude/rules/component-organization.md`)
+- ❌ Hard-code brand hex values (reference `lfxColors` scales)
+- ❌ Reference browser-only APIs without `isPlatformBrowser`
+- ❌ Mix module concerns in one change
+- ❌ Open a PR without invoking the post-commit review pair (`lfx-self-serve-code-review` + `lfx-self-serve-learnings-review` skills, in parallel) after every pre-PR commit and draining the queue clean — both reviews are non-negotiable pre-PR
+- ❌ Push the pre-PR queue before every running review has returned and every Critical finding is addressed (the queue must be drained at the PR boundary; once the PR is open, the bots become the audit surface and the pair is no longer invoked)
+- ❌ Open a multi-commit PR without running the pre-PR full-branch sweep (`base: origin/main`) — per-commit reviews can miss cross-commit drift
+- ❌ Open a PR without running `/lfx-self-serve-pr-readiness` to a clean verdict — also non-negotiable
+- ❌ Open a PR without DCO sign-off + GPG (`--signoff -S`)
+- ❌ Commit and claim "done" before `yarn build` passes
+- ❌ Re-introduce Figma references — design source is HTML/GitHub
+- ❌ Edit `CLAUDE.md` or other `lfx-preflight` protected files without code-owner review

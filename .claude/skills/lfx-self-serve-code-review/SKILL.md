@@ -194,5 +194,3 @@ The examples below are illustrative, not exhaustive — apply the same severity 
 
 - **PR-shape sanity** (branch name, JIRA, conventional commits, rebase, DCO + GPG, diff size) → `/lfx-self-serve-pr-readiness`.
 - **Empirical pattern matching** (KB of past-PR review comments) → `/lfx-self-serve-learnings-review`.
-
-If a finding fits one of those surfaces, drop it.
