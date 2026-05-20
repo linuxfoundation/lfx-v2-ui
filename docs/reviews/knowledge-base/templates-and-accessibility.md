@@ -1,6 +1,6 @@
 # Templates and accessibility
 
-Patterns CodeRabbit + Copilot flag in Angular templates — ARIA roles, focus management, keyboard parity, semantic HTML, class-binding clobbering, wrong `@for` track keys, missing `lens=` query params, and inline-style misuse. Heavily concentrated in `.component.html` files for table rows, custom toggle buttons, and icon-only buttons.
+Patterns CodeRabbit + Copilot flag in Angular templates — ARIA roles, focus management, keyboard parity, semantic HTML, class-binding clobbering, wrong `@for` track keys, missing `lens=` query params, inline-style misuse, PrimeNG primitives used directly instead of LFX wrappers, dynamic labels forced to single-line at narrow viewports, and tooltips attached to non-focusable hosts. Heavily concentrated in `.component.html` files for table rows, custom toggle buttons, and icon-only buttons.
 
 **Read when:** any `.component.html` file changed. Cross-checked in Steps 3-4 of the learnings-review playbook (KB-match gate in Step 3, false-positive filter in Step 4); findings without a quotable pattern below are dropped.
 
@@ -115,3 +115,45 @@ Patterns CodeRabbit + Copilot flag in Angular templates — ARIA roles, focus ma
 **Failure message:** Inline `[style.*]` binding when a Tailwind utility could be used.
 
 **Fix:** use `[ngClass]` or a Tailwind utility class. Reserve `[style.*]` for genuinely dynamic values (computed colors, dynamic dimensions) that can't be expressed with utilities.
+
+---
+
+## `templates-and-accessibility/primeng-bypass-lfx-wrapper` — Important
+
+**Pattern:** an Angular template uses a PrimeNG component directly (e.g., `<p-tabs>`, `<p-button>`, `<p-table>`, `<p-dialog>`) instead of the LFX wrapper component the repo standardises on. Bypasses the wrapper's defaults (styling tokens, accessibility hooks, signal-aware inputs) and breaks the "UI library independence" abstraction documented in `docs/architecture/frontend/component-architecture.md`.
+
+**Detect:** in `.component.html`, grep for `<p-(tabs|tabView|button|table|dialog|drawer|select|menu|chip|tooltip|inputtext|checkbox|radiobutton)[\s>]`. For each match, check whether an LFX wrapper exists under `apps/lfx-one/src/app/shared/components/` for that primitive — if yes, the template must use the wrapper.
+
+**Empirical citation:** H-02 KB coverage audit (2026-05-19) — PRs #326, #335, #356, #357: "Direct p-tabs / PrimeNG bindings bypass LFX wrapper components."
+
+**Failure message:** Template uses a PrimeNG primitive directly instead of its LFX wrapper — bypasses wrapper defaults and breaks UI-library independence.
+
+**Fix:** replace with the LFX wrapper (`<lfx-button>`, `<lfx-tabs>`, etc.). If a wrapper doesn't exist yet for the primitive you need, add one under `shared/components/` and update the import — don't reach into PrimeNG directly from a feature module.
+
+---
+
+## `templates-and-accessibility/no-wrap-truncates-dynamic-label` — Important
+
+**Pattern:** a card subtitle / caption / metric label has `whitespace-nowrap` (or `truncate` without container width allowance) applied to dynamic content. Long names overflow the card on smaller viewports — the text clips or pushes layout sideways. The risk is unpredictable user-provided content (project names, foundation names, account labels) that fit fine in design mocks but break in production.
+
+**Detect:** in `.component.html`, find dynamic text bindings (`{{ ... }}`) inside elements with `whitespace-nowrap` / `truncate` / `text-ellipsis`. For each, verify (a) a sibling tooltip exposes the full string, AND (b) the layout can accommodate wrapping at narrow widths (e.g., `whitespace-normal lg:whitespace-nowrap` for desktop-only nowrap). Static labels are fine — the risk is unpredictable dynamic content.
+
+**Empirical citation:** H-02 KB coverage audit (2026-05-19) — PRs #485, #492, #495: "Long card subtitles forced to single-line and clip on smaller viewports."
+
+**Failure message:** Dynamic label / subtitle forced to single-line — clips or breaks layout on narrow viewports.
+
+**Fix:** allow wrapping by default (`whitespace-normal`), apply `nowrap` only at breakpoints where the container is wide enough (`lg:whitespace-nowrap`). Pair with a tooltip showing the full string when truncation does occur, and use `min-w-0` on flex children to let truncation work without overflowing the parent.
+
+---
+
+## `templates-and-accessibility/tooltip-on-non-focusable-host` — Important
+
+**Pattern:** a tooltip (`pTooltip`, `<lfx-tooltip>`, `[title]`) is attached to a non-interactive, non-focusable host element (`<span>`, `<div>`, `<img>`) without `tabindex="0"`. Keyboard users can't reach the host to trigger the tooltip — only mouse hover works, which excludes keyboard-only and screen-reader users.
+
+**Detect:** in `.component.html`, find every tooltip-bearing attribute (`pTooltip=`, `tooltipPosition=`, `[lfxTooltip]=`, `title=`). For each, verify the host is either (a) a natively-focusable element (`<button>`, `<a href>`, form control), or (b) carries `tabindex="0"` plus a `role` that announces meaning. Host placement also matters — tooltips on icons inside non-focusable wrappers need the wrapper to be the focusable element.
+
+**Empirical citation:** H-02 KB coverage audit (2026-05-19) — PRs #255, #257, #258, #447, #469, #713: "Tooltips attached to hover-only or non-focusable spans/divs."
+
+**Failure message:** Tooltip on non-focusable host — keyboard users can't trigger it.
+
+**Fix:** move the tooltip to a focusable element (a `<button>` containing the icon, an `<a>` link). If the host genuinely must be a `<span>` / `<div>`, add `tabindex="0"` plus an appropriate `role` and matching `aria-label`. Bind `(focus)` / `(blur)` so keyboard focus shows the tooltip the same way hover does.

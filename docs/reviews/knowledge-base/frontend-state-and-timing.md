@@ -1,6 +1,6 @@
 # Frontend state and timing
 
-Patterns CodeRabbit + Copilot reliably flag at the signals ↔ observables interface — double-emissions from `toObservable + startWith`, missing `distinctUntilChanged` after primitive projections, and identity-equal-object re-emissions triggering redundant downstream work.
+Patterns CodeRabbit + Copilot reliably flag at the signals ↔ observables interface — double-emissions from `toObservable + startWith`, missing `distinctUntilChanged` after primitive projections, identity-equal-object re-emissions triggering redundant downstream work, and guards / persona checks racing against asynchronously-populated context services.
 
 **Read when:** any `.component.ts` / `.service.ts` under `apps/lfx-one/src/app/` changed. Cross-checked in Steps 3-4 of the learnings-review playbook (KB-match gate in Step 3, false-positive filter in Step 4); findings without a quotable pattern below are dropped.
 
@@ -73,3 +73,17 @@ Patterns CodeRabbit + Copilot reliably flag at the signals ↔ observables inter
 **Failure message:** `effect()` reads identity-different input and resets downstream state — same content re-fires.
 
 **Fix:** use `computed()` instead of `effect()` if you're just deriving state. If you genuinely need an effect, project the input to a primitive ID and gate on `equal` (the `effect()` config option) or `distinctUntilChanged` on a toObservable bridge.
+
+---
+
+## `frontend-state-and-timing/async-context-not-ready-when-consumed` — Important
+
+**Pattern:** a guard, persona check, feature gate, or TLF / ED enforcement reads a context value (`activeProject`, `selectedAccount`, persona signal) that's populated by a separate asynchronous service initialization. If the guard fires before the async population resolves, the check sees `undefined` / a stale value and either fails open, redirects incorrectly, or hangs the navigation.
+
+**Detect:** in guards (`apps/lfx-one/src/app/shared/guards/**`), persona helpers, and feature-flag checks, find every read of a context-service signal / getter. Verify either (a) the route resolver / guard awaits a readiness signal before reading, OR (b) the context is populated synchronously at app bootstrap (not from an HTTP call). Async-population sites typically live in services that subscribe to a fetch and `.set()` the signal inside the callback — those are the risk surface.
+
+**Empirical citation:** H-02 KB coverage audit (2026-05-19) — PRs #279, #345: "Persona/TLF enforcement depends on asynchronously populated project context."
+
+**Failure message:** Guard / persona check reads context populated asynchronously — races against the initial fetch.
+
+**Fix:** expose a `ready: Signal<boolean>` (or readiness `Observable<true>`) from the context service that flips after the initial fetch resolves. Gate the guard on readiness — e.g., `toObservable(ctx.ready).pipe(filter(Boolean), take(1), switchMap(() => actualCheck()))`. Or move population into a route resolver so guards run after the data is in place.

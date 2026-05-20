@@ -1,8 +1,8 @@
 # Code truthiness
 
-Patterns where the code lies about itself — docstrings, inline comments, JSDoc tags, hard-coded duplicates of config, PR descriptions diverging from shipped behavior, and entirely-new services / components shipped without tests. The highest-volume bucket in the research (~35 docs-drift finds + 6 testing finds across CodeRabbit + Copilot). Copilot is the strongest reviewer for this — it cross-correlates across files and notices when one file claims behavior another file actually implements.
+Patterns where the code lies about itself — docstrings, inline comments, JSDoc tags, hard-coded duplicates of config, PR descriptions diverging from shipped behavior, KPI labels / chart series / rounded-zero deltas drifting from their underlying data, form validators diverging from API contracts, markdown fences missing language tags, and entirely-new services / components shipped without tests. The highest-volume bucket in the research (~35 docs-drift finds + 6 testing finds across CodeRabbit + Copilot). Copilot is the strongest reviewer for this — it cross-correlates across files and notices when one file claims behavior another file actually implements.
 
-**Read when:** any JSDoc / inline comment, anything under `docs/**`, or any new feature module / service / component without a matching `*.spec.ts`. Cross-checked in Steps 3-4 of the learnings-review playbook (KB-match gate in Step 3, false-positive filter in Step 4); findings without a quotable pattern below are dropped.
+**Read when:** any JSDoc / inline comment, anything under `docs/**`, any new feature module / service / component without a matching `*.spec.ts`, any `.component.html` / `.component.ts` rendering KPI cards / sparklines / trend charts, or any form definition using `Validators.*` / `FormBuilder.group`. Cross-checked in Steps 3-4 of the learnings-review playbook (KB-match gate in Step 3, false-positive filter in Step 4); findings without a quotable pattern below are dropped.
 
 ---
 
@@ -143,3 +143,73 @@ Patterns where the code lies about itself — docstrings, inline comments, JSDoc
 **Failure message:** New method added to service without a corresponding unit test.
 
 **Fix:** add a unit test exercising the method's happy path and at least one edge case. If the method is genuinely trivial (e.g., a single property getter), document why in a comment and downgrade to Nit.
+
+---
+
+## `code-truthiness/kpi-label-data-source-mismatch` — Important
+
+**Pattern:** a KPI / metric card's visible label (e.g., "Email CTR", "ROAS MoM", "CTR vs 6-month average") doesn't match the data field or comparison window the component actually binds. The label claims one thing while the underlying value, server response field, or delta calculation is from a different source. The repeating-themes audit flagged label-vs-data-window drift across multiple PRs already; this entry captures the dashboard-KPI variant where label, value field, and comparison window can each drift independently.
+
+**Detect:** in `.component.html` / `.component.ts` rendering metric cards, dashboards, or analytics drawers, locate `[label]=` / `{{ label }}` / static label strings adjacent to bound values or response fields. Verify (a) the label's noun matches the bound field's noun, AND (b) the label's comparison window (MoM / WoW / vs 6-month average) matches the delta calculation in the service layer. Common drift: Email CTR shown as Open Rate; ROAS MoM bound to Total Impressions MoM; CTR labelled MoM when the delta is vs 6-month average.
+
+**Empirical citation:** H-02 KB coverage audit (2026-05-19) — repeated across PRs #718–#725: "Email CTR shown as Open Rate, ROAS MoM shown as Total Impressions MoM, CTR vs 6-month average labelled as MoM."
+
+**Failure message:** KPI label doesn't match the data field or comparison window it renders — UI lies about what it's showing.
+
+**Fix:** align the label noun with the bound field noun, and align the comparison-window phrasing with the delta calculation. If the same component renders multiple KPIs, drive each label from a typed `KpiDescriptor` keyed to its data field so the label can't drift independently of the data.
+
+---
+
+## `code-truthiness/chart-series-data-field-mismatch` — Important
+
+**Pattern:** a sparkline / trend chart's visible metric label (e.g., "Social Followers", "Web Sessions") is built from the wrong series field, or the actual series field for the labelled metric is missing entirely. The chart shape looks plausible but represents different data.
+
+**Detect:** in components rendering sparklines / trends, locate the chart-data assembly (series array, `data: [...]` bindings, `seriesField` options). Verify the series field referenced matches the metric the label claims. Watch for shared data sources where one series (e.g., `sessions`) is reused for multiple labelled metrics (e.g., "Social Followers" sparkline) because the actual follower series isn't wired up.
+
+**Empirical citation:** H-02 KB coverage audit (2026-05-19) — PRs #433, #443, #452: "Social Followers sparkline built from sessions data or missing the actual follower trend series."
+
+**Failure message:** Chart series field doesn't match the visible metric label — the line is plotting different data than it claims.
+
+**Fix:** map each labelled metric to its own typed series field; never reuse a single data source across mismatched labels. If the labelled series isn't available, render a "data unavailable" state instead of substituting an unrelated series.
+
+---
+
+## `code-truthiness/rounded-zero-delta-with-direction-arrow` — Important
+
+**Pattern:** a KPI delta rounds to `+0.0%` / `-0.0%` (the raw value is non-zero but small enough to round to zero at the displayed precision), and the component still renders a directional arrow (▲ / ▼). Users see "no change" with a misleading direction indicator.
+
+**Detect:** in components rendering KPI deltas + trend arrows, locate the conditional that drives arrow direction. Verify the arrow visibility is gated on the rounded display value (or an explicit zero-check on the display string), not on the raw signed value. Specifically: an arrow shown when `displayDelta === '+0.0%'` or `displayDelta === '-0.0%'` is a finding.
+
+**Empirical citation:** H-02 KB coverage audit (2026-05-19) — PRs #435, #508: "Non-zero raw values round to +0.0% / -0.0% but still show directional arrows."
+
+**Failure message:** Rounded-zero delta still renders a direction arrow — the arrow contradicts the displayed number.
+
+**Fix:** gate the arrow on the displayed rounded value, not the raw value: `@if (rounded !== 0) { <arrow /> }`. Or render a neutral "no change" indicator when the displayed delta rounds to zero, regardless of raw sign.
+
+---
+
+## `code-truthiness/markdown-fence-missing-language` — Important
+
+**Pattern:** a Markdown code fence in `docs/**` opens without a language identifier (bare triple-backtick instead of triple-backtick followed by `text` / `bash` / `ts` / `yaml`). Markdownlint's `MD040` (`fenced-code-language`) fails CI, blocking the PR.
+
+**Detect:** in any `docs/**.md` diff, look for opening fences (triple-backtick at line start) with no language tag immediately after the third backtick. Every fence opener should have a language tag.
+
+**Empirical citation:** H-02 KB coverage audit (2026-05-19) — PRs #338, #418, #464: "Unlabeled fenced code blocks trigger MD040 / CI lint failures."
+
+**Failure message:** Markdown fence opens without a language identifier — `MD040` will fail CI.
+
+**Fix:** add a language tag to every opening fence. Use `text` for free-form output (logs, command output, plain prose) and the correct language tag for code samples (`bash`, `ts`, `tsx`, `yaml`, etc.).
+
+---
+
+## `code-truthiness/form-validator-mismatches-api-or-flag` — Important
+
+**Pattern:** an Angular `FormControl` is declared with `Validators.required` (or `Validators.minLength`, etc.) while the corresponding API field is optional, OR while a feature flag / parent state disables that branch of the workflow (e.g., voting disabled, optional step gated off). The form either blocks submission for input the backend would accept, or shows required errors on fields that aren't reachable in the current flow.
+
+**Detect:** in forms (`FormBuilder.group({ ... })` / `new FormControl(...)`), grep for `Validators.required` (and other strict validators) on fields whose corresponding interface in `packages/shared/src/interfaces/**` marks them optional (`field?:`) or whose UI branch is gated behind a feature flag / disabled state. Cross-check against the upstream Goa contract (per `.claude/rules/development-rules.md`) for backend optionality.
+
+**Empirical citation:** H-02 KB coverage audit (2026-05-19) — PRs #296, #319: "Required form fields conflict with optional API request fields or disabled-voting flows."
+
+**Failure message:** Form validator stricter than API contract or current feature-flag state — blocks valid input or surfaces unreachable required errors.
+
+**Fix:** align the validator with the API contract — drop `Validators.required` when the backend marks the field optional. For feature-gated branches, apply validators conditionally: `enableField ? [Validators.required] : []`, and call `control.updateValueAndValidity()` when the gate flips.

@@ -92,15 +92,15 @@ Patterns where new backend routes are mounted without the right auth middleware,
 
 ## `server-request-handling/replaceState-loses-history-state` — Important
 
-**Pattern:** `Location.replaceState(url)` is called with only one argument, wiping `history.state`. Angular Router stores its `navigationId` in `history.state`; wiping it breaks `Router.getCurrentNavigation()` and back-button behavior.
+**Pattern:** `Location.replaceState(url)` is called with only one argument, OR raw `history.replaceState(state, '', url)` is called with a fresh / null `state` arg, wiping the existing `history.state`. Angular Router stores its `navigationId` in `history.state`; wiping it breaks `Router.getCurrentNavigation()`, back / forward navigation, and scroll restoration. The risk surface covers both the Angular `Location.replaceState(url)` single-arg form AND raw `history.replaceState` calls (typically used for query-param clearing) when the first arg isn't `history.state` (or a spread that preserves it).
 
-**Detect:** grep for `\.replaceState\(\s*[^,)]+\s*\)` — calls with only the URL arg, no state preservation.
+**Detect:** grep for `\.replaceState\(\s*[^,)]+\s*\)` — calls with only the URL arg (single-arg form). For two- or three-arg `history.replaceState(state, ...)` calls, verify the first arg is `history.state` (or `{ ...history.state, ... }`), not a fresh literal or `null`.
 
-**Empirical citation:** PR #701 — "`Location.replaceState(...)` without preserving `history.state` — Angular Router's `navigationId` gets wiped."
+**Empirical citation:** PR #701 — "`Location.replaceState(...)` without preserving `history.state` — Angular Router's `navigationId` gets wiped." Also flagged at PR #578 (per H-02 KB coverage audit, 2026-05-19): raw `history.replaceState` used for query-param clearing overwrites Router state and breaks back/forward navigation + scroll restoration.
 
-**Failure message:** `replaceState` without state preservation breaks Router internals.
+**Failure message:** `replaceState` without state preservation breaks Router internals — back/forward navigation, scroll restoration, and `getCurrentNavigation` all fail.
 
-**Fix:** either (a) pass `history.state` as the third argument: `this.location.replaceState(url, '', history.state)`, OR (b) use `this.router.navigate(...)` with `replaceUrl: true` and `skipLocationChange: false` if you actually need Router-aware navigation.
+**Fix:** either (a) pass `history.state` so it's preserved: `this.location.replaceState(url, '', history.state)` (Angular `Location`) or `history.replaceState(history.state, '', url)` (raw API), OR (b) use `this.router.navigate(...)` with `replaceUrl: true` and `skipLocationChange: false` if you actually need Router-aware navigation.
 
 ---
 
