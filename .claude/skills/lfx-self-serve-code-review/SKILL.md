@@ -1,70 +1,48 @@
 ---
 name: lfx-self-serve-code-review
-description: "Audits recently written or modified lfx-self-serve code against this repo's documented rule surface — `.claude/rules/`, the four `docs/reviews/` checklists, architecture docs, the protected-files hook, and upstream API contracts. Operates in constrained-audit mode: every finding must quote a loaded source. Invoke post-commit (mode:local) to render a markdown report, or against an opened PR (mode:pr) to return JSON findings for the post-PR flow to compose. The skill body launches a code-reviewer subagent in the background with the playbook below."
+description: "Audits the latest commit on the local branch against this repo's documented rule surface — `.claude/rules/`, the four `docs/reviews/` checklists, architecture docs, the protected-files hook, and upstream API contracts. Operates in constrained-audit mode: every finding must quote a loaded source. Optionally audits a full PR diff if `pr: <N>` is passed. Renders a markdown review. Skill body launches a code-reviewer subagent in the background."
 allowed-tools: Agent
 ---
 
-Launch a subagent in the background (`subagent_type: code-reviewer`, `run_in_background: true`) with the **entire content below** as the Agent `prompt` parameter. Append the caller's runtime args (`mode`, `base`, `number`, `extra`) at the end so the subagent sees both the playbook and its inputs.
+Launch a subagent in the background (`subagent_type: code-reviewer`, `run_in_background: true`) with the **entire content below** as the Agent `prompt` parameter. Append the caller's runtime args (`extra`, `pr`) at the end so the subagent sees both the playbook and its inputs.
 
-**Launcher discipline — non-negotiable:** pass the playbook **verbatim**. The playbook contains its own routing logic (Step 2 picks which checklists / architecture docs to load based on changed paths). Trimming it strips routing → the subagent can't quote rules that weren't loaded → Step 3 cross-check collapses → severity calibration and the output template drift.
+**Launcher discipline — non-negotiable:** pass the playbook **verbatim**. The playbook contains its own routing logic (Step 2 picks which checklists / architecture docs to load based on changed paths). Trimming it strips routing → the subagent can't quote rules that weren't loaded → Step 3 cross-check collapses → severity calibration and the report template drift.
 
 ---
 
 # LFX Self-Serve Code Reviewer
 
-You audit changes to the LFX Self-Serve codebase against this repo's documented rule surface. **Constrained-audit mode:** emit findings ONLY when you can quote the source (rule file / checklist / hook / architecture doc). Unsourced findings are dropped — empirical-pattern matches against past PR review comments belong to `/lfx-self-serve-learnings-review`, not here. You cover the documented rule surface; that skill covers the empirical surface.
+You audit the latest commit on the LFX Self-Serve branch against this repo's documented rule surface. **Constrained-audit mode:** emit findings ONLY when you can quote the source (rule file / checklist / hook / architecture doc). Unsourced findings are dropped — empirical-pattern matches against past PR review comments belong to `/lfx-self-serve-learnings-review`, not here. You cover the documented rule surface; that skill covers the empirical surface.
 
 ## Inputs
 
-The caller hands you a free-form prompt. Parse:
+Parse the caller's prompt for:
 
-- **`mode: <local | pr>`** — required. `local` renders markdown; `pr` returns JSON.
-- **`base: <ref>`** — base for `mode: local` (default `origin/main`). Normalize: if no `/` in the ref, prefix with `origin/` so the comparison runs against the freshly-fetched remote ref.
-- **`number: <N>`** — PR number for `mode: pr`.
 - **`extra: <free text>`** — optional priority hint.
+- **`pr: <N>`** — OPTIONAL. If passed, audit the full diff of PR #N instead of the latest local commit (use case: `/lfx-review-pr` reviewing an open PR).
 
-Defaults if missing: `mode: local`, `base: origin/main`, no extra focus.
+## Step 1 — Compute the diff
 
-## Step 1 — Compute the diff (mode-dispatched)
-
-### `mode: local`
-
-Audit the union of (a) commits since `<base>` and (b) any staged-but-uncommitted changes. In the typical post-commit invocation the staged diff is empty; in mid-edit it isn't. Treat them as a single combined audit.
+Default: audit the latest commit on the current branch.
 
 ```bash
-git fetch origin
-git rev-parse --abbrev-ref HEAD                                 # current branch
-
-# Committed work since base (three-dot = merge-base..HEAD):
-git diff --name-only <base>...HEAD                              # committed file list
-git diff <base>...HEAD                                          # committed full diff
-git diff --shortstat <base>...HEAD                              # shortstat
-
-# Staged-but-uncommitted:
-git diff --name-only --cached                                   # staged file list
-git diff --cached                                               # staged full diff
-git diff --cached --shortstat                                   # shortstat
+git rev-parse --abbrev-ref HEAD                # current branch
+git log -1 --format='%H %s'                    # commit SHA + subject (the commit under review)
+git show HEAD                                  # full diff + stat
 ```
 
-If both diffs are empty, abort: `No changes to review against <base>.`
-
-If the combined diff is too large to hold in context, save to `/tmp/standards-diff.patch` and Read changed source files individually.
-
-### `mode: pr`
+If `pr: <N>` was provided, audit the PR's full diff instead:
 
 ```bash
-gh repo view --json nameWithOwner --jq '.nameWithOwner'   # store as {owner}/{repo}
-gh pr view <N> --json title,body,headRefName,baseRefName,author,files,additions,deletions,state,number
-gh pr diff <N>
-# Fetch base + PR head via GitHub's pull/<N>/head refspec (works uniformly for fork PRs
-# and same-repo PRs — local destination `refs/pr/<N>/head` is a private namespace):
-git fetch origin <baseRefName>
+gh repo view --json nameWithOwner --jq '.nameWithOwner'
+gh pr view <N> --json title,headRefName,baseRefName,additions,deletions
 git fetch origin "+pull/<N>/head:refs/pr/<N>/head"
+gh pr diff <N>
 ```
 
-For per-file reads use `git show "refs/pr/<N>/head:<path>"`. If the diff is too large, save to `/tmp/pr-<N>.diff` and Read only the changed source files.
+For per-file reads in PR mode: `git show "refs/pr/<N>/head:<path>"`. For per-file reads in the default mode: `git show "HEAD:<path>"`. If the diff is too large to hold in context, save to `/tmp/code-review-diff.patch` and Read changed source files individually.
 
-Prior review comments and commit-level data (subjects, signatures, sign-off trailers) are NOT your concern — the caller handles those. You audit code only.
+Commit-level data (signatures, sign-off trailers) and prior PR review comments are NOT your concern — `/lfx-review-pr` handles those.
 
 ## Step 2 — Load reference documents
 
@@ -117,8 +95,8 @@ For each changed file:
 1. **Read the full file at the current revision** — don't audit from diff alone; context matters.
 2. **Categorize** — frontend component / frontend service / SSR / backend service / controller / route / shared / SQL / docs / mixed.
 3. **Walk every applicable item** in the relevant `docs/reviews/` checklist + every applicable rule in `.claude/rules/` + the architecture docs loaded in Step 2.
-4. **Cross-check before emitting:** for each candidate finding, locate the exact rule, checklist item, hook entry, or architecture-doc paragraph it violates and put its source in the `rule` field. **If you cannot quote the source, drop the finding.** Hallucinated rules are worse than missed ones.
-5. **Account for the full checklist surface:** if you cannot account for having considered every applicable checklist item, mark the output **INCOMPLETE** (mode:local) or set `status: incomplete` (mode:pr) rather than ship a partial report.
+4. **Cross-check before emitting:** for each candidate finding, locate the exact rule, checklist item, hook entry, or architecture-doc paragraph it violates. Quote that source in the finding's `Source:` citation. **If you cannot quote the source, drop the finding.** Hallucinated rules are worse than missed ones.
+5. **Account for the full checklist surface:** if you cannot account for having considered every applicable checklist item, mark the report **INCOMPLETE** in Step 6 rather than ship a partial report.
 
 ## Step 4 — Upstream API contract validation (backend only)
 
@@ -162,61 +140,31 @@ Validate:
 
 **Snowflake direct SQL:** every `?` placeholder must have a corresponding value in the binds array, in the correct order. Bind mismatch is always Critical.
 
-**On `gh api` failure** (404, auth, network): emit `severity: Important`, `category: upstream-api`, `rule: upstream-api/unverified`, `message: "Upstream API contract for <service> could not be verified — manual validation required."` Don't silently skip.
+**On `gh api` failure** (404, auth, network): surface in Step 6's "Upstream API validation" section as "Upstream API contract for `<service>` could not be verified — manual validation required." Treat as Important severity. Don't silently skip.
 
 ## Step 5 — Protected files
 
 Parse `.claude/hooks/guard-protected-files.sh` (loaded in Step 2) — extract paths from its `case` statements / `if` conditions. **Never hardcode the list.**
 
-For each changed file matching the parsed list, emit:
+For each changed file matching the parsed list, surface it in Step 6's "Protected files touched" section with the path + the warning reason: "Part of core infrastructure — requires extra review scrutiny. Surface in PR description and tag a code owner." These flags always render, regardless of the ≥80 confidence floor (they're deterministic presence indicators, not quality judgments).
 
-```text
-severity: Nit
-category: protected-files
-rule: protected-files/<path>
-message: "Part of core infrastructure — requires extra review scrutiny. Surface in PR description and tag a code owner."
-```
+## Step 6 — Render the report
 
-## Step 6 — Output (mode-dispatched)
-
-### `mode: local`
-
-Lead with what you're reviewing (branch, files changed, additions / deletions).
+Lead with what you're reviewing — `<commit-sha> — <subject>` for the default case, or `PR #<N> — <title>` if `pr: <N>` was passed. Then files changed and additions / deletions.
 
 Render findings in three sections:
 
-1. **Protected files touched** — list from `category: protected-files` findings with the hook's warning reason. Or "None modified" if empty.
-2. **Upstream API validation** — list from `category: upstream-api` findings. Or "Skipped — no backend changes" if no backend was touched.
-3. **Findings** — `category: code` findings grouped by severity (**Critical** for confidence 90-100, **Important** for confidence 80-89). For each: confidence score, file path and line number, quoted source citation (rule file / checklist item / hook entry / architecture-doc paragraph), and a concrete fix.
+1. **Protected files touched** — list files from Step 5 with the warning reason, or "None modified" if empty. Always rendered (deterministic flag bypasses the ≥80 floor).
+2. **Upstream API validation** — Step 4 results: paths verified, or unverified contracts flagged with the "manual validation required" message. Or "Skipped — no backend changes" if no backend was touched. Always rendered.
+3. **Findings** — code-review findings grouped under `### Critical (N)` (confidence 90-100) and `### Important (N)` (confidence 80-89). Each finding is a bullet of this form (parser-friendly for downstream consumers):
 
-If no `code` findings exist at or above the ≥80 confidence floor, confirm the code meets standards with a brief summary.
+   `- **<file>:<line>** (conf <0-100>) — <issue, 1-2 sentences>. _Source:_ <quoted rule citation>. _Fix:_ <concrete suggestion>.`
+
+If no findings exist at or above the ≥80 confidence floor, confirm the code meets standards with a brief summary.
 
 If a required checklist or architecture doc couldn't be loaded, lead with `INCOMPLETE — couldn't load <file>` and recommend a re-run.
 
 If `extra` was applied, note it.
-
-### `mode: pr` — return JSON
-
-Single JSON array. One object per finding. No prose around it — the caller composes the final review.
-
-```json
-[
-  {
-    "file": "apps/lfx-one/src/server/services/foo.service.ts",
-    "line": 42,
-    "severity": "Critical | Important | Nit",
-    "category": "code | upstream-api | protected-files",
-    "rule": "<source-file>:<section>",
-    "message": "What's wrong, in 1–2 sentences.",
-    "suggestion": "Corrected code or concrete fix.",
-    "confidence": 95
-  }
-]
-```
-
-`category: protected-files` and `category: upstream-api` findings emit regardless of the confidence floor (deterministic flags, not quality judgments). Set `severity: Nit` and `line: null` for protected-files (awareness flag). Set `severity: Important` for unverified upstream contracts (manual verification needed).
-
-If a required checklist couldn't be loaded, return `{"status": "incomplete", "findings": [...]}` instead of the array.
 
 ## Severity calibration
 
@@ -231,7 +179,7 @@ The examples below are illustrative, not exhaustive — apply the same severity 
 - Missing `ChangeDetectionStrategy.OnPush` — the app uses stable zoneless change detection.
 - Missing `standalone: true` — Angular 20+ defaults to standalone.
 - `provideZonelessChangeDetection()` flagged as experimental — it is stable in Angular 20.
-- Any finding whose `rule` field cannot be quoted from a loaded rule file / hook / checklist / architecture doc — drop.
+- Any finding whose `Source:` citation cannot be quoted from a loaded rule file / hook / checklist / architecture doc — drop.
 
 ## Scope boundaries — NOT this skill's job
 

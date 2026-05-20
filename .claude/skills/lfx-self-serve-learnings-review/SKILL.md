@@ -1,10 +1,10 @@
 ---
 name: lfx-self-serve-learnings-review
-description: "Post-commit empirical-pattern review for lfx-self-serve. Matches the diff against `docs/reviews/knowledge-base/` — patterns extracted from past PR review comments on this repo. Findings are gated by KB matches: every finding must quote a pattern entry; unsourced findings are dropped. Skill body launches a general-purpose subagent in the background that renders a markdown review of the cumulative branch state."
+description: "Post-commit empirical-pattern review for lfx-self-serve. Audits the latest commit against `docs/reviews/knowledge-base/` — patterns extracted from past PR review comments on this repo. Findings are gated by KB matches: every finding must quote a pattern entry; unsourced findings are dropped. Optionally audits a full PR diff if `pr: <N>` is passed. Renders a markdown review. Skill body launches a general-purpose subagent in the background."
 allowed-tools: Agent
 ---
 
-Launch a subagent in the background (`subagent_type: general-purpose`, `run_in_background: true`) with the **entire content below** as the Agent `prompt` parameter. Append the caller's runtime args (`base`, `extra`) at the end so the subagent sees both the playbook and its inputs.
+Launch a subagent in the background (`subagent_type: general-purpose`, `run_in_background: true`) with the **entire content below** as the Agent `prompt` parameter. Append the caller's runtime args (`extra`, `pr`) at the end so the subagent sees both the playbook and its inputs.
 
 **Launcher discipline — non-negotiable:** pass the playbook **verbatim**. The playbook contains its own routing logic (Step 2 picks which pattern files in `docs/reviews/knowledge-base/` to load based on changed paths). Trimming it strips routing → the subagent can't quote pattern entries that weren't loaded → Step 3's KB-match gate collapses → Step 4 false-positive filtering breaks → confidence mapping and the report template drift.
 
@@ -12,7 +12,7 @@ Launch a subagent in the background (`subagent_type: general-purpose`, `run_in_b
 
 # LFX Self-Serve Learnings Reviewer
 
-You match a local git diff against the empirical pattern knowledge base in `docs/reviews/knowledge-base/`. Each pattern entry was extracted from a real PR review comment on this repo. **Findings are gated by KB matches:** every emitted finding must quote a pattern entry's rule ID + a phrase from its `**Pattern:**` or `**Detect:**` clause. If you can't quote, you drop.
+You match the latest commit on the local branch against the empirical pattern knowledge base in `docs/reviews/knowledge-base/`. Each pattern entry was extracted from a real PR review comment on this repo. **Findings are gated by KB matches:** every emitted finding must quote a pattern entry's rule ID + a phrase from its `**Pattern:**` or `**Detect:**` clause. If you can't quote, you drop.
 
 Generic-rubric findings (security / performance / quality / architecture / testing intuitions not grounded in a KB entry) belong to `/lfx-self-serve-code-review`, which audits the documented rule surface. You cover the empirical surface — the patterns the bots and human reviewers have actually flagged.
 
@@ -20,31 +20,28 @@ Generic-rubric findings (security / performance / quality / architecture / testi
 
 Parse the caller's prompt for:
 
-- **`base: <ref>`** — base branch to compare against (default `origin/main`). If `<base>` contains no `/` (bare `main`), prefix with `origin/` so the comparison runs against the freshly-fetched remote ref.
 - **`extra: <free text>`** — optional priority hint.
+- **`pr: <N>`** — OPTIONAL. If passed, audit the full diff of PR #N instead of the latest local commit.
 
 ## Step 1 — Compute the diff
 
-Audit the union of (a) commits since `<base>` and (b) any staged-but-uncommitted changes. In the typical post-commit invocation the staged diff is empty (the commit cleaned it); stay robust to the mid-edit case where both are non-empty.
+Default: audit the latest commit on the current branch.
 
 ```bash
-git fetch origin
 git rev-parse --abbrev-ref HEAD                # current branch
-
-# Committed work since base (three-dot = merge-base..HEAD):
-git diff --name-only <base>...HEAD             # committed file list
-git diff <base>...HEAD                         # committed full diff
-git diff --shortstat <base>...HEAD             # shortstat
-
-# Staged-but-uncommitted:
-git diff --name-only --cached                  # staged file list
-git diff --cached                              # staged full diff
-git diff --cached --shortstat                  # shortstat
+git log -1 --format='%H %s'                    # commit SHA + subject (the commit under review)
+git show HEAD                                  # full diff + stat
 ```
 
-If both diffs are empty, render: `No changes to audit against <base>.` and stop.
+If `pr: <N>` was provided, audit the PR's full diff instead:
 
-If the combined diff is too large to hold in context, save to `/tmp/learnings-reviewer-diff.patch` and Read changed source files individually.
+```bash
+git fetch origin "+pull/<N>/head:refs/pr/<N>/head"
+gh pr view <N> --json title,baseRefName,additions,deletions
+gh pr diff <N>
+```
+
+If the diff is too large to hold in context, save to `/tmp/learnings-reviewer-diff.patch` and Read changed source files individually.
 
 ## Step 2 — Load pattern files (routed by diff)
 
@@ -106,20 +103,13 @@ If `extra` was passed, prioritise those areas when ordering the report. Don't su
 
 ## Step 6 — Render the report
 
-Lead with what you're reviewing (branch, files changed, additions / deletions, pattern files loaded). Group findings by severity:
+Lead with what you're reviewing — `<commit-sha> — <subject>` for the default case, or `PR #<N> — <title>` if `pr: <N>` was passed. Then files changed, additions / deletions, and pattern files loaded.
 
-- **Critical** (confidence 90-100)
-- **Important** (confidence 80-89)
+Group findings under `### Critical (N)` (confidence 90-100) and `### Important (N)` (confidence 80-89). Each finding is a bullet of this form (parser-friendly for downstream consumers):
+
+`- **<file>:<line>** (conf <0-100>) — <KB failure message>. _Source:_ `<rule-id>` — "<quoted Pattern: or Detect: phrase>". _Fix:_ <KB fix text>.`
 
 Findings with confidence below 80 are suppressed.
-
-For each finding, include:
-
-- Description scoped to file + line.
-- Confidence score.
-- File path and line number.
-- **Source:** the KB rule ID (e.g., `security/secrets-in-diff`) AND the quoted `**Pattern:**` or `**Detect:**` phrase that matched.
-- **Fix:** the KB entry's `**Fix:**` directly.
 
 If no findings at or above the ≥80 confidence floor exist, confirm the code meets the empirical-pattern bar with a brief summary.
 
