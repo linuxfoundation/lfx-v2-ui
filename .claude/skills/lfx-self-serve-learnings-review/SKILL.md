@@ -1,66 +1,62 @@
 ---
 name: lfx-self-serve-learnings-review
-description: 'Post-commit code-review skill for lfx-self-serve — runs a comprehensive review rubric (security, performance, code quality, architecture, testing) cross-checked against an empirical pattern knowledge base sampled from past PR review comments on this repo. Invoke after each commit; the skill body launches a general-purpose subagent in the background and renders a markdown review report of the cumulative branch state.'
+description: "Post-commit empirical-pattern review for lfx-self-serve. Matches the diff against `docs/reviews/knowledge-base/` — patterns extracted from past PR review comments on this repo. Findings are gated by KB matches: every finding must quote a pattern entry; unsourced findings are dropped. Skill body launches a code-reviewer subagent in the background that renders a markdown review of the cumulative branch state."
 allowed-tools: Agent
 ---
 
-Launch a subagent in the background (`subagent_type: general-purpose`, `run_in_background: true`) with the **entire content below** as the Agent `prompt` parameter.
+Launch a subagent in the background (`subagent_type: code-reviewer`, `run_in_background: true`) with the **entire content below** as the Agent `prompt` parameter. Append the caller's runtime args (`base`, `extra`) at the end so the subagent sees both the playbook and its inputs.
 
-**Launcher discipline — non-negotiable:** pass the playbook **verbatim**. Do not summarize, condense, paraphrase, or pre-route based on the diff you happen to know about. The playbook contains the subagent's own routing logic (Step 2 picks which pattern files in `docs/reviews/knowledge-base/` to load based on changed paths); if you trim it, the subagent cannot quote pattern entries that aren't in its prompt — Step 4 KB cross-check collapses (findings get dropped for lack of quotable source), Step 5 false-positive filtering breaks, and the documented severity scale and report template drift. Append the caller's runtime args (`base`, `extra`) at the end of the prompt so the subagent sees both the playbook and its inputs.
+**Launcher discipline — non-negotiable:** pass the playbook **verbatim**. The playbook contains its own routing logic (Step 2 picks which pattern files in `docs/reviews/knowledge-base/` to load based on changed paths). Trimming it strips routing → the subagent can't quote pattern entries that weren't loaded → Step 3's KB-match gate collapses → Step 4 false-positive filtering breaks → severity (taken per-entry) and the report template drift.
 
 ---
 
 # LFX Self-Serve Learnings Reviewer
 
-You are a senior software engineer conducting a thorough code review of a local git diff against the LFX self-serve codebase. Typically invoked in the background right after a commit lands, reviewing the cumulative branch state against the base. Apply the review rubric below, cross-checked against this repo's empirical-pattern knowledge base. Provide constructive, actionable feedback.
+You match a local git diff against the empirical pattern knowledge base in `docs/reviews/knowledge-base/`. Each pattern entry was extracted from a real PR review comment on this repo. **Findings are gated by KB matches:** every emitted finding must quote a pattern entry's rule ID + a phrase from its `**Pattern:**` or `**Detect:**` clause. If you can't quote, you drop.
+
+Generic-rubric findings (security / performance / quality / architecture / testing intuitions not grounded in a KB entry) belong to `/lfx-self-serve-code-review`, which audits the documented rule surface. You cover the empirical surface — the patterns the bots and human reviewers have actually flagged.
 
 ## Inputs
 
-The caller hands you a free-form prompt. Parse it for:
+Parse the caller's prompt for:
 
-- **`base: <ref>`** — base branch to compare against (default `origin/main`).
-- **`extra: <free text>`** — optional focus areas to prioritise (e.g., "focus on security").
+- **`base: <ref>`** — base branch to compare against (default `origin/main`). If `<base>` contains no `/` (bare `main`), prefix with `origin/` so the comparison runs against the freshly-fetched remote ref.
+- **`extra: <free text>`** — optional priority hint.
 
-If `<base>` contains no `/` (e.g., bare `main`), prefix with `origin/` so the comparison runs against the freshly-fetched remote ref rather than a possibly-stale local branch.
+## Step 1 — Compute the diff
 
-Defaults if missing: `base: origin/main`, no extra focus.
-
-## Procedure
-
-### Step 1 — Compute the local diff
-
-Audit the union of (a) commits since the base and (b) any staged-but-uncommitted changes. In the typical post-commit invocation the staged diff is empty (the commit cleaned it), and you'll be reviewing the cumulative committed work since `<base>`. Stay robust to mid-edit staged work too — if both diffs are non-empty, treat them as a single combined audit.
+Audit the union of (a) commits since `<base>` and (b) any staged-but-uncommitted changes. In the typical post-commit invocation the staged diff is empty (the commit cleaned it); stay robust to the mid-edit case where both are non-empty.
 
 ```bash
 git fetch origin
-git rev-parse --abbrev-ref HEAD                     # current branch
+git rev-parse --abbrev-ref HEAD                # current branch
 
 # Committed work since base (three-dot = merge-base..HEAD):
-git diff --name-only <base>...HEAD                  # committed file list
-git diff <base>...HEAD                              # committed full diff
-git diff --shortstat <base>...HEAD                  # committed additions/deletions
+git diff --name-only <base>...HEAD             # committed file list
+git diff <base>...HEAD                         # committed full diff
+git diff --shortstat <base>...HEAD             # shortstat
 
-# Staged-but-uncommitted work:
-git diff --name-only --cached                       # staged file list
-git diff --cached                                   # staged full diff
-git diff --cached --shortstat                       # staged additions/deletions
+# Staged-but-uncommitted:
+git diff --name-only --cached                  # staged file list
+git diff --cached                              # staged full diff
+git diff --cached --shortstat                  # shortstat
 ```
 
-If both the committed diff and the staged diff are empty, render: `No changes to audit against <base>.` and stop.
+If both diffs are empty, render: `No changes to audit against <base>.` and stop.
 
-If the diff is too large to hold in context, save the combined patch to `/tmp/learnings-reviewer-diff.patch` and Read changed source files individually.
+If the combined diff is too large to hold in context, save to `/tmp/learnings-reviewer-diff.patch` and Read changed source files individually.
 
-### Step 2 — Load pattern files (routed by diff)
+## Step 2 — Load pattern files (routed by diff)
 
 **Always read:**
 
-- `docs/reviews/knowledge-base/known-false-positives.md` — applied LAST to drop findings that aren't real for this codebase.
+- `docs/reviews/knowledge-base/known-false-positives.md` — applied LAST (Step 4) to drop findings that aren't real for this codebase.
+- `docs/reviews/knowledge-base/security.md` — secrets / sanitization / auth-state leakage / untrusted cookies / untrusted URLs can hit any change.
 
-**Conditionally read** the per-category pattern files in `docs/reviews/knowledge-base/`, based on the changed-file paths:
+**Conditionally read** the per-category pattern files based on changed-file paths:
 
 | Pattern file                     | Read when                                                                                                                                                                                                                                                          |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `security.md`                    | always (secrets / sanitization / auth-state leakage / untrusted cookies / untrusted URLs can hit any change)                                                                                                                                                       |
 | `typescript-correctness.md`      | any `.ts` file changed                                                                                                                                                                                                                                             |
 | `templates-and-accessibility.md` | any `.component.html` changed                                                                                                                                                                                                                                      |
 | `frontend-state-and-timing.md`   | any `.component.ts` / `.service.ts` under `apps/lfx-one/src/app/`                                                                                                                                                                                                  |
@@ -69,9 +65,9 @@ If the diff is too large to hold in context, save the combined patch to `/tmp/le
 | `data-and-snowflake.md`          | `apps/lfx-one/src/server/services/snowflake.service.ts` or any file with direct Snowflake SQL                                                                                                                                                                      |
 | `code-truthiness.md`             | any JSDoc / inline comments, anything under `docs/**`, or any new feature module / service / component without a matching `*.spec.ts`                                                                                                                              |
 
-Read ONLY the rows whose condition matches the diff. Do NOT blanket-read all pattern files — that's wasted context with no audit value. When in doubt about a borderline row, lean toward reading.
+Read ONLY the rows whose condition matches. Do NOT blanket-read — wasted context with no audit value. When borderline, lean toward reading.
 
-Each pattern file entry uses this format:
+Each pattern entry uses this format:
 
 ```text
 ## `<category>/<pattern-id>` — CRITICAL | SHOULD_FIX | NIT
@@ -83,84 +79,54 @@ Each pattern file entry uses this format:
 **Fix:** how to fix.
 ```
 
-### Step 3 — Review pass against the rubric
+If a routed pattern file fails to load, mark the verdict **INCOMPLETE** in Step 6.
 
-Analyze the diff for:
+## Step 3 — KB match pass
 
-1. **Security**
-   - Hardcoded secrets / API keys / tokens committed
-   - Input validation and sanitization
-   - Authentication and authorization (route guards, identity-leak in error messages)
-   - Data exposure (PII in logs / identifiers, public-route visibility filters)
-   - Injection vulnerabilities (XSS via `innerHTML`, SQL injection in raw queries, command injection)
-   - Sanitizer bypass / untrusted URL bindings
+For each pattern entry in every loaded pattern file (excluding `known-false-positives.md`):
 
-2. **Performance and efficiency**
-   - Algorithm complexity vs data size
-   - Database query patterns (N+1, missing `ORDER BY` / `LIMIT`, non-deterministic pagination)
-   - Resource lifecycle (timer cleanup, observable unsubscribe, subscription leaks)
-   - Render correctness (state ↔ stream timing, double emissions, retained subscriptions)
-   - Unnecessary recomputations and missing memoization
+1. **Check `**Detect:**`** — use grep / file reads as the entry directs. Don't infer the match from the `**Pattern:**` description alone; the `**Detect:**` clause is the operational rule.
+2. **If matched, emit a finding:**
+   - **Severity:** taken from the entry header (CRITICAL / SHOULD_FIX / NIT) — don't promote, don't demote.
+   - **Rule:** the entry's full ID (e.g., `security/secrets-in-diff`).
+   - **Message:** the entry's `**Failure message:**`, scoped to the specific file + line.
+   - **Fix:** the entry's `**Fix:**`.
+   - **Citation:** quote the entry's `**Pattern:**` or `**Detect:**` phrase that triggered the match.
+3. **If you can't quote the entry, drop the finding.** The KB is the bar — no quote, no ship.
 
-3. **Code quality**
-   - Readability and naming
-   - Function / class size and single responsibility
-   - Type soundness — avoid `any`, justify `as` casts, no non-null assertions on async results
-   - Code duplication
-   - Dead code, unused imports, leftover debug logs
+**Findings without a matching pattern entry do not ship.** Generic code-review intuition belongs to `/lfx-self-serve-code-review`.
 
-4. **Architecture and design**
-   - Design pattern fit and separation of concerns
-   - Dependency management
-   - Error handling strategy (graceful degradation, structured error logging, opaque denials at trust boundaries)
-   - Module boundaries
+## Step 4 — Apply known false positives
 
-5. **Testing and documentation**
-   - Test coverage for new feature / behaviour
-   - Test quality (assertions match intent, no skipped / xfailed without rationale)
-   - Documentation completeness (JSDoc on exports, route-mounting comments)
-   - Comment-vs-code drift (claims that don't match the implementation)
+Walk `known-false-positives.md`. For each Step 3 finding, check whether it matches a documented false-positive pattern. If matched, drop. **False positives win even over quotable pattern matches** — this list is the floor.
 
-### Step 4 — KB cross-check
+## Step 5 — Apply extra focus
 
-For each finding from Step 3, check whether it matches a pattern entry in any of the loaded pattern files.
+If `extra` was passed, prioritise those areas when ordering the report. Don't suppress other findings — `extra` is a priority hint, not a filter.
 
-- If a finding matches a pattern, cite the pattern's rule ID (e.g., `security/secrets-in-diff`) and quote the entry (rule ID + a phrase from `**Pattern:**` or `**Detect:**`). If you can't quote the source, drop the finding.
-- If a finding matches a review area but no pattern entry, cite `<area>/<short-id>` (e.g., `code-quality/dead-code`).
-
-### Step 5 — Apply known false positives
-
-Walk `known-false-positives.md`. Drop findings that match documented false-positive patterns. The false-positive list wins over both pattern matches and generic-area findings.
-
-### Step 6 — Apply extra focus
-
-If `extra` was passed, prioritise those areas. Don't suppress other findings — `extra` is a priority hint, not a filter.
-
-### Step 7 — Render the report
+## Step 6 — Render the report
 
 Print to terminal — no git mutations.
 
 ```markdown
-# Post-commit code review (learnings-reviewer)
+# Post-commit learnings review (KB-matched)
 
 **Branch:** `<current-branch>` → `<base>`
 **Files changed:** N | **Additions:** +A | **Deletions:** -D
-**Verdict:** NOT READY | READY WITH CHANGES | READY
+**Pattern files loaded:** <comma-separated short list>
+**Verdict:** NOT READY | READY WITH CHANGES | READY | INCOMPLETE
 
 ## Findings
 
-Grouped by severity. Each finding cites its rule.
+Each finding cites its KB rule ID and quotes the pattern entry it matched.
 
 ### 🔴 Critical (N)
-
-- `<file>:<line>` — <message>. Source: `<rule>`. Fix: <suggestion>.
+- `<file>:<line>` — <message>. Source: `<rule>` ("<quoted Pattern: or Detect: phrase>"). Fix: <suggestion>.
 
 ### 🟡 Should fix (N)
-
 - ...
 
 ### 🔵 Nit (N)
-
 - ...
 
 ## Verdict reasoning
@@ -168,39 +134,25 @@ Grouped by severity. Each finding cites its rule.
 <one line per CRITICAL plus a roll-up>
 ```
 
-If `extra` was applied, note it in the report header.
+If `extra` was applied, note it in the header.
 
-If you couldn't load a pattern file the routing said you should have, mark the verdict **INCOMPLETE** and explain — re-run once the underlying issue is resolved.
+## Verdict rules
 
-## Severity scale
-
-| Severity   | Meaning                                                                                                   |
-| ---------- | --------------------------------------------------------------------------------------------------------- |
-| CRITICAL   | Security, data-integrity, runtime crashes, auth bypass, secrets, SSR breakage, framework-runtime breakage |
-| SHOULD_FIX | Correctness issues that aren't catastrophic, structural problems, missing tests on new features           |
-| NIT        | Style, naming, micro-optimizations, doc nits                                                              |
-
-Don't promote NITs to CRITICAL.
-
-Verdict rules:
-
-- **NOT READY** — any CRITICAL finding.
-- **READY WITH CHANGES** — zero CRITICAL; SHOULD_FIX findings present.
+- **NOT READY** — any CRITICAL.
+- **READY WITH CHANGES** — zero CRITICAL; SHOULD_FIX present.
 - **READY** — zero CRITICAL, zero SHOULD_FIX. NITs are fine to carry forward.
+- **INCOMPLETE** — a routed pattern file couldn't be loaded; re-run once resolved.
 
-## Scope boundaries
+## Scope boundaries — NOT this skill's job
 
-This rubric does NOT cover:
-
-- **PR-shape sanity** (branch name, JIRA reference, conventional commits, rebase, DCO + GPG signing, diff size).
-- **Project conventions** (Angular component organization, repo rule files, architecture checklists, upstream API contract validation, protected files).
-
-If a finding fits one of those surfaces, drop it.
+- **PR-shape sanity** (branch / JIRA / commits / DCO+GPG / rebase / diff size) → `/lfx-self-serve-pr-readiness`.
+- **Documented rule-surface audits** (Angular structure, repo rule files, architecture checklists, upstream API contracts, protected files) → `/lfx-self-serve-code-review`.
+- **Generic code-review intuition** not grounded in a KB pattern entry → drop.
 
 ## Constraints
 
 - Be specific — every finding cites file + line.
-- Be actionable — suggest a fix, not just diagnose.
-- Be fair — don't promote NITs to CRITICAL.
-- Don't invent pattern matches — quote the entry or drop.
-- Don't blanket-read all pattern files — read ONLY the ones whose Read-when condition matches the diff.
+- Be actionable — quote the entry's `**Fix:**` directly.
+- Be fair — severity is what the entry says; don't promote NITs to CRITICAL.
+- Don't invent pattern matches — quote the entry's exact phrase or drop the finding.
+- Don't blanket-read all pattern files — read ONLY the routed rows.

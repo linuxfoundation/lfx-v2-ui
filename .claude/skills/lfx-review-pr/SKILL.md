@@ -67,7 +67,7 @@ The metadata file path (`/tmp/pr-<N>-meta.json`) and the local PR-head ref (`ref
 
 ## Phase 2 — Invoke the code review skill (launches background subagent)
 
-Invoke the `/lfx-self-serve-code-review` skill via the Skill tool. Its body instructs you to launch a `general-purpose` subagent with `run_in_background: true` — follow that launcher instruction. Do **not** wait — proceed to Phases 3–4 immediately so the reviewer's work overlaps with the skill-side audits.
+Invoke the `/lfx-self-serve-code-review` skill via the Skill tool. Its body instructs you to launch a `code-reviewer` subagent with `run_in_background: true` — follow that launcher instruction. Do **not** wait — proceed to Phases 3–4 immediately so the reviewer's work overlaps with the skill-side audits.
 
 The skill body contains the full code-review playbook, which becomes the launched subagent's prompt. Pass minimal context as args — anything you list here that's already in the playbook is duplicate signal. The launched subagent fetches the PR diff and metadata itself.
 

@@ -22,7 +22,7 @@ This project has guided skills for common workflows. **Proactively suggest the r
 
 ## Post-commit review skills (launch background subagents)
 
-The two post-commit reviews are **skills with launcher bodies**: each skill body instructs Claude to spawn a `general-purpose` subagent in the background (`run_in_background: true`) with the full review playbook inlined. Invoke them in parallel via the Skill tool immediately after each commit **while the branch is pre-PR**, while you keep working on the next commit. The latest in-flight pair is drained and addressed at the PR boundary, not the commit boundary (see the work cycle in `CLAUDE.md`).
+The two post-commit reviews are **skills with launcher bodies**: each skill body instructs Claude to spawn a `code-reviewer` subagent in the background (`run_in_background: true`) with the full review playbook inlined. Invoke them in parallel via the Skill tool immediately after each commit **while the branch is pre-PR**, while you keep working on the next commit. The latest in-flight pair is drained and addressed at the PR boundary, not the commit boundary (see the work cycle in `CLAUDE.md`).
 
 **Scope: pre-PR only.** Once the PR is open and you're iterating on CodeRabbit / Copilot feedback, do NOT invoke the pair on iteration commits — the bots auto-trigger on every push and become the live audit surface from that point. Stacking skill-launched reviews on top of bot reviews makes the iteration loop too slow without adding signal.
 
