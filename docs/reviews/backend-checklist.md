@@ -325,13 +325,10 @@ await this.microserviceProxy.proxyRequest(req, '/query/resources/meetings', 'POS
 
 ```typescript
 // Read — /query/resources
-const { resources } = await this.microserviceProxy.proxyRequest(
-  req,
-  '/query/resources',
-  'GET',
-  undefined,
-  { type: 'meeting', filters: `project_id:${projectId}` },
-);
+const { resources } = await this.microserviceProxy.proxyRequest(req, '/query/resources', 'GET', undefined, {
+  type: 'meeting',
+  filters: `project_id:${projectId}`,
+});
 
 // Write — /itx/...
 await this.microserviceProxy.proxyRequest(req, `/itx/meetings/${id}`, 'PUT', body);

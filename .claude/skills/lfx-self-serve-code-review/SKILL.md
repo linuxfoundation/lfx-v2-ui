@@ -68,32 +68,32 @@ Always pull current contents — never rely on memory of these files from prior 
 
 These are the **primary audit surface** — each item exists because it broke a real PR on this repo. Skipping a relevant checklist invalidates the audit. If you cannot Read a required checklist, mark the report as **INCOMPLETE**.
 
-| Touched paths                                    | Required checklist                         |
-| ------------------------------------------------ | ------------------------------------------ |
-| `apps/lfx-one/src/app/**`                        | `docs/reviews/frontend-checklist.md`       |
-| `apps/lfx-one/src/server/**`                     | `docs/reviews/backend-checklist.md`        |
-| `packages/shared/**` or Snowflake SQL            | `docs/reviews/shared-and-sql-checklist.md` |
-| `docs/**`                                        | `docs/reviews/docs-checklist.md`           |
+| Touched paths                         | Required checklist                         |
+| ------------------------------------- | ------------------------------------------ |
+| `apps/lfx-one/src/app/**`             | `docs/reviews/frontend-checklist.md`       |
+| `apps/lfx-one/src/server/**`          | `docs/reviews/backend-checklist.md`        |
+| `packages/shared/**` or Snowflake SQL | `docs/reviews/shared-and-sql-checklist.md` |
+| `docs/**`                             | `docs/reviews/docs-checklist.md`           |
 
 You audit **by these checklists**, not against your general framework knowledge. Locate a specific checklist item, rule file entry, hook path, or architecture-doc paragraph for every finding (see Step 3).
 
 ### Architecture docs — load conditionally by changed-file paths
 
-| Touched paths                                  | Load                                                                                                                                                                                                |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/lfx-one/src/app/**`                      | `docs/architecture/frontend/angular-patterns.md`, `component-architecture.md`, `styling-system.md`                                                                                                  |
-| Drawer component or `DialogService.open` usage | `docs/architecture/frontend/drawer-pattern.md`                                                                                                                                                      |
-| `apps/lfx-one/src/server/**`                   | `docs/architecture/backend/README.md`, `error-handling-architecture.md`, `logging-monitoring.md`, `server-helpers.md`                                                                               |
-| `middleware/auth*`                             | `docs/architecture/backend/authentication.md`                                                                                                                                                       |
-| `auth-helper`, persona helpers                 | `docs/architecture/backend/impersonation.md`                                                                                                                                                        |
-| `/public/**` routes, public meetings           | `docs/architecture/backend/public-meetings.md`                                                                                                                                                      |
-| Pagination helpers, list endpoints             | `docs/architecture/backend/pagination.md`                                                                                                                                                           |
-| `ai.service.ts`, AI proxy calls                | `docs/architecture/backend/ai-service.md`                                                                                                                                                           |
-| `nats.service.ts`, project NATS RPCs           | `docs/architecture/backend/nats-integration.md`                                                                                                                                                     |
-| `snowflake.service.ts`, direct SQL             | `docs/architecture/backend/snowflake-integration.md`                                                                                                                                                |
-| SSR / `server.ts` / render pipeline            | `docs/architecture/backend/ssr-server.md`                                                                                                                                                           |
-| `packages/shared/**`                           | `docs/architecture/shared/package-architecture.md`                                                                                                                                                  |
-| `*.spec.ts` or `e2e/**`                        | `docs/architecture/testing/e2e-testing.md`, `docs/architecture/testing/testing-best-practices.md`                                                                                                   |
+| Touched paths                                  | Load                                                                                                                  |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `apps/lfx-one/src/app/**`                      | `docs/architecture/frontend/angular-patterns.md`, `component-architecture.md`, `styling-system.md`                    |
+| Drawer component or `DialogService.open` usage | `docs/architecture/frontend/drawer-pattern.md`                                                                        |
+| `apps/lfx-one/src/server/**`                   | `docs/architecture/backend/README.md`, `error-handling-architecture.md`, `logging-monitoring.md`, `server-helpers.md` |
+| `middleware/auth*`                             | `docs/architecture/backend/authentication.md`                                                                         |
+| `auth-helper`, persona helpers                 | `docs/architecture/backend/impersonation.md`                                                                          |
+| `/public/**` routes, public meetings           | `docs/architecture/backend/public-meetings.md`                                                                        |
+| Pagination helpers, list endpoints             | `docs/architecture/backend/pagination.md`                                                                             |
+| `ai.service.ts`, AI proxy calls                | `docs/architecture/backend/ai-service.md`                                                                             |
+| `nats.service.ts`, project NATS RPCs           | `docs/architecture/backend/nats-integration.md`                                                                       |
+| `snowflake.service.ts`, direct SQL             | `docs/architecture/backend/snowflake-integration.md`                                                                  |
+| SSR / `server.ts` / render pipeline            | `docs/architecture/backend/ssr-server.md`                                                                             |
+| `packages/shared/**`                           | `docs/architecture/shared/package-architecture.md`                                                                    |
+| `*.spec.ts` or `e2e/**`                        | `docs/architecture/testing/e2e-testing.md`, `docs/architecture/testing/testing-best-practices.md`                     |
 
 If `.claude/skills/develop/references/` exists, also Read the relevant reference files (`backend-endpoint.md` for server changes, `frontend-component.md` for components, etc.).
 

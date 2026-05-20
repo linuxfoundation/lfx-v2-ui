@@ -1,6 +1,6 @@
 ---
 name: lfx-self-serve-learnings-review
-description: "Post-commit empirical-pattern review for lfx-self-serve. Audits the latest commit against `docs/reviews/knowledge-base/` — patterns extracted from past PR review comments on this repo. Findings are gated by KB matches: every finding must quote a pattern entry; unsourced findings are dropped. Optionally audits the cumulative diff against a base via `base: <ref>` (used for the pre-PR full-branch sweep on multi-commit branches, and by `/lfx-review-pr`). Renders a markdown review. Skill body launches a general-purpose subagent in the background."
+description: 'Post-commit empirical-pattern review for lfx-self-serve. Audits the latest commit against `docs/reviews/knowledge-base/` — patterns extracted from past PR review comments on this repo. Findings are gated by KB matches: every finding must quote a pattern entry; unsourced findings are dropped. Optionally audits the cumulative diff against a base via `base: <ref>` (used for the pre-PR full-branch sweep on multi-commit branches, and by `/lfx-review-pr`). Renders a markdown review. Skill body launches a general-purpose subagent in the background.'
 allowed-tools: Agent
 ---
 
@@ -117,7 +117,9 @@ Lead with what you're reviewing — `<commit-sha> — <subject>` for the default
 
 Group findings under `### Critical (N)` (confidence 90-100) and `### Important (N)` (confidence 80-89). Each finding is a bullet of this form (parser-friendly for downstream consumers):
 
-`- **<file>:<line>** (conf <0-100>) — <KB failure message>. _Source:_ `<rule-id>` — "<quoted Pattern: or Detect: phrase>". _Fix:_ <KB fix text>.`
+```text
+- **<file>:<line>** (conf <0-100>) — <KB failure message>. _Source:_ `<rule-id>` — "<quoted Pattern: or Detect: phrase>". _Fix:_ <KB fix text>.
+```
 
 Findings with confidence below 80 are suppressed.
 
