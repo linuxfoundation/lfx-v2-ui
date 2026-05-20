@@ -42,10 +42,11 @@ export class BadgeCardComponent {
   protected shareToLinkedIn(): void {
     const b = this.badge();
     const url = buildLinkedInAddToProfileUrl(b);
-    if (typeof window !== 'undefined') {
-      window.open(url, '_blank', 'noopener,noreferrer');
+    // Only track when the popup actually opens — window.open returns null when blocked.
+    const opened = typeof window !== 'undefined' ? window.open(url, '_blank', 'noopener,noreferrer') : null;
+    if (opened) {
+      this.emitShared(b, 'linkedin');
     }
-    this.emitShared(b, 'linkedin');
   }
 
   protected async nativeShare(): Promise<void> {
