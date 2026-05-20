@@ -8,9 +8,9 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, signal, Si
 import { CardComponent } from '@components/card/card.component';
 import { MenuComponent } from '@components/menu/menu.component';
 import { EnrichedBadge } from '@lfx-one/shared/interfaces';
+import { PlausibleService } from '@services/plausible.service';
 import { MenuItem, MessageService } from 'primeng/api';
 
-import { AnalyticsService } from '../../../../../core/services/analytics.service';
 import { buildLinkedInAddToProfileUrl } from '../../../utils/linkedin-share.util';
 
 type ShareChannel = 'linkedin' | 'native_share' | 'copy_link';
@@ -25,7 +25,7 @@ type ShareChannel = 'linkedin' | 'native_share' | 'copy_link';
 export class BadgeCardComponent {
   // === Services ===
   private readonly messageService = inject(MessageService);
-  private readonly analytics = inject(AnalyticsService);
+  private readonly plausible = inject(PlausibleService);
 
   // === Inputs ===
   public readonly badge = input.required<EnrichedBadge>();
@@ -129,7 +129,7 @@ export class BadgeCardComponent {
 
   // === Private Helpers ===
   private emitShared(badge: EnrichedBadge, channel: ShareChannel): void {
-    this.analytics.track('badge_shared', {
+    this.plausible.trackEvent('badge_shared', {
       badgeId: badge.id,
       badgeTitle: badge.title,
       issuer: badge.issuer,

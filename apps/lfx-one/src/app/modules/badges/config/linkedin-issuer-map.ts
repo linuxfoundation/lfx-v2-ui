@@ -10,10 +10,15 @@
  * to `organizationName=<issuer>` — LinkedIn shows the free-text name without
  * org-page linkage but the rest of the prefill still works.
  *
- * v1 seeds The Linux Foundation only. Sub-foundation IDs (CNCF, OpenSSF,
- * PyTorch, …) are an open question on LFXV2-1925 — populate as confirmed.
+ * v1 ships with the map empty so we don't bake in unverified organization IDs.
+ * The fallback to `organizationName` covers every issuer correctly today. Once
+ * the canonical LinkedIn organizationId is confirmed for The Linux Foundation
+ * (and sub-foundations like CNCF / OpenSSF / PyTorch), populate this map per
+ * LFXV2-1925.
+ *
+ * Typed as Partial<Record> because indexing returns `number | undefined` —
+ * unknown issuers must not type-check as `number`.
  */
-export const LINKEDIN_ISSUER_ORG_IDS: Readonly<Record<string, number>> = {
-  // TODO LFXV2-1925: confirm canonical LF organizationId from LinkedIn admin.
-  'The Linux Foundation': 1004,
+export const LINKEDIN_ISSUER_ORG_IDS: Readonly<Partial<Record<string, number>>> = {
+  // TODO LFXV2-1925: populate once canonical org IDs are confirmed in LinkedIn admin.
 };
