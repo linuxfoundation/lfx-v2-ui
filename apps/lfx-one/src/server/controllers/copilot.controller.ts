@@ -117,17 +117,33 @@ export class CopilotController {
   private async closeAllStreams(): Promise<void> {
     const streams = [...this.activeStreams];
     this.activeStreams.clear();
+    // 2s per-stream timeout guards against backpressure: if the client's TCP receive
+    // buffer is full, res.write()'s flush callback stalls until the buffer drains.
+    const STREAM_CLOSE_TIMEOUT_MS = 2_000;
     await Promise.all(
       streams.map(
         (res) =>
           new Promise<void>((resolve) => {
-            try {
-              if (!res.writableEnded) {
-                res.write('event: shutdown\ndata: {"reason":"server_shutdown"}\n\n', () => res.end(resolve));
-              } else {
+            let done = false;
+            const finish = (): void => {
+              if (!done) {
+                done = true;
                 resolve();
               }
+            };
+            const timer = setTimeout(finish, STREAM_CLOSE_TIMEOUT_MS);
+            try {
+              if (!res.writableEnded) {
+                res.write('event: shutdown\ndata: {"reason":"server_shutdown"}\n\n', () => {
+                  clearTimeout(timer);
+                  res.end(finish);
+                });
+              } else {
+                clearTimeout(timer);
+                finish();
+              }
             } catch (error) {
+              clearTimeout(timer);
               const isExpected = error instanceof Error && (error.message.includes('write after end') || error.message.includes('Cannot call end'));
               if (isExpected) {
                 logger.debug(undefined, 'sse_stream_shutdown_close', 'Stream already closed during shutdown', {
@@ -138,7 +154,7 @@ export class CopilotController {
                   err: error,
                 });
               }
-              resolve();
+              finish();
             }
           })
       )

@@ -367,8 +367,19 @@ async function gracefulShutdown(signal: string): Promise<void> {
 
   const startTime = logger.startOperation(undefined, 'graceful_shutdown', { signal });
 
-  // Run registered hooks (closes SSE streams).
-  await runShutdownHooks();
+  // Run registered hooks (closes SSE streams) with a 5s budget.
+  // Without a budget, a single blocked SSE write (backpressure) can stall
+  // hook execution and push the total shutdown time past PM2 kill_timeout.
+  const HOOK_BUDGET_MS = 5_000;
+  await Promise.race([
+    runShutdownHooks(),
+    new Promise<void>((resolve) =>
+      setTimeout(() => {
+        logger.warning(undefined, 'shutdown_hooks_timeout', 'Shutdown hooks exceeded budget', { budget_ms: HOOK_BUDGET_MS });
+        resolve();
+      }, HOOK_BUDGET_MS)
+    ),
+  ]);
 
   if (!httpServer) {
     logger.success(undefined, 'graceful_shutdown', startTime, { reason: 'no_http_server' });
@@ -396,10 +407,32 @@ async function gracefulShutdown(signal: string): Promise<void> {
   // Each drain is race'd against a 15s budget so a hung drain cannot exceed PM2's kill_timeout.
   // SnowflakeService.shutdownIfInitialized() skips pool creation for pods that never used Snowflake.
   const SERVICE_DRAIN_BUDGET_MS = 15_000;
-  const raceDrain = (p: Promise<void>): Promise<void> => Promise.race([p, new Promise<void>((resolve) => setTimeout(resolve, SERVICE_DRAIN_BUDGET_MS))]);
+  const raceDrain = (name: string, p: Promise<void>): Promise<void> => {
+    let completed = false;
+    const tracked = p.then(
+      () => {
+        completed = true;
+      },
+      () => {
+        completed = true;
+      }
+    );
+    return Promise.race([
+      tracked,
+      new Promise<void>((resolve) =>
+        setTimeout(() => {
+          if (!completed) {
+            logger.warning(undefined, 'shutdown_drain_timeout', `${name} drain budget exceeded`, { budget_ms: SERVICE_DRAIN_BUDGET_MS });
+          }
+          resolve();
+        }, SERVICE_DRAIN_BUDGET_MS)
+      ),
+    ]);
+  };
 
   await Promise.allSettled([
     raceDrain(
+      'nats',
       NatsService.shutdownAll().then(
         () => {
           logger.info(undefined, 'shutdown_nats_drained', 'NATS connections drained', {});
@@ -410,6 +443,7 @@ async function gracefulShutdown(signal: string): Promise<void> {
       )
     ),
     raceDrain(
+      'snowflake',
       SnowflakeService.shutdownIfInitialized().then(
         () => {
           logger.info(undefined, 'shutdown_snowflake_drained', 'Snowflake pool drained', {});

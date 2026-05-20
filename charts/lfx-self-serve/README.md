@@ -109,7 +109,7 @@ environment:
 | `image.repository`               | Image repository                                                                                               | `ghcr.io/linuxfoundation/lfx-self-serve`                                      |
 | `image.tag`                      | Image tag                                                                                                      | `"latest"`                                                                    |
 | `image.pullPolicy`               | Image pull policy                                                                                              | `IfNotPresent`                                                                |
-| `image.pullSecrets`              | Image pull secrets                                                                                             | `[]`                                                                          |
+| `imagePullSecrets`               | Image pull secrets                                                                                             | `[]`                                                                          |
 
 ### Environment Variables
 
