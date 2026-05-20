@@ -83,7 +83,6 @@ export class ProfileIndividualEnrollmentComponent {
     if (!item.membership || this.isPending(item)) return;
 
     const membershipId = item.membership.ID;
-    const originalValue = item.membership.AutoRenew;
 
     // Optimistically apply new value so the toggle does not flicker back
     this.autoRenewOverrides.update((m) => {
@@ -104,12 +103,12 @@ export class ProfileIndividualEnrollmentComponent {
       rejectLabel: 'Cancel',
       acceptButtonStyleClass: 'p-button-primary p-button-sm',
       rejectButtonStyleClass: 'p-button-text p-button-sm',
-      accept: () => void this.performAutoRenewUpdate(membershipId, newValue, originalValue),
-      reject: () => this.revertAutoRenewOverride(membershipId, originalValue),
+      accept: () => void this.performAutoRenewUpdate(membershipId, newValue),
+      reject: () => this.clearAutoRenewOverride(membershipId),
     });
   }
 
-  private performAutoRenewUpdate(membershipId: string, newValue: boolean, originalValue: boolean): void {
+  private performAutoRenewUpdate(membershipId: string, newValue: boolean): void {
     this.pendingIds.update((s) => new Set([...s, membershipId]));
 
     this.enrollmentService
@@ -126,6 +125,8 @@ export class ProfileIndividualEnrollmentComponent {
       )
       .subscribe({
         next: () => {
+          this.syncAutoRenewValue(membershipId, newValue);
+          this.clearAutoRenewOverride(membershipId);
           this.messageService.add({
             severity: 'success',
             summary: 'Success',
@@ -138,15 +139,27 @@ export class ProfileIndividualEnrollmentComponent {
             summary: 'Error',
             detail: 'Failed to update membership, please try again',
           });
-          this.revertAutoRenewOverride(membershipId, originalValue);
+          this.clearAutoRenewOverride(membershipId);
         },
       });
   }
 
-  private revertAutoRenewOverride(membershipId: string, originalValue: boolean): void {
+  private syncAutoRenewValue(membershipId: string, autoRenew: boolean): void {
+    this.enrollments.update((list) => {
+      if (!list) return list;
+      return list.map((item) => {
+        if (item.membership?.ID === membershipId) {
+          return { ...item, membership: { ...item.membership, AutoRenew: autoRenew } };
+        }
+        return item;
+      });
+    });
+  }
+
+  private clearAutoRenewOverride(membershipId: string): void {
     this.autoRenewOverrides.update((m) => {
       const next = new Map(m);
-      next.set(membershipId, originalValue);
+      next.delete(membershipId);
       return next;
     });
   }

@@ -45,7 +45,7 @@ export class EnrollmentController {
       next(
         ServiceValidationError.forField('autorenew', 'autorenew must be a boolean', {
           operation: 'update_individual_enrollment_auto_renew',
-          service: 'enrollment_service',
+          service: 'enrollment_controller',
           path: req.path,
         })
       );
