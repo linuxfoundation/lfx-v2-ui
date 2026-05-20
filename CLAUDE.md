@@ -260,7 +260,7 @@ Detailed patterns are in `.claude/rules/` and loaded contextually based on the `
 
 1. **Commit your work.** `git commit --signoff -S`. Do not wait for any prior review to finish.
 2. **Immediately invoke both review skills in parallel — no args.** The default audits the commit you just made. Issue two **Skill tool calls in a single message**:
-   - **`lfx-self-serve-code-review`** — documented rule-surface audit (`.claude/rules/`, the four `docs/reviews/` checklists, architecture docs, upstream API contracts, protected files). Skill body launches a `code-reviewer` subagent with `run_in_background: true`. Renders a markdown review.
+   - **`lfx-self-serve-code-review`** — general code review on the diff (Step 2, native disposition) + convention audit (Step 3) against the documented rule surface (`.claude/rules/`, the four `docs/reviews/` checklists, architecture docs) and upstream API contracts (Step 4). Skill body launches a `code-reviewer` subagent with `run_in_background: true`. Renders a markdown review with General review / Upstream API / Repo conventions sections.
    - **`lfx-self-serve-learnings-review`** — empirical-pattern matching against `docs/reviews/knowledge-base/` (patterns sampled from past PR review comments on this repo). Skill body launches a `general-purpose` subagent with `run_in_background: true`. Renders a markdown review.
 
    **Launcher discipline — non-negotiable:** pass each skill body **verbatim** as the Agent `prompt` parameter. The playbook contains the subagent's own routing logic; trimming or summarizing it breaks the cross-check discipline (subagent can't quote rules not in its prompt) and drifts severity calibration.

@@ -7,11 +7,12 @@ description: >
   base ref fresh, then invokes the `/lfx-self-serve-code-review` skill
   with `base: origin/<baseRefName>` — the skill body launches a
   background subagent that audits the cumulative diff and renders a
-  markdown review covering rules, checklists, upstream API contracts,
-  and protected files. This skill body adds what only a post-PR skill
-  can do: verifying prior review comments are addressed, walking the
-  PR-shape checklist (branch/JIRA/commits/DCO+GPG/rebase/diff-size/
-  PR-title/external-refs), applying new-contributor educational tone,
+  markdown review covering general code review, upstream API contracts,
+  and repo conventions (rules, checklists, architecture). This skill
+  body adds what only a post-PR skill can do: verifying prior review
+  comments are addressed, walking the PR-shape checklist (branch/JIRA/
+  commits/DCO+GPG/rebase/diff-size/protected-files/PR-title/external-refs),
+  applying new-contributor educational tone,
   presenting a draft for explicit approval, and posting via /review only
   after user go-ahead. NEVER auto-posts comments or submits reviews. Use
   when reviewing PRs, checking PR quality, validating code changes, or
@@ -22,7 +23,7 @@ allowed-tools: Bash, Read, Glob, Grep, Agent, AskUserQuestion, Skill
 
 # LFX PR Review
 
-You are reviewing an opened pull request against LFX standards. **Pre-requisite:** the reviewer's HEAD must be the PR's branch — author scenarios are natural (you're already on it); external reviewers run `gh pr checkout <N>` first (commit/stash uncommitted work first; `gh pr checkout` switches branches). Phase 1 verifies this. The code audit — diff computation, rule loading, code review, upstream API contract validation, protected-file flagging — is performed by the `/lfx-self-serve-code-review` skill invoked in Phase 2 with `base: origin/<baseRefName>`; its skill body launches a background subagent that audits the cumulative diff between the PR's base and HEAD, returning a markdown review report. PR-shape sanity is NOT the review subagent's concern — this skill body walks it in Phase 4. This skill also handles **what only a post-PR skill can do:** verifying that prior review comments were addressed, applying new-contributor educational tone, compiling the subagent's report into a draft review, and posting via `/review` only after the user explicitly approves.
+You are reviewing an opened pull request against LFX standards. **Pre-requisite:** the reviewer's HEAD must be the PR's branch — author scenarios are natural (you're already on it); external reviewers run `gh pr checkout <N>` first (commit/stash uncommitted work first; `gh pr checkout` switches branches). Phase 1 verifies this. The code audit — diff computation, general code review, rule/checklist/architecture walking, and upstream API contract validation — is performed by the `/lfx-self-serve-code-review` skill invoked in Phase 2 with `base: origin/<baseRefName>`; its skill body launches a background subagent that audits the cumulative diff between the PR's base and HEAD, returning a markdown review report. PR-shape sanity (including protected files) is NOT the review subagent's concern — this skill body walks it in Phase 4. This skill also handles **what only a post-PR skill can do:** verifying that prior review comments were addressed, applying new-contributor educational tone, compiling the subagent's report into a draft review, and posting via `/review` only after the user explicitly approves.
 
 Walk through each phase in order. Phases may short-circuit when their preconditions are not met (noted inline) but none should be skipped outright.
 
@@ -80,13 +81,13 @@ Invoke the `/lfx-self-serve-code-review` skill via the Skill tool. Its body inst
 > base: origin/\<baseRefName-from-pr-meta\>
 > extra: \<extra focus from args, or empty\>
 
-The launched subagent returns a **markdown review report** with three sections:
+The launched subagent returns a **markdown review report** with three sections, in order:
 
-1. **Protected files touched** — files matching the protected-files hook.
+1. **General review** — bugs / smells / correctness findings from the agent's native review on the raw diff, grouped under `### Critical (N)` and `### Important (N)`. Bullets of the form `- **<file>:<line>** (conf <N>) — <issue>. _Fix:_ <suggestion>.` (no `_Source:_` field).
 2. **Upstream API validation** — backend contract checks (or "Skipped — no backend changes").
-3. **Findings** — code-review findings grouped under `### Critical (N)` and `### Important (N)`, each as a bullet of the form `- **<file>:<line>** (conf <N>) — <issue>. _Source:_ <rule>. _Fix:_ <suggestion>.`
+3. **Repo conventions** — findings sourced from rule files, checklists, architecture docs. Same Critical/Important grouping. Bullets include a `_Source:_` quoted rule citation.
 
-NOTE: the review subagent does NOT do PR-shape and does NOT fetch prior review comments — both are this skill's job (Phases 3 and 4).
+NOTE: the review subagent does NOT do PR-shape (branch / JIRA / commits / DCO+GPG / rebase / diff-size / **protected files** / PR-title / external-refs) and does NOT fetch prior review comments — both are this skill's job (Phases 3 and 4).
 
 ## Phase 3 — Verify prior review comments (parallel with Phase 2)
 

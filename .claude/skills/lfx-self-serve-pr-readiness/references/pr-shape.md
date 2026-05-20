@@ -2,8 +2,8 @@
 
 This file is the single source of truth for PR-shape sanity checks. It is consumed by:
 
-- **`/lfx-self-serve-pr-readiness`** (pre-PR) — runs every item in §§1–6 below; skips §§7–8 (PR-only).
-- **`/lfx-review-pr`** (post-PR) — runs every item, including §§7–8.
+- **`/lfx-self-serve-pr-readiness`** (pre-PR) — runs every item in §§1–7 below; skips §§8–9 (PR-only).
+- **`/lfx-review-pr`** (post-PR) — runs every item, including §§8–9.
 
 Each item lists its `rule:` ID (used in finding JSON), severity, the check, the failure message, and the suggested fix.
 
@@ -73,11 +73,22 @@ Non-zero exit → fail.
 
 Note: `U` is acceptable (good signature with an untrusted key); GitHub's "Verified" badge requires the key be registered on the contributor's GitHub account, which is checked at push time, not here.
 
+## 7. `pr-shape/protected-files-touched` — SHOULD_FIX
+
+**Check:** intersect the diff's changed files against the path list parsed from `.claude/hooks/guard-protected-files.sh` (the hook's authoritative `case` / `if` blocks — never hardcode). If any changed file matches, emit one finding listing every match.
+
+- Pre-PR: `git diff --name-only <base>...HEAD`.
+- Post-PR: `jq -r '.files[].path' /tmp/pr-<N>-meta.json`.
+
+**Failure message:** `Protected files touched: <list>. These are part of core infrastructure — surface in the PR description and tag a code owner for explicit review.`
+
+**Suggestion:** Add a "Protected files" section to the PR body listing each touched file and the reason for the change. Tag a code owner on the PR.
+
 ---
 
 ## PR-only checks (skipped pre-PR)
 
-## 7. `pr-shape/pr-title` — SHOULD_FIX
+## 8. `pr-shape/pr-title` — SHOULD_FIX
 
 **Check (post-PR only):** the PR title matches `^(feat|fix|docs|style|refactor|perf|test|build|ci|revert)(\([a-z0-9-]+\))?: .+$`, lowercase, MUST NOT include `LFXV2-XXX`. `chore` is invalid.
 
@@ -88,7 +99,7 @@ Note: `U` is acceptable (good signature with an untrusted key); GitHub's "Verifi
 - Invalid: `Fix: LFXV2-123 fix login bug`
 - Valid: `fix(auth): resolve login redirect on session expiry`
 
-## 8. `pr-shape/external-refs` — SHOULD_FIX
+## 9. `pr-shape/external-refs` — SHOULD_FIX
 
 **Check (post-PR only):** if any changed file under `apps/lfx-one/src/server/` calls an upstream microservice via `MicroserviceProxyService.proxyRequest()`, the PR body should link to the corresponding upstream PR or commit (in `lfx-v2-<service>-service`).
 

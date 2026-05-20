@@ -3,12 +3,13 @@ name: lfx-self-serve-pr-readiness
 description: >
   Pre-PR shape check on local lfx-self-serve work. Audits PR-shape
   sanity (branch name, JIRA reference, conventional-commit format,
-  rebase status, DCO + GPG signing per commit, total diff size)
-  against the target base branch. Does NOT audit code — code audits
-  run post-commit via the `/lfx-self-serve-code-review` and
-  `/lfx-self-serve-learnings-review` skills (each launches a background
-  subagent), drained before this check. Use once before opening a PR,
-  after the post-commit review queue has returned clean.
+  rebase status, DCO + GPG signing per commit, total diff size, and
+  protected files touched) against the target base branch. Does NOT
+  audit code — code audits run post-commit via the
+  `/lfx-self-serve-code-review` and `/lfx-self-serve-learnings-review`
+  skills (each launches a background subagent), drained before this
+  check. Use once before opening a PR, after the post-commit review
+  queue has returned clean.
 context: fork
 allowed-tools: Bash, Read, Glob, Grep
 ---
@@ -49,11 +50,14 @@ Run in parallel:
 git fetch origin
 git rev-parse --abbrev-ref HEAD                                 # current branch
 git diff --shortstat <base>...HEAD                              # additions/deletions (three-dot = merge-base..HEAD)
+git diff --name-only <base>...HEAD                              # changed files (drives protected-files check)
 git log --format='%H %s' <base>..HEAD                           # commit subjects on the branch
 git log --format='%G? %h %s' <base>..HEAD                       # signature status per commit
 git log --format=%B <base>..HEAD                                # commit bodies (Signed-off-by trailers)
-git merge-base --is-ancestor <base> HEAD; echo $?                # rebase status (0 = ancestor)
+git merge-base --is-ancestor <base> HEAD; echo $?               # rebase status (0 = ancestor)
 ```
+
+Also Read `.claude/hooks/guard-protected-files.sh` and parse its `case` / `if` blocks to build the authoritative protected-paths list. Never hardcode the list — the hook is the source of truth.
 
 If there are no commits between base and HEAD, abort: "No commits to audit against `<base>` — make at least one commit on this branch."
 
@@ -80,6 +84,7 @@ Reference Phase 2 outputs:
 - Rebase → `git merge-base --is-ancestor <base> HEAD` exit code (0 = rebased)
 - DCO + GPG → `%G?` codes + `Signed-off-by:` trailer presence per commit
 - Diff size → `additions` from `git diff --shortstat`
+- Protected files touched → intersect `git diff --name-only <base>...HEAD` against the protected-paths list parsed from `.claude/hooks/guard-protected-files.sh`
 
 ## Phase 4 — Cross-check discipline
 
@@ -96,14 +101,15 @@ Every finding must quote an item in `references/pr-shape.md`. Drop hallucinated 
 
 ## PR-shape sanity
 
-| Check               | Status | Detail                          |
-| ------------------- | ------ | ------------------------------- |
-| Branch name         | PASS   | feat/LFXV2-1234                 |
-| JIRA ticket         | PASS   | Found LFXV2-1234 in commits     |
-| Conventional commit | PASS   | All 3 commits valid             |
-| Branch rebased      | PASS   | origin/main is an ancestor      |
-| Diff size           | PASS   | 342 additions                   |
-| DCO + GPG signing   | PASS   | 3/3 commits signed + signed-off |
+| Check               | Status     | Detail                                                 |
+| ------------------- | ---------- | ------------------------------------------------------ |
+| Branch name         | PASS       | feat/LFXV2-1234                                        |
+| JIRA ticket         | PASS       | Found LFXV2-1234 in commits                            |
+| Conventional commit | PASS       | All 3 commits valid                                    |
+| Branch rebased      | PASS       | origin/main is an ancestor                             |
+| Diff size           | PASS       | 342 additions                                          |
+| DCO + GPG signing   | PASS       | 3/3 commits signed + signed-off                        |
+| Protected files     | SHOULD_FIX | 1 file: CLAUDE.md (surface in PR body, tag code owner) |
 
 ## Verdict reasoning
 
