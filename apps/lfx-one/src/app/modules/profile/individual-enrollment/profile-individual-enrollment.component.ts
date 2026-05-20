@@ -42,22 +42,7 @@ export class ProfileIndividualEnrollmentComponent {
   /** Local overrides for auto-renew values applied optimistically before PATCH completes. */
   private readonly autoRenewOverrides = signal<Map<string, boolean>>(new Map());
 
-  /** Computed enrollments with auto-renew overrides applied. */
-  protected readonly displayedEnrollments: Signal<DisplayEnrollment[] | null | undefined> = computed(() => {
-    const list = this.enrollments();
-    const overrides = this.autoRenewOverrides();
-    if (!list) return list;
-    return list.map((item) => {
-      const membershipId = item.membership?.ID;
-      if (membershipId && overrides.has(membershipId)) {
-        const autoRenew = overrides.get(membershipId)!;
-        const updatedMembership = { ...item.membership!, AutoRenew: autoRenew };
-        const displayStatus = deriveEnrollmentStatus({ ...item, membership: updatedMembership });
-        return { ...item, membership: updatedMembership, displayStatus, severity: enrollmentStatusSeverity(displayStatus) };
-      }
-      return item;
-    });
-  });
+  protected readonly displayedEnrollments: Signal<DisplayEnrollment[] | null | undefined> = this.initDisplayedEnrollments();
 
   public constructor() {
     this.enrollmentService
@@ -87,17 +72,6 @@ export class ProfileIndividualEnrollmentComponent {
           this.enrollmentError.set(null);
         }
       });
-  }
-
-  protected getAutoRenew(item: DisplayEnrollment): boolean {
-    const membershipId = item.membership?.ID;
-    if (membershipId) {
-      const overrides = this.autoRenewOverrides();
-      if (overrides.has(membershipId)) {
-        return overrides.get(membershipId)!;
-      }
-    }
-    return item.membership?.AutoRenew ?? false;
   }
 
   protected isPending(item: DisplayEnrollment): boolean {
@@ -174,6 +148,24 @@ export class ProfileIndividualEnrollmentComponent {
       const next = new Map(m);
       next.set(membershipId, originalValue);
       return next;
+    });
+  }
+
+  private initDisplayedEnrollments(): Signal<DisplayEnrollment[] | null | undefined> {
+    return computed(() => {
+      const list = this.enrollments();
+      const overrides = this.autoRenewOverrides();
+      if (!list) return list;
+      return list.map((item) => {
+        const membershipId = item.membership?.ID;
+        if (membershipId && overrides.has(membershipId)) {
+          const autoRenew = overrides.get(membershipId)!;
+          const updatedMembership = { ...item.membership!, AutoRenew: autoRenew };
+          const displayStatus = deriveEnrollmentStatus({ ...item, membership: updatedMembership });
+          return { ...item, membership: updatedMembership, displayStatus, severity: enrollmentStatusSeverity(displayStatus) };
+        }
+        return item;
+      });
     });
   }
 }
