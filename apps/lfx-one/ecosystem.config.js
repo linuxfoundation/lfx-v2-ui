@@ -18,7 +18,7 @@ module.exports = {
       autorestart: true, // Restarts on crash (non-zero exit); process.exit(0) in gracefulShutdown bypasses this
       instances: 1, // Number of instances to run
       exec_mode: 'cluster', // Enable cluster mode for load balancing
-      kill_timeout: 45000, // 25s HTTP drain + 15s NATS/Snowflake drain + 5s margin; must be < terminationGracePeriodSeconds (60s) - preStop (10s)
+      kill_timeout: 45000, // 25s HTTP drain + 15s service drain (budget-capped) + 5s margin; terminationGracePeriodSeconds (75s) must exceed preStop (10s, inside grace period) + kill_timeout (45s) = 55s
       shutdown_with_message: false, // Use real SIGTERM, not PM2 IPC message
     },
   ],

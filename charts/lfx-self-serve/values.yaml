@@ -12,14 +12,16 @@ strategy:
     maxSurge: "100%"
     maxUnavailable: 0
 
-# terminationGracePeriodSeconds must exceed preStop.sleep + PM2 kill_timeout (10s + 45s = 55s).
-# 60s provides a 5s safety margin. Timing breakdown after pod termination begins:
-#   10s  preStop sleep  — kube-proxy / Traefik endpoint removal propagation
+# terminationGracePeriodSeconds must exceed preStop.sleep + PM2 kill_timeout.
+# IMPORTANT: preStop runs *inside* the grace period — the clock starts when the pod enters
+# Terminating (before preStop executes), not after it finishes.
+# Timing breakdown after pod enters Terminating:
+#   10s  preStop sleep  — kube-proxy / Traefik endpoint removal propagation (inside grace period)
 #   25s  HTTP drain     — in-flight requests complete (httpServer.close 25s window)
-#   15s  service drain  — NATS drain + Snowflake pool drain in parallel
+#   15s  service drain  — NATS drain + Snowflake pool drain in parallel (budget-capped)
 #    5s  margin
-# Total = 55s, fits within 60s. PM2 kill_timeout (45s) fires before k8s force-kill.
-terminationGracePeriodSeconds: 60
+# Active time = 10s + 45s (PM2 kill_timeout) = 55s. 75s provides a 20s safety margin.
+terminationGracePeriodSeconds: 75
 
 # lifecycle hooks run inside the container before SIGTERM is sent.
 # The preStop sleep gives kube-proxy / Traefik time to propagate endpoint removal

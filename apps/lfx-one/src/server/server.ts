@@ -378,15 +378,22 @@ async function gracefulShutdown(signal: string): Promise<void> {
   logger.info(undefined, 'shutdown_http_drained', 'HTTP server drained', {});
 
   // Drain NATS and Snowflake concurrently; a failure in one must not block the other.
+  // Each drain is race'd against a 15s budget so a hung drain cannot exceed PM2's kill_timeout.
+  // SnowflakeService.shutdownIfInitialized() skips pool creation for pods that never used Snowflake.
+  const SERVICE_DRAIN_BUDGET_MS = 15_000;
+  const raceDrain = (p: Promise<void>): Promise<void> => Promise.race([p, new Promise<void>((resolve) => setTimeout(resolve, SERVICE_DRAIN_BUDGET_MS))]);
+
   await Promise.allSettled([
-    NatsService.shutdownAll().then(() => {
-      logger.info(undefined, 'shutdown_nats_drained', 'NATS connections drained', {});
-    }),
-    SnowflakeService.getInstance()
-      .shutdown()
-      .then(() => {
+    raceDrain(
+      NatsService.shutdownAll().then(() => {
+        logger.info(undefined, 'shutdown_nats_drained', 'NATS connections drained', {});
+      })
+    ),
+    raceDrain(
+      SnowflakeService.shutdownIfInitialized().then(() => {
         logger.info(undefined, 'shutdown_snowflake_drained', 'Snowflake pool drained', {});
-      }),
+      })
+    ),
   ]);
 
   logger.success(undefined, 'shutdown_complete', startTime, {});
@@ -411,8 +418,14 @@ const isPM2 = process.env['PM2'] === 'true';
 
 if (isMain || isPM2) {
   startServer();
-  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  const handleSignal = (sig: string): void => {
+    gracefulShutdown(sig).catch((err) => {
+      logger.error(undefined, 'shutdown_fatal', Date.now(), err, { signal: sig });
+      process.exit(1);
+    });
+  };
+  process.on('SIGTERM', () => handleSignal('SIGTERM'));
+  process.on('SIGINT', () => handleSignal('SIGINT'));
 }
 
 export const reqHandler = createNodeRequestHandler(app);

@@ -13,9 +13,10 @@ import { getEffectiveSub } from '../utils/auth-helper';
 export class CopilotController {
   private readonly copilotService = new CopilotService();
   private readonly activeStreams = new Set<Response>();
+  private readonly removeShutdownHook: () => void;
 
   public constructor() {
-    addShutdownHook(() => this.closeAllStreams());
+    this.removeShutdownHook = addShutdownHook(() => this.closeAllStreams());
   }
 
   public async chat(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -70,7 +71,7 @@ export class CopilotController {
     });
 
     const sendEvent = (type: CopilotSSEEventType, data: unknown): void => {
-      if (clientDisconnected) return;
+      if (clientDisconnected || isShuttingDown()) return;
       res.write(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`);
       (res as FlushableResponse).flush?.();
     };
@@ -114,16 +115,34 @@ export class CopilotController {
     }
   }
 
-  private closeAllStreams(): void {
-    for (const res of this.activeStreams) {
-      try {
-        res.end('event: shutdown\ndata: {}\n\n');
-      } catch (error) {
-        logger.debug(undefined, 'sse_stream_shutdown_close', 'Stream already closed during shutdown', {
-          err: error,
-        });
-      }
-    }
+  private async closeAllStreams(): Promise<void> {
+    const streams = [...this.activeStreams];
     this.activeStreams.clear();
+    await Promise.all(
+      streams.map(
+        (res) =>
+          new Promise<void>((resolve) => {
+            try {
+              if (!res.writableEnded) {
+                res.write('event: shutdown\ndata: {"reason":"server_shutdown"}\n\n', () => res.end(resolve));
+              } else {
+                resolve();
+              }
+            } catch (error) {
+              const isExpected = error instanceof Error && (error.message.includes('write after end') || error.message.includes('Cannot call end'));
+              if (isExpected) {
+                logger.debug(undefined, 'sse_stream_shutdown_close', 'Stream already closed during shutdown', {
+                  err: error,
+                });
+              } else {
+                logger.warning(undefined, 'sse_stream_shutdown_close', 'Unexpected error closing SSE stream', {
+                  err: error,
+                });
+              }
+              resolve();
+            }
+          })
+      )
+    );
   }
 }

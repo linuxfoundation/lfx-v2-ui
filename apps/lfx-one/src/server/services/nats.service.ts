@@ -111,19 +111,20 @@ export class NatsService {
    * Gracefully shutdown NATS connection
    */
   public async shutdown(): Promise<void> {
-    NatsService.instances.delete(this);
-
-    if (this.connection && !this.connection.isClosed()) {
-      const startTime = logger.startOperation(undefined, 'nats_shutdown', {});
-
-      try {
-        await this.connection.drain();
-        logger.success(undefined, 'nats_shutdown', startTime, {});
-      } catch (error) {
-        logger.error(undefined, 'nats_shutdown', startTime, error, {});
+    try {
+      if (this.connection && !this.connection.isClosed()) {
+        const startTime = logger.startOperation(undefined, 'nats_shutdown', {});
+        try {
+          await this.connection.drain();
+          logger.success(undefined, 'nats_shutdown', startTime, {});
+        } catch (error) {
+          logger.error(undefined, 'nats_shutdown', startTime, error, {});
+        }
       }
+      this.connection = null;
+    } finally {
+      NatsService.instances.delete(this);
     }
-    this.connection = null;
   }
 
   /**
