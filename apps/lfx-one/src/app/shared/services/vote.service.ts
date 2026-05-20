@@ -137,13 +137,7 @@ export class VoteService {
     return this.http.post<void>('/api/votes/responses', payload).pipe(take(1));
   }
 
-  /**
-   * Submits the current user's response for a vote.
-   *
-   * Looks up the pre-allocated invitation row via `getMyVoteResponse`, then POSTs the answer payload
-   * to `createVoteResponse` reusing that uid (the voting service requires it). Throws
-   * `Error(INVITATION_NOT_FOUND)` if no invitation row exists so callers can surface a specific toast.
-   */
+  /** Wraps getMyVoteResponse + createVoteResponse; throws INVITATION_NOT_FOUND if no row exists. */
   public submitMyResponse(voteUid: string, params: { abstain: boolean; userVoteContent: VoteAnswerInput[] | undefined }): Observable<void> {
     return this.getMyVoteResponse(voteUid).pipe(
       take(1),

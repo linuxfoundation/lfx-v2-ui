@@ -44,13 +44,7 @@ export class VoteBallotInlineComponent {
   protected readonly isMultipleChoice = computed(() => this.question()?.type === 'multiple_choice');
   protected readonly allowAbstain = computed(() => !!this.vote().allow_abstain);
   protected readonly abstain: Signal<boolean> = toSignal(this.abstainControl.valueChanges, { initialValue: this.abstainControl.value });
-  protected readonly submitDisabled: Signal<boolean> = computed(() => {
-    this.formVersion(); // re-evaluate when controls are added/removed/disabled via { emitEvent: false }
-    if (this.submitting()) return true;
-    if (this.abstain()) return false;
-    if (!this.question()) return true;
-    return !this.form.valid;
-  });
+  protected readonly submitDisabled: Signal<boolean> = this.initSubmitDisabled();
 
   public constructor() {
     this.setupFormReactions();
@@ -102,6 +96,16 @@ export class VoteBallotInlineComponent {
   }
 
   // === Private Initializers ===
+  private initSubmitDisabled(): Signal<boolean> {
+    return computed(() => {
+      this.formVersion(); // re-evaluate when controls are added/removed/disabled via { emitEvent: false }
+      if (this.submitting()) return true;
+      if (this.abstain()) return false;
+      if (!this.question()) return true;
+      return !this.form.valid;
+    });
+  }
+
   private setupFormReactions(): void {
     toObservable(this.question)
       .pipe(takeUntilDestroyed(this.destroyRef))

@@ -71,12 +71,7 @@ export class VoteResultsDrawerComponent {
     () => this.loadingVoteDetails() || this.loadingVoteResults() || (this.audience() === 'voter' && this.myResponseLoading())
   );
   /** Creator-scope inline cast CTA gate: active vote where the viewer is also a voter awaiting response. Voter audience uses the dedicated State A panel instead. */
-  protected readonly canCastVoteFromDrawer: Signal<boolean> = computed(() => {
-    const v = this.vote();
-    if (!v) return false;
-    if (v.status !== PollStatus.ACTIVE) return false;
-    return v.response_status === VoteResponseStatus.AWAITING_RESPONSE;
-  });
+  protected readonly canCastVoteFromDrawer: Signal<boolean> = this.initCanCastVoteFromDrawer();
   protected readonly participationStats: Signal<VoteParticipationStats> = this.initParticipationStats();
   protected readonly isVoteClosed: Signal<boolean> = this.initIsVoteClosed();
   protected readonly questionsWithResults: Signal<VoteResultsQuestion[]> = this.initQuestionsWithResults();
@@ -156,6 +151,15 @@ export class VoteResultsDrawerComponent {
       ),
       { initialValue: null }
     );
+  }
+
+  private initCanCastVoteFromDrawer(): Signal<boolean> {
+    return computed(() => {
+      const v = this.vote();
+      if (!v) return false;
+      if (v.status !== PollStatus.ACTIVE) return false;
+      return v.response_status === VoteResponseStatus.AWAITING_RESPONSE;
+    });
   }
 
   private initIsGenericPoll(): Signal<boolean> {
