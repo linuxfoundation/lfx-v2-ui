@@ -1,10 +1,10 @@
 ---
 name: lfx-self-serve-code-review
-description: "Audits the latest commit on the local branch in two sequential passes: (1) general code review on the raw diff via the subagent's native disposition, run BEFORE any repo docs are loaded so it stays untainted by repo-specific framing; (2) convention audit — load `.claude/rules/`, the four `docs/reviews/` checklists, architecture docs, and walk them with cross-check discipline (every finding quotes a loaded source) plus upstream API contracts. Optionally audits the cumulative diff against a base via `base: <ref>` (used for the pre-PR full-branch sweep on multi-commit branches, and by `/lfx-review-pr`). Renders a markdown review with General review / Upstream API / Repo conventions sections. Skill body launches a code-reviewer subagent in the background."
+description: "Audits the latest commit on the local branch in two sequential passes: (1) general code review on the raw diff via the subagent's native disposition, run BEFORE any repo docs are loaded so it stays untainted by repo-specific framing; (2) convention audit — load `.claude/rules/`, the four `docs/reviews/` checklists, architecture docs, and walk them with cross-check discipline (every finding quotes a loaded source) plus upstream API contracts. Pass the keyword `branch` to switch to full-branch mode (audits the branch's diff against main — used for the pre-PR full-branch sweep and by `/lfx-review-pr`). Renders a markdown review with General review / Upstream API / Repo conventions sections. Skill body launches a code-reviewer subagent in the background."
 allowed-tools: Agent
 ---
 
-Launch a subagent in the background (`subagent_type: code-reviewer`, `model: "opus"`, `run_in_background: true`) with the **entire content below** as the Agent `prompt` parameter. Append the caller's runtime args (`extra`, `base`) at the end so the subagent sees both the playbook and its inputs.
+Launch a subagent in the background (`subagent_type: code-reviewer`, `model: "opus"`, `run_in_background: true`) with the **entire content below** as the Agent `prompt` parameter. Append the caller's runtime args (`branch`, `extra`) at the end so the subagent sees both the playbook and its inputs.
 
 The explicit `model: "opus"` pins the review to Opus (currently 4.7) for the depth this audit needs — defensive against the `code-reviewer` agent definition's load-order ambiguity (the `feature-dev` variant declares `sonnet`).
 
@@ -25,14 +25,14 @@ Empirical-pattern matches against past PR review comments belong to `/lfx-self-s
 
 Parse the caller's prompt for:
 
+- **`branch`** — OPTIONAL keyword. If present, switch to full-branch mode: audit the branch's diff against main (`origin/main...HEAD`) instead of just the latest commit. Used by the pre-PR full-branch sweep and `/lfx-review-pr`.
 - **`extra: <free text>`** — optional priority hint.
-- **`base: <ref>`** — OPTIONAL. If passed, audit the cumulative diff between `<ref>` and HEAD (`<ref>...HEAD`) instead of the latest commit. Used for the pre-PR full-branch sweep on multi-commit branches AND by `/lfx-review-pr` (which passes `base: origin/<baseRefName>`).
 
 ## Step 1 — Compute the diff
 
-Default: `git show --stat -p HEAD` — audits only the latest commit (not staged / unstaged work). Use the stat block as the canonical changed-file list; abort if empty.
+Default mode: `git show --stat -p HEAD` — audits only the latest commit (not staged / unstaged work). Use the stat block as the canonical changed-file list; abort if empty.
 
-If `base: <ref>` was provided, use `git fetch origin && git diff --stat <ref>...HEAD && git diff <ref>...HEAD` instead (cumulative across all commits between `<ref>` and HEAD). Normalize bare branch names like `main` to `origin/main` so the comparison runs against the fresh remote ref.
+Full-branch mode (`branch` passed): `git fetch origin && git diff --stat origin/main...HEAD && git diff origin/main...HEAD` — the branch's diff against main, i.e., everything HEAD adds vs `origin/main`.
 
 For per-file reads: `git show "HEAD:<path>"`. If the diff is too big for context, save to `/tmp/code-review-diff.patch` and Read changed files individually.
 
@@ -145,7 +145,7 @@ Validate:
 
 ## Step 5 — Render the report
 
-Header: `<commit-sha> — <subject>` (default) or `<base>...HEAD (<branch>, N commits)` (base mode), plus files changed and additions / deletions.
+Header: `<commit-sha> — <subject>` (default) or `origin/main...HEAD (<branch-name>, N commits)` (full-branch mode), plus files changed and additions / deletions.
 
 Three sections, in order. Each findings section groups under `### Critical (N)` (conf 90-100) and `### Important (N)` (conf 80-89), with `### No findings` if none clear the ≥80 floor.
 

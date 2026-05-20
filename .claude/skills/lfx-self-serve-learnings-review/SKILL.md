@@ -1,10 +1,10 @@
 ---
 name: lfx-self-serve-learnings-review
-description: 'Post-commit empirical-pattern review for lfx-self-serve. Audits the latest commit against `docs/reviews/knowledge-base/` — patterns extracted from past PR review comments on this repo. Findings are gated by KB matches: every finding must quote a pattern entry; unsourced findings are dropped. Optionally audits the cumulative diff against a base via `base: <ref>` (used for the pre-PR full-branch sweep on multi-commit branches, and by `/lfx-review-pr`). Renders a markdown review. Skill body launches a general-purpose subagent in the background.'
+description: "Post-commit empirical-pattern review for lfx-self-serve. Audits the latest commit against `docs/reviews/knowledge-base/` — patterns extracted from past PR review comments on this repo. Findings are gated by KB matches: every finding must quote a pattern entry; unsourced findings are dropped. Pass the keyword `branch` to switch to full-branch mode (audits the branch's diff against main — used for the pre-PR full-branch sweep and by `/lfx-review-pr`). Renders a markdown review. Skill body launches a general-purpose subagent in the background."
 allowed-tools: Agent
 ---
 
-Launch a subagent in the background (`subagent_type: general-purpose`, `model: "opus"`, `run_in_background: true`) with the **entire content below** as the Agent `prompt` parameter. Append the caller's runtime args (`extra`, `base`) at the end so the subagent sees both the playbook and its inputs.
+Launch a subagent in the background (`subagent_type: general-purpose`, `model: "opus"`, `run_in_background: true`) with the **entire content below** as the Agent `prompt` parameter. Append the caller's runtime args (`branch`, `extra`) at the end so the subagent sees both the playbook and its inputs.
 
 The explicit `model: "opus"` pins the review to Opus (currently 4.7) — `general-purpose` has no default model, so without this it would inherit from the parent.
 
@@ -22,36 +22,16 @@ Generic-rubric findings (security / performance / quality / architecture / testi
 
 Parse the caller's prompt for:
 
+- **`branch`** — OPTIONAL keyword. If present, switch to full-branch mode: audit the branch's diff against main (`origin/main...HEAD`) instead of just the latest commit. Used by the pre-PR full-branch sweep and `/lfx-review-pr`.
 - **`extra: <free text>`** — optional priority hint.
-- **`base: <ref>`** — OPTIONAL. If passed, audit the cumulative diff between `<ref>` and HEAD (`<ref>...HEAD`) instead of the latest commit. Used for the pre-PR full-branch sweep on multi-commit branches AND by `/lfx-review-pr`.
 
 ## Step 1 — Compute the diff
 
-Default: audit **only the latest commit** on the current branch. Do not include unstaged or staged work-in-progress — review HEAD's diff, nothing else.
+Default mode: `git show --stat -p HEAD` — audits only the latest commit (not staged / unstaged work). Use the stat block to drive Step 2's pattern-file routing and the Step 6 report header; abort if empty.
 
-```bash
-git rev-parse --abbrev-ref HEAD                # current branch
-git log -1 --format='%H %s'                    # commit SHA + subject (the commit under review)
-git show --stat -p HEAD                        # stat header + full patch (one shot)
-```
+Full-branch mode (`branch` passed): `git fetch origin && git diff --stat origin/main...HEAD && git diff origin/main...HEAD` — the branch's diff against main, i.e., everything HEAD adds vs `origin/main`.
 
-With `--stat -p`, the stat block at the top of `git show`'s output is followed by the full patch. The stat block is the canonical changed-file list — use those paths to drive Step 2's pattern-file routing. The shortstat line feeds the Step 6 report header.
-
-If no `N files changed,` shortstat line appears in the output (empty commit), abort: `No changes to review in the latest commit.`
-
-If `base: <ref>` was provided, audit the cumulative diff between `<ref>` and HEAD instead — used for the pre-PR full-branch sweep on multi-commit branches, and by `/lfx-review-pr`:
-
-```bash
-git fetch origin                                          # ensure base is fresh
-git rev-parse --abbrev-ref HEAD                           # current branch
-git log <ref>..HEAD --format='%H %s'                      # commits being reviewed
-git diff --stat <ref>...HEAD                              # file list + counts (three-dot computes merge-base)
-git diff <ref>...HEAD                                     # full diff
-```
-
-Normalize `<ref>` first: if it contains no `/` (e.g., bare `main`), prefix with `origin/` so the comparison runs against the freshly-fetched remote ref. If no commits exist between `<ref>` and HEAD, abort: `No commits between <ref> and HEAD.`
-
-If the diff is too large to hold in context, save to `/tmp/learnings-reviewer-diff.patch` and Read changed source files individually.
+If the diff is too big for context, save to `/tmp/learnings-reviewer-diff.patch` and Read changed files individually.
 
 ## Step 2 — Load pattern files (routed by diff)
 
@@ -113,7 +93,7 @@ If `extra` was passed, prioritise those areas when ordering the report. Don't su
 
 ## Step 6 — Render the report
 
-Lead with what you're reviewing — `<commit-sha> — <subject>` for the default case, or `<base>...HEAD (<branch-name>, N commits)` if `base: <ref>` was passed. Then files changed, additions / deletions, and pattern files loaded.
+Lead with what you're reviewing — `<commit-sha> — <subject>` for the default case, or `origin/main...HEAD (<branch-name>, N commits)` if `branch` was passed. Then files changed, additions / deletions, and pattern files loaded.
 
 Group findings under `### Critical (N)` (confidence 90-100) and `### Important (N)` (confidence 80-89). Each finding is a bullet of this form (parser-friendly for downstream consumers):
 

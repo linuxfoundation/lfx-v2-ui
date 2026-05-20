@@ -3,11 +3,11 @@ name: lfx-review-pr
 description: >
   Review a pull request against LFX architecture standards. Requires the
   reviewer's HEAD to be the PR's branch (author scenarios are natural;
-  external reviewers run `gh pr checkout <N>` first). Fetches the PR's
-  base ref fresh, then invokes the `/lfx-self-serve-code-review` skill
-  with `base: origin/<baseRefName>` — the skill body launches a
-  background subagent that audits the cumulative diff and renders a
-  markdown review covering general code review, upstream API contracts,
+  external reviewers run `gh pr checkout <N>` first). Fetches main fresh,
+  then invokes the `/lfx-self-serve-code-review` skill with `branch` —
+  the skill body launches a background subagent that audits the PR
+  branch's diff against main and renders a markdown review covering
+  general code review, upstream API contracts,
   and repo conventions (rules, checklists, architecture). This skill
   body adds what only a post-PR skill can do: verifying prior review
   comments are addressed, walking the PR-shape checklist (branch/JIRA/
@@ -46,15 +46,17 @@ gh repo view --json nameWithOwner --jq '.nameWithOwner'   # store as {owner}/{re
 gh pr view <N> --json title,body,headRefName,baseRefName,author,additions,deletions,files \
   > /tmp/pr-<N>-meta.json
 
-# Pull the base ref locally (used by Phase 2 as `base: origin/<baseRefName>`) + the PR
-# head via GitHub's `pull/<N>/head` refspec (mirrored even for fork PRs, so subsequent
-# `git show` reads work uniformly via the local ref `refs/pr/<N>/head`).
+# Pull main (used by Phase 2's `branch` mode) and the PR's actual base ref (used by
+# Phase 4's rebase check — usually the same as main) + the PR head via GitHub's
+# `pull/<N>/head` refspec (mirrored even for fork PRs, so subsequent `git show` reads
+# work uniformly via the local ref `refs/pr/<N>/head`).
 BASE_REF=$(jq -r '.baseRefName' /tmp/pr-<N>-meta.json)
-git fetch origin "$BASE_REF"
+git fetch origin main
+[ "$BASE_REF" = "main" ] || git fetch origin "$BASE_REF"
 git fetch origin "+pull/<N>/head:refs/pr/<N>/head"
 
-# Verify HEAD is the PR's branch (required for Phase 2's `base: origin/<baseRefName>`
-# diff to be the PR's diff). Author scenarios pass naturally; external reviewers need
+# Verify HEAD is the PR's branch (required so Phase 2's `branch` mode diff against
+# main is the PR's diff). Author scenarios pass naturally; external reviewers need
 # to run `gh pr checkout <N>` first (will switch branches; commit/stash first).
 HEAD_REF=$(jq -r '.headRefName' /tmp/pr-<N>-meta.json)
 CURRENT=$(git rev-parse --abbrev-ref HEAD)
@@ -64,21 +66,20 @@ CURRENT=$(git rev-parse --abbrev-ref HEAD)
 **Shell-state caveat:** the Bash tool runs each invocation in an isolated shell — `cwd` persists, but environment variables do **not** survive across calls. Every later phase that needs `$BASE_REF` / `$HEAD_REF` / `$AUTHOR` must re-derive them at the top of its own Bash invocation:
 
 ```bash
-BASE_REF=$(jq -r '.baseRefName' /tmp/pr-<N>-meta.json)
+BASE_REF=$(jq -r '.baseRefName' /tmp/pr-<N>-meta.json)   # PR's actual base ref (Phase 4's rebase check uses this; code-review hardcodes main)
 HEAD_REF=$(jq -r '.headRefName' /tmp/pr-<N>-meta.json)   # branch name (needed only for the branch-name regex check)
 AUTHOR=$(jq -r   '.author.login' /tmp/pr-<N>-meta.json)
 # Git operations on the PR head use the local ref refs/pr/<N>/head (created in Phase 1
 # via the pull-refspec fetch — same path regardless of whether the PR is from a fork).
-# ... use $BASE_REF / $HEAD_REF / $AUTHOR + refs/pr/<N>/head inside the same call
 ```
 
 The metadata file path (`/tmp/pr-<N>-meta.json`) and the local PR-head ref (`refs/pr/<N>/head`) are both stable across phases because they're on disk, not in shell state.
 
 ## Phase 2 — Invoke the code review skill (launches background subagent)
 
-Invoke the `/lfx-self-serve-code-review` skill via the Skill tool. Its body instructs you to launch a `code-reviewer` subagent with `run_in_background: true` — follow that launcher instruction. Pass `base: origin/<baseRefName>` (read from `/tmp/pr-<N>-meta.json`; typically `origin/main`) so the subagent audits the cumulative diff between the PR's base and HEAD. Do **not** wait — proceed to Phases 3–5 immediately so the reviewer's work overlaps with the skill-side audits.
+Invoke the `/lfx-self-serve-code-review` skill via the Skill tool. Its body instructs you to launch a `code-reviewer` subagent with `run_in_background: true` — follow that launcher instruction. Pass the keyword `branch` so the subagent audits the PR branch's diff against main. Do **not** wait — proceed to Phases 3–5 immediately so the reviewer's work overlaps with the skill-side audits.
 
-> base: origin/\<baseRefName-from-pr-meta\>
+> branch
 > extra: \<extra focus from args, or empty\>
 
 The launched subagent returns a **markdown review report** with three sections, in order:

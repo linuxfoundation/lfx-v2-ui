@@ -252,7 +252,7 @@ Detailed patterns are in `.claude/rules/` and loaded contextually based on the `
 
 ## Work cycle — post-commit and pre-PR reviews
 
-> **CRITICAL — while the branch is pre-PR, post-commit reviews are mandatory.** After every commit on the local branch, invoke the `lfx-self-serve-code-review` AND `lfx-self-serve-learnings-review` skills in parallel via the Skill tool — each skill body launches its background subagent — then keep working while they run. Before opening a PR, every running review must return clean (or remaining findings explicitly documented as trade-offs), the **full-branch sweep** must run clean if the branch has more than one commit (`base: origin/main`), AND `/lfx-self-serve-pr-readiness` must pass (branch / JIRA / commits / DCO + GPG / rebase / diff size). The reviewers' time is the most expensive resource in this workflow — never skip, save for later, or assume changes are "small enough" to bypass.
+> **CRITICAL — while the branch is pre-PR, post-commit reviews are mandatory.** After every commit on the local branch, invoke the `lfx-self-serve-code-review` AND `lfx-self-serve-learnings-review` skills in parallel via the Skill tool — each skill body launches its background subagent — then keep working while they run. Before opening a PR, every running review must return clean (or remaining findings explicitly documented as trade-offs), the **full-branch sweep** must run clean if the branch has more than one commit (`branch` arg), AND `/lfx-self-serve-pr-readiness` must pass (branch / JIRA / commits / DCO + GPG / rebase / diff size / protected files). The reviewers' time is the most expensive resource in this workflow — never skip, save for later, or assume changes are "small enough" to bypass.
 >
 > **Once the PR is open, do NOT invoke the review skill pair on iteration commits.** CodeRabbit + Copilot auto-trigger on every push and own the audit surface from that point — stacking skill-launched audits on top adds latency without proportional signal. The pair is pre-PR insurance only. (For substantive new work pushed to an open PR, judgment applies; default is still to skip.)
 
@@ -275,9 +275,9 @@ When the work is "done" — no more code commits planned:
 
 1. **Wait for every running review to complete.** Each pair audits one commit, so the pair invoked by every recent commit needs to have returned before you continue.
 2. **If any returned pair flags Critical or reasonable Important:** add a fix commit, invoke the pair again on the new state, wait. Loop until the pair returns clean (or remaining findings are explicitly documented in the PR description with a stated trade-off).
-3. **Full-branch sweep — only if the branch has more than one commit.** Invoke both review skills again in parallel via the Skill tool, with the `base` arg pointing at your target ref so each audits the cumulative diff across all commits on the branch:
-   - **`lfx-self-serve-code-review`**, args: `"base: origin/main"`.
-   - **`lfx-self-serve-learnings-review`**, args: `"base: origin/main"`.
+3. **Full-branch sweep — only if the branch has more than one commit.** Invoke both review skills again in parallel via the Skill tool, with the `branch` keyword so each audits the branch's diff against main (not just the latest commit):
+   - **`lfx-self-serve-code-review`**, args: `"branch"`.
+   - **`lfx-self-serve-learnings-review`**, args: `"branch"`.
 
    Same **launcher discipline** as post-commit: pass each skill body verbatim, args appended at the end. Per-commit reviews can miss cross-commit drift (an issue introduced in commit N and only made dangerous by commit N+2's changes wouldn't surface in either's individual review); the sweep catches it. Single-commit branches skip — already covered by the post-commit pair. Address any new findings, then re-run the sweep until clean.
 
@@ -303,7 +303,7 @@ After `/compact`, re-invoke `/develop` or the relevant convention skill if conti
 - ❌ Mix module concerns in one change
 - ❌ Open a PR without invoking the post-commit review pair (`lfx-self-serve-code-review` + `lfx-self-serve-learnings-review` skills, in parallel) after every pre-PR commit and draining the queue clean — both reviews are non-negotiable pre-PR
 - ❌ Push the pre-PR queue before every running review has returned and every Critical finding is addressed (the queue must be drained at the PR boundary; once the PR is open, the bots become the audit surface and the pair is no longer invoked)
-- ❌ Open a multi-commit PR without running the pre-PR full-branch sweep (`base: origin/main`) — per-commit reviews can miss cross-commit drift
+- ❌ Open a multi-commit PR without running the pre-PR full-branch sweep (`branch` arg) — per-commit reviews can miss cross-commit drift
 - ❌ Open a PR without running `/lfx-self-serve-pr-readiness` to a clean verdict — also non-negotiable
 - ❌ Open a PR without DCO sign-off + GPG (`--signoff -S`)
 - ❌ Commit and claim "done" before `yarn build` passes
