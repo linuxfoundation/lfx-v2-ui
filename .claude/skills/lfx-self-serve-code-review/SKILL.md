@@ -23,13 +23,17 @@ Parse the caller's prompt for:
 
 ## Step 1 — Compute the diff
 
-Default: audit the latest commit on the current branch.
+Default: audit **only the latest commit** on the current branch. Do not include unstaged or staged work-in-progress — review HEAD's diff, nothing else.
 
 ```bash
 git rev-parse --abbrev-ref HEAD                # current branch
 git log -1 --format='%H %s'                    # commit SHA + subject (the commit under review)
-git show HEAD                                  # full diff + stat
+git show --stat HEAD                           # changed files + line counts + full diff (one shot)
 ```
+
+The `--stat` header at the top of `git show`'s output is the canonical changed-file list — use those paths to drive Step 2's path-conditional document loads and Step 3's per-file audit. The shortstat line (e.g., "2 files changed, 12 insertions(+), 3 deletions(-)") feeds the Step 6 report header.
+
+If the stat block reports `0 files changed` (empty commit), abort: `No changes to review in the latest commit.`
 
 If `pr: <N>` was provided, audit the PR's full diff instead:
 
