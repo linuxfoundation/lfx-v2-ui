@@ -401,14 +401,22 @@ async function gracefulShutdown(signal: string): Promise<void> {
   await Promise.allSettled([
     raceDrain(
       NatsService.shutdownAll().then(
-        () => { logger.info(undefined, 'shutdown_nats_drained', 'NATS connections drained', {}); },
-        (err) => { logger.warning(undefined, 'shutdown_nats_drain_failed', 'NATS drain failed', { err }); }
+        () => {
+          logger.info(undefined, 'shutdown_nats_drained', 'NATS connections drained', {});
+        },
+        (err) => {
+          logger.warning(undefined, 'shutdown_nats_drain_failed', 'NATS drain failed', { err });
+        }
       )
     ),
     raceDrain(
       SnowflakeService.shutdownIfInitialized().then(
-        () => { logger.info(undefined, 'shutdown_snowflake_drained', 'Snowflake pool drained', {}); },
-        (err) => { logger.warning(undefined, 'shutdown_snowflake_drain_failed', 'Snowflake drain failed', { err }); }
+        () => {
+          logger.info(undefined, 'shutdown_snowflake_drained', 'Snowflake pool drained', {});
+        },
+        (err) => {
+          logger.warning(undefined, 'shutdown_snowflake_drain_failed', 'Snowflake drain failed', { err });
+        }
       )
     ),
   ]);
