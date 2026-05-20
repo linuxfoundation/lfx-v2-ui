@@ -149,7 +149,10 @@ export class ProfileIndividualEnrollmentComponent {
       if (!list) return list;
       return list.map((item) => {
         if (item.membership?.ID === membershipId) {
-          return { ...item, membership: { ...item.membership, AutoRenew: autoRenew } };
+          const updatedMembership = { ...item.membership, AutoRenew: autoRenew };
+          const updatedItem = { ...item, membership: updatedMembership };
+          const displayStatus = deriveEnrollmentStatus(updatedItem);
+          return { ...updatedItem, displayStatus, severity: enrollmentStatusSeverity(displayStatus) };
         }
         return item;
       });
