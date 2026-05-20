@@ -51,7 +51,7 @@ import { logger } from './services/logger.service';
 import { NatsService } from './services/nats.service';
 import { SnowflakeService } from './services/snowflake.service';
 import { clearImpersonationSession, decodeJwtPayload } from './utils/auth-helper';
-import { isShuttingDown, runShutdownHooks } from './utils/shutdown';
+import { isShuttingDown, markShuttingDown, runShutdownHooks } from './utils/shutdown';
 import { resolvePersonaForSsr } from './utils/persona-helper';
 
 if (process.env['NODE_ENV'] !== 'production') {
@@ -345,15 +345,14 @@ app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
 });
 
 let httpServer: HttpServer | undefined;
-let shuttingDown = false;
 
 async function gracefulShutdown(signal: string): Promise<void> {
-  if (shuttingDown) return;
-  shuttingDown = true;
+  if (isShuttingDown()) return;
+  markShuttingDown(); // flip /readyz to 503 synchronously before anything async runs
 
   const startTime = logger.startOperation(undefined, 'shutdown_initiated', { signal });
 
-  // Run registered hooks first (flips isShuttingDown() → 503, closes SSE streams).
+  // Run registered hooks (closes SSE streams).
   await runShutdownHooks();
 
   if (!httpServer) {

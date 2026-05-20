@@ -15,10 +15,10 @@ module.exports = {
       max_restarts: 10, // Restart limit for unstable apps
       exp_backoff_restart_delay: 100, // Exponential backoff restart delay
       watch: false, // Disable file watching in production
-      autorestart: true, // Auto restart on crashes
+      autorestart: true, // Restarts on crash (non-zero exit); process.exit(0) in gracefulShutdown bypasses this
       instances: 1, // Number of instances to run
       exec_mode: 'cluster', // Enable cluster mode for load balancing
-      kill_timeout: 30000, // Allow 30s for graceful drain before SIGKILL (must exceed in-app 25s drain window)
+      kill_timeout: 45000, // 25s HTTP drain + 15s NATS/Snowflake drain + 5s margin; must be < terminationGracePeriodSeconds (60s) - preStop (10s)
       shutdown_with_message: false, // Use real SIGTERM, not PM2 IPC message
     },
   ],

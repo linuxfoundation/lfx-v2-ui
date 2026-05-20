@@ -14,9 +14,12 @@ export function addShutdownHook(hook: ShutdownHook): void {
   hooks.push(hook);
 }
 
-// Marks shutdown as in-progress and runs all registered hooks concurrently.
-// Called before httpServer.close() so SSE streams can be ended first.
-export async function runShutdownHooks(): Promise<void> {
+export function markShuttingDown(): void {
   shuttingDown = true;
+}
+
+// Runs all registered hooks concurrently. Call markShuttingDown() first so
+// /readyz flips synchronously before hook execution begins.
+export async function runShutdownHooks(): Promise<void> {
   await Promise.allSettled(hooks.map((hook) => hook()));
 }

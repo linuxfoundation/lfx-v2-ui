@@ -7,7 +7,7 @@ import { NextFunction, Request, Response } from 'express';
 import { ServiceValidationError } from '../errors';
 import { CopilotService } from '../services/copilot.service';
 import { logger } from '../services/logger.service';
-import { addShutdownHook } from '../utils/shutdown';
+import { addShutdownHook, isShuttingDown } from '../utils/shutdown';
 import { getEffectiveSub } from '../utils/auth-helper';
 
 export class CopilotController {
@@ -19,6 +19,11 @@ export class CopilotController {
   }
 
   public async chat(req: Request, res: Response, next: NextFunction): Promise<void> {
+    if (isShuttingDown()) {
+      res.status(503).json({ status: 'shutting_down' });
+      return;
+    }
+
     const { message, sessionId, context } = req.body as CopilotChatRequest;
 
     if (!message || typeof message !== 'string' || !message.trim()) {
@@ -112,10 +117,11 @@ export class CopilotController {
   private closeAllStreams(): void {
     for (const res of this.activeStreams) {
       try {
-        res.write('event: shutdown\ndata: {}\n\n');
-        res.end();
-      } catch {
-        // stream may already be closed
+        res.end('event: shutdown\ndata: {}\n\n');
+      } catch (error) {
+        logger.debug(undefined, 'sse_stream_shutdown_close', 'Stream already closed during shutdown', {
+          err: error,
+        });
       }
     }
     this.activeStreams.clear();

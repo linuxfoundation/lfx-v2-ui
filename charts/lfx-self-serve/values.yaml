@@ -12,8 +12,13 @@ strategy:
     maxSurge: "100%"
     maxUnavailable: 0
 
-# terminationGracePeriodSeconds must exceed preStop.sleep + PM2 kill_timeout (10s + 25s = 35s).
-# 60s provides an additional 25s margin for service drain (NATS, Snowflake).
+# terminationGracePeriodSeconds must exceed preStop.sleep + PM2 kill_timeout (10s + 45s = 55s).
+# 60s provides a 5s safety margin. Timing breakdown after pod termination begins:
+#   10s  preStop sleep  — kube-proxy / Traefik endpoint removal propagation
+#   25s  HTTP drain     — in-flight requests complete (httpServer.close 25s window)
+#   15s  service drain  — NATS drain + Snowflake pool drain in parallel
+#    5s  margin
+# Total = 55s, fits within 60s. PM2 kill_timeout (45s) fires before k8s force-kill.
 terminationGracePeriodSeconds: 60
 
 # lifecycle hooks run inside the container before SIGTERM is sent.
