@@ -370,12 +370,19 @@ async function gracefulShutdown(signal: string): Promise<void> {
   // Run registered hooks (closes SSE streams) with a 5s budget.
   // Without a budget, a single blocked SSE write (backpressure) can stall
   // hook execution and push the total shutdown time past PM2 kill_timeout.
+  // The `hooksCompleted` flag mirrors the `completed` guard in `raceDrain` to
+  // suppress a spurious timeout warning when hooks finish before the budget.
+  let hooksCompleted = false;
   const HOOK_BUDGET_MS = 5_000;
   await Promise.race([
-    runShutdownHooks(),
+    runShutdownHooks().then(() => {
+      hooksCompleted = true;
+    }),
     new Promise<void>((resolve) =>
       setTimeout(() => {
-        logger.warning(undefined, 'shutdown_hooks_timeout', 'Shutdown hooks exceeded budget', { budget_ms: HOOK_BUDGET_MS });
+        if (!hooksCompleted) {
+          logger.warning(undefined, 'shutdown_hooks_timeout', 'Shutdown hooks exceeded budget', { budget_ms: HOOK_BUDGET_MS });
+        }
         resolve();
       }, HOOK_BUDGET_MS)
     ),
@@ -433,23 +440,27 @@ async function gracefulShutdown(signal: string): Promise<void> {
   await Promise.allSettled([
     raceDrain(
       'nats',
-      NatsService.shutdownAll().then(
-        () => {
-          logger.info(undefined, 'shutdown_nats_drained', 'NATS connections drained', {});
-        },
-        (err) => {
-          logger.warning(undefined, 'shutdown_nats_drain_failed', 'NATS drain failed', { err });
-        }
-      )
+      // shutdownAll() uses Promise.allSettled — always resolves regardless of individual
+      // drain outcomes. Per-connection failures are already logged at ERROR inside
+      // NatsService.shutdown(). Log "complete" here (not "drained") to avoid implying
+      // all drains succeeded when some may have been swallowed.
+      NatsService.shutdownAll().then(() => {
+        logger.info(undefined, 'shutdown_nats_complete', 'NATS shutdown complete', {});
+      })
     ),
     raceDrain(
       'snowflake',
+      // shutdown() has an internal try/catch that logs pool drain errors and resolves.
+      // Per-drain failures are already logged at ERROR inside SnowflakeService.shutdown().
+      // Log "complete" here (not "drained") for the same reason as NATS above.
+      // Keep the rejection handler: unlike shutdownAll(), shutdownIfInitialized() can
+      // reject if pre-pool code throws before the internal try/catch.
       SnowflakeService.shutdownIfInitialized().then(
         () => {
-          logger.info(undefined, 'shutdown_snowflake_drained', 'Snowflake pool drained', {});
+          logger.info(undefined, 'shutdown_snowflake_complete', 'Snowflake shutdown complete', {});
         },
         (err) => {
-          logger.warning(undefined, 'shutdown_snowflake_drain_failed', 'Snowflake drain failed', { err });
+          logger.warning(undefined, 'shutdown_snowflake_failed', 'Snowflake shutdown failed', { err });
         }
       )
     ),
