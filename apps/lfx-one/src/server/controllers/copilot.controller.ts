@@ -7,10 +7,16 @@ import { NextFunction, Request, Response } from 'express';
 import { ServiceValidationError } from '../errors';
 import { CopilotService } from '../services/copilot.service';
 import { logger } from '../services/logger.service';
+import { addShutdownHook } from '../utils/shutdown';
 import { getEffectiveSub } from '../utils/auth-helper';
 
 export class CopilotController {
   private readonly copilotService = new CopilotService();
+  private readonly activeStreams = new Set<Response>();
+
+  public constructor() {
+    addShutdownHook(() => this.closeAllStreams());
+  }
 
   public async chat(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { message, sessionId, context } = req.body as CopilotChatRequest;
@@ -51,8 +57,10 @@ export class CopilotController {
     const abortController = new AbortController();
     let clientDisconnected = false;
 
+    this.activeStreams.add(res);
     res.on('close', () => {
       clientDisconnected = true;
+      this.activeStreams.delete(res);
       abortController.abort();
     });
 
@@ -94,9 +102,22 @@ export class CopilotController {
       logger.error(req, 'copilot_chat', startTime, error, { user_id: userId });
       sendEvent('error', 'Something went wrong. Please try again.');
     } finally {
+      this.activeStreams.delete(res);
       if (!clientDisconnected) {
         res.end();
       }
     }
+  }
+
+  private closeAllStreams(): void {
+    for (const res of this.activeStreams) {
+      try {
+        res.write('event: shutdown\ndata: {}\n\n');
+        res.end();
+      } catch {
+        // stream may already be closed
+      }
+    }
+    this.activeStreams.clear();
   }
 }

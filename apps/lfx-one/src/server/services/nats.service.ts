@@ -20,6 +20,8 @@ import { logger } from './logger.service';
  * This service handles only infrastructure concerns, not business logic
  */
 export class NatsService {
+  private static readonly instances = new Set<NatsService>();
+
   private connection: NatsConnection | null = null;
   private connectionPromise: Promise<NatsConnection> | null = null;
   private natsHostname: string;
@@ -30,6 +32,11 @@ export class NatsService {
     const parsedUrl = new URL(natsUrl.replace(/^nats:/, 'http:'));
     this.natsHostname = parsedUrl.hostname;
     this.natsPort = parseInt(parsedUrl.port, 10) || 4222;
+    NatsService.instances.add(this);
+  }
+
+  public static async shutdownAll(): Promise<void> {
+    await Promise.allSettled([...NatsService.instances].map((i) => i.shutdown()));
   }
 
   /**
@@ -104,6 +111,8 @@ export class NatsService {
    * Gracefully shutdown NATS connection
    */
   public async shutdown(): Promise<void> {
+    NatsService.instances.delete(this);
+
     if (this.connection && !this.connection.isClosed()) {
       const startTime = logger.startOperation(undefined, 'nats_shutdown', {});
 

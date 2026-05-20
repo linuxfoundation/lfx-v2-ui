@@ -8,6 +8,7 @@ import { AuthContext, RuntimeConfig, User } from '@lfx-one/shared/interfaces';
 import dotenv from 'dotenv';
 import express, { NextFunction, Request, Response } from 'express';
 import { attemptSilentLogin, auth, ConfigParams } from 'express-openid-connect';
+import { Server as HttpServer } from 'node:http';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pinoHttp from 'pino-http';
@@ -47,7 +48,10 @@ import userRouter from './routes/user.route';
 import votesRouter from './routes/votes.route';
 import { reqSerializer, resSerializer, serverLogger } from './server-logger';
 import { logger } from './services/logger.service';
+import { NatsService } from './services/nats.service';
+import { SnowflakeService } from './services/snowflake.service';
 import { clearImpersonationSession, decodeJwtPayload } from './utils/auth-helper';
+import { isShuttingDown, runShutdownHooks } from './utils/shutdown';
 import { resolvePersonaForSsr } from './utils/persona-helper';
 
 if (process.env['NODE_ENV'] !== 'production') {
@@ -97,6 +101,10 @@ app.get('/livez', (_req: Request, res: Response) => {
 // failures are handled at the route level, not by pulling the whole pod out
 // of the Service endpoints list.
 app.get('/readyz', (_req: Request, res: Response) => {
+  if (isShuttingDown()) {
+    res.status(503).json({ status: 'shutting_down' });
+    return;
+  }
   res.status(200).json({ status: 'ready' });
 });
 
@@ -336,9 +344,59 @@ app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
   apiErrorHandler(error, req, res, next);
 });
 
+let httpServer: HttpServer | undefined;
+let shuttingDown = false;
+
+async function gracefulShutdown(signal: string): Promise<void> {
+  if (shuttingDown) return;
+  shuttingDown = true;
+
+  const startTime = logger.startOperation(undefined, 'shutdown_initiated', { signal });
+
+  // Run registered hooks first (flips isShuttingDown() → 503, closes SSE streams).
+  await runShutdownHooks();
+
+  if (!httpServer) {
+    logger.success(undefined, 'shutdown_complete', startTime, { reason: 'no_http_server' });
+    process.exit(0);
+    return;
+  }
+
+  // Stop accepting new connections and drain in-flight requests (25s window).
+  await new Promise<void>((resolve) => {
+    const drainTimeout = setTimeout(() => {
+      httpServer!.closeAllConnections();
+      resolve();
+    }, 25_000);
+
+    httpServer!.closeIdleConnections();
+    httpServer!.close(() => {
+      clearTimeout(drainTimeout);
+      resolve();
+    });
+  });
+
+  logger.info(undefined, 'shutdown_http_drained', 'HTTP server drained', {});
+
+  // Drain NATS and Snowflake concurrently; a failure in one must not block the other.
+  await Promise.allSettled([
+    NatsService.shutdownAll().then(() => {
+      logger.info(undefined, 'shutdown_nats_drained', 'NATS connections drained', {});
+    }),
+    SnowflakeService.getInstance()
+      .shutdown()
+      .then(() => {
+        logger.info(undefined, 'shutdown_snowflake_drained', 'Snowflake pool drained', {});
+      }),
+  ]);
+
+  logger.success(undefined, 'shutdown_complete', startTime, {});
+  process.exit(0);
+}
+
 export function startServer() {
   const port = process.env['PORT'] || 4000;
-  app.listen(port, () => {
+  httpServer = app.listen(port, () => {
     logger.debug(undefined, 'server_startup', 'Node Express server started', {
       port,
       url: `http://localhost:${port}`,
@@ -354,6 +412,8 @@ const isPM2 = process.env['PM2'] === 'true';
 
 if (isMain || isPM2) {
   startServer();
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 }
 
 export const reqHandler = createNodeRequestHandler(app);

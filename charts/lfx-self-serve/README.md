@@ -101,8 +101,11 @@ environment:
 
 | Parameter           | Description        | Default                                  |
 | ------------------- | ------------------ | ---------------------------------------- |
-| `replicaCount`      | Number of replicas | `1`                                      |
-| `image.registry`    | Image registry     | `""`                                     |
+| `replicaCount`                              | Number of replicas                                                                                               | `3`                                          |
+| `strategy`                                  | Kubernetes rolling update strategy. Default spins up a full new replica set before terminating any old pods.    | `{type: RollingUpdate, rollingUpdate: {maxSurge: "100%", maxUnavailable: 0}}` |
+| `terminationGracePeriodSeconds`             | Seconds Kubernetes waits before SIGKILL after SIGTERM. Must exceed `preStop.sleep` + PM2 `kill_timeout` (35s). | `60`                                         |
+| `lifecycle.preStop.exec.command`            | Command run inside the container before SIGTERM. Allows kube-proxy/Traefik to deregister the endpoint.         | `["/bin/sh", "-c", "sleep 10"]`              |
+| `image.registry`                            | Image registry                                                                                                  | `""`                                         |
 | `image.repository`  | Image repository   | `ghcr.io/linuxfoundation/lfx-self-serve` |
 | `image.tag`         | Image tag          | `"latest"`                               |
 | `image.pullPolicy`  | Image pull policy  | `IfNotPresent`                           |

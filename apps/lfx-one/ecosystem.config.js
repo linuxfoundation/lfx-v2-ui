@@ -18,6 +18,8 @@ module.exports = {
       autorestart: true, // Auto restart on crashes
       instances: 1, // Number of instances to run
       exec_mode: 'cluster', // Enable cluster mode for load balancing
+      kill_timeout: 30000, // Allow 30s for graceful drain before SIGKILL (must exceed in-app 25s drain window)
+      shutdown_with_message: false, // Use real SIGTERM, not PM2 IPC message
     },
   ],
 };

@@ -3,6 +3,27 @@
 
 replicaCount: 3
 
+# strategy controls the Kubernetes rolling update behavior.
+# maxSurge: "100%" spins up a full new replica set before terminating any old pods (zero disruption).
+# maxUnavailable: 0 ensures the ready count never drops below the desired replica count.
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: "100%"
+    maxUnavailable: 0
+
+# terminationGracePeriodSeconds must exceed preStop.sleep + PM2 kill_timeout (10s + 25s = 35s).
+# 60s provides an additional 25s margin for service drain (NATS, Snowflake).
+terminationGracePeriodSeconds: 60
+
+# lifecycle hooks run inside the container before SIGTERM is sent.
+# The preStop sleep gives kube-proxy / Traefik time to propagate endpoint removal
+# so no new requests arrive on a pod that is about to be terminated.
+lifecycle:
+  preStop:
+    exec:
+      command: ["/bin/sh", "-c", "sleep 10"]
+
 # podDisruptionBudget configures a PodDisruptionBudget for the deployment.
 # Only one of minAvailable or maxUnavailable may be set (not both).
 podDisruptionBudget:
