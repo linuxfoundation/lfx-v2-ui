@@ -147,19 +147,8 @@
         <div class="flex flex-col gap-3" data-testid="settings-beneficiaries-list">
           @for (group of beneficiaryGroups(); track $index) {
             <div class="flex items-center gap-2" [attr.data-testid]="'settings-beneficiary-row-' + $index">
-              <lfx-input-text
-                [form]="group"
-                control="name"
-                placeholder="Full name"
-                class="flex-1"
-                [dataTest]="'beneficiary-name-' + $index" />
-              <lfx-input-text
-                [form]="group"
-                control="email"
-                type="email"
-                placeholder="Email"
-                class="flex-[2]"
-                [dataTest]="'beneficiary-email-' + $index" />
+              <lfx-input-text [form]="group" control="name" placeholder="Full name" class="flex-1" [dataTest]="'beneficiary-name-' + $index" />
+              <lfx-input-text [form]="group" control="email" type="email" placeholder="Email" class="flex-[2]" [dataTest]="'beneficiary-email-' + $index" />
               <button
                 type="button"
                 (click)="removeBeneficiary($index)"
