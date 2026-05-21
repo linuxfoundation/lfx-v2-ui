@@ -1,6 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { addDays } from 'date-fns';
+import { DRAFT_VOTE_DEFAULT_DURATION_DAYS, DRAFT_VOTE_PLACEHOLDER_QUESTION, VOTE_QUESTION_MIN_LENGTH } from '../constants/poll.constants';
 import { CommitteeMemberVotingStatus } from '../enums/committee-member.enum';
 import { CommitteeReference } from '../interfaces/committee.interface';
 import { CreatePollQuestion, CreateVoteRequest, PollQuestion, QuestionFormValue, UpdateVoteRequest, Vote, VoteFormValue } from '../interfaces/poll.interface';
@@ -95,6 +97,11 @@ export function mapQuestionToApiFormat(question: QuestionFormValue): CreatePollQ
   };
 }
 
+/** Returns questions that pass the form's own length validator — anything shorter would fail on re-open. */
+function filterDraftQuestions(questions: QuestionFormValue[]): CreatePollQuestion[] {
+  return questions.filter((q) => q.question.trim().length >= VOTE_QUESTION_MIN_LENGTH).map(mapQuestionToApiFormat);
+}
+
 /**
  * Builds a CreateVoteRequest from form values
  * @param formValue - The vote form values
@@ -103,13 +110,29 @@ export function mapQuestionToApiFormat(question: QuestionFormValue): CreatePollQ
  */
 export function buildCreateVoteRequest(formValue: VoteFormValue, projectUid: string): CreateVoteRequest {
   return {
-    name: formValue.title,
-    description: formValue.description || '',
+    name: formValue.title.trim(),
+    description: formValue.description?.trim() || '',
     end_time: formValue.close_date ? formValue.close_date.toISOString() : '',
     project_uid: projectUid,
     committee_uid: formValue.committee?.uid || '',
     committee_filters: mapEligibilityToFilters(formValue.eligible_participants),
     poll_questions: formValue.questions.map(mapQuestionToApiFormat),
+  };
+}
+
+/** Fills upstream-required fields with sensible defaults so a partial form can be saved as a draft. */
+export function buildDraftVoteRequest(formValue: VoteFormValue, projectUid: string): CreateVoteRequest {
+  const filledQuestions = filterDraftQuestions(formValue.questions);
+  const poll_questions: CreatePollQuestion[] = filledQuestions.length > 0 ? filledQuestions : [DRAFT_VOTE_PLACEHOLDER_QUESTION];
+
+  return {
+    name: formValue.title.trim(),
+    description: formValue.description?.trim() || '',
+    end_time: formValue.close_date?.toISOString() ?? addDays(new Date(), DRAFT_VOTE_DEFAULT_DURATION_DAYS).toISOString(),
+    project_uid: projectUid,
+    committee_uid: formValue.committee?.uid || '',
+    committee_filters: mapEligibilityToFilters(formValue.eligible_participants),
+    poll_questions,
   };
 }
 
@@ -121,12 +144,28 @@ export function buildCreateVoteRequest(formValue: VoteFormValue, projectUid: str
  */
 export function buildUpdateVoteRequest(formValue: VoteFormValue, projectUid: string): UpdateVoteRequest {
   return {
-    name: formValue.title,
-    description: formValue.description || '',
+    name: formValue.title.trim(),
+    description: formValue.description?.trim() || '',
     end_time: formValue.close_date ? formValue.close_date.toISOString() : '',
     project_uid: projectUid,
     committee_uid: formValue.committee?.uid || '',
     committee_filters: mapEligibilityToFilters(formValue.eligible_participants),
     poll_questions: formValue.questions.map(mapQuestionToApiFormat),
+  };
+}
+
+/** Update-mode counterpart to buildDraftVoteRequest — fills upstream-required fields when the user clears them while editing an existing draft. */
+export function buildDraftUpdateVoteRequest(formValue: VoteFormValue, projectUid: string): UpdateVoteRequest {
+  const filledQuestions = filterDraftQuestions(formValue.questions);
+  const poll_questions: CreatePollQuestion[] = filledQuestions.length > 0 ? filledQuestions : [DRAFT_VOTE_PLACEHOLDER_QUESTION];
+
+  return {
+    name: formValue.title.trim(),
+    description: formValue.description?.trim() || '',
+    end_time: formValue.close_date?.toISOString() ?? addDays(new Date(), DRAFT_VOTE_DEFAULT_DURATION_DAYS).toISOString(),
+    project_uid: projectUid,
+    committee_uid: formValue.committee?.uid || '',
+    committee_filters: mapEligibilityToFilters(formValue.eligible_participants),
+    poll_questions,
   };
 }
