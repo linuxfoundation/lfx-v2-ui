@@ -32,10 +32,7 @@ export const ATTRIBUTION_MODEL_OPTIONS: AttributionModelOption[] = [
   { label: 'Time Decay', value: 'timeDecay' },
 ];
 
-/**
- * Maps MarketingImpactFocusProgram IDs to Snowflake LF_SUB_DOMAIN_CLASSIFICATION values.
- * 'all' maps to undefined (no filter). Used by endpoints that support classification filtering.
- */
+/** Maps MarketingImpactFocusProgram IDs to Snowflake LF_SUB_DOMAIN_CLASSIFICATION values. 'all' maps to undefined (no filter). */
 export const FOCUS_TO_CLASSIFICATION: Record<MarketingImpactFocusProgram, string | undefined> = {
   all: undefined,
   events: 'Events',
