@@ -1,16 +1,16 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, inject, Signal, signal, viewChild, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { MetricCardComponent } from '@components/metric-card/metric-card.component';
 import { BASE_BAR_CHART_OPTIONS, BASE_LINE_CHART_OPTIONS, lfxColors, ORG_INVOLVEMENT_METRICS } from '@lfx-one/shared/constants';
-import { hexToRgba } from '@lfx-one/shared/utils';
+import { hexToRgba, parseLocalDateString } from '@lfx-one/shared/utils';
 import { AccountContextService } from '@services/account-context.service';
 import { OrgInvolvementAnalyticsService } from '@services/org-involvement-analytics.service';
 import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directive';
-import { catchError, map, of, switchMap, tap } from 'rxjs';
+import { distinctUntilChanged, map, Observable, of, switchMap, tap } from 'rxjs';
 
 import type {
   DashboardMetricCard,
@@ -31,10 +31,10 @@ import type { ChartOptions, ChartType } from 'chart.js';
   styleUrl: './org-overview-involvement.component.scss',
 })
 export class OrgOverviewInvolvementComponent {
-  public readonly scrollShadowDirective = viewChild(ScrollShadowDirective);
-
   private readonly analyticsService = inject(OrgInvolvementAnalyticsService);
   private readonly accountContextService = inject(AccountContextService);
+
+  public readonly scrollShadowDirective = viewChild(ScrollShadowDirective);
 
   private readonly maintainersLoading = signal(true);
   private readonly contributorsLoading = signal(true);
@@ -42,8 +42,19 @@ export class OrgOverviewInvolvementComponent {
   private readonly trainingEnrollmentsLoading = signal(true);
   private readonly eventsLoading = signal(true);
   private readonly coverageLoading = signal(true);
+  public readonly selectedFilter = signal<string>('all');
 
-  private readonly selectedAccountId$ = toObservable(this.accountContextService.selectedAccount).pipe(map((account) => account.accountId));
+  public readonly filterOptions: FilterPillOption[] = [
+    { id: 'all', label: 'All' },
+    { id: 'contributions', label: 'Contribution' },
+    { id: 'events', label: 'Event' },
+    { id: 'education', label: 'Education' },
+  ];
+
+  private readonly selectedAccountId$: Observable<string> = toObservable(this.accountContextService.selectedAccount).pipe(
+    map((account) => account.accountId),
+    distinctUntilChanged()
+  );
 
   private readonly coverageData = this.initializeCoverageData();
   private readonly maintainersData = this.initializeMaintainersData();
@@ -52,7 +63,6 @@ export class OrgOverviewInvolvementComponent {
   private readonly trainingEnrollmentsData = this.initializeTrainingEnrollmentsData();
   private readonly eventAttendanceMonthlyData = this.initializeEventAttendanceMonthlyData();
 
-  public readonly selectedFilter = signal<string>('all');
   public readonly accountName = computed<string>(() => this.accountContextService.selectedAccount().accountName || 'Organization');
 
   public readonly subtitleText = computed<string>(() => {
@@ -62,13 +72,6 @@ export class OrgOverviewInvolvementComponent {
     }
     return coverage.foundationCount > 0 ? `across ${coverage.foundationCount} LF foundations` : 'No engagement yet';
   });
-
-  public readonly filterOptions: FilterPillOption[] = [
-    { id: 'all', label: 'All' },
-    { id: 'contributions', label: 'Contribution' },
-    { id: 'events', label: 'Event' },
-    { id: 'education', label: 'Education' },
-  ];
 
   private readonly activeContributorsCard = this.initializeActiveContributorsCard();
   private readonly maintainersCard = this.initializeMaintainersCard();
@@ -83,35 +86,94 @@ export class OrgOverviewInvolvementComponent {
     this.selectedFilter.set(filter);
   }
 
-  private getMetricConfig(title: string): DashboardMetricCard {
-    return ORG_INVOLVEMENT_METRICS.find((m) => m.title === title)!;
+  private initializeCoverageData(): Signal<OrgFoundationCoverageResponse> {
+    return this.buildOrgDataSignal(
+      (id) => this.analyticsService.getFoundationCoverage(id),
+      (accountId) => ({ accountId, foundationCount: 0, foundations: [] }),
+      this.coverageLoading
+    );
   }
 
-  private initializeActiveContributorsCard() {
+  private initializeMaintainersData(): Signal<OrgInvolvementMaintainersMonthlyResponse> {
+    return this.buildOrgDataSignal(
+      (id) => this.analyticsService.getMaintainersMonthly(id),
+      (accountId) => ({
+        accountId,
+        accountName: '',
+        totalMaintainersYearly: 0,
+        totalProjectsYearly: 0,
+        monthlyData: [],
+        monthlyLabels: [],
+      }),
+      this.maintainersLoading
+    );
+  }
+
+  private initializeContributorsData(): Signal<OrgInvolvementContributorsMonthlyResponse> {
+    return this.buildOrgDataSignal(
+      (id) => this.analyticsService.getContributorsMonthly(id),
+      (accountId) => ({ accountId, totalActiveContributors: 0, monthlyData: [], monthlyLabels: [] }),
+      this.contributorsLoading
+    );
+  }
+
+  private initializeCertifiedEmployeesData(): Signal<OrgInvolvementCertifiedEmployeesMonthlyResponse> {
+    return this.buildOrgDataSignal(
+      (id) => this.analyticsService.getCertifiedEmployeesMonthly(id),
+      (accountId) => ({ accountId, totalCertifications: 0, totalCertifiedEmployees: 0, monthlyData: [], monthlyLabels: [] }),
+      this.certifiedEmployeesLoading
+    );
+  }
+
+  private initializeTrainingEnrollmentsData(): Signal<OrgTrainingEnrollmentsResponse> {
+    return this.buildOrgDataSignal(
+      (id) => this.analyticsService.getTrainingEnrollments(id),
+      (accountId) => ({ accountId, totalEnrollments: 0, dailyData: [] }),
+      this.trainingEnrollmentsLoading
+    );
+  }
+
+  private initializeEventAttendanceMonthlyData(): Signal<OrgInvolvementEventAttendanceMonthlyResponse> {
+    return this.buildOrgDataSignal(
+      (id) => this.analyticsService.getEventAttendanceMonthly(id),
+      (accountId) => ({
+        accountId,
+        accountName: '',
+        totalAttended: 0,
+        totalSpeakers: 0,
+        attendeesMonthlyData: [],
+        speakersMonthlyData: [],
+        monthlyLabels: [],
+      }),
+      this.eventsLoading
+    );
+  }
+
+  private initializeActiveContributorsCard(): Signal<DashboardMetricCard> {
     return computed(() => this.transformActiveContributors(this.contributorsData(), this.getMetricConfig('Active Contributors')));
   }
 
-  private initializeMaintainersCard() {
+  private initializeMaintainersCard(): Signal<DashboardMetricCard> {
     return computed(() => this.transformMaintainers(this.maintainersData(), this.getMetricConfig('Maintainers')));
   }
 
-  private initializeEventAttendeesCard() {
+  private initializeEventAttendeesCard(): Signal<DashboardMetricCard> {
     return computed(() => this.transformEventAttendees(this.eventAttendanceMonthlyData(), this.getMetricConfig('Event Attendees')));
   }
 
-  private initializeEventSpeakersCard() {
+  private initializeEventSpeakersCard(): Signal<DashboardMetricCard> {
     return computed(() => this.transformEventSpeakers(this.eventAttendanceMonthlyData(), this.getMetricConfig('Event Speakers')));
   }
 
-  private initializeCertifiedEmployeesCard() {
+  private initializeCertifiedEmployeesCard(): Signal<DashboardMetricCard> {
     return computed(() => this.transformCertifiedEmployees(this.certifiedEmployeesData(), this.getMetricConfig('Certified Employees')));
   }
 
-  private initializeTrainingEnrollmentsCard() {
+  private initializeTrainingEnrollmentsCard(): Signal<DashboardMetricCard> {
     return computed(() => this.transformTrainingEnrollments(this.trainingEnrollmentsData(), this.getMetricConfig('Training Enrollments')));
   }
 
-  private initializePrimaryMetrics() {
+  private initializePrimaryMetrics(): Signal<DashboardMetricCard[]> {
     return computed<DashboardMetricCard[]>(() => {
       const filter = this.selectedFilter();
 
@@ -132,171 +194,24 @@ export class OrgOverviewInvolvementComponent {
     });
   }
 
-  private initializeCoverageData() {
+  /** Skip HTTP on empty accountId, echo accountId in the empty envelope, and rely on the service's catchError. */
+  private buildOrgDataSignal<T extends { accountId: string }>(
+    loader: (accountId: string) => Observable<T>,
+    emptyValue: (accountId: string) => T,
+    loading: WritableSignal<boolean>
+  ): Signal<T> {
     return toSignal(
       this.selectedAccountId$.pipe(
         switchMap((accountId) => {
-          this.coverageLoading.set(true);
-          return this.analyticsService.getFoundationCoverage(accountId).pipe(
-            tap(() => this.coverageLoading.set(false)),
-            catchError(() => {
-              this.coverageLoading.set(false);
-              return of({ accountId: '', foundationCount: 0, foundations: [] } as OrgFoundationCoverageResponse);
-            })
-          );
+          if (!accountId) {
+            loading.set(false);
+            return of(emptyValue(accountId));
+          }
+          loading.set(true);
+          return loader(accountId).pipe(tap(() => loading.set(false)));
         })
       ),
-      { initialValue: { accountId: '', foundationCount: 0, foundations: [] } as OrgFoundationCoverageResponse }
-    );
-  }
-
-  private initializeMaintainersData() {
-    return toSignal(
-      this.selectedAccountId$.pipe(
-        switchMap((accountId) => {
-          this.maintainersLoading.set(true);
-          return this.analyticsService.getMaintainersMonthly(accountId).pipe(
-            tap(() => this.maintainersLoading.set(false)),
-            catchError(() => {
-              this.maintainersLoading.set(false);
-              return of({
-                accountId: '',
-                accountName: '',
-                totalMaintainersYearly: 0,
-                totalProjectsYearly: 0,
-                monthlyData: [],
-                monthlyLabels: [],
-              } as OrgInvolvementMaintainersMonthlyResponse);
-            })
-          );
-        })
-      ),
-      {
-        initialValue: {
-          accountId: '',
-          accountName: '',
-          totalMaintainersYearly: 0,
-          totalProjectsYearly: 0,
-          monthlyData: [],
-          monthlyLabels: [],
-        } as OrgInvolvementMaintainersMonthlyResponse,
-      }
-    );
-  }
-
-  private initializeContributorsData() {
-    return toSignal(
-      this.selectedAccountId$.pipe(
-        switchMap((accountId) => {
-          this.contributorsLoading.set(true);
-          return this.analyticsService.getContributorsMonthly(accountId).pipe(
-            tap(() => this.contributorsLoading.set(false)),
-            catchError(() => {
-              this.contributorsLoading.set(false);
-              return of({
-                accountId: '',
-                totalActiveContributors: 0,
-                monthlyData: [],
-                monthlyLabels: [],
-              } as OrgInvolvementContributorsMonthlyResponse);
-            })
-          );
-        })
-      ),
-      {
-        initialValue: {
-          accountId: '',
-          totalActiveContributors: 0,
-          monthlyData: [],
-          monthlyLabels: [],
-        } as OrgInvolvementContributorsMonthlyResponse,
-      }
-    );
-  }
-
-  private initializeCertifiedEmployeesData() {
-    return toSignal(
-      this.selectedAccountId$.pipe(
-        switchMap((accountId) => {
-          this.certifiedEmployeesLoading.set(true);
-          return this.analyticsService.getCertifiedEmployeesMonthly(accountId).pipe(
-            tap(() => this.certifiedEmployeesLoading.set(false)),
-            catchError(() => {
-              this.certifiedEmployeesLoading.set(false);
-              return of({
-                accountId: '',
-                totalCertifications: 0,
-                totalCertifiedEmployees: 0,
-                monthlyData: [],
-                monthlyLabels: [],
-              } as OrgInvolvementCertifiedEmployeesMonthlyResponse);
-            })
-          );
-        })
-      ),
-      {
-        initialValue: {
-          accountId: '',
-          totalCertifications: 0,
-          totalCertifiedEmployees: 0,
-          monthlyData: [],
-          monthlyLabels: [],
-        } as OrgInvolvementCertifiedEmployeesMonthlyResponse,
-      }
-    );
-  }
-
-  private initializeTrainingEnrollmentsData() {
-    return toSignal(
-      this.selectedAccountId$.pipe(
-        switchMap((accountId) => {
-          this.trainingEnrollmentsLoading.set(true);
-          return this.analyticsService.getTrainingEnrollments(accountId).pipe(
-            tap(() => this.trainingEnrollmentsLoading.set(false)),
-            catchError(() => {
-              this.trainingEnrollmentsLoading.set(false);
-              return of({ accountId: '', totalEnrollments: 0, dailyData: [] } as OrgTrainingEnrollmentsResponse);
-            })
-          );
-        })
-      ),
-      { initialValue: { accountId: '', totalEnrollments: 0, dailyData: [] } as OrgTrainingEnrollmentsResponse }
-    );
-  }
-
-  private initializeEventAttendanceMonthlyData() {
-    return toSignal(
-      this.selectedAccountId$.pipe(
-        switchMap((accountId) => {
-          this.eventsLoading.set(true);
-          return this.analyticsService.getEventAttendanceMonthly(accountId).pipe(
-            tap(() => this.eventsLoading.set(false)),
-            catchError(() => {
-              this.eventsLoading.set(false);
-              return of({
-                accountId: '',
-                accountName: '',
-                totalAttended: 0,
-                totalSpeakers: 0,
-                attendeesMonthlyData: [],
-                speakersMonthlyData: [],
-                monthlyLabels: [],
-              } as OrgInvolvementEventAttendanceMonthlyResponse);
-            })
-          );
-        })
-      ),
-      {
-        initialValue: {
-          accountId: '',
-          accountName: '',
-          totalAttended: 0,
-          totalSpeakers: 0,
-          attendeesMonthlyData: [],
-          speakersMonthlyData: [],
-          monthlyLabels: [],
-        } as OrgInvolvementEventAttendanceMonthlyResponse,
-      }
+      { initialValue: emptyValue('') }
     );
   }
 
@@ -440,10 +355,7 @@ export class OrgOverviewInvolvementComponent {
       subtitle: 'Training courses enrolled this year',
       chartOptions: this.createLineChartOptions('Training enrollments'),
       chartData: {
-        labels: data.dailyData.map((row) => {
-          const date = new Date(row.date);
-          return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        }),
+        labels: data.dailyData.map((row) => parseLocalDateString(row.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })),
         datasets: [
           {
             data: data.dailyData.map((row) => row.cumulativeCount),
@@ -457,6 +369,15 @@ export class OrgOverviewInvolvementComponent {
         ],
       },
     };
+  }
+
+  /** Title-keyed lookup into ORG_INVOLVEMENT_METRICS; throws on missing card so renames surface as a clear error. */
+  private getMetricConfig(title: string): DashboardMetricCard {
+    const config = ORG_INVOLVEMENT_METRICS.find((m) => m.title === title);
+    if (!config) {
+      throw new Error(`ORG_INVOLVEMENT_METRICS is missing card titled '${title}'`);
+    }
+    return config;
   }
 
   private createBarChartOptions(label: string): ChartOptions<ChartType> {

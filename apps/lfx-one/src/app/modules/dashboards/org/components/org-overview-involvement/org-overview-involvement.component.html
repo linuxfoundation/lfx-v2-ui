@@ -53,14 +53,14 @@
 
     <!-- Right shadow fade -->
     <div
-      class="absolute top-0 bottom-0 right-0 w-32 z-10 pointer-events-none bg-[linear-gradient(to_right,transparent,#f9fafb)] transition-opacity duration-200"
+      class="absolute top-0 bottom-0 right-0 w-32 z-10 pointer-events-none bg-gradient-to-r from-transparent to-gray-50 transition-opacity duration-200"
       [class.opacity-0]="!scrollShadowDirective()?.showRightShadow()"
       data-testid="dashboard-involvement-shadow-right"
       aria-hidden="true"></div>
 
     <!-- Left shadow fade -->
     <div
-      class="absolute top-0 bottom-0 left-0 w-32 z-10 pointer-events-none bg-[linear-gradient(to_left,transparent,#f9fafb)] transition-opacity duration-200"
+      class="absolute top-0 bottom-0 left-0 w-32 z-10 pointer-events-none bg-gradient-to-l from-transparent to-gray-50 transition-opacity duration-200"
       [class.opacity-0]="!scrollShadowDirective()?.showLeftShadow()"
       data-testid="dashboard-involvement-shadow-left"
       aria-hidden="true"></div>
