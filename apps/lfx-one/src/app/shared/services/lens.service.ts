@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { computed, inject, Injectable, signal, Signal, WritableSignal } from '@angular/core';
-import { ALL_LENSES, DEFAULT_LENS, LENS_COOKIE_KEY } from '@lfx-one/shared/constants';
+import { ALL_LENSES, DEFAULT_LENS, FEATURE_FLAG_ORG_LENS_ENABLED, LENS_COOKIE_KEY } from '@lfx-one/shared/constants';
 import { Lens, LensOption } from '@lfx-one/shared/interfaces';
 import { SsrCookieService } from 'ngx-cookie-service-ssr';
 
@@ -20,7 +20,7 @@ export class LensService {
   private readonly featureFlagService = inject(FeatureFlagService);
 
   /** Dark-launch gate; off by default until the LaunchDarkly flag is flipped. */
-  private readonly isOrgLensEnabled = this.featureFlagService.getBooleanFlag('org-lens-enabled', false);
+  private readonly isOrgLensEnabled = this.featureFlagService.getBooleanFlag(FEATURE_FLAG_ORG_LENS_ENABLED, false);
 
   private readonly selectedLens: WritableSignal<Lens>;
 
