@@ -43,11 +43,15 @@ const stripeActiveMembership = [
 /** Same membership but AutoRenew: false. */
 const stripeActiveMembershipAutoRenewOff = [{ ...stripeActiveMembership[0], membership: { ...stripeActiveMembership[0].membership, AutoRenew: false } }];
 
-/** Builds an ISO date string N days from today — keeps date-sensitive fixtures from going stale. */
+/** Builds a local YYYY-MM-DD string N days from today — keeps date-sensitive fixtures from going stale.
+ *  Uses local getters to match parseLocalDateString, which builds dates as local midnight. */
 function daysFromNow(n: number): string {
   const d = new Date();
   d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 /** Expired Stripe membership — displayStatus: 'Expired'. */
@@ -290,6 +294,7 @@ test.describe('Individual Enrollment — Content Tests', () => {
       await expect(page.locator('.p-confirmdialog')).toBeVisible({ timeout: 5000 });
       await expect(page.locator('.p-confirmdialog')).toContainText('Update Membership');
       await expect(page.locator('.p-confirmdialog')).toContainText('Enable auto renew');
+      await expect(page.locator('.p-confirmdialog').getByRole('button', { name: /^Enable$/i })).toBeVisible();
     });
 
     test('accepting Enable shows success toast', async ({ page }) => {
