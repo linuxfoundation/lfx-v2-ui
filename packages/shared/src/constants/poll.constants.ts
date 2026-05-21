@@ -253,7 +253,7 @@ export const OPEN_VOTE_CONFIRMATION = {
   rejectLabel: 'Cancel',
 } as const;
 
-/** Minimum trimmed length for a question prompt — shared by the form validator and the draft payload filter. */
+/** Minimum trimmed length for a vote question prompt — used by the form validator. */
 export const VOTE_QUESTION_MIN_LENGTH = 10;
 
 /** Default close window applied to draft votes when the user has not picked an end date. */
