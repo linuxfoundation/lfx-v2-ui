@@ -40,9 +40,14 @@ export class InviteController {
         );
       }
 
+      const jwtSecret = process.env['JWT_SECRET'];
+      if (!jwtSecret) {
+        return next(new Error('JWT_SECRET is not configured'));
+      }
+
       let payload: InviteTokenPayload;
       try {
-        payload = this.verifyInviteToken(token);
+        payload = this.verifyInviteToken(token, jwtSecret);
       } catch (err) {
         if (err instanceof JoseErrors.JWTExpired) {
           return next(
@@ -133,13 +138,13 @@ export class InviteController {
 
   // Verifies the JWT signature using HS256 and the JWT_SECRET env var.
   // Throws JoseErrors.JWTExpired for expired tokens and other JoseErrors for invalid/tampered ones.
-  private verifyInviteToken(token: string): InviteTokenPayload {
-    const secret = process.env['JWT_SECRET'];
-    if (!secret) {
-      throw new Error('JWT_SECRET is not configured');
-    }
+  private verifyInviteToken(token: string, secret: string): InviteTokenPayload {
     const key = JWK.asKey(Buffer.from(secret, 'base64'));
-    return JWT.verify(token, key, { algorithms: ['HS256'] }) as InviteTokenPayload;
+    const payload = JWT.verify(token, key, { algorithms: ['HS256'] }) as InviteTokenPayload;
+    if (typeof payload.exp !== 'number' || !isFinite(payload.exp)) {
+      throw new Error('Token is missing required exp claim');
+    }
+    return payload;
   }
 
   // Only LFX-owned domains are valid redirect destinations — prevents open-redirect.
