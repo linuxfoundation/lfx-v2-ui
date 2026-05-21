@@ -91,9 +91,12 @@ export function mapVoteToFormValue(vote: Vote): VoteFormValue {
  */
 export function mapQuestionToApiFormat(question: QuestionFormValue): CreatePollQuestion {
   return {
-    prompt: question.question,
+    prompt: question.question.trim(),
     type: question.response_type === 'single' ? 'single_choice' : 'multiple_choice',
-    choices: question.options.filter((option) => option.trim() !== '').map((option) => ({ choice_text: option })),
+    choices: question.options
+      .map((option) => option.trim())
+      .filter((option) => option !== '')
+      .map((option) => ({ choice_text: option })),
   };
 }
 
