@@ -452,7 +452,10 @@ All enrollment CTAs are wrapped with `v-if="!$user.inPreviewMode"` in
 ### Demo user
 
 Username `johnlf2727` returns hardcoded mock data from `dummy-data.ts` for all enrollment
-endpoints. Used for demos and onboarding.
+endpoints in the legacy myprofile backend. Used for demos and onboarding.
+
+This short-circuit was **not carried into `lfx-self-serve`**. Use impersonation (Auth0 CTE) to
+demo against a real account in lower environments.
 
 ### Legacy / dead code
 
