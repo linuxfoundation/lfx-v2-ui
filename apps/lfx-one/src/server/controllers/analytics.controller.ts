@@ -1835,7 +1835,7 @@ export class AnalyticsController {
 
       logger.success(req, 'get_email_ctr', startTime, {
         foundation_slug: foundationSlug,
-        classification,
+        ...(classification && { classification }),
         current_ctr: response.currentCtr,
         monthly_data_points: response.monthlyData.length,
       });

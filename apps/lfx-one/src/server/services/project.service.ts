@@ -2014,6 +2014,7 @@ export class ProjectService {
           ROUND(SUM(CLICKS) * 100.0 / NULLIF(SUM(SENDS), 0), 1) AS CTR
         FROM ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CAMPAIGN_PERFORMANCE
         WHERE FOUNDATION_SLUG = ?
+          ${classificationFilter}
           AND PUBLISHED_MONTH_DATE >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         GROUP BY MARKETING_EMAIL_NAME, EMAIL_TYPE
         ORDER BY TOTAL_SENDS DESC
@@ -2041,7 +2042,7 @@ export class ProjectService {
             TOTAL_CLICKS: number;
             OPEN_RATE: number;
             CTR: number;
-          }>(campaignPerfQuery, [foundationSlug])
+          }>(campaignPerfQuery, [foundationSlug, ...classificationParams])
           .catch((error) => {
             logger.warning(undefined, 'get_email_ctr', 'Optional campaign breakdown query failed, degrading gracefully', {
               foundation_slug: foundationSlug,
