@@ -115,8 +115,7 @@ function normalizeDraftQuestion(question: QuestionFormValue): CreatePollQuestion
   const paddedOptions = [...nonEmptyOptions];
 
   while (paddedOptions.length < 2) {
-    const nextPad =
-      DRAFT_OPTION_PAD_LABELS.find((label) => !paddedOptions.includes(label)) ?? `Option ${paddedOptions.length + 1}`;
+    const nextPad = DRAFT_OPTION_PAD_LABELS.find((label) => !paddedOptions.includes(label)) ?? `Option ${paddedOptions.length + 1}`;
     paddedOptions.push(nextPad);
   }
 
@@ -152,8 +151,7 @@ export function buildCreateVoteRequest(formValue: VoteFormValue, projectUid: str
 /** Fills upstream-required fields with sensible defaults so a partial form can be saved as a draft. */
 export function buildDraftVoteRequest(formValue: VoteFormValue, projectUid: string): CreateVoteRequest {
   const preparedQuestions = prepareDraftQuestions(formValue.questions);
-  const poll_questions: CreatePollQuestion[] =
-    preparedQuestions.length > 0 ? preparedQuestions : [DRAFT_VOTE_PLACEHOLDER_QUESTION];
+  const poll_questions: CreatePollQuestion[] = preparedQuestions.length > 0 ? preparedQuestions : [DRAFT_VOTE_PLACEHOLDER_QUESTION];
 
   return {
     name: formValue.title.trim(),
@@ -187,8 +185,7 @@ export function buildUpdateVoteRequest(formValue: VoteFormValue, projectUid: str
 /** Update-mode counterpart to buildDraftVoteRequest — fills upstream-required fields when the user clears them while editing an existing draft. */
 export function buildDraftUpdateVoteRequest(formValue: VoteFormValue, projectUid: string): UpdateVoteRequest {
   const preparedQuestions = prepareDraftQuestions(formValue.questions);
-  const poll_questions: CreatePollQuestion[] =
-    preparedQuestions.length > 0 ? preparedQuestions : [DRAFT_VOTE_PLACEHOLDER_QUESTION];
+  const poll_questions: CreatePollQuestion[] = preparedQuestions.length > 0 ? preparedQuestions : [DRAFT_VOTE_PLACEHOLDER_QUESTION];
 
   return {
     name: formValue.title.trim(),
