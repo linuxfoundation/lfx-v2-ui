@@ -121,7 +121,7 @@ export class PendingActionsComponent {
       });
   }
 
-  // Persist the hide synchronously (so an unmount within the animation window can't cancel the cookie write), then drive the fade → skeleton → next-action animation through two timers.
+  // Persist the hide synchronously (so an unmount within the animation window can't cancel the cookie write), then drive the fade → drop → skeleton-arrival animation through two timers.
   private startCompletion(item: PendingActionItem, options: { withSkeleton: boolean }): void {
     const rowKey = this.getRowKey(item);
     this.hiddenActionsService.hideAction(item);
@@ -130,19 +130,27 @@ export class PendingActionsComponent {
     timer(FADE_OUT_MS)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
+        // Drop the completed row — it's already hidden via cookie; removing it from completingRowKeys lets the natural filter take over.
         this.completingRowKeys.update((keys) => this.removeFromSet(keys, rowKey));
-        const hasQueuedNext = this.visibleActionsUnlimited().length > this.displayLimit();
-        if (options.withSkeleton && hasQueuedNext) {
-          this.swappingRowKeys.update((keys) => new Set(keys).add(rowKey));
-          timer(SKELETON_HOLD_MS)
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe(() => {
-              this.swappingRowKeys.update((keys) => this.removeFromSet(keys, rowKey));
-              this.hiddenActionsVersion.update((v) => v + 1);
-            });
-        } else {
-          this.hiddenActionsVersion.update((v) => v + 1);
-        }
+        this.hiddenActionsVersion.update((v) => v + 1);
+
+        if (!options.withSkeleton) return;
+
+        // After the recompute, the new arrival (if any) occupies the last visible slot — render it as a skeleton briefly so the user sees a "loading in" effect.
+        const limit = Math.max(0, this.displayLimit());
+        const visible = this.visibleActionsUnlimited();
+        if (limit === 0 || visible.length < limit) return;
+
+        const arrival = visible[limit - 1];
+        const arrivalKey = this.getRowKey(arrival);
+        if (arrivalKey === rowKey) return;
+
+        this.swappingRowKeys.update((keys) => new Set(keys).add(arrivalKey));
+        timer(SKELETON_HOLD_MS)
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe(() => {
+            this.swappingRowKeys.update((keys) => this.removeFromSet(keys, arrivalKey));
+          });
       });
   }
 
