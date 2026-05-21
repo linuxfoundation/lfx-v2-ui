@@ -92,9 +92,7 @@ export function mapVoteToFormValue(vote: Vote): VoteFormValue {
     committee,
     eligible_participants: mapFiltersToEligibility(vote.committee_filters),
     close_date: vote.end_time ? new Date(vote.end_time) : null,
-    questions: (vote.poll_questions?.filter((question) => !isDraftPlaceholderPollQuestion(question)) ?? []).map(
-      mapApiQuestionToFormValue
-    ),
+    questions: (vote.poll_questions?.filter((question) => !isDraftPlaceholderPollQuestion(question)) ?? []).map(mapApiQuestionToFormValue),
   };
 }
 
