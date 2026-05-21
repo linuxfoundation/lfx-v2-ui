@@ -4,10 +4,11 @@ description: >
   Review a pull request against LFX architecture standards. Requires the
   reviewer's HEAD to be the PR's branch (author scenarios are natural;
   external reviewers run `gh pr checkout <N>` first). Fetches main fresh,
-  then launches the `lfx-self-serve-code-reviewer` subagent with `branch`
-  in the prompt — the subagent audits the PR branch's diff against main
-  and renders a markdown review covering general code review, upstream
-  API contracts, and repo conventions (rules, checklists, architecture).
+  then launches the `lfx-self-serve-code-reviewer` subagent with the
+  canonical full-branch prompt — the subagent audits the PR branch's
+  diff against `origin/main` and renders a markdown review covering
+  general code review, upstream API contracts, and repo conventions
+  (rules, checklists, architecture).
   This skill body adds what only a post-PR skill can do: verifying prior
   review comments are addressed, walking the PR-shape checklist (branch/
   JIRA/commits/DCO+GPG/rebase/diff-size/protected-files/PR-title/external-refs),
@@ -21,7 +22,7 @@ allowed-tools: Bash, Read, Glob, Grep, Agent, AskUserQuestion, Skill
 
 # LFX PR Review
 
-You are reviewing an opened pull request against LFX standards. **Pre-requisite:** the reviewer's HEAD must be the PR's branch — author scenarios are natural (you're already on it); external reviewers run `gh pr checkout <N>` first (commit/stash uncommitted work first; `gh pr checkout` switches branches). Phase 1 verifies this. The code audit — diff computation, general code review, rule/checklist/architecture walking, and upstream API contract validation — is performed by the `lfx-self-serve-code-reviewer` subagent launched in Phase 2 with `branch` in the prompt; the subagent audits the PR branch's diff against `origin/main` and returns a markdown review report. PR-shape sanity (including protected files) is NOT the reviewer subagent's concern — this skill body walks it in Phase 4. This skill also handles **what only a post-PR skill can do:** verifying that prior review comments were addressed, applying new-contributor educational tone, compiling the subagent's report into a draft review, and posting via `/review` only after the user explicitly approves.
+You are reviewing an opened pull request against LFX standards. **Pre-requisite:** the reviewer's HEAD must be the PR's branch — author scenarios are natural (you're already on it); external reviewers run `gh pr checkout <N>` first (commit/stash uncommitted work first; `gh pr checkout` switches branches). Phase 1 verifies this. The code audit — diff computation, general code review, rule/checklist/architecture walking, and upstream API contract validation — is performed by the `lfx-self-serve-code-reviewer` subagent launched in Phase 2 with the canonical full-branch prompt (`branch\n\nReview the branch's diff against origin/main.`); the subagent audits the PR branch's diff against `origin/main` and returns a markdown review report. PR-shape sanity (including protected files) is NOT the reviewer subagent's concern — this skill body walks it in Phase 4. This skill also handles **what only a post-PR skill can do:** verifying that prior review comments were addressed, applying new-contributor educational tone, compiling the subagent's report into a draft review, and posting via `/review` only after the user explicitly approves.
 
 Walk through each phase in order. Phases may short-circuit when their preconditions are not met (noted inline) but none should be skipped outright.
 
@@ -92,12 +93,15 @@ HEAD_CHECK=$(cat /tmp/pr-<N>-head-check.txt 2>/dev/null || true)
 [ "$HEAD_CHECK" = "HEAD_OK" ] || { echo "Aborting: Phase 1 did not verify HEAD is the PR tip. Run: gh pr checkout <N> and restart."; exit 1; }
 ```
 
-Launch the `lfx-self-serve-code-reviewer` subagent via the Agent tool with `subagent_type: lfx-self-serve-code-reviewer` and `run_in_background: true`. The full review playbook lives in the subagent's definition (`.claude/agents/lfx-self-serve-code-reviewer.md`); the Agent `prompt` parameter only needs to carry the runtime args. Pass the keyword `branch` so the subagent audits the PR branch's diff against main. Do **not** wait — proceed to Phases 3–5 immediately so the reviewer's work overlaps with the skill-side audits.
+Launch the `lfx-self-serve-code-reviewer` subagent via the Agent tool with `subagent_type: lfx-self-serve-code-reviewer` and `run_in_background: true`. The full review playbook lives in the subagent's definition (`.claude/agents/lfx-self-serve-code-reviewer.md`); the Agent `prompt` parameter only carries the canonical full-branch string so the subagent audits the PR branch's diff against `origin/main`. Do **not** wait — proceed to Phases 3–5 immediately so the reviewer's work overlaps with the skill-side audits.
 
-The Agent `prompt` parameter should be:
+The Agent `prompt` parameter must be exactly:
 
 > branch
-> extra: \<extra focus from args, or empty\>
+>
+> Review the branch's diff against origin/main.
+>
+> extra: \<extra focus from args; omit this line if empty\>
 
 The launched subagent returns a **markdown review report** with three sections, in order:
 

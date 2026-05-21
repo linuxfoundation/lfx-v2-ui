@@ -36,7 +36,12 @@ The two post-commit reviews are **project-level subagents**: each definition in 
 | `lfx-self-serve-code-reviewer`      | Immediately after every commit — general code review on the diff (senior-reviewer disposition, no source citation) + convention audit against the documented rule surface (`.claude/rules/`, `docs/reviews/` checklists, architecture, upstream API contracts) with cross-check discipline. Audits the latest commit by default; pass `branch` for the pre-PR full-branch sweep on multi-commit branches. |
 | `lfx-self-serve-learnings-reviewer` | Immediately after every commit — empirical-pattern matching against `docs/reviews/knowledge-base/` (patterns sampled from past PR review comments). Audits the latest commit by default; pass `branch` for the pre-PR full-branch sweep on multi-commit branches.                                                                                                                                         |
 
-Launch both in parallel by issuing two Agent tool calls in a single message. Each subagent's full playbook lives in its `.claude/agents/` definition — the Agent `prompt` parameter only needs to carry runtime args (`branch`, `extra: <focus>`) or remain empty for default mode. Keep working on the next commit while they run. When the pair returns, roll every Critical and reasonable Important finding into the next commit. Drain the queue, run the full-branch sweep on multi-commit branches, then open the PR; after the PR is open, switch to the bot-iteration loop and stop launching the pair.
+Launch both in parallel by issuing two Agent tool calls in a single message. Each subagent's full playbook lives in its `.claude/agents/` definition, so the Agent `prompt` parameter stays short — but it is **always required and must match the canonical strings** so the launcher behaves identically across workflows:
+
+- **Post-commit mode:** `Review the latest commit.`
+- **Full-branch mode:** `branch\n\nReview the branch's diff against origin/main.`
+
+Append `extra: <focus>` on a new line only when there's a priority hint to add. Keep working on the next commit while they run. When the pair returns, roll every Critical and reasonable Important finding into the next commit. Drain the queue, run the full-branch sweep on multi-commit branches, then open the PR; after the PR is open, switch to the bot-iteration loop and stop launching the pair.
 
 ## Trigger Phrases
 
