@@ -99,7 +99,15 @@ export function mapQuestionToApiFormat(question: QuestionFormValue): CreatePollQ
 
 /** Returns questions that pass the form's own length validator — anything shorter would fail on re-open. */
 function filterDraftQuestions(questions: QuestionFormValue[]): CreatePollQuestion[] {
-  return questions.filter((q) => q.question.trim().length >= VOTE_QUESTION_MIN_LENGTH).map(mapQuestionToApiFormat);
+  return questions
+    .filter((q) => {
+      if (q.question.trim().length < VOTE_QUESTION_MIN_LENGTH) {
+        return false;
+      }
+      const nonEmptyOptionCount = (q.options ?? []).filter((option) => (option?.trim().length ?? 0) > 0).length;
+      return nonEmptyOptionCount >= 2;
+    })
+    .map(mapQuestionToApiFormat);
 }
 
 /**
