@@ -10,7 +10,7 @@ Trust-boundary patterns across the stack — credential disclosure, identity enu
 
 **Pattern:** hardcoded tokens, API keys, `Bearer ey...`, `sk_live_`, `sk_test_`, AWS keys, or any other credential committed to the diff.
 
-**Detect:** grep the diff for `(api[_-]?key|secret|token|password|Bearer\s+ey|sk_live|sk_test|AKIA[0-9A-Z]{16})\s*[:=]\s*['"]` (case-insensitive). Also flag any new `.env` / `*.local.json` / `*.pem` file that doesn't have a corresponding `.gitignore` entry.
+**Detect:** grep the diff for key assignments `(api[_-]?key|secret|token|password)\s*[:=]\s*['"]` and value-shaped credentials `(Bearer\s+ey[A-Za-z0-9._-]+|AKIA[0-9A-Z]{16}|sk_(live|test)_[A-Za-z0-9]+)` (case-insensitive). Also flag any new `.env` / `*.local.json` / `*.pem` file that doesn't have a corresponding `.gitignore` entry.
 
 **Empirical citation:** not observed in our sampled PRs (which is good). Preventive — CodeRabbit's Gitleaks scan catches this for every PR; we mirror the check pre-PR.
 

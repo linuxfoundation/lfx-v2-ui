@@ -12,7 +12,7 @@ TypeScript-soundness and async-lifecycle patterns CodeRabbit + Copilot flag — 
 
 **Detect:** grep for `function <name><T>(...)` where the body can return `null` but the return type is declared as `T` (or any type that doesn't include null). Especially look at object-mapping utilities, ID helpers, deep-clone-like functions.
 
-**Empirical citation:** PR #673 `packages/shared/src/utils/object.utils.ts` — "`nullifyEmptyStrings<T>` returns `null` for `T = string`. The generic claims `T` but returns null at runtime, breaking caller assumptions."
+**Empirical citation:** PR #673 `packages/shared/src/utils/object.utils.ts` covered this class of bug while introducing `nullifyEmptyStrings<T>`: string leaves can become `null`, so the accepted shape is `NullifyEmptyStrings<T>` rather than a return type that still claims plain `T`.
 
 **Failure message:** Generic claims `T` but returns null at runtime — the type lies.
 

@@ -36,7 +36,7 @@ Full-branch mode (`branch` passed): `git fetch origin && git diff --stat origin/
 
 For per-file reads: `git show "HEAD:<path>"`. If the diff is too big for context, save to `/tmp/code-review-diff.patch` and Read changed files individually.
 
-Commit-level data (signatures, prior PR review comments) is not your concern — `/lfx-review-pr` handles that.
+Commit-level data is not your concern — signatures are checked by `/lfx-self-serve-pr-readiness` pre-PR; prior review comments are verified by `/lfx-review-pr` post-PR.
 
 ## Step 2 — General review
 
@@ -99,7 +99,7 @@ For each changed file:
 4. **Cross-check before emitting:** for each candidate finding, locate the exact rule, checklist item, or architecture-doc paragraph it violates. Quote that source in the finding's `_Source:_` citation. **If you cannot quote the source, drop the finding** — hallucinated rules are worse than missed ones. These findings go in the **Repo conventions** section of the Step 5 report.
 5. **Account for the full checklist surface:** if you cannot account for having considered every applicable checklist item, mark the report **INCOMPLETE** in Step 5 rather than ship a partial report.
 
-## Step 4 — Upstream API contract validation (backend only)
+## Step 4 — Upstream API / data-layer contract validation (backend only)
 
 **Skip this entirely if no files under `apps/lfx-one/src/server/` were changed.**
 
@@ -141,7 +141,7 @@ Validate:
 
 **Snowflake direct SQL:** every `?` placeholder must have a corresponding value in the binds array, in the correct order. Bind mismatch is always Critical.
 
-**On `gh api` failure** (404, auth, network): surface in Step 5's "Upstream API validation" section as "Upstream API contract for `<service>` could not be verified — manual validation required." Treat as Important severity. Don't silently skip.
+**On `gh api` failure** (404, auth, network): surface in Step 5's "Upstream API / data-layer validation" section as "Upstream API contract for `<service>` could not be verified — manual validation required." Treat as Important severity. Don't silently skip.
 
 ## Step 5 — Render the report
 
@@ -150,7 +150,7 @@ Header: `<commit-sha> — <subject>` (default) or `origin/main...HEAD (<branch-n
 Three sections, in order. Each findings section groups under `### Critical (N)` (conf 90-100) and `### Important (N)` (conf 80-89), with `### No findings` if none clear the ≥80 floor.
 
 1. **General review** (Step 2): `- **<file>:<line>** (conf <0-100>) — <issue>. _Fix:_ <suggestion>.`
-2. **Upstream API validation** (Step 4): verified paths, "manual validation required" flags, or "Skipped — no backend changes".
+2. **Upstream API / data-layer validation** (Step 4): verified paths, SQL bind checks, "manual validation required" flags, or "Skipped — no backend changes".
 3. **Repo conventions** (Step 3.2): `- **<file>:<line>** (conf <0-100>) — <issue>. _Source:_ <quoted rule citation>. _Fix:_ <suggestion>.`
 
 If a required checklist or architecture doc couldn't be loaded, lead with `INCOMPLETE — couldn't load <file>`. If `extra` was applied, note it.

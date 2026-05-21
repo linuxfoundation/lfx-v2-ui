@@ -61,7 +61,15 @@ git fetch origin "+pull/<N>/head:refs/pr/<N>/head"
 # differently-named local branch (gh pr checkout collisions), or in detached HEAD.
 # If commits differ, external reviewers run `gh pr checkout <N>` first (commit/stash
 # any uncommitted work first; `gh pr checkout` switches branches).
-[ "$(git rev-parse HEAD)" = "$(git rev-parse refs/pr/<N>/head)" ] || { echo "HEAD is not at the PR's tip commit. Run: gh pr checkout <N>"; exit 1; }
+HEAD_CHECK=/tmp/pr-<N>-head-check.txt
+rm -f "$HEAD_CHECK"
+if [ "$(git rev-parse HEAD)" = "$(git rev-parse refs/pr/<N>/head)" ]; then
+  echo "HEAD_OK" > "$HEAD_CHECK"
+else
+  echo "HEAD_MISMATCH" > "$HEAD_CHECK"
+  echo "HEAD is not at the PR's tip commit. Run: gh pr checkout <N>"
+  exit 1
+fi
 ```
 
 **Shell-state caveat:** the Bash tool runs each invocation in an isolated shell — `cwd` persists, but environment variables do **not** survive across calls. Every later phase that needs `$REPO` / `$BASE_REF` / `$HEAD_REF` / `$AUTHOR` must re-derive them at the top of its own Bash invocation:
@@ -75,9 +83,16 @@ AUTHOR=$(jq -r   '.author.login' /tmp/pr-<N>-meta.json)
 # via the pull-refspec fetch — same path regardless of whether the PR is from a fork).
 ```
 
-The metadata file path (`/tmp/pr-<N>-meta.json`) and the local PR-head ref (`refs/pr/<N>/head`) are both stable across phases because they're on disk, not in shell state.
+The metadata file path (`/tmp/pr-<N>-meta.json`), head-check sentinel (`/tmp/pr-<N>-head-check.txt`), and the local PR-head ref (`refs/pr/<N>/head`) are stable across phases because they're on disk, not in shell state. If Phase 1 prints a head mismatch, do not continue later phases; run `gh pr checkout <N>` and restart the skill.
 
 ## Phase 2 — Invoke the code review skill (launches background subagent)
+
+First, verify the Phase 1 head check passed. `exit 1` in Phase 1 stops only that Bash invocation, so this sentinel prevents the later phases from continuing after a visible mismatch:
+
+```bash
+HEAD_CHECK=$(cat /tmp/pr-<N>-head-check.txt 2>/dev/null || true)
+[ "$HEAD_CHECK" = "HEAD_OK" ] || { echo "Aborting: Phase 1 did not verify HEAD is the PR tip. Run: gh pr checkout <N> and restart."; exit 1; }
+```
 
 Invoke the `/lfx-self-serve-code-review` skill via the Skill tool. Its body instructs you to launch a `code-reviewer` subagent with `run_in_background: true` — follow that launcher instruction. Pass the keyword `branch` so the subagent audits the PR branch's diff against main. Do **not** wait — proceed to Phases 3–5 immediately so the reviewer's work overlaps with the skill-side audits.
 
@@ -87,7 +102,7 @@ Invoke the `/lfx-self-serve-code-review` skill via the Skill tool. Its body inst
 The launched subagent returns a **markdown review report** with three sections, in order:
 
 1. **General review** — bugs / smells / correctness findings from the agent's native review on the raw diff, grouped under `### Critical (N)` and `### Important (N)`. Bullets of the form `- **<file>:<line>** (conf <N>) — <issue>. _Fix:_ <suggestion>.` (no `_Source:_` field).
-2. **Upstream API validation** — backend contract checks (or "Skipped — no backend changes").
+2. **Upstream API / data-layer validation** — backend contract checks, SQL bind checks, or "Skipped — no backend changes".
 3. **Repo conventions** — findings sourced from rule files, checklists, architecture docs. Same Critical/Important grouping. Bullets include a `_Source:_` quoted rule citation.
 
 NOTE: the review subagent does NOT do PR-shape (branch / JIRA / commits / DCO+GPG / rebase / diff-size / **protected files** / PR-title / external-refs) and does NOT fetch prior review comments — both are this skill's job (Phases 3 and 4).
@@ -139,16 +154,16 @@ git log --format='%G? %h %s' "origin/$BASE_REF..refs/pr/<N>/head"  # GPG status 
 
 Use `git log --format='%H %s'` (not `gh api .../commits --jq '.[].commit.message'`) because the regex check is per-subject — `.commit.message` includes the body and would false-fail on newlines.
 
-Then check each item from `.claude/skills/lfx-self-serve-pr-readiness/references/pr-shape.md` (inside Bash calls that re-derive `$BASE_REF` and reference the PR head as `refs/pr/<N>/head`):
+Then walk each rule ID from `.claude/skills/lfx-self-serve-pr-readiness/references/pr-shape.md`, using that file's severity and failure message as source of truth. The commands below are implementation notes, not a second checklist (inside Bash calls, re-derive `$BASE_REF` and reference the PR head as `refs/pr/<N>/head`):
 
-- **Branch name format** → `jq -r .headRefName /tmp/pr-<N>-meta.json`. Match `<type>/LFXV2-<number>`.
-- **JIRA ticket reference** → grep `LFXV2-[0-9]+` over commit subjects + bodies + PR body. None → SHOULD_FIX.
-- **Conventional commit on every commit** → each commit subject (from `git log --format='%H %s'`) against the regex in `pr-shape.md`. `chore` is invalid.
-- **PR title format** (PR-only) → `jq -r .title /tmp/pr-<N>-meta.json` against `type(scope): description`, lowercase, no `LFXV2-XXX` in the title, `chore` invalid. → SHOULD_FIX.
-- **Branch rebased on base** → `git merge-base --is-ancestor "origin/$BASE_REF" "refs/pr/<N>/head"`. Non-zero → SHOULD_FIX.
-- **Diff size** → `jq -r .additions /tmp/pr-<N>-meta.json`. If > 1000 → NIT (plus a review-body note — see Additional Rules).
-- **DCO + GPG signing** → from `git log --format='%G? %h %s'` and commit bodies. `N` / `B` / `E` codes → CRITICAL. Missing `Signed-off-by:` → CRITICAL.
-- **PR body external refs** (PR-only) → check `jq -r '.files[].path' /tmp/pr-<N>-meta.json` for paths under `apps/lfx-one/src/server/`; for each, `git show "refs/pr/<N>/head:<file>" | grep -q 'proxyRequest'` to confirm it calls an upstream microservice. If any do AND the PR body has no link to the upstream PR/commit → SHOULD_FIX.
+- `pr-shape/branch-name` → `jq -r .headRefName /tmp/pr-<N>-meta.json`; match the regex in `pr-shape.md`.
+- `pr-shape/jira` → grep `LFXV2-[0-9]+` over commit subjects + bodies + PR body.
+- `pr-shape/conventional-commit` → each commit subject (from `git log --format='%H %s'`) against the regex in `pr-shape.md`.
+- `pr-shape/pr-title` (PR-only) → `jq -r .title /tmp/pr-<N>-meta.json` against the rule in `pr-shape.md`.
+- `pr-shape/rebase` → `git merge-base --is-ancestor "origin/$BASE_REF" "refs/pr/<N>/head"`.
+- `pr-shape/diff-size` → `jq -r .additions /tmp/pr-<N>-meta.json`.
+- `pr-shape/dco` + `pr-shape/gpg-signature` → from `git log --format='%G? %h %s'` and commit bodies.
+- `pr-shape/external-refs` (PR-only) → check `jq -r '.files[].path' /tmp/pr-<N>-meta.json` for paths under `apps/lfx-one/src/server/`; for each, `git show "refs/pr/<N>/head:<file>" | grep -q 'proxyRequest'` to confirm it calls an upstream microservice, then verify the PR body links upstream context.
 
 Build a `category: pr-shape` finding for each failure. Skip findings with no quotable item in `.claude/skills/lfx-self-serve-pr-readiness/references/pr-shape.md` (cross-check discipline applies here too).
 
@@ -163,7 +178,7 @@ If the author has fewer than 5 merged PRs to this repo, mark the review as **edu
 
 ## Phase 6 — Wait for the review subagent
 
-Wait for the background subagent launched by `/lfx-self-serve-code-review` in Phase 2 to complete. It returns a markdown review report with three sections: General review / Upstream API validation / Repo conventions.
+Wait for the background subagent launched by `/lfx-self-serve-code-review` in Phase 2 to complete. It returns a markdown review report with three sections: General review / Upstream API / data-layer validation / Repo conventions.
 
 ## Phase 7 — Compile context for `/review`
 
@@ -172,7 +187,7 @@ Assemble a single text block containing:
 1. **PR summary** — number, title, author, additions/deletions, branch
 2. **Previous-comment verification table** (Phase 3) — or "No previous review comments found"
 3. **PR-shape findings** (Phase 4) — pre-PR checks plus PR-title and external-refs
-4. **Code review report** (Phase 6) — embed the markdown report from the code-review subagent verbatim. The report contains General review, Upstream API validation, and Repo conventions sections.
+4. **Code review report** (Phase 6) — embed the markdown report from the code-review subagent verbatim. The report contains General review, Upstream API / data-layer validation, and Repo conventions sections.
 5. **Educational mode flag** (Phase 5) — if set, instruct `/review` to cite rule files inline and explain the _why_
 6. **Extra user instructions** (Phase 1) — relay as-is
 

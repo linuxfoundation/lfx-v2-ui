@@ -118,7 +118,7 @@ Every finding must quote an item in `references/pr-shape.md`. Drop hallucinated 
 
 ### Verdict rules
 
-- **NOT READY** — any CRITICAL finding (unsigned commit, missing DCO, missing JIRA, wrong branch format, oversized diff).
+- **NOT READY** — any CRITICAL finding.
 - **READY WITH CHANGES** — zero CRITICAL; SHOULD_FIX findings present. Address or document the trade-off in the PR description.
 - **READY** — zero CRITICAL, zero SHOULD_FIX.
 

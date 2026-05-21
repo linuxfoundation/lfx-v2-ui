@@ -14,7 +14,7 @@ Used by the `/lfx-self-serve-learnings-review` skill (Step 4), and also relevant
 
 **Why false:** the app uses **stable zoneless change detection** (`provideZonelessChangeDetection()` in `app.config.ts`). `OnPush` is irrelevant under zoneless — the runtime is already not doing zone-based change detection.
 
-**Source:** see `CLAUDE.md` "Development Memories" + `docs/architecture/frontend/angular-patterns.md`.
+**Source:** `docs/architecture/frontend/angular-patterns.md`.
 
 ### `standalone: true` flags
 
@@ -36,7 +36,7 @@ Used by the `/lfx-self-serve-learnings-review` skill (Step 4), and also relevant
 
 **Pattern matched:** prettier line-length, trailing-whitespace, or formatting nits on `*.md` files.
 
-**Why false:** `/preflight` runs `yarn format:check` which already enforces prettier on the whole repo. Surfacing in a review is duplicate signal.
+**Why false:** formatting is already enforced by pre-commit / CI and by `/preflight`'s formatting step. Surfacing the same formatting-only issue in a review is duplicate signal.
 
 ### License-header complaints on a file that has one
 
