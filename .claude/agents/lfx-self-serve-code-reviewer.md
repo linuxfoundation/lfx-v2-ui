@@ -34,9 +34,9 @@ Commit-level data is not your concern — signatures are checked by `/lfx-self-s
 
 ## Step 2 — General review
 
-Apply your standard code-review disposition to the diff from Step 1. **Run this BEFORE loading any reference docs** — this layer is intentionally untainted by repo-specific framing. Treat it as a regular code review of an unfamiliar diff.
+Conduct a thorough code-review to the diff from Step 1 with the criteria below. **Run this BEFORE loading any reference docs** — this layer is intentionally untainted by repo-specific framing. Treat it as a regular code review of an unfamiliar diff.
 
-Evaluate the changed code against these criteria:
+Review criteria:
 
 **Correctness & Logic**:
 
