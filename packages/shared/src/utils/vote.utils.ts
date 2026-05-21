@@ -53,6 +53,7 @@ export function mapFiltersToEligibility(filters: string[] | undefined): string {
   return 'voting_rep';
 }
 
+// Exact match only — user content identical to our placeholder is treated as empty on re-open.
 function isDraftPlaceholderPollQuestion(question: PollQuestion): boolean {
   const placeholder = DRAFT_VOTE_PLACEHOLDER_QUESTION;
   if (question.prompt.trim() !== placeholder.prompt || question.type !== placeholder.type) {
@@ -126,7 +127,7 @@ function normalizeDraftQuestion(question: QuestionFormValue): CreatePollQuestion
   const paddedOptions = [...nonEmptyOptions];
 
   while (paddedOptions.length < 2) {
-    const nextPad = DRAFT_OPTION_PAD_LABELS.find((label) => !paddedOptions.includes(label)) ?? `Option ${paddedOptions.length + 1}`;
+    const nextPad = DRAFT_OPTION_PAD_LABELS.find((label) => !paddedOptions.includes(label))!;
     paddedOptions.push(nextPad);
   }
 

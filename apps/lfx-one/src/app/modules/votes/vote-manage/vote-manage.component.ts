@@ -72,6 +72,7 @@ export class VoteManageComponent {
   public readonly mode = signal<'create' | 'edit'>('create');
   public readonly voteId = signal<string | null>(null);
   public readonly submitting = signal<boolean>(false);
+  private readonly confirmingOpenVote = signal<boolean>(false);
   public readonly loading = signal<boolean>(false);
   private readonly internalStep = signal<number>(1);
 
@@ -142,7 +143,7 @@ export class VoteManageComponent {
       this.messageService.add({
         severity: 'warn',
         summary: 'Cannot save draft',
-        detail: `Please enter a title and select a ${this.committeeLabel.singular.toLowerCase()} before saving as ${this.voteLabel.singular.toLowerCase()} draft.`,
+        detail: `Please enter a title and select a ${this.committeeLabel.singular.toLowerCase()} before saving this ${this.voteLabel.singular.toLowerCase()} as a draft.`,
       });
       return;
     }
@@ -207,7 +208,7 @@ export class VoteManageComponent {
   }
 
   public onSubmit(): void {
-    if (this.submitting()) {
+    if (this.submitting() || this.confirmingOpenVote()) {
       return;
     }
 
@@ -218,6 +219,7 @@ export class VoteManageComponent {
 
     // For create mode, show confirmation dialog before opening the vote
     if (!this.isEditMode()) {
+      this.confirmingOpenVote.set(true);
       this.confirmationService.confirm({
         header: OPEN_VOTE_CONFIRMATION.header,
         message: OPEN_VOTE_CONFIRMATION.message,
@@ -225,7 +227,11 @@ export class VoteManageComponent {
         rejectLabel: OPEN_VOTE_CONFIRMATION.rejectLabel,
         acceptButtonStyleClass: 'p-button-info p-button-sm',
         rejectButtonStyleClass: 'p-button-text p-button-sm',
-        accept: () => this.submitVote(),
+        accept: () => {
+          this.confirmingOpenVote.set(false);
+          this.submitVote();
+        },
+        reject: () => this.confirmingOpenVote.set(false),
       });
     } else {
       this.submitVote();
@@ -512,10 +518,9 @@ export class VoteManageComponent {
 
   private initIsDraftSavable(): Signal<boolean> {
     return computed(() => {
-      this.formValue();
-      const title = (this.form().get('title')?.value as string | null) ?? '';
+      const { title } = this.formValue() as VoteFormValue;
       const committeeValid = !!this.committeeContext() || !!this.form().get('committee')?.valid;
-      return title.trim().length > 0 && committeeValid;
+      return (title?.trim().length ?? 0) > 0 && committeeValid;
     });
   }
 
