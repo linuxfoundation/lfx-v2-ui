@@ -13,6 +13,6 @@ declare module 'jose' {
   };
 
   export const JWT: {
-    verify: <TPayload extends Record<string, unknown> = Record<string, unknown>>(token: string, key: JoseKey, options?: { algorithms?: string[] }) => TPayload;
+    verify: <TPayload = Record<string, unknown>>(token: string, key: JoseKey, options?: { algorithms?: string[] }) => TPayload;
   };
 }
