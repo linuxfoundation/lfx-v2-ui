@@ -1,29 +1,21 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-/**
- * Foundation entry in the org foundation coverage response
- */
+/** Foundation entry in the org foundation coverage response. */
 export interface OrgFoundationCoverageFoundation {
   foundationId: string;
   foundationSlug: string;
   foundationName: string;
 }
 
-/**
- * GET /api/analytics/org-foundation-coverage
- * How many LF foundations this organization is involved in
- */
+/** GET /api/analytics/org-foundation-coverage — how many LF foundations this organization is involved in. */
 export interface OrgFoundationCoverageResponse {
   accountId: string;
   foundationCount: number;
   foundations: OrgFoundationCoverageFoundation[];
 }
 
-/**
- * GET /api/analytics/org-involvement-contributors-monthly
- * Cross-foundation active contributors aggregated monthly (12-month window)
- */
+/** GET /api/analytics/org-involvement-contributors-monthly — cross-foundation active contributors (12-month window). */
 export interface OrgInvolvementContributorsMonthlyResponse {
   accountId: string;
   totalActiveContributors: number;
@@ -31,10 +23,7 @@ export interface OrgInvolvementContributorsMonthlyResponse {
   monthlyLabels: string[];
 }
 
-/**
- * GET /api/analytics/org-involvement-maintainers-monthly
- * Cross-foundation maintainers aggregated monthly (12-month window)
- */
+/** GET /api/analytics/org-involvement-maintainers-monthly — cross-foundation maintainers (12-month window). */
 export interface OrgInvolvementMaintainersMonthlyResponse {
   accountId: string;
   accountName: string;
@@ -44,10 +33,7 @@ export interface OrgInvolvementMaintainersMonthlyResponse {
   monthlyLabels: string[];
 }
 
-/**
- * GET /api/analytics/org-involvement-event-attendance-monthly
- * Cross-foundation event attendance aggregated monthly (12-month window)
- */
+/** GET /api/analytics/org-involvement-event-attendance-monthly — cross-foundation event attendance (12-month window). */
 export interface OrgInvolvementEventAttendanceMonthlyResponse {
   accountId: string;
   accountName: string;
@@ -58,10 +44,7 @@ export interface OrgInvolvementEventAttendanceMonthlyResponse {
   monthlyLabels: string[];
 }
 
-/**
- * GET /api/analytics/org-involvement-certified-employees-monthly
- * Cross-foundation certified employees aggregated monthly (12-month window)
- */
+/** GET /api/analytics/org-involvement-certified-employees-monthly — cross-foundation certified employees (12-month window). */
 export interface OrgInvolvementCertifiedEmployeesMonthlyResponse {
   accountId: string;
   totalCertifications: number;
@@ -70,19 +53,14 @@ export interface OrgInvolvementCertifiedEmployeesMonthlyResponse {
   monthlyLabels: string[];
 }
 
-/**
- * Daily data point for training enrollments
- */
+/** Daily data point for training enrollments. */
 export interface OrgTrainingEnrollmentDailyDataPoint {
   date: string;
   count: number;
   cumulativeCount: number;
 }
 
-/**
- * GET /api/analytics/org-involvement-training-enrollments
- * Cross-foundation training enrollments YTD (daily grain)
- */
+/** GET /api/analytics/org-involvement-training-enrollments — cross-foundation training enrollments YTD (daily grain). */
 export interface OrgTrainingEnrollmentsResponse {
   accountId: string;
   totalEnrollments: number;
