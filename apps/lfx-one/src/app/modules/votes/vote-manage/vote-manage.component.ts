@@ -72,7 +72,7 @@ export class VoteManageComponent {
   public readonly mode = signal<'create' | 'edit'>('create');
   public readonly voteId = signal<string | null>(null);
   public readonly submitting = signal<boolean>(false);
-  private readonly confirmingOpenVote = signal<boolean>(false);
+  public readonly confirmingOpenVote = signal<boolean>(false);
   public readonly loading = signal<boolean>(false);
   private readonly internalStep = signal<number>(1);
 
@@ -518,9 +518,9 @@ export class VoteManageComponent {
 
   private initIsDraftSavable(): Signal<boolean> {
     return computed(() => {
-      const { title } = this.formValue() as VoteFormValue;
+      const title = (this.formValue()['title'] as string | undefined) ?? '';
       const committeeValid = !!this.committeeContext() || !!this.form().get('committee')?.valid;
-      return (title?.trim().length ?? 0) > 0 && committeeValid;
+      return title.trim().length > 0 && committeeValid;
     });
   }
 
