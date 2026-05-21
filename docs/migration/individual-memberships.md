@@ -242,7 +242,7 @@ fields from member-service that influence whether the "Manage AutoRenew" toggle 
 | `backend/src/modules/enrollment/enrollment.module.ts`     | NestJS module registration                                              |
 | `backend/src/modules/enrollment/enrollment.controller.ts` | Controller for all `/enrollment/*` endpoints                            |
 | `backend/src/modules/enrollment/enrollment.service.ts`    | Business logic: product catalog, alias management, member-service calls |
-| `backend/src/modules/enrollment/dummy-data.ts`            | Mock data for demo user `johnlf2727`                                    |
+| `backend/src/modules/enrollment/dummy-data.ts`            | Mock enrollment data (myprofile only)                                   |
 | `backend/src/services/member.service.ts`                  | HTTP client to LFX `member-service` v2                                  |
 | `backend/src/services/apigateway.service.ts`              | Builds LFX API Gateway base URL from `STAGE` env var                    |
 | `backend/src/services/snowflake.service.ts`               | Snowflake query client for transactions/certs/trainings                 |
@@ -533,7 +533,7 @@ component import — candidates for cleanup:
 | `frontend/src/views/Home.vue:35, 147–148`                                  | SupportedProjects mount                                                                |
 | `backend/src/modules/enrollment/enrollment.controller.ts`                  | All `/enrollment/*` endpoints                                                          |
 | `backend/src/modules/enrollment/enrollment.service.ts`                     | Business logic, product catalog                                                        |
-| `backend/src/modules/enrollment/dummy-data.ts`                             | Mock data for demo user                                                                |
+| `backend/src/modules/enrollment/dummy-data.ts`                             | Mock enrollment data (myprofile only)                                                  |
 | `backend/src/services/member.service.ts`                                   | member-service v2 client                                                               |
 | `backend/src/services/apigateway.service.ts`                               | LFX API Gateway URL builder                                                            |
 | `backend/src/services/snowflake.service.ts`                                | Snowflake query client                                                                 |
