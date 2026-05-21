@@ -23,4 +23,33 @@ export class MyDonationsComponent {
   protected readonly donationHistory = signal<DonationHistoryItem[]>(MOCK_DONATION_HISTORY);
   protected readonly paymentMethods = signal<PaymentMethod[]>(MOCK_PAYMENT_METHODS);
   protected readonly cancelledCount = signal(4);
+
+  protected onViewCancelled(): void {
+    // TODO: navigate to cancelled donations view
+  }
+
+  protected onChangeAmount(donation: RecurringDonation): void {
+    // TODO: open change amount dialog for donation
+    void donation;
+  }
+
+  protected onPauseDonation(donation: RecurringDonation): void {
+    // TODO: call pause API for donation
+    void donation;
+  }
+
+  protected onResumeDonation(donation: RecurringDonation): void {
+    // TODO: call resume API for donation
+    void donation;
+  }
+
+  protected onCancelDonation(donation: RecurringDonation): void {
+    // TODO: call cancel API for donation
+    void donation;
+  }
+
+  protected onRemoveCard(card: PaymentMethod): void {
+    // TODO: call remove card API
+    void card;
+  }
 }

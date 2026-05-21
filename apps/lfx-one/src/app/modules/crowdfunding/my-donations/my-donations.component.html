@@ -23,7 +23,14 @@
   <lfx-donations-stats-bar [stats]="stats()" />
 
   <!-- Recurring donations -->
-  <lfx-recurring-donations-list [donations]="recurringDonations()" [cancelledCount]="cancelledCount()" />
+  <lfx-recurring-donations-list
+    [donations]="recurringDonations()"
+    [cancelledCount]="cancelledCount()"
+    (viewCancelled)="onViewCancelled()"
+    (changeAmount)="onChangeAmount($event)"
+    (pauseDonation)="onPauseDonation($event)"
+    (resumeDonation)="onResumeDonation($event)"
+    (cancelDonation)="onCancelDonation($event)" />
 
   <!-- Donation history -->
   <div class="flex flex-col gap-3" data-testid="donation-history-section">
@@ -32,5 +39,5 @@
   </div>
 
   <!-- Payment methods -->
-  <lfx-payment-methods [methods]="paymentMethods()" />
+  <lfx-payment-methods [methods]="paymentMethods()" (removeCard)="onRemoveCard($event)" />
 </div>

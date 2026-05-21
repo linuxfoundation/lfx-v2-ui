@@ -89,8 +89,9 @@
               </span>
             }
             <input
+              pInputText
               type="text"
-              class="flex-1 min-w-[80px] border-none outline-none text-sm bg-transparent py-0.5"
+              class="flex-1 min-w-[80px] border-none outline-none text-sm bg-transparent py-0.5 p-0 shadow-none"
               placeholder="Add category…"
               [value]="newTagValue()"
               (input)="newTagValue.set($any($event.target).value)"
@@ -144,24 +145,21 @@
         <p class="text-sm text-gray-500">You will be automatically added as a beneficiary. Add others who can submit expenses below.</p>
 
         <div class="flex flex-col gap-3" data-testid="settings-beneficiaries-list">
-          @for (beneficiary of beneficiaries(); track $index) {
+          @for (group of beneficiaryGroups(); track $index) {
             <div class="flex items-center gap-2" [attr.data-testid]="'settings-beneficiary-row-' + $index">
-              <input
-                pInputText
-                type="text"
-                class="flex-1"
+              <lfx-input-text
+                [form]="group"
+                control="name"
                 placeholder="Full name"
-                [value]="beneficiary.name"
-                (input)="updateBeneficiary($index, 'name', $any($event.target).value)"
-                [attr.aria-label]="'Beneficiary ' + ($index + 1) + ' full name'" />
-              <input
-                pInputText
+                class="flex-1"
+                [dataTest]="'beneficiary-name-' + $index" />
+              <lfx-input-text
+                [form]="group"
+                control="email"
                 type="email"
-                class="flex-[2]"
                 placeholder="Email"
-                [value]="beneficiary.email"
-                (input)="updateBeneficiary($index, 'email', $any($event.target).value)"
-                [attr.aria-label]="'Beneficiary ' + ($index + 1) + ' email'" />
+                class="flex-[2]"
+                [dataTest]="'beneficiary-email-' + $index" />
               <button
                 type="button"
                 (click)="removeBeneficiary($index)"

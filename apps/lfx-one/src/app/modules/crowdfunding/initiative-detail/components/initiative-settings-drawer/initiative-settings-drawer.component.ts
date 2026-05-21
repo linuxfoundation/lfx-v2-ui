@@ -17,11 +17,6 @@ interface SettingsTab {
   label: string;
 }
 
-interface Beneficiary {
-  name: string;
-  email: string;
-}
-
 @Component({
   selector: 'lfx-initiative-settings-drawer',
   imports: [DrawerModule, InputTextComponent, TextareaComponent, ButtonComponent, ReactiveFormsModule, InputTextModule, LowerCasePipe],
@@ -50,13 +45,13 @@ export class InitiativeSettingsDrawerComponent {
 
   protected readonly tags = signal<string[]>([]);
   protected readonly newTagValue = signal<string>('');
-  protected readonly beneficiaries = signal<Beneficiary[]>([]);
+  protected readonly beneficiaryGroups = signal<FormGroup[]>([]);
 
   private readonly formValue = toSignal(this.form.valueChanges, { initialValue: this.form.value });
   protected readonly nameLength = computed(() => this.formValue().name?.length ?? 0);
   protected readonly descriptionLength = computed(() => this.formValue().description?.length ?? 0);
 
-  constructor() {
+  public constructor() {
     effect(() => {
       if (this.visible()) {
         const init = this.initiative();
@@ -67,7 +62,7 @@ export class InitiativeSettingsDrawerComponent {
           goal: init.goal,
         });
         this.tags.set([...init.tags]);
-        this.beneficiaries.set([]);
+        this.beneficiaryGroups.set([]);
         this.activeSettingsTab.set('details');
       }
     });
@@ -90,14 +85,14 @@ export class InitiativeSettingsDrawerComponent {
   }
 
   protected addBeneficiary(): void {
-    this.beneficiaries.update((list) => [...list, { name: '', email: '' }]);
+    const group = new FormGroup({
+      name: new FormControl(''),
+      email: new FormControl('', Validators.email),
+    });
+    this.beneficiaryGroups.update((groups) => [...groups, group]);
   }
 
   protected removeBeneficiary(index: number): void {
-    this.beneficiaries.update((list) => list.filter((_, i) => i !== index));
-  }
-
-  protected updateBeneficiary(index: number, field: 'name' | 'email', value: string): void {
-    this.beneficiaries.update((list) => list.map((b, i) => (i === index ? { ...b, [field]: value } : b)));
+    this.beneficiaryGroups.update((groups) => groups.filter((_, i) => i !== index));
   }
 }
