@@ -40,9 +40,9 @@ export class InviteController {
         );
       }
 
-      const jwtSecret = process.env['JWT_SECRET'];
+      const jwtSecret = process.env['INVITE_SERVICE_JWT_SECRET'];
       if (!jwtSecret) {
-        return next(new Error('JWT_SECRET is not configured'));
+        return next(new Error('INVITE_SERVICE_JWT_SECRET is not configured'));
       }
 
       let payload: InviteTokenPayload;

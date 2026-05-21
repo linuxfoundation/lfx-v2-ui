@@ -284,7 +284,7 @@ environment:
     value:
 
   # Invite JWT signing secret (HS256) — used to verify signed invite tokens
-  JWT_SECRET:
+  INVITE_SERVICE_JWT_SECRET:
     value: "qtPxtMAVHkg58Odl2j35iGweRNYUXK3PwO6DiDvaIIc="
 
   # Snowflake Analytics Configuration
