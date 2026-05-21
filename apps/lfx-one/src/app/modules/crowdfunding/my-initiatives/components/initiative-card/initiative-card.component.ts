@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, input, output, Signal } from '@angular/core';
 import { AvatarComponent } from '@components/avatar/avatar.component';
 import {
   CROWDFUNDING_FUND_TYPE_AVATAR_CLASSES,
@@ -26,21 +26,31 @@ export class InitiativeCardComponent {
   protected readonly fundTypeColorClass = computed(() => CROWDFUNDING_FUND_TYPE_COLOR_CLASSES[this.initiative().fundType]);
   protected readonly avatarStyleClass = computed(() => CROWDFUNDING_FUND_TYPE_AVATAR_CLASSES[this.initiative().fundType]);
 
-  protected readonly progressPercent = computed(() => {
-    const { raised, goal } = this.initiative();
-    if (!goal || goal === 0) return 0;
-    return Math.min(100, Math.round((raised / goal) * 100));
-  });
+  protected readonly progressPercent = this.initProgressPercent();
 
   protected readonly isClickable = computed(() => this.initiative().status !== 'pending');
 
-  protected formatCurrency(value: number): string {
-    return `$${value.toLocaleString()}`;
-  }
+  protected readonly formattedRaised = computed(() => this.formatCurrency(this.initiative().raised));
+  protected readonly formattedGoal = computed(() => {
+    const g = this.initiative().goal;
+    return g != null ? this.formatCurrency(g) : null;
+  });
 
   protected onCardClick(): void {
     if (this.isClickable()) {
       this.cardClick.emit(this.initiative().id);
     }
+  }
+
+  private formatCurrency(value: number): string {
+    return `$${value.toLocaleString()}`;
+  }
+
+  private initProgressPercent(): Signal<number> {
+    return computed(() => {
+      const { raised, goal } = this.initiative();
+      if (!goal || goal === 0) return 0;
+      return Math.min(100, Math.round((raised / goal) * 100));
+    });
   }
 }

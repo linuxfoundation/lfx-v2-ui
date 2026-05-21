@@ -20,17 +20,21 @@ export class MyInitiativesComponent {
   protected readonly crowdfundingUrl = environment.urls.crowdfunding;
   protected readonly initiatives = signal<CrowdfundingInitiative[]>(MOCK_INITIATIVES);
 
-  protected readonly stats: Signal<CrowdfundingInitiativesStats> = computed(() => {
-    const all = this.initiatives();
-    return {
-      activeCount: all.filter((i) => i.status === 'active').length,
-      totalRaised: all.reduce((sum, i) => sum + i.raised, 0),
-      monthlyGain: 8400,
-      totalSponsors: all.reduce((sum, i) => sum + i.sponsorsCount, 0),
-    };
-  });
+  protected readonly stats: Signal<CrowdfundingInitiativesStats> = this.initStats();
 
   protected onInitiativeClick(id: string): void {
     void this.router.navigate(['/crowdfunding/initiatives', id]);
+  }
+
+  private initStats(): Signal<CrowdfundingInitiativesStats> {
+    return computed(() => {
+      const all = this.initiatives();
+      return {
+        activeCount: all.filter((i) => i.status === 'active').length,
+        totalRaised: all.reduce((sum, i) => sum + i.raised, 0),
+        monthlyGain: 8400,
+        totalSponsors: all.reduce((sum, i) => sum + i.sponsorsCount, 0),
+      };
+    });
   }
 }
