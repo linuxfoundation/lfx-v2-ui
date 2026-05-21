@@ -30,7 +30,7 @@
             <i class="fa-light fa-briefcase text-xl"></i>
           </div>
           <div class="flex flex-col gap-0.5">
-            @if (pageState() === 'loading') {
+            @if (pageState() === 'loading' || pageState() === 'error') {
               <p class="text-xl font-medium text-gray-400">&mdash;</p>
             } @else {
               <p class="text-xl font-medium text-gray-900">{{ summary()?.activeMemberships ?? 0 }}</p>
@@ -43,7 +43,7 @@
             <i class="fa-light fa-clock text-xl"></i>
           </div>
           <div class="flex flex-col gap-0.5">
-            @if (pageState() === 'loading') {
+            @if (pageState() === 'loading' || pageState() === 'error') {
               <p class="text-xl font-medium text-gray-400">&mdash;</p>
             } @else {
               <p class="text-xl font-medium text-gray-900">{{ summary()?.renewingWithin90Days ?? 0 }}</p>
@@ -56,7 +56,7 @@
             <i class="fa-light fa-users text-xl"></i>
           </div>
           <div class="flex flex-col gap-0.5">
-            @if (pageState() === 'loading') {
+            @if (pageState() === 'loading' || pageState() === 'error') {
               <p class="text-xl font-medium text-gray-400">&mdash;</p>
             } @else {
               <p class="text-xl font-medium text-gray-900">{{ summary()?.governanceRoles ?? 0 }}</p>
@@ -153,7 +153,7 @@
                       <img [src]="membership.foundationLogo" [alt]="membership.foundationName" class="w-10 h-10 rounded-lg object-contain flex-shrink-0" />
                     } @else {
                       <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-sm font-semibold text-gray-600 flex-shrink-0">
-                        {{ getInitials(membership.foundationName) }}
+                        {{ membership.initials }}
                       </div>
                     }
                     <div class="flex flex-col">
@@ -165,10 +165,10 @@
                 <td>
                   <div class="flex flex-col">
                     <span class="text-sm text-gray-900">{{ membership.membershipTier }}</span>
-                    <span class="text-xs text-gray-500">{{ formatTierRange(membership) }}</span>
+                    <span class="text-xs text-gray-500">{{ membership.tierRange }}</span>
                   </div>
                 </td>
-                <td class="text-sm text-gray-700">{{ formatDateShort(membership.memberSince) }}</td>
+                <td class="text-sm text-gray-700">{{ membership.memberSinceFormatted }}</td>
                 <td class="text-sm text-gray-700">{{ membership.boardMembers }}</td>
                 <td class="text-sm text-gray-700">{{ membership.committeeMembers }}</td>
                 <td>
@@ -211,7 +211,15 @@
 
       <div class="px-5 pb-5">
         @if (expiredState() === 'error') {
-          <lfx-empty-state [withCard]="false" icon="fa-light fa-triangle-exclamation" title="Failed to load expired memberships" subtitle="Please try again.">
+          <lfx-empty-state
+            [withCard]="false"
+            icon="fa-light fa-triangle-exclamation"
+            title="Failed to load expired memberships"
+            subtitle="Please try again."
+            ctaLabel="Retry"
+            ctaIcon="fa-light fa-arrow-rotate-left"
+            data-testid="memberships-expired-error-state"
+            (ctaClick)="retryExpired()">
           </lfx-empty-state>
         } @else if (expiredState() === 'empty') {
           <lfx-empty-state [withCard]="false" icon="fa-light fa-clock-rotate-left" title="No expired memberships" subtitle="All your memberships are current!">
@@ -241,27 +249,27 @@
                     } @else {
                       <div
                         class="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-semibold text-white flex-shrink-0"
-                        [class]="getLogoClasses(membership.foundationId)">
-                        {{ getInitials(membership.foundationName) }}
+                        [class]="membership.logoClasses">
+                        {{ membership.initials }}
                       </div>
                     }
                     <div class="flex flex-col">
                       <span class="font-medium text-gray-900">{{ membership.foundationName }}</span>
-                      <span class="text-xs text-gray-500">Expired {{ formatDateFull(membership.expirationDate) }}</span>
+                      <span class="text-xs text-gray-500">Expired {{ membership.expirationDateFormatted }}</span>
                     </div>
                   </div>
                 </td>
                 <td>
                   <div class="flex flex-col">
                     <span class="text-sm text-gray-900">{{ membership.membershipTier }}</span>
-                    <span class="text-xs text-gray-500">{{ formatDateFull(membership.tierStartDate) }} – {{ formatDateFull(membership.tierEndDate) }}</span>
+                    <span class="text-xs text-gray-500">{{ membership.tierStartFormatted }} – {{ membership.tierEndFormatted }}</span>
                   </div>
                 </td>
-                <td class="text-sm text-gray-700">{{ formatDateFull(membership.expirationDate) }}</td>
+                <td class="text-sm text-gray-700">{{ membership.expirationDateFormatted }}</td>
                 <td>
                   @if (membership.actionType === 'renew') {
                     <a
-                      [href]="getRenewUrl(membership.foundationId)"
+                      [href]="membership.renewUrl"
                       target="_blank"
                       rel="noopener noreferrer"
                       class="inline-block px-3 py-1.5 text-sm font-medium text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
@@ -297,7 +305,11 @@
             [withCard]="false"
             icon="fa-light fa-triangle-exclamation"
             title="Failed to load discover opportunities"
-            subtitle="Please try again.">
+            subtitle="Please try again."
+            ctaLabel="Retry"
+            ctaIcon="fa-light fa-arrow-rotate-left"
+            data-testid="memberships-discover-error-state"
+            (ctaClick)="retryDiscover()">
           </lfx-empty-state>
         } @else if (discoverState() === 'empty') {
           <lfx-empty-state
@@ -332,8 +344,8 @@
                     } @else {
                       <div
                         class="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-semibold text-white flex-shrink-0"
-                        [class]="getLogoClasses(opportunity.foundationId)">
-                        {{ getInitials(opportunity.foundationName) }}
+                        [class]="opportunity.logoClasses">
+                        {{ opportunity.initials }}
                       </div>
                     }
                     <div class="flex flex-col">
@@ -352,7 +364,7 @@
                 <td class="text-sm text-gray-700">{{ opportunity.contributions }}</td>
                 <td>
                   <a
-                    [href]="getJoinUrl(opportunity.foundationId)"
+                    [href]="opportunity.joinUrl"
                     target="_blank"
                     rel="noopener noreferrer"
                     class="inline-block px-3 py-1.5 text-sm font-medium text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors">

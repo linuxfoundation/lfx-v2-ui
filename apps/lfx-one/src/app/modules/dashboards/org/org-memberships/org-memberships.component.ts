@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, type Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -17,7 +17,9 @@ import { EmptyStateComponent } from '@components/empty-state/empty-state.compone
 import type {
   OrgActiveMembership,
   OrgActiveMembershipsResponse,
+  OrgDiscoverOpportunity,
   OrgDiscoverOpportunitiesResponse,
+  OrgExpiredMembership,
   OrgExpiredMembershipsResponse,
 } from '@lfx-one/shared/interfaces';
 import { foundationInitials, foundationLogoSquareClasses } from '../components/org-overview-foundations-and-projects/helpers/foundation-logo.helper';
@@ -28,6 +30,27 @@ type MembershipTab = 'active' | 'expired' | 'discover';
 interface DropdownOption {
   label: string;
   value: string;
+}
+
+interface ActiveMembershipRow extends OrgActiveMembership {
+  initials: string;
+  tierRange: string;
+  memberSinceFormatted: string;
+}
+
+interface ExpiredMembershipRow extends OrgExpiredMembership {
+  initials: string;
+  logoClasses: string;
+  expirationDateFormatted: string;
+  tierStartFormatted: string;
+  tierEndFormatted: string;
+  renewUrl: string;
+}
+
+interface DiscoverOpportunityRow extends OrgDiscoverOpportunity {
+  initials: string;
+  logoClasses: string;
+  joinUrl: string;
 }
 
 @Component({
@@ -51,9 +74,7 @@ export class OrgMembershipsComponent {
 
   private readonly allTiers = signal<string[]>([]);
 
-  protected readonly tierOptions = computed<DropdownOption[]>(() => {
-    return [{ label: 'All Membership Levels', value: '' }, ...this.allTiers().map((t) => ({ label: t, value: t }))];
-  });
+  protected readonly tierOptions: Signal<DropdownOption[]> = computed(() => this.initTierOptions());
 
   protected readonly renewalOptions: DropdownOption[] = [
     { label: 'All Renewals', value: '' },
@@ -76,12 +97,14 @@ export class OrgMembershipsComponent {
   private readonly searchTerm$ = toObservable(this.searchTerm);
   private readonly selectedTier$ = toObservable(this.selectedTier);
   private readonly selectedRenewal$ = toObservable(this.selectedRenewal);
+  private readonly retryTrigger$ = toObservable(this.retryTrigger);
 
   private readonly activeResponse$ = combineLatest([
     this.selectedAccountId$.pipe(filter((id): id is string => !!id)),
     this.searchTerm$,
     this.selectedTier$,
     this.selectedRenewal$,
+    this.retryTrigger$,
   ]).pipe(
     tap(() => {
       this.fetchLoading.set(true);
@@ -107,53 +130,49 @@ export class OrgMembershipsComponent {
 
   protected readonly activeData = toSignal<OrgActiveMembershipsResponse | null>(this.activeResponse$, { initialValue: null });
   protected readonly summary = computed(() => this.activeData()?.summary);
-  protected readonly memberships = computed(() => this.activeData()?.memberships ?? []);
+  protected readonly memberships: Signal<ActiveMembershipRow[]> = computed(() => this.initMemberships());
 
-  protected readonly pageState = computed<PageState>(() => {
-    if (this.fetchLoading()) return 'loading';
-    if (this.fetchError()) return 'error';
-    const data = this.activeData();
-    if (!data || data.memberships.length === 0) return 'empty';
-    return 'ready';
-  });
+  protected readonly pageState: Signal<PageState> = computed(() => this.initPageState());
 
   private readonly expiredLoading = signal(false);
   private readonly expiredError = signal(false);
   private readonly expiredData = signal<OrgExpiredMembershipsResponse | null>(null);
 
-  protected readonly expiredMemberships = computed(() => {
-    const data = this.expiredData();
-    if (!data) return [];
-    const search = this.expiredSearchTerm().toLowerCase();
-    if (!search) return data.memberships;
-    return data.memberships.filter((m) => m.foundationName.toLowerCase().includes(search));
-  });
+  protected readonly expiredMemberships: Signal<ExpiredMembershipRow[]> = computed(() => this.initExpiredMemberships());
 
-  protected readonly expiredState = computed<PageState>(() => {
-    if (this.expiredLoading()) return 'loading';
-    if (this.expiredError()) return 'error';
-    if (!this.expiredData() || this.expiredMemberships().length === 0) return 'empty';
-    return 'ready';
-  });
+  protected readonly expiredState: Signal<PageState> = computed(() => this.initExpiredState());
 
   private readonly discoverLoading = signal(false);
   private readonly discoverError = signal(false);
   private readonly discoverData = signal<OrgDiscoverOpportunitiesResponse | null>(null);
 
-  protected readonly discoverOpportunities = computed(() => this.discoverData()?.opportunities ?? []);
+  protected readonly discoverOpportunities: Signal<DiscoverOpportunityRow[]> = computed(() => this.initDiscoverOpportunities());
 
-  protected readonly discoverState = computed<PageState>(() => {
-    if (this.discoverLoading()) return 'loading';
-    if (this.discoverError()) return 'error';
-    if (!this.discoverData() || this.discoverOpportunities().length === 0) return 'empty';
-    return 'ready';
+  protected readonly discoverState: Signal<PageState> = computed(() => this.initDiscoverState());
+
+  private readonly renewBaseUrl = computed(() => {
+    const slug = this.accountContext.selectedAccount()?.accountSlug ?? '';
+    return `https://myorg.lfx.dev/${slug}/project/project-group-membership`;
   });
+
+  private readonly joinBaseUrl = computed(() => {
+    const slug = this.accountContext.selectedAccount()?.accountSlug ?? '';
+    return `https://myorg.lfx.dev/${slug}/project`;
+  });
+
+  private lastAccountId: string | null = null;
 
   public constructor() {
     effect(() => {
       const tab = this.activeTab();
       const accountId = this.accountContext.selectedAccount()?.accountId;
       if (!accountId) return;
+
+      if (this.lastAccountId && this.lastAccountId !== accountId) {
+        this.expiredData.set(null);
+        this.discoverData.set(null);
+      }
+      this.lastAccountId = accountId;
 
       if (tab === 'expired' && !this.expiredData()) {
         this.fetchExpired(accountId);
@@ -172,37 +191,104 @@ export class OrgMembershipsComponent {
     this.retryTrigger.update((v) => v + 1);
   }
 
-  protected formatDateShort(dateString: string | null): string {
+  protected retryExpired(): void {
+    const accountId = this.accountContext.selectedAccount()?.accountId;
+    if (accountId) this.fetchExpired(accountId);
+  }
+
+  protected retryDiscover(): void {
+    const accountId = this.accountContext.selectedAccount()?.accountId;
+    if (accountId) this.fetchDiscover(accountId);
+  }
+
+  // --- Private init methods for multi-line computed() (component-organization convention) ---
+
+  private initTierOptions(): DropdownOption[] {
+    return [{ label: 'All Membership Levels', value: '' }, ...this.allTiers().map((t) => ({ label: t, value: t }))];
+  }
+
+  private initPageState(): PageState {
+    if (this.fetchLoading()) return 'loading';
+    if (this.fetchError()) return 'error';
+    const data = this.activeData();
+    if (!data || data.memberships.length === 0) return 'empty';
+    return 'ready';
+  }
+
+  private initMemberships(): ActiveMembershipRow[] {
+    return (this.activeData()?.memberships ?? []).map((m) => ({
+      ...m,
+      initials: foundationInitials(m.foundationName),
+      tierRange: `${this.formatDateShort(m.tierStartDate)} – ${this.formatDateShort(m.tierEndDate)}`,
+      memberSinceFormatted: this.formatDateShort(m.memberSince),
+    }));
+  }
+
+  private initExpiredMemberships(): ExpiredMembershipRow[] {
+    const data = this.expiredData();
+    if (!data) return [];
+    const baseUrl = this.renewBaseUrl();
+    let rows = data.memberships;
+    const search = this.expiredSearchTerm().toLowerCase();
+    if (search) {
+      rows = rows.filter((m) => m.foundationName.toLowerCase().includes(search));
+    }
+    return rows.map((m) => ({
+      ...m,
+      initials: foundationInitials(m.foundationName),
+      logoClasses: foundationLogoSquareClasses(m.foundationId),
+      expirationDateFormatted: this.formatDateFull(m.expirationDate),
+      tierStartFormatted: this.formatDateFull(m.tierStartDate),
+      tierEndFormatted: this.formatDateFull(m.tierEndDate),
+      renewUrl: `${baseUrl}/${m.foundationId}`,
+    }));
+  }
+
+  private initExpiredState(): PageState {
+    if (this.expiredLoading()) return 'loading';
+    if (this.expiredError()) return 'error';
+    if (!this.expiredData() || this.expiredMemberships().length === 0) return 'empty';
+    return 'ready';
+  }
+
+  private initDiscoverOpportunities(): DiscoverOpportunityRow[] {
+    const data = this.discoverData();
+    if (!data) return [];
+    const baseUrl = this.joinBaseUrl();
+    return data.opportunities.map((o) => ({
+      ...o,
+      initials: foundationInitials(o.foundationName),
+      logoClasses: foundationLogoSquareClasses(o.foundationId),
+      joinUrl: `${baseUrl}/${o.foundationId}/membership`,
+    }));
+  }
+
+  private initDiscoverState(): PageState {
+    if (this.discoverLoading()) return 'loading';
+    if (this.discoverError()) return 'error';
+    if (!this.discoverData() || this.discoverOpportunities().length === 0) return 'empty';
+    return 'ready';
+  }
+
+  // --- Private date helpers (split-and-construct to avoid UTC timezone shift) ---
+
+  private formatDateShort(dateString: string | null): string {
     if (!dateString) return '—';
-    return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+    const parts = dateString.split('-').map(Number);
+    if (parts.length !== 3 || parts.some(Number.isNaN)) return dateString;
+    const [year, month, day] = parts as [number, number, number];
+    return new Date(year, month - 1, day).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
   }
 
-  protected formatDateFull(dateString: string | null): string {
+  private formatDateFull(dateString: string | null): string {
     if (!dateString) return '—';
-    return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    const parts = dateString.split('-').map(Number);
+    if (parts.length !== 3 || parts.some(Number.isNaN)) return dateString;
+    const [year, month, day] = parts as [number, number, number];
+    return new Date(year, month - 1, day).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
-  protected formatTierRange(membership: OrgActiveMembership): string {
-    return `${this.formatDateShort(membership.tierStartDate)} – ${this.formatDateShort(membership.tierEndDate)}`;
-  }
-
-  protected getInitials(name: string): string {
-    return foundationInitials(name);
-  }
-
-  protected getLogoClasses(foundationId: string): string {
-    return foundationLogoSquareClasses(foundationId);
-  }
-
-  protected getRenewUrl(foundationId: string): string {
-    const slug = this.accountContext.selectedAccount()?.accountSlug ?? '';
-    return `https://myorg.lfx.dev/${slug}/project/project-group-membership/${foundationId}`;
-  }
-
-  protected getJoinUrl(foundationId: string): string {
-    const slug = this.accountContext.selectedAccount()?.accountSlug ?? '';
-    return `https://myorg.lfx.dev/${slug}/project/${foundationId}/membership`;
-  }
+  // --- Private fetch methods ---
 
   private fetchExpired(accountId: string): void {
     this.expiredLoading.set(true);
