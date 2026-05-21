@@ -46,8 +46,27 @@
           <i class="fa-light fa-arrow-up-right-from-square text-xs" aria-hidden="true"></i>
         </a>
       }
-      <lfx-button label="Settings" icon="fa-light fa-gear" severity="secondary" size="small" data-testid="initiative-settings-btn" />
-      <lfx-button icon="fa-light fa-ellipsis" severity="secondary" size="small" data-testid="initiative-more-btn" />
+      <lfx-button
+        label="Settings"
+        icon="fa-light fa-gear"
+        severity="secondary"
+        size="small"
+        data-testid="initiative-settings-btn"
+        (click)="settingsClick.emit()" />
+      <lfx-button icon="fa-light fa-ellipsis" severity="secondary" size="small" data-testid="initiative-more-btn" (click)="onMoreClick($event)" />
+      <lfx-menu #moreMenu [model]="moreMenuItems" [popup]="true" appendTo="body" styleClass="w-72">
+        <ng-template #item let-item>
+          <button class="flex flex-col gap-0.5 w-full px-3 py-2.5 text-left hover:bg-gray-50 transition-colors" [class.hover:bg-red-50]="item.danger">
+            <div class="flex items-center gap-2 text-sm font-medium" [class.text-gray-800]="!item.danger" [class.text-red-600]="item.danger">
+              <i [class]="item.icon" aria-hidden="true"></i>
+              {{ item.label }}
+            </div>
+            @if (item.description) {
+              <div class="text-xs text-gray-400 leading-relaxed pl-5">{{ item.description }}</div>
+            }
+          </button>
+        </ng-template>
+      </lfx-menu>
     </div>
   </div>
 

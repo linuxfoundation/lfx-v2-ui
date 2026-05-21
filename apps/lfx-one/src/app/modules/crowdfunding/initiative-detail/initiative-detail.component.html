@@ -12,7 +12,13 @@
     styleClass="self-start"
     data-testid="initiative-detail-back-btn" />
 
-  <lfx-initiative-detail-header [initiative]="initiative()" [activeTab]="activeTab()" (tabChange)="activeTab.set($event)" />
+  <lfx-initiative-detail-header
+    [initiative]="initiative()"
+    [activeTab]="activeTab()"
+    (tabChange)="activeTab.set($event)"
+    (settingsClick)="settingsDrawerVisible.set(true)" />
+
+  <lfx-initiative-settings-drawer [initiative]="initiative()" [(visible)]="settingsDrawerVisible" />
 
   @if (activeTab() === 'overview') {
     <lfx-initiative-overview [initiative]="initiative()" (viewAllFinancials)="activeTab.set('financials')" />

@@ -11,10 +11,18 @@ import { InitiativeDetailHeaderComponent } from './components/initiative-detail-
 import { InitiativeOverviewComponent } from './components/initiative-overview/initiative-overview.component';
 import { InitiativeFinancialsComponent } from './components/initiative-financials/initiative-financials.component';
 import { InitiativeAnnouncementsComponent } from './components/initiative-announcements/initiative-announcements.component';
+import { InitiativeSettingsDrawerComponent } from './components/initiative-settings-drawer/initiative-settings-drawer.component';
 
 @Component({
   selector: 'lfx-initiative-detail',
-  imports: [ButtonComponent, InitiativeDetailHeaderComponent, InitiativeOverviewComponent, InitiativeFinancialsComponent, InitiativeAnnouncementsComponent],
+  imports: [
+    ButtonComponent,
+    InitiativeDetailHeaderComponent,
+    InitiativeOverviewComponent,
+    InitiativeFinancialsComponent,
+    InitiativeAnnouncementsComponent,
+    InitiativeSettingsDrawerComponent,
+  ],
   templateUrl: './initiative-detail.component.html',
   styleUrl: './initiative-detail.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -28,4 +36,5 @@ export class InitiativeDetailComponent {
     return MOCK_INITIATIVE_DETAIL;
   });
   protected readonly activeTab = signal<string>('overview');
+  protected readonly settingsDrawerVisible = signal(false);
 }
