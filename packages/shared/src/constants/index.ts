@@ -57,3 +57,4 @@ export * from './foundation-projects.constants';
 export * from './marketing-impact.constants';
 export * from './individual-enrollment-catalog';
 export * from './newsletter.constants';
+export * from './crowdfunding.constants';
