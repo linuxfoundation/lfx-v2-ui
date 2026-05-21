@@ -53,6 +53,17 @@ export function mapFiltersToEligibility(filters: string[] | undefined): string {
   return 'voting_rep';
 }
 
+function isDraftPlaceholderPollQuestion(question: PollQuestion): boolean {
+  const placeholder = DRAFT_VOTE_PLACEHOLDER_QUESTION;
+  if (question.prompt.trim() !== placeholder.prompt || question.type !== placeholder.type) {
+    return false;
+  }
+
+  const choiceTexts = question.choices.map((choice) => choice.choice_text.trim());
+  const placeholderTexts = placeholder.choices.map((choice) => choice.choice_text);
+  return choiceTexts.length === placeholderTexts.length && placeholderTexts.every((text, index) => choiceTexts[index] === text);
+}
+
 /**
  * Maps an API PollQuestion back to the form's QuestionFormValue
  * @param question - PollQuestion from the API response
@@ -80,7 +91,7 @@ export function mapVoteToFormValue(vote: Vote): VoteFormValue {
     committee,
     eligible_participants: mapFiltersToEligibility(vote.committee_filters),
     close_date: vote.end_time ? new Date(vote.end_time) : null,
-    questions: vote.poll_questions?.map(mapApiQuestionToFormValue) || [],
+    questions: vote.poll_questions?.filter((question) => !isDraftPlaceholderPollQuestion(question)).map(mapApiQuestionToFormValue) || [],
   };
 }
 

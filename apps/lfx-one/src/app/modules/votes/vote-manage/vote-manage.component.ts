@@ -207,6 +207,10 @@ export class VoteManageComponent {
   }
 
   public onSubmit(): void {
+    if (this.submitting()) {
+      return;
+    }
+
     if (this.form().invalid) {
       this.markAllFormControlsAsTouched();
       return;
