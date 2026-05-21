@@ -13,18 +13,7 @@ import {
   CROWDFUNDING_FUND_TYPE_ICONS,
   CROWDFUNDING_FUND_TYPE_LABELS,
 } from '@lfx-one/shared/constants';
-import { CrowdfundingInitiativeDetail } from '@lfx-one/shared/interfaces';
-import { MenuItem } from 'primeng/api';
-
-interface TabOption {
-  id: string;
-  label: string;
-}
-
-interface InitiativeMenuItem extends MenuItem {
-  description?: string;
-  danger?: boolean;
-}
+import { CrowdfundingInitiativeDetail, InitiativeMenuItem, TabOption } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-initiative-detail-header',
@@ -40,10 +29,10 @@ export class InitiativeDetailHeaderComponent {
 
   private readonly moreMenu = viewChild<MenuComponent>('moreMenu');
 
-  protected readonly tabOptions: TabOption[] = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'financials', label: 'Financials' },
-    { id: 'announcements', label: 'Announcements' },
+  protected readonly tabOptions: TabOption<string>[] = [
+    { value: 'overview', label: 'Overview' },
+    { value: 'financials', label: 'Financials' },
+    { value: 'announcements', label: 'Announcements' },
   ];
 
   protected readonly moreMenuItems: InitiativeMenuItem[] = [

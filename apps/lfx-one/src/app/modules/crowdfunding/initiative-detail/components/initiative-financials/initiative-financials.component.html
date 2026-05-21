@@ -10,7 +10,7 @@
       </div>
       <div>
         <div class="text-xs text-gray-500 mb-0.5">Total received</div>
-        <div class="text-lg font-bold text-gray-900">{{ formatCurrency(totalReceived()) }}</div>
+        <div class="text-lg font-bold text-gray-900">{{ formattedTotalReceived() }}</div>
       </div>
     </div>
     <div class="flex-1 flex items-center gap-3 px-5 py-4 border-l border-gray-200">
@@ -19,7 +19,7 @@
       </div>
       <div>
         <div class="text-xs text-gray-500 mb-0.5">Total expenses</div>
-        <div class="text-lg font-bold text-gray-900">{{ formatCurrency(totalExpenses()) }}</div>
+        <div class="text-lg font-bold text-gray-900">{{ formattedTotalExpenses() }}</div>
       </div>
     </div>
     <div class="flex-1 flex items-center gap-3 px-5 py-4 border-l border-gray-200">
@@ -28,7 +28,7 @@
       </div>
       <div>
         <div class="text-xs text-gray-500 mb-0.5">Balance</div>
-        <div class="text-lg font-bold text-gray-900">{{ formatCurrency(balance()) }}</div>
+        <div class="text-lg font-bold text-gray-900">{{ formattedBalance() }}</div>
       </div>
     </div>
   </div>
@@ -51,12 +51,12 @@
             </tr>
           </thead>
           <tbody>
-            @for (donation of initiative().donationsIn; track donation.who + donation.date) {
+            @for (donation of donationsInWithMeta(); track donation.who + donation.date) {
               <tr class="border-b border-gray-100 last:border-0" data-testid="donation-row">
                 <td class="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{{ donation.date }}</td>
                 <td class="px-4 py-3">
                   <div class="flex items-center gap-2.5">
-                    <lfx-avatar [label]="donation.who" shape="square" size="normal" [styleClass]="donorAvatarClass(donation.who)" />
+                    <lfx-avatar [label]="donation.who" shape="square" size="normal" [styleClass]="donation.avatarClass" />
                     <span class="text-sm font-medium text-gray-900">{{ donation.who }}</span>
                   </div>
                 </td>
@@ -68,7 +68,7 @@
                   }
                 </td>
                 <td class="px-4 py-3 text-right text-sm font-bold text-gray-900 whitespace-nowrap">
-                  {{ formatCurrency(donation.amount) }}
+                  {{ donation.formattedAmount }}
                 </td>
               </tr>
             }
@@ -95,11 +95,11 @@
             </tr>
           </thead>
           <tbody>
-            @for (expense of initiative().donationsOut; track expense.who + expense.date) {
+            @for (expense of donationsOutWithMeta(); track expense.who + expense.date) {
               <tr class="border-b border-gray-100 last:border-0" data-testid="expense-row">
                 <td class="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{{ expense.date }}</td>
                 <td class="px-4 py-3 text-sm text-gray-700">{{ expense.who }}</td>
-                <td class="px-4 py-3 text-right text-sm font-bold text-red-600 whitespace-nowrap">−{{ formatCurrency(expense.amount) }}</td>
+                <td class="px-4 py-3 text-right text-sm font-bold text-red-600 whitespace-nowrap">−{{ expense.formattedAmount }}</td>
               </tr>
             }
           </tbody>

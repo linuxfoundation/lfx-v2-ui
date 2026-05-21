@@ -2,20 +2,16 @@
 // SPDX-License-Identifier: MIT
 
 import { LowerCasePipe } from '@angular/common';
-import { Component, effect, model, input, signal, computed } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { Component, model, input, signal, computed } from '@angular/core';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
-import { CrowdfundingInitiativeDetail } from '@lfx-one/shared/interfaces';
+import { CrowdfundingInitiativeDetail, TabOption } from '@lfx-one/shared/interfaces';
+import { filter } from 'rxjs';
 import { InputTextModule } from 'primeng/inputtext';
 import { DrawerModule } from 'primeng/drawer';
-
-interface SettingsTab {
-  id: string;
-  label: string;
-}
 
 @Component({
   selector: 'lfx-initiative-settings-drawer',
@@ -29,16 +25,16 @@ export class InitiativeSettingsDrawerComponent {
 
   protected readonly activeSettingsTab = signal<string>('details');
 
-  protected readonly settingsTabs: SettingsTab[] = [
-    { id: 'details', label: 'Initiative details' },
-    { id: 'branding', label: 'Branding' },
-    { id: 'beneficiaries', label: 'Beneficiaries' },
-    { id: 'funding', label: 'Funding' },
+  protected readonly settingsTabs: TabOption<string>[] = [
+    { value: 'details', label: 'Initiative details' },
+    { value: 'branding', label: 'Branding' },
+    { value: 'beneficiaries', label: 'Beneficiaries' },
+    { value: 'funding', label: 'Funding' },
   ];
 
   protected readonly form: FormGroup = new FormGroup({
     name: new FormControl('', [Validators.required, Validators.maxLength(100)]),
-    description: new FormControl('', [Validators.maxLength(500)]),
+    description: new FormControl('', [Validators.required, Validators.maxLength(500)]),
     websiteUrl: new FormControl(''),
     goal: new FormControl<number | null>(null),
   });
@@ -52,8 +48,9 @@ export class InitiativeSettingsDrawerComponent {
   protected readonly descriptionLength = computed(() => this.formValue().description?.length ?? 0);
 
   public constructor() {
-    effect(() => {
-      if (this.visible()) {
+    toObservable(this.visible)
+      .pipe(filter(Boolean), takeUntilDestroyed())
+      .subscribe(() => {
         const init = this.initiative();
         this.form.patchValue({
           name: init.name,
@@ -64,8 +61,7 @@ export class InitiativeSettingsDrawerComponent {
         this.tags.set([...init.tags]);
         this.beneficiaryGroups.set([]);
         this.activeSettingsTab.set('details');
-      }
-    });
+      });
   }
 
   protected onClose(): void {

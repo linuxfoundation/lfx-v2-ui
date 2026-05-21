@@ -26,9 +26,9 @@
       </button>
     </div>
     <div class="flex flex-col" data-testid="activity-feed">
-      @for (donation of recentDonations(); track donation.who + donation.date) {
+      @for (donation of recentDonationsWithMeta(); track donation.who + donation.date) {
         <div class="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0" data-testid="activity-row">
-          <lfx-avatar [label]="donation.who" shape="square" size="normal" [styleClass]="donorAvatarClass(donation.who)" />
+          <lfx-avatar [label]="donation.who" shape="square" size="normal" [styleClass]="donation.avatarClass" />
           <div class="flex-1 min-w-0">
             <div class="text-sm font-semibold text-gray-900 truncate">
               {{ donation.who }}
@@ -38,7 +38,7 @@
             </div>
             <div class="text-xs text-gray-400">{{ donation.date }}</div>
           </div>
-          <div class="text-sm font-bold text-gray-900 whitespace-nowrap">{{ formatCurrency(donation.amount) }}</div>
+          <div class="text-sm font-bold text-gray-900 whitespace-nowrap">{{ donation.formattedAmount }}</div>
         </div>
       }
     </div>

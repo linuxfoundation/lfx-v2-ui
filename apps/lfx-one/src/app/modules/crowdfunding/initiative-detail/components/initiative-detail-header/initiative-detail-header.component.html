@@ -72,14 +72,14 @@
 
   <!-- Tab bar -->
   <div class="border-t border-gray-200 flex items-center px-2" data-testid="initiative-tab-bar">
-    @for (tab of tabOptions; track tab.id) {
+    @for (tab of tabOptions; track tab.value) {
       <button
         class="relative px-4 py-3 text-sm font-medium transition-colors"
-        [class]="activeTab() === tab.id ? 'text-blue-600' : 'text-gray-500 hover:text-gray-900'"
-        (click)="tabChange.emit(tab.id)"
-        [attr.data-testid]="'initiative-tab-' + tab.id">
+        [class]="activeTab() === tab.value ? 'text-blue-600' : 'text-gray-500 hover:text-gray-900'"
+        (click)="tabChange.emit(tab.value)"
+        [attr.data-testid]="'initiative-tab-' + tab.value">
         {{ tab.label }}
-        @if (activeTab() === tab.id) {
+        @if (activeTab() === tab.value) {
           <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
         }
       </button>
