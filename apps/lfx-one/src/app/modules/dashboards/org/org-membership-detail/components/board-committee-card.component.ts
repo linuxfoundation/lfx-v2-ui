@@ -213,7 +213,7 @@ export class BoardCommitteeCardComponent {
   protected onReassignSubmit(event: ReassignSubmitEvent): void {
     const initials = (event.body.firstName.charAt(0) + event.body.lastName.charAt(0)).toUpperCase();
     const tempPerson: OrgMembershipKeyContactPerson = {
-      personId: `temp-${crypto.randomUUID()}`,
+      personId: `temp-${this.generateUuid()}`,
       firstName: event.body.firstName,
       lastName: event.body.lastName,
       fullName: `${event.body.firstName} ${event.body.lastName}`,
@@ -322,5 +322,12 @@ export class BoardCommitteeCardComponent {
     const term = this.searchTerm().trim().toLowerCase();
     if (!term) return rows;
     return rows.filter((r) => r.person.fullName.toLowerCase().includes(term) || r.person.email.toLowerCase().includes(term));
+  }
+
+  private generateUuid(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+    return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   }
 }

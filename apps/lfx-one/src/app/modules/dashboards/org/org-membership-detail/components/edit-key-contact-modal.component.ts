@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectorRef, Component, computed, effect, inject, input, model, output, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, DestroyRef, effect, inject, input, model, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import type { OrgMembershipKeyContact, OrgMembershipKeyContactPerson, OrgMembershipKeyContactType } from '@lfx-one/shared/interfaces';
 import { DialogModule } from 'primeng/dialog';
@@ -39,6 +39,10 @@ type ModalKind = 'closed' | 'replace-form' | 'chooser' | 'add-form' | 'remove-li
 })
 export class EditKeyContactModalComponent {
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly destroyRef = inject(DestroyRef);
+
+  /** Save timer handle so we can cancel on destroy. */
+  private saveTimerId: ReturnType<typeof setTimeout> | null = null;
 
   // === Two-way bound visibility ===
   public readonly visible = model<boolean>(false);
@@ -148,6 +152,13 @@ export class EditKeyContactModalComponent {
         this.modalKind.set(initial);
       } else {
         this.modalKind.set('closed');
+      }
+    });
+
+    this.destroyRef.onDestroy(() => {
+      if (this.saveTimerId !== null) {
+        clearTimeout(this.saveTimerId);
+        this.saveTimerId = null;
       }
     });
   }
@@ -311,10 +322,10 @@ export class EditKeyContactModalComponent {
 
   // === Private helpers ===
 
-  // FR-018a — wraps any save flow with the 400 ms loading state
   private simulateSave(then: () => void): void {
     this.isSaving.set(true);
-    setTimeout(() => {
+    this.saveTimerId = setTimeout(() => {
+      this.saveTimerId = null;
       try {
         then();
       } finally {

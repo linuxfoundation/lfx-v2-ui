@@ -218,10 +218,10 @@ export class OrgLensMembershipsService {
   }
 
   // GET /api/orgs/:accountId/lens/memberships/:foundationId — FR-024 to FR-026b.
-  // v1 mock: foundation header derived from the existing active-memberships data
-  // (or a generic stub for unknown foundationId), keyContacts is the shared fixture.
-  // No network I/O beyond the underlying Snowflake call already made by
-  // getActiveMemberships for the header lookup.
+  // v1: foundation header derived by calling getActiveMemberships (which queries
+  // Snowflake) then matching the foundationId. Unknown IDs fall back to a generic
+  // stub. keyContacts are from the shared fixture (no additional I/O beyond the
+  // Snowflake call in getActiveMemberships).
   public async getMembershipDetail(accountId: string, foundationId: string): Promise<OrgMembershipDetailResponse> {
     const activeResponse = await this.getActiveMemberships(accountId);
     const knownFoundation = activeResponse.memberships.find((m) => m.foundationId === foundationId);
