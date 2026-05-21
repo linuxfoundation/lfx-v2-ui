@@ -156,3 +156,6 @@ export * from './marketing-impact.interface';
 
 // Enrollment interfaces
 export * from './enrollment.interface';
+
+// Crowdfunding interfaces
+export * from './crowdfunding.interface';
