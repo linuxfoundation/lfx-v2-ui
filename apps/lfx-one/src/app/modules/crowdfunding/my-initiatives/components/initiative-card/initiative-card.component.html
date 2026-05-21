@@ -12,14 +12,8 @@
   [attr.data-testid]="'initiative-card-' + initiative().id"
   (click)="onCardClick()"
   (keydown.enter)="onCardClick()">
-
   <!-- Avatar / Icon -->
-  <lfx-avatar
-    [label]="initiative().name"
-    shape="square"
-    size="large"
-    [styleClass]="avatarStyleClass()"
-    [ariaLabel]="fundTypeLabel() + ' initiative icon'" />
+  <lfx-avatar [label]="initiative().name" shape="square" size="large" [styleClass]="avatarStyleClass()" [ariaLabel]="fundTypeLabel() + ' initiative icon'" />
 
   <!-- Content -->
   <div class="flex flex-col gap-1 min-w-0 flex-1">

@@ -30,3 +30,10 @@ export const CROWDFUNDING_FUND_TYPE_AVATAR_CLASSES: Record<FundType, string> = {
   [FundType.MENTORSHIP]: 'rounded-xl bg-emerald-100 !text-emerald-700',
   [FundType.EVENT]: 'rounded-xl bg-blue-100 !text-blue-700',
 };
+
+export const CROWDFUNDING_DONOR_AVATAR_PALETTE: string[] = [
+  'bg-blue-100 !text-blue-700',
+  'bg-violet-100 !text-violet-700',
+  'bg-emerald-100 !text-emerald-700',
+  'bg-amber-100 !text-amber-700',
+];

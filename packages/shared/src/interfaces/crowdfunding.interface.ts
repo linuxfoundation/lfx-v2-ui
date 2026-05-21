@@ -24,3 +24,30 @@ export interface CrowdfundingInitiativesStats {
   monthlyGain: number;
   totalSponsors: number;
 }
+
+export interface AllocationItem {
+  name: string;
+  spent: number;
+  total: number;
+  pct: number;
+}
+
+export interface DonationTransaction {
+  who: string;
+  org?: boolean;
+  amount: number;
+  date: string;
+}
+
+export interface CrowdfundingInitiativeDetail extends CrowdfundingInitiative {
+  about: string;
+  balance: number;
+  monthlyDelta: number;
+  tags: string[];
+  alloc: AllocationItem[];
+  donationsIn: DonationTransaction[];
+  donationsOut: DonationTransaction[];
+  matchLabel?: string;
+  matchDesc?: string;
+  matchPct?: number;
+}
