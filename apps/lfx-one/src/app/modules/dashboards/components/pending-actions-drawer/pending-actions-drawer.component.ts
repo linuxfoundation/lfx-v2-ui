@@ -85,10 +85,12 @@ export class PendingActionsDrawerComponent {
 
   protected handleRsvpSubmit(item: DrawerActionRow, rsvp: MeetingRsvp): void {
     this.messageService.add({
+      key: 'pending-actions-toast',
       severity: 'success',
       summary: 'RSVP saved',
-      detail: `RSVP '${this.formatResponse(rsvp.response_type)}' saved for ${item.text}`,
-      life: 3000,
+      detail: `You responded '${this.formatResponse(rsvp.response_type)}' to ${item.text}`,
+      data: item.meetingUid ? { meetingHref: `/meetings/${item.meetingUid}/details`, meetingTitle: item.text } : undefined,
+      life: 5000,
     });
     this.startCompletion(item);
   }

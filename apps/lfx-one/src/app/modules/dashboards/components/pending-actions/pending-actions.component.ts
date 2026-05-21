@@ -12,6 +12,7 @@ import { MeetingService } from '@services/meeting.service';
 import { HiddenActionsService } from '@shared/services/hidden-actions.service';
 import { MessageService } from 'primeng/api';
 import { SkeletonModule } from 'primeng/skeleton';
+import { ToastModule } from 'primeng/toast';
 import { timer } from 'rxjs';
 
 import type { DecoratedPendingAction, Meeting, MeetingRsvp, PendingActionItem, RsvpResponse } from '@lfx-one/shared/interfaces';
@@ -23,7 +24,7 @@ const SKELETON_HOLD_MS = 500;
 
 @Component({
   selector: 'lfx-pending-actions',
-  imports: [ButtonComponent, TagComponent, RsvpButtonGroupComponent, PendingActionsDrawerComponent, SkeletonModule],
+  imports: [ButtonComponent, TagComponent, RsvpButtonGroupComponent, PendingActionsDrawerComponent, SkeletonModule, ToastModule],
   templateUrl: './pending-actions.component.html',
   styleUrl: './pending-actions.component.scss',
 })
@@ -82,10 +83,12 @@ export class PendingActionsComponent {
 
   protected handleRsvpSubmit(item: DecoratedPendingAction, rsvp: MeetingRsvp): void {
     this.messageService.add({
+      key: 'pending-actions-toast',
       severity: 'success',
       summary: 'RSVP saved',
-      detail: `RSVP '${this.formatResponse(rsvp.response_type)}' saved for ${item.text}`,
-      life: 3000,
+      detail: `You responded '${this.formatResponse(rsvp.response_type)}' to ${item.text}`,
+      data: item.meetingUid ? { meetingHref: `/meetings/${item.meetingUid}/details`, meetingTitle: item.text } : undefined,
+      life: 5000,
     });
     this.startCompletion(item, { withSkeleton: true });
   }
