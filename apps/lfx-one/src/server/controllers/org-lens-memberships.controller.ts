@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { SALESFORCE_ACCOUNT_ID_PATTERN } from '@lfx-one/shared/constants';
+import { FOUNDATION_ID_PATTERN, SALESFORCE_ACCOUNT_ID_PATTERN } from '@lfx-one/shared/constants';
 import { NextFunction, Request, Response } from 'express';
 
 import { ServiceValidationError } from '../errors';
@@ -82,9 +82,9 @@ export class OrgLensMembershipsController {
 
     try {
       this.assertAccountId(accountId, 'get_org_membership_detail');
-      // foundationId requires no format validation per FR-026b — unknown IDs return a generic stub header
+      this.assertFoundationId(foundationId, 'get_org_membership_detail');
 
-      const response = await this.service.getMembershipDetail(accountId, foundationId as string);
+      const response = await this.service.getMembershipDetail(accountId, foundationId);
 
       logger.success(req, 'get_org_membership_detail', startTime, {
         account_id: accountId,
@@ -129,6 +129,15 @@ export class OrgLensMembershipsController {
     }
     if (!SALESFORCE_ACCOUNT_ID_PATTERN.test(accountId)) {
       throw ServiceValidationError.forField('accountId', 'Invalid Salesforce accountId format', { operation });
+    }
+  }
+
+  private assertFoundationId(foundationId: string | undefined, operation: string): asserts foundationId is string {
+    if (!foundationId || typeof foundationId !== 'string') {
+      throw ServiceValidationError.forField('foundationId', 'foundationId path parameter is required', { operation });
+    }
+    if (!FOUNDATION_ID_PATTERN.test(foundationId)) {
+      throw ServiceValidationError.forField('foundationId', 'Invalid foundationId format', { operation });
     }
   }
 }

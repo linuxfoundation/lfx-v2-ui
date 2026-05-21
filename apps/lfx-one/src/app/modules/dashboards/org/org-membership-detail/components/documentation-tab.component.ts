@@ -99,6 +99,9 @@ export class DocumentationTabComponent {
 
   private formatDateShort(dateString: string): string {
     if (!dateString) return '—';
-    return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+    const parts = dateString.split('-').map(Number);
+    if (parts.length !== 3 || parts.some(Number.isNaN)) return dateString;
+    const [year, month, day] = parts as [number, number, number];
+    return new Date(year, month - 1, day).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
   }
 }

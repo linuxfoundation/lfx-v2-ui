@@ -14,9 +14,9 @@ export const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9
 export const SALESFORCE_ACCOUNT_ID_PATTERN = /^001[A-Za-z0-9]{12,15}$/;
 
 /**
- * Foundation / seat / vote identifier — mixed-case alphanumerics + hyphens, length 1–64.
- * Used at the SSR boundary (spec 016 FR-009j) to validate `foundationId`, `seatId`,
- * and `voteId` path parameters on the Board & Committee endpoints.
+ * General-purpose SSR path parameter validator — mixed-case alphanumerics + hyphens, length 1-64.
+ * Currently used to validate `foundationId` path parameters on the Org Lens membership
+ * and Board & Committee SSR endpoints.
  *
  * Allowed values intentionally span three legitimate id shapes the SSR layer sees:
  *   1. Salesforce 18-char custom-object IDs (e.g. "a0941000002wBz2AAE") — the
