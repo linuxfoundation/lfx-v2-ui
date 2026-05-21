@@ -51,8 +51,11 @@
             <td class="px-4 py-3 text-right">
               <button
                 type="button"
-                class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 border border-gray-200 rounded px-2 py-1 hover:bg-gray-50 hover:border-gray-300 transition-colors"
-                [attr.aria-label]="'Download invoice for ' + item.initiativeName + ' on ' + item.date">
+                class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-400 border border-gray-200 rounded px-2 py-1 opacity-60 cursor-not-allowed"
+                [attr.aria-label]="'Download invoice for ' + item.initiativeName + ' on ' + item.date"
+                title="Invoice downloads coming soon"
+                disabled
+                aria-disabled="true">
                 <i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i>
                 Invoice
               </button>

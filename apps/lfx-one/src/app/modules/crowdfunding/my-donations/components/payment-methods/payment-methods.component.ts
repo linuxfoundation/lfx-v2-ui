@@ -3,7 +3,7 @@
 
 import { Component, inject, input, output } from '@angular/core';
 import { PaymentMethod } from '@lfx-one/shared/interfaces';
-import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
+import { DialogService } from 'primeng/dynamicdialog';
 import { AddPaymentCardDialogComponent } from '../add-payment-card-dialog/add-payment-card-dialog.component';
 import { PaymentMethodCardComponent } from '../payment-method-card/payment-method-card.component';
 
@@ -20,10 +20,8 @@ export class PaymentMethodsComponent {
   public readonly methods = input.required<PaymentMethod[]>();
   public readonly removeCard = output<PaymentMethod>();
 
-  private dialogRef: DynamicDialogRef | null = null;
-
   protected openAddCardDialog(): void {
-    this.dialogRef = this.dialogService.open(AddPaymentCardDialogComponent, {
+    this.dialogService.open(AddPaymentCardDialogComponent, {
       header: 'Add Payment Card',
       width: '420px',
       modal: true,

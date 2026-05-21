@@ -20,9 +20,9 @@ export class AddPaymentCardDialogComponent {
   private readonly dialogRef = inject(DynamicDialogRef);
 
   protected readonly form = new FormGroup({
-    cardNumber: new FormControl('', [Validators.required, Validators.minLength(19)]),
-    expiry: new FormControl('', [Validators.required, Validators.pattern(/^\d{2}\/\d{2}$/)]),
-    cvc: new FormControl('', [Validators.required, Validators.minLength(3)]),
+    cardNumber: new FormControl('', [Validators.required, Validators.pattern(/^(\d{4} ){3}\d{4}$/)]),
+    expiry: new FormControl('', [Validators.required, Validators.pattern(/^(0[1-9]|1[0-2])\/\d{2}$/)]),
+    cvc: new FormControl('', [Validators.required, Validators.pattern(/^\d{3,4}$/)]),
   });
 
   protected onCardNumberInput(event: Event): void {

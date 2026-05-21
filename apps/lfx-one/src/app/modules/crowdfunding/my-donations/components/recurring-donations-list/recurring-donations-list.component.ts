@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, input, output, viewChildren } from '@angular/core';
+import { Component, computed, input, output, Signal, viewChildren } from '@angular/core';
 import { ButtonComponent } from '@components/button/button.component';
 import { MenuComponent } from '@components/menu/menu.component';
 import { RecurringDonation } from '@lfx-one/shared/interfaces';
@@ -25,15 +25,19 @@ export class RecurringDonationsListComponent {
 
   private readonly menus = viewChildren<MenuComponent>(MenuComponent);
 
-  protected readonly donationsWithMenuItems = computed(() =>
-    this.donations().map((donation) => ({
-      donation,
-      menuItems: this.buildMenuItems(donation),
-    }))
-  );
+  protected readonly donationsWithMenuItems = this.initDonationsWithMenuItems();
 
   protected onMenuToggle(event: Event, index: number): void {
     this.menus()[index]?.toggle(event);
+  }
+
+  private initDonationsWithMenuItems(): Signal<{ donation: RecurringDonation; menuItems: MenuItem[] }[]> {
+    return computed(() =>
+      this.donations().map((donation) => ({
+        donation,
+        menuItems: this.buildMenuItems(donation),
+      }))
+    );
   }
 
   private buildMenuItems(donation: RecurringDonation): MenuItem[] {

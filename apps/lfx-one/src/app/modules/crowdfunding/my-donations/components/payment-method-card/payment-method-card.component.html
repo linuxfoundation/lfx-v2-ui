@@ -8,17 +8,6 @@
       {{ method().brand }}
     </span>
     <div class="flex items-center gap-1">
-      <button
-        type="button"
-        class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded"
-        [attr.aria-label]="revealed() ? 'Hide card details' : 'Show card details'"
-        (click)="toggleReveal()">
-        @if (revealed()) {
-          <i class="fa-solid fa-eye-slash text-sm" aria-hidden="true"></i>
-        } @else {
-          <i class="fa-solid fa-eye text-sm" aria-hidden="true"></i>
-        }
-      </button>
       <button type="button" class="p-1.5 text-gray-400 hover:text-red-500 transition-colors rounded" aria-label="Remove payment method" (click)="remove.emit()">
         <i class="fa-solid fa-trash text-sm" aria-hidden="true"></i>
       </button>

@@ -19,9 +19,7 @@
   <!-- Cards -->
   <div class="flex flex-col gap-2" data-testid="recurring-cards">
     @for (entry of donationsWithMenuItems(); track entry.donation.id; let i = $index) {
-      <div
-        class="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors cursor-pointer"
-        [attr.data-testid]="'recurring-card-' + entry.donation.id">
+      <div class="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-lg" [attr.data-testid]="'recurring-card-' + entry.donation.id">
         <!-- Icon -->
         <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-gray-50 text-xl flex-shrink-0" aria-hidden="true">
           {{ entry.donation.icon }}
@@ -64,13 +62,13 @@
             (click)="onMenuToggle($event, i)" />
           <lfx-menu [model]="entry.menuItems" [popup]="true" appendTo="body">
             <ng-template #item let-item>
-              <button
+              <div
                 class="flex items-center gap-2 w-full px-3 py-2 text-sm transition-colors hover:bg-gray-50"
                 [class.text-red-600]="item.styleClass === 'text-red-600'"
                 [class.text-gray-700]="item.styleClass !== 'text-red-600'">
                 <i [class]="item.icon + ' text-xs'" aria-hidden="true"></i>
                 {{ item.label }}
-              </button>
+              </div>
             </ng-template>
           </lfx-menu>
         </div>
