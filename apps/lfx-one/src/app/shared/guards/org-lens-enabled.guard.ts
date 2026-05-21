@@ -26,5 +26,5 @@ export const orgLensEnabledGuard: CanMatchFn = async () => {
     }
   }
 
-  return featureFlagService.getBooleanFlag('org-lens-enabled', false)() ? true : router.parseUrl('/');
+  return featureFlagService.getBooleanFlag('org-lens-enabled', true)() ? true : router.parseUrl('/');
 };

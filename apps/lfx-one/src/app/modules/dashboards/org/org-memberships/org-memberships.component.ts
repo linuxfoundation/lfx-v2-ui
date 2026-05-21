@@ -4,6 +4,7 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { catchError, combineLatest, filter, of, switchMap, take, tap } from 'rxjs';
 import { TooltipModule } from 'primeng/tooltip';
 import { SelectModule } from 'primeng/select';
@@ -32,7 +33,7 @@ interface DropdownOption {
 @Component({
   selector: 'lfx-org-memberships',
   standalone: true,
-  imports: [FormsModule, TableComponent, TooltipModule, SelectModule, InputTextModule, CardComponent, EmptyStateComponent],
+  imports: [FormsModule, RouterLink, TableComponent, TooltipModule, SelectModule, InputTextModule, CardComponent, EmptyStateComponent],
   templateUrl: './org-memberships.component.html',
 })
 export class OrgMembershipsComponent {

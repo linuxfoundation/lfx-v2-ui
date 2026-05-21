@@ -20,7 +20,7 @@ export class LensService {
   private readonly featureFlagService = inject(FeatureFlagService);
 
   /** Dark-launch gate; off by default until the LaunchDarkly flag is flipped. */
-  private readonly isOrgLensEnabled = this.featureFlagService.getBooleanFlag('org-lens-enabled', false);
+  private readonly isOrgLensEnabled = this.featureFlagService.getBooleanFlag('org-lens-enabled', true);
 
   private readonly selectedLens: WritableSignal<Lens>;
 

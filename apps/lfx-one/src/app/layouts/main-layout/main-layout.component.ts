@@ -44,7 +44,7 @@ export class MainLayoutComponent {
   protected readonly userService = inject(UserService);
 
   /** Dark-launch gate; falls back to Me Lens nav when off. */
-  private readonly isOrgLensEnabled = this.featureFlagService.getBooleanFlag('org-lens-enabled', false);
+  private readonly isOrgLensEnabled = this.featureFlagService.getBooleanFlag('org-lens-enabled', true);
 
   // Expose mobile sidebar state from service (writable for two-way binding with p-drawer)
   protected readonly showMobileSidebar = this.appService.showMobileSidebar;

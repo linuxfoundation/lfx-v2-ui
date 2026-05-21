@@ -71,6 +71,34 @@ export class OrgLensMembershipsController {
     }
   }
 
+  /** GET /api/orgs/:accountId/lens/memberships/:foundationId */
+  public async getMembershipDetail(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const accountId = req.params['accountId'];
+    const foundationId = req.params['foundationId'];
+    const startTime = logger.startOperation(req, 'get_org_membership_detail', {
+      account_id: accountId,
+      foundation_id: foundationId,
+    });
+
+    try {
+      this.assertAccountId(accountId, 'get_org_membership_detail');
+      // foundationId requires no format validation per FR-026b — unknown IDs return a generic stub header
+
+      const response = await this.service.getMembershipDetail(accountId, foundationId as string);
+
+      logger.success(req, 'get_org_membership_detail', startTime, {
+        account_id: accountId,
+        foundation_id: foundationId,
+        contact_count: response.keyContacts.reduce((acc, c) => acc + c.people.length, 0),
+      });
+
+      res.setHeader('Cache-Control', 'no-store');
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   /** GET /api/orgs/:accountId/lens/memberships/discover */
   public async getDiscoverOpportunities(req: Request, res: Response, next: NextFunction): Promise<void> {
     const accountId = req.params['accountId'];

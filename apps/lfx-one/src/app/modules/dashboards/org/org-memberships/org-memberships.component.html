@@ -145,7 +145,10 @@
             <ng-template #body let-membership>
               <tr>
                 <td>
-                  <div class="flex items-center gap-3">
+                  <a
+                    [routerLink]="['/org/memberships', membership.foundationId]"
+                    [attr.data-testid]="'memberships-active-row-link-' + membership.foundationId"
+                    class="flex items-center gap-3 -mx-2 -my-1.5 px-2 py-1.5 rounded-md hover:bg-gray-50 transition-colors no-underline">
                     @if (membership.foundationLogo) {
                       <img [src]="membership.foundationLogo" [alt]="membership.foundationName" class="w-10 h-10 rounded-lg object-contain flex-shrink-0" />
                     } @else {
@@ -157,7 +160,7 @@
                       <span class="font-medium text-gray-900">{{ membership.foundationName }}</span>
                       <span class="text-xs text-gray-500">{{ membership.projectCount }} projects · {{ membership.memberCount }} members</span>
                     </div>
-                  </div>
+                  </a>
                 </td>
                 <td>
                   <div class="flex flex-col">

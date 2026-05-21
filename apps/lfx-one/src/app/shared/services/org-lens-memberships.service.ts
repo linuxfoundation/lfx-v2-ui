@@ -3,7 +3,13 @@
 
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import type { OrgActiveMembershipsResponse, OrgDiscoverOpportunitiesResponse, OrgExpiredMembershipsResponse } from '@lfx-one/shared/interfaces';
+import type {
+  OrgActiveMembershipsResponse,
+  OrgDiscoverOpportunitiesResponse,
+  OrgExpiredMembershipsResponse,
+  OrgMembershipDetailResponse,
+  OrgMembershipDocumentsResponse,
+} from '@lfx-one/shared/interfaces';
 import { Observable } from 'rxjs';
 
 @Injectable({
@@ -28,5 +34,15 @@ export class OrgLensMembershipsService {
 
   public getDiscoverOpportunities(accountId: string): Observable<OrgDiscoverOpportunitiesResponse> {
     return this.http.get<OrgDiscoverOpportunitiesResponse>(`/api/orgs/${encodeURIComponent(accountId)}/lens/memberships/discover`);
+  }
+
+  public getMembershipDetail(accountId: string, foundationId: string): Observable<OrgMembershipDetailResponse> {
+    return this.http.get<OrgMembershipDetailResponse>(`/api/orgs/${encodeURIComponent(accountId)}/lens/memberships/${encodeURIComponent(foundationId)}`);
+  }
+
+  public getMembershipDocuments(accountId: string, foundationId: string): Observable<OrgMembershipDocumentsResponse> {
+    return this.http.get<OrgMembershipDocumentsResponse>(
+      `/api/orgs/${encodeURIComponent(accountId)}/lens/memberships/${encodeURIComponent(foundationId)}/documents`
+    );
   }
 }
