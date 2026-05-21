@@ -92,8 +92,10 @@ Review criteria:
 
 **Style Consistency**:
 
-- Does the code match the style of surrounding code?
-- Are project-specific conventions followed (from CLAUDE.md or similar)?
+- Does the code match the style of surrounding code in the changed files?
+- Is formatting/style internally consistent and readable?
+
+(Project-specific conventions live in Step 3 — do not enforce them here; Step 2 is intentionally untainted by repo-specific framing.)
 
 Findings here go in the **General review** section of the Step 5 report. The cross-check discipline in Step 3.2 does NOT apply; your native concrete-failure-mode standard is the bar. Apply the report's ≥80 confidence floor and Critical / Important grouping (see Severity calibration below).
 
