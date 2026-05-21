@@ -34,12 +34,7 @@ export class AccountContextService {
 
   public readonly selectedAccount: WritableSignal<Account>;
 
-  /**
-   * Accounts visible in the org-selector — one row per persona-authorised
-   * account, enriched with Snowflake display attributes once available,
-   * falling back to bare seed records while live data is loading so the
-   * selector is never empty between bootstrap and the first response.
-   */
+  /** Org-selector rows — persona seeds enriched with live Snowflake attributes; never empty between bootstrap and first response. */
   public readonly availableAccounts: Signal<Account[]> = computed(() => {
     const seeds = this.userOrganizations();
     const live = this.liveAccounts();
@@ -61,20 +56,11 @@ export class AccountContextService {
   });
 
   public constructor() {
-    /**
-     * Start on the placeholder; the stored cookie only contributes an accountId for
-     * later reconciliation against persona seeds — display fields are never trusted
-     * from the cookie, so a tampered value cannot spoof accountName/logoUrl/tier in
-     * the brief window before initializeUserOrganizations() resolves selection.
-     */
+    // Bootstrap on the placeholder; cookie only contributes accountId for later seed reconciliation — display fields never come from the cookie.
     this.selectedAccount = signal<Account>(PLACEHOLDER_ACCOUNT);
   }
 
-  /**
-   * Seed persona-authorised orgs and trigger Snowflake enrichment. Selection is
-   * matched against the seeds by the stored accountId; display attributes always
-   * come from the seed or the live Snowflake response, never from the cookie.
-   */
+  /** Seed persona-authorised orgs and trigger Snowflake enrichment; selection matches by stored accountId only — display attributes always come from seeds or live response. */
   public initializeUserOrganizations(organizations: Account[]): void {
     const seeds = organizations ?? [];
     this.userOrganizations.set(seeds);
