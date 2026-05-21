@@ -84,7 +84,7 @@ export const routes: Routes = [
           {
             path: 'memberships',
             data: { lens: 'org', title: 'Memberships', description: 'Active memberships and tier history.', icon: 'fa-light fa-display' },
-            loadComponent: loadOrgPlaceholderPage,
+            loadComponent: () => import('./modules/dashboards/org/org-memberships/org-memberships.component').then((m) => m.OrgMembershipsComponent),
           },
           {
             path: 'projects',
