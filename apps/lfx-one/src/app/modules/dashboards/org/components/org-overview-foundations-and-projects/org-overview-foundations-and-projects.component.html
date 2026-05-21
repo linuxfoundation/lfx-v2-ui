@@ -2,7 +2,6 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <section class="flex flex-col gap-4" data-testid="org-overview-foundations-and-projects-section">
-  <!-- Section header -->
   <header class="flex flex-col gap-1 md:flex-row md:items-center md:justify-between md:gap-3" data-testid="org-overview-foundations-and-projects-header">
     <h2 class="flex items-center gap-2 text-base font-medium text-gray-900" data-testid="org-overview-foundations-and-projects-title">
       <i class="fa-light fa-layer-group text-sm text-gray-500" aria-hidden="true"></i>
@@ -17,7 +16,6 @@
   </header>
 
   @if (loading()) {
-    <!-- Loading skeleton — mutually exclusive with error/data -->
     <div class="flex flex-col gap-4" data-testid="org-overview-foundations-and-projects-loading-skeleton">
       <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         @for (i of [1, 2, 3, 4]; track i) {
@@ -35,7 +33,6 @@
       </div>
     </div>
   } @else if (error()) {
-    <!-- Retry affordance -->
     <div class="flex flex-col items-start gap-3 p-4 bg-white border border-gray-200 rounded-lg" data-testid="org-overview-foundations-and-projects-error">
       <p class="text-sm text-gray-700">Couldn't load Foundations and Projects.</p>
       <button
@@ -47,14 +44,11 @@
       </button>
     </div>
   } @else {
-    <!-- Stat strip -->
     <lfx-foundations-stat-strip [strip]="statStrip()" />
 
     @if (isEmpty()) {
-      <!-- Empty state -->
       <p class="italic text-gray-500 text-sm" data-testid="org-overview-foundations-and-projects-empty">No foundations or projects yet.</p>
     } @else {
-      <!-- Foundations table (sort order is preserved by the BFF) -->
       <div class="bg-white border border-gray-200 rounded-lg overflow-hidden" data-testid="org-overview-foundations-and-projects-table">
         <table class="w-full text-sm">
           <thead class="bg-gray-50">
@@ -69,12 +63,12 @@
             @for (row of rows(); track row.foundationId; let i = $index) {
               <lfx-foundation-row
                 [row]="row"
-                [expanded]="isExpanded(row.foundationId)"
+                [expanded]="!!expansionMap()[row.foundationId]"
                 [index]="i"
                 (toggle)="toggleExpansion(row.foundationId)"
                 (rowClick)="onRowClick($event)"
                 (caretToggle)="onCaretToggle($event)" />
-              @if (isExpanded(row.foundationId)) {
+              @if (expansionMap()[row.foundationId]) {
                 <tr class="bg-gray-50" [attr.data-testid]="'org-overview-foundations-and-projects-row-' + (row.foundationSlug || row.foundationId) + '-detail'">
                   <td colspan="4" class="px-12 py-4">
                     @if (row.projects.length === 0) {
@@ -110,21 +104,33 @@
                                 'org-overview-foundations-and-projects-row-' +
                                 (row.foundationSlug || row.foundationId) +
                                 '-project-' +
-                                projectSlugTestId(project.projectSlug, project.projectId)
+                                (project.projectSlug && project.projectSlug.length > 0 ? project.projectSlug : project.projectId)
                               ">
                               <td class="py-2">
                                 <span class="inline-flex items-center gap-2">
-                                  <span
-                                    class="inline-block w-2 h-2 rounded-full"
-                                    [class]="influenceDotClasses(project.influence)"
-                                    [attr.aria-label]="project.influence + ' influence'"></span>
+                                  @switch (project.influence) {
+                                    @case ('Leading') {
+                                      <span
+                                        class="inline-block w-2 h-2 rounded-full bg-emerald-700"
+                                        [attr.aria-label]="project.influence + ' influence'"></span>
+                                    }
+                                    @case ('Contributing') {
+                                      <span class="inline-block w-2 h-2 rounded-full bg-blue-500" [attr.aria-label]="project.influence + ' influence'"></span>
+                                    }
+                                    @case ('Participating') {
+                                      <span class="inline-block w-2 h-2 rounded-full bg-amber-500" [attr.aria-label]="project.influence + ' influence'"></span>
+                                    }
+                                    @default {
+                                      <span class="inline-block w-2 h-2 rounded-full bg-gray-400" [attr.aria-label]="project.influence + ' influence'"></span>
+                                    }
+                                  }
                                   <span class="text-gray-900">{{ project.projectName }}</span>
                                 </span>
                               </td>
-                              <td class="py-2 text-right text-gray-700">{{ project.maintainers.toLocaleString() }}</td>
-                              <td class="py-2 text-right text-gray-700">{{ project.contributors.toLocaleString() }}</td>
-                              <td class="py-2 text-right text-gray-700">{{ project.collaborators.toLocaleString() }}</td>
-                              <td class="py-2 text-right text-gray-700">{{ project.commits.toLocaleString() }}</td>
+                              <td class="py-2 text-right text-gray-700">{{ project.maintainers | number }}</td>
+                              <td class="py-2 text-right text-gray-700">{{ project.contributors | number }}</td>
+                              <td class="py-2 text-right text-gray-700">{{ project.collaborators | number }}</td>
+                              <td class="py-2 text-right text-gray-700">{{ project.commits | number }}</td>
                             </tr>
                           }
                         </tbody>
