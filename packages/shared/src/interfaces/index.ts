@@ -183,3 +183,8 @@ export * from './email-service.interface';
 
 // Invite interfaces
 export * from './invite.interface';
+// Crowdfunding interfaces
+export * from './crowdfunding.interface';
+
+// Donut chart interfaces
+export * from './donut-chart.interface';
