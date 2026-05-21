@@ -207,13 +207,7 @@ export class AnalyticsService {
     );
   }
 
-  /**
-   * Bootstrap the Org Lens account context for the user's persona-authorised
-   * Salesforce accounts. Returns a single denormalised row per account_id
-   * with display attributes, Crowd.dev mapping, and the highest active
-   * corporate membership tier — drives both the org-selector dropdown and
-   * the header badge.
-   */
+  /** Resolve display attributes + tier for the persona-authorised account IDs (drives selector + header badge). */
   public getOrgLensAccountContext(accountIds: string[]): Observable<OrgLensAccountContextResponse[]> {
     if (accountIds.length === 0) {
       return of([]);

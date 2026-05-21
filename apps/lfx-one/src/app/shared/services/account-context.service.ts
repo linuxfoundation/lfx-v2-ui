@@ -26,20 +26,10 @@ export class AccountContextService {
   private readonly analyticsService = inject(AnalyticsService);
   private readonly storageKey = ACCOUNT_COOKIE_KEY;
 
-  /**
-   * Seed organizations from the persona service — the accounts the
-   * current user is authorised to see. Display attributes (slug, logo,
-   * tier) are resolved from Snowflake via getOrgLensAccountContext.
-   */
+  /** Persona-authorised accounts seeded at bootstrap; enriched from Snowflake via getOrgLensAccountContext. */
   private readonly userOrganizations: WritableSignal<Account[]> = signal<Account[]>([]);
 
-  private readonly initialized: WritableSignal<boolean> = signal<boolean>(false);
-
-  /**
-   * Snowflake-resolved Account records keyed by accountId. Flat — the
-   * UI renders one entry per account regardless of any Salesforce
-   * conglomerate hierarchy that may exist behind the scenes.
-   */
+  /** Snowflake-resolved Account records keyed by accountId; flat regardless of Salesforce conglomerate hierarchy. */
   private readonly liveAccounts: WritableSignal<Map<string, Account>> = signal(new Map());
 
   public readonly selectedAccount: WritableSignal<Account>;
@@ -71,33 +61,34 @@ export class AccountContextService {
   });
 
   public constructor() {
-    const stored = this.loadFromStorage();
-    this.selectedAccount = signal<Account>(stored ?? PLACEHOLDER_ACCOUNT);
+    /**
+     * Start on the placeholder; the stored cookie only contributes an accountId for
+     * later reconciliation against persona seeds — display fields are never trusted
+     * from the cookie, so a tampered value cannot spoof accountName/logoUrl/tier in
+     * the brief window before initializeUserOrganizations() resolves selection.
+     */
+    this.selectedAccount = signal<Account>(PLACEHOLDER_ACCOUNT);
   }
 
   /**
-   * Initialize user organizations from auth context (SSR state transfer).
-   *
-   * Sets the seed list from the persona service, then fetches
-   * /api/analytics/org-lens-account-context to enrich each seed with
-   * its Snowflake display attributes (slug, logo, cdev mapping, tier).
-   * Selection is reconciled against the seeds and re-enriched once the
-   * live data arrives.
+   * Seed persona-authorised orgs and trigger Snowflake enrichment. Selection is
+   * matched against the seeds by the stored accountId; display attributes always
+   * come from the seed or the live Snowflake response, never from the cookie.
    */
   public initializeUserOrganizations(organizations: Account[]): void {
-    this.initialized.set(true);
     const seeds = organizations ?? [];
     this.userOrganizations.set(seeds);
 
-    if (seeds.length > 0) {
-      const stored = this.loadFromStorage();
-      const matchedSeed = stored ? (seeds.find((seed) => seed.accountId === stored.accountId) ?? null) : null;
-      if (matchedSeed) {
-        this.setAccount(matchedSeed);
-      } else {
-        this.setAccount(seeds[0]);
-      }
+    if (seeds.length === 0) {
+      this.liveAccounts.set(new Map());
+      this.selectedAccount.set(PLACEHOLDER_ACCOUNT);
+      this.clearStorage();
+      return;
     }
+
+    const storedId = this.loadAccountIdFromStorage();
+    const matchedSeed = storedId ? (seeds.find((seed) => seed.accountId === storedId) ?? null) : null;
+    this.setAccount(matchedSeed ?? seeds[0]);
 
     this.refreshFromSnowflake(seeds.map((seed) => seed.accountId));
   }
@@ -164,8 +155,13 @@ export class AccountContextService {
     };
   }
 
+  /** Persist only the accountId — display fields stay in memory and are always re-hydrated from persona seeds + Snowflake. */
   private persistToStorage(account: Account): void {
-    this.cookieService.set(this.storageKey, JSON.stringify(account), {
+    if (!this.isValidAccountId(account.accountId)) {
+      this.clearStorage();
+      return;
+    }
+    this.cookieService.set(this.storageKey, JSON.stringify({ accountId: account.accountId }), {
       expires: 30,
       path: '/',
       sameSite: 'Lax',
@@ -174,25 +170,25 @@ export class AccountContextService {
     this.cookieRegistry.registerCookie(this.storageKey);
   }
 
-  private loadFromStorage(): Account | null {
+  private clearStorage(): void {
+    this.cookieService.delete(this.storageKey, '/');
+  }
+
+  /** Returns the validated accountId from the cookie, or null. Display fields are ignored on purpose. */
+  private loadAccountIdFromStorage(): string | null {
     try {
       const stored = this.cookieService.get(this.storageKey);
       if (!stored) {
         return null;
       }
-      const parsed = JSON.parse(stored) as Account;
-      if (!this.isValidAccountId(parsed?.accountId)) {
-        return null;
-      }
-      return parsed;
+      const parsed = JSON.parse(stored) as Partial<Account>;
+      return this.isValidAccountId(parsed?.accountId) ? parsed.accountId : null;
     } catch {
       return null;
     }
   }
 
-  // Salesforce account ids are 15- or 18-char alphanumeric strings.
-  // Reject anything else so a tampered cookie can't seed selectedAccount with
-  // an invalid id before persona init reconciles.
+  /** Salesforce account ids are 15- or 18-char alphanumeric strings; anything else is treated as tampered. */
   private isValidAccountId(id: unknown): id is string {
     return typeof id === 'string' && /^[a-zA-Z0-9]{15}([a-zA-Z0-9]{3})?$/.test(id);
   }

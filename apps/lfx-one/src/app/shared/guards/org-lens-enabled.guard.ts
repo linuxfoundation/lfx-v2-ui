@@ -2,25 +2,29 @@
 // SPDX-License-Identifier: MIT
 
 import { inject } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { CanMatchFn, Router } from '@angular/router';
+import { catchError, filter, firstValueFrom, of, timeout } from 'rxjs';
 
 import { FeatureFlagService } from '../services/feature-flag.service';
 
-/**
- * Route guard that dark-launches the Org Lens behind the `org-lens-enabled`
- * LaunchDarkly flag. Defaults to false so the lens is invisible to all users
- * until the flag is turned on. When the flag is off, deep links into `/org/*`
- * (and the `/org` → `/org/overview` redirect) bounce back to the Me Lens
- * root. Implemented as a CanMatchFn so the lazy `loadComponent` import is
- * never even resolved while the flag is off.
- */
-export const orgLensEnabledGuard: CanMatchFn = () => {
+/** CanMatch guard for /org/* — waits for the feature-flag client to initialise so deep links don't race the async init. */
+export const orgLensEnabledGuard: CanMatchFn = async () => {
   const featureFlagService = inject(FeatureFlagService);
   const router = inject(Router);
 
-  if (featureFlagService.getBooleanFlag('org-lens-enabled', false)()) {
-    return true;
+  if (!featureFlagService.initialized()) {
+    const ready = await firstValueFrom(
+      toObservable(featureFlagService.initialized).pipe(
+        filter((init): init is true => init === true),
+        timeout(5000),
+        catchError(() => of(false))
+      )
+    );
+    if (!ready) {
+      return router.parseUrl('/');
+    }
   }
 
-  return router.parseUrl('/');
+  return featureFlagService.getBooleanFlag('org-lens-enabled', false)() ? true : router.parseUrl('/');
 };

@@ -19,8 +19,7 @@ export class LensService {
   private readonly personaService = inject(PersonaService);
   private readonly featureFlagService = inject(FeatureFlagService);
 
-  // Dark-launch gate for the Org Lens. Default false so the lens is invisible
-  // until the LaunchDarkly flag is flipped per-user / per-environment.
+  /** Dark-launch gate; off by default until the LaunchDarkly flag is flipped. */
   private readonly isOrgLensEnabled = this.featureFlagService.getBooleanFlag('org-lens-enabled', false);
 
   private readonly selectedLens: WritableSignal<Lens>;

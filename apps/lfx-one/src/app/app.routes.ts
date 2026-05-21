@@ -9,6 +9,9 @@ import { lensRedirectGuard } from './shared/guards/lens-redirect.guard';
 import { orgLensEnabledGuard } from './shared/guards/org-lens-enabled.guard';
 import { projectQueryParamGuard } from './shared/guards/project-query-param.guard';
 
+const loadOrgPlaceholderPage = () =>
+  import('./modules/dashboards/org/components/org-placeholder-page/org-placeholder-page.component').then((m) => m.OrgPlaceholderPageComponent);
+
 export const routes: Routes = [
   {
     path: '',
@@ -57,9 +60,7 @@ export const routes: Routes = [
         canActivate: [projectQueryParamGuard],
         loadComponent: () => import('./modules/dashboards/dashboard.component').then((m) => m.DashboardComponent),
       },
-      // Org Lens — dark-launched behind the org-lens-enabled flag (CanMatch).
-      // When the flag is off the entire `/org` subtree fails to match and
-      // the user is redirected to the Me Lens root by the guard.
+      // Org Lens — dark-launched behind `org-lens-enabled` (CanMatch); /org/* is invisible when the flag is off.
       {
         path: 'org',
         canMatch: [orgLensEnabledGuard],
@@ -78,38 +79,32 @@ export const routes: Routes = [
               description: 'A summary of your organization across the Linux Foundation.',
               icon: 'fa-light fa-grid-2',
             },
-            loadComponent: () =>
-              import('./modules/dashboards/org/components/org-placeholder-page/org-placeholder-page.component').then((m) => m.OrgPlaceholderPageComponent),
+            loadComponent: loadOrgPlaceholderPage,
           },
           {
             path: 'memberships',
             data: { lens: 'org', title: 'Memberships', description: 'Active memberships and tier history.', icon: 'fa-light fa-display' },
-            loadComponent: () =>
-              import('./modules/dashboards/org/components/org-placeholder-page/org-placeholder-page.component').then((m) => m.OrgPlaceholderPageComponent),
+            loadComponent: loadOrgPlaceholderPage,
           },
           {
             path: 'projects',
             data: { lens: 'org', title: 'Projects', description: 'Projects your organization participates in.', icon: 'fa-light fa-folder' },
-            loadComponent: () =>
-              import('./modules/dashboards/org/components/org-placeholder-page/org-placeholder-page.component').then((m) => m.OrgPlaceholderPageComponent),
+            loadComponent: loadOrgPlaceholderPage,
           },
           {
             path: 'roi',
             data: { lens: 'org', title: 'ROI', description: 'Return on investment across your memberships and engagement.', icon: 'fa-light fa-chart-line-up' },
-            loadComponent: () =>
-              import('./modules/dashboards/org/components/org-placeholder-page/org-placeholder-page.component').then((m) => m.OrgPlaceholderPageComponent),
+            loadComponent: loadOrgPlaceholderPage,
           },
           {
             path: 'governance',
             data: { lens: 'org', title: 'Governance', description: 'Board seats and governance participation.', icon: 'fa-light fa-layer-group' },
-            loadComponent: () =>
-              import('./modules/dashboards/org/components/org-placeholder-page/org-placeholder-page.component').then((m) => m.OrgPlaceholderPageComponent),
+            loadComponent: loadOrgPlaceholderPage,
           },
           {
             path: 'people',
             data: { lens: 'org', title: 'People', description: 'Employees and contributors associated with your organization.', icon: 'fa-light fa-users' },
-            loadComponent: () =>
-              import('./modules/dashboards/org/components/org-placeholder-page/org-placeholder-page.component').then((m) => m.OrgPlaceholderPageComponent),
+            loadComponent: loadOrgPlaceholderPage,
           },
           {
             path: 'contributions',
@@ -119,14 +114,12 @@ export const routes: Routes = [
               description: "Open-source contributions from your organization's contributors.",
               icon: 'fa-light fa-code',
             },
-            loadComponent: () =>
-              import('./modules/dashboards/org/components/org-placeholder-page/org-placeholder-page.component').then((m) => m.OrgPlaceholderPageComponent),
+            loadComponent: loadOrgPlaceholderPage,
           },
           {
             path: 'events',
             data: { lens: 'org', title: 'Events', description: 'Events your organization is sponsoring or attending.', icon: 'fa-light fa-calendar' },
-            loadComponent: () =>
-              import('./modules/dashboards/org/components/org-placeholder-page/org-placeholder-page.component').then((m) => m.OrgPlaceholderPageComponent),
+            loadComponent: loadOrgPlaceholderPage,
           },
           {
             path: 'training',
@@ -136,26 +129,22 @@ export const routes: Routes = [
               description: 'Training enrollments and certifications across your organization.',
               icon: 'fa-light fa-graduation-cap',
             },
-            loadComponent: () =>
-              import('./modules/dashboards/org/components/org-placeholder-page/org-placeholder-page.component').then((m) => m.OrgPlaceholderPageComponent),
+            loadComponent: loadOrgPlaceholderPage,
           },
           {
             path: 'meetings',
             data: { lens: 'org', title: 'Meetings', description: 'Meetings your organization is participating in.', icon: 'fa-light fa-video' },
-            loadComponent: () =>
-              import('./modules/dashboards/org/components/org-placeholder-page/org-placeholder-page.component').then((m) => m.OrgPlaceholderPageComponent),
+            loadComponent: loadOrgPlaceholderPage,
           },
           {
             path: 'groups',
             data: { lens: 'org', title: 'Groups', description: 'Committees your organization participates in.', icon: 'fa-light fa-users-rectangle' },
-            loadComponent: () =>
-              import('./modules/dashboards/org/components/org-placeholder-page/org-placeholder-page.component').then((m) => m.OrgPlaceholderPageComponent),
+            loadComponent: loadOrgPlaceholderPage,
           },
           {
             path: 'profile',
             data: { lens: 'org', title: 'Profile', description: 'Public-facing details about your organization.', icon: 'fa-light fa-file' },
-            loadComponent: () =>
-              import('./modules/dashboards/org/components/org-placeholder-page/org-placeholder-page.component').then((m) => m.OrgPlaceholderPageComponent),
+            loadComponent: loadOrgPlaceholderPage,
           },
         ],
       },

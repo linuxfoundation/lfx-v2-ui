@@ -43,8 +43,7 @@ export class MainLayoutComponent {
   private readonly featureFlagService = inject(FeatureFlagService);
   protected readonly userService = inject(UserService);
 
-  // Dark-launch gate for the Org Lens sidebar branch — when the flag is off
-  // the lens is invisible everywhere and we fall back to the Me Lens nav.
+  /** Dark-launch gate; falls back to Me Lens nav when off. */
   private readonly isOrgLensEnabled = this.featureFlagService.getBooleanFlag('org-lens-enabled', false);
 
   // Expose mobile sidebar state from service (writable for two-way binding with p-drawer)

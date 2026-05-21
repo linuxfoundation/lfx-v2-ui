@@ -24,14 +24,15 @@ export class OrgSelectorComponent {
   public readonly isPanelOpen = model<boolean>(false);
 
   protected readonly searchControl = new FormControl<string>('', { nonNullable: true });
-  private readonly searchTerm: Signal<string> = computed(() => (this.searchValue() ?? '').trim().toLowerCase());
   private readonly searchValue = toSignal(this.searchControl.valueChanges, { initialValue: '' });
+  private readonly searchTerm: Signal<string> = computed(() => (this.searchValue() ?? '').trim().toLowerCase());
 
   protected readonly panelStyleClass = computed(() =>
     this.userService.impersonating() ? 'org-selector-panel org-selector-panel--with-banner' : 'org-selector-panel'
   );
 
   protected readonly selectedAccount: Signal<Account> = this.accountContextService.selectedAccount;
+  protected readonly selectedAccountId: Signal<string> = computed(() => this.selectedAccount().accountId);
   protected readonly availableAccounts: Signal<Account[]> = this.accountContextService.availableAccounts;
 
   protected readonly displayName: Signal<string> = computed(() => this.selectedAccount().accountName || 'Select Organization');
@@ -63,9 +64,5 @@ export class OrgSelectorComponent {
   protected onPopoverHide(): void {
     this.isPanelOpen.set(false);
     this.searchControl.setValue('', { emitEvent: true });
-  }
-
-  protected isSelected(account: Account): boolean {
-    return account.accountId === this.selectedAccount().accountId;
   }
 }
