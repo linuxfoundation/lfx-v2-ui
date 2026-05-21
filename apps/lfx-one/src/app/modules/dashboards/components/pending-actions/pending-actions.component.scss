@@ -1,2 +1,15 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
+
+.pending-action-row {
+  transition:
+    opacity 250ms ease-out,
+    max-height 300ms ease-out;
+  max-height: 12rem;
+  overflow: hidden;
+
+  &.is-completing {
+    opacity: 0;
+    max-height: 0;
+  }
+}
