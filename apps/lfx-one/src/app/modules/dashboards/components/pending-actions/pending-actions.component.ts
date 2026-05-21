@@ -3,6 +3,7 @@
 
 import { Component, computed, DestroyRef, effect, inject, input, model, output, signal, Signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
 import { PendingActionsDrawerComponent } from '@app/modules/dashboards/components/pending-actions-drawer/pending-actions-drawer.component';
 import { RsvpButtonGroupComponent } from '@app/modules/meetings/components/rsvp-button-group/rsvp-button-group.component';
 import { ButtonComponent } from '@components/button/button.component';
@@ -24,7 +25,7 @@ const SKELETON_HOLD_MS = 500;
 
 @Component({
   selector: 'lfx-pending-actions',
-  imports: [ButtonComponent, TagComponent, RsvpButtonGroupComponent, PendingActionsDrawerComponent, SkeletonModule, ToastModule],
+  imports: [ButtonComponent, TagComponent, RsvpButtonGroupComponent, PendingActionsDrawerComponent, SkeletonModule, ToastModule, RouterLink],
   templateUrl: './pending-actions.component.html',
   styleUrl: './pending-actions.component.scss',
 })
@@ -53,6 +54,7 @@ export class PendingActionsComponent {
   protected readonly swappingRowKeys = signal<ReadonlySet<string>>(new Set());
   private readonly rsvpMeetingCache = signal<Record<string, Meeting>>({});
   private readonly loadingMeetingUids = signal<ReadonlySet<string>>(new Set());
+  private readonly failedMeetingUids = signal<ReadonlySet<string>>(new Set());
 
   protected readonly visibleActionsUnlimited: Signal<PendingActionItem[]> = this.initVisibleActionsUnlimited();
   protected readonly visibleActions: Signal<PendingActionItem[]> = this.initVisibleActions();
@@ -105,6 +107,7 @@ export class PendingActionsComponent {
   private loadMeeting(meetingUid: string): void {
     if (this.rsvpMeetingCache()[meetingUid]) return;
     if (this.loadingMeetingUids().has(meetingUid)) return;
+    if (this.failedMeetingUids().has(meetingUid)) return;
 
     this.loadingMeetingUids.update((set) => new Set(set).add(meetingUid));
     this.meetingService
@@ -117,6 +120,14 @@ export class PendingActionsComponent {
         },
         error: () => {
           this.loadingMeetingUids.update((set) => this.removeFromSet(set, meetingUid));
+          this.failedMeetingUids.update((set) => new Set(set).add(meetingUid));
+          this.messageService.add({
+            key: 'pending-actions-toast',
+            severity: 'warn',
+            summary: 'Unable to load RSVP options',
+            detail: 'Open the meeting page to RSVP.',
+            life: 5000,
+          });
         },
       });
   }
@@ -137,7 +148,7 @@ export class PendingActionsComponent {
         if (!options.withSkeleton) return;
 
         // After the recompute, the new arrival (if any) occupies the last visible slot — render it as a skeleton briefly so the user sees a "loading in" effect.
-        const limit = Math.max(0, this.displayLimit());
+        const limit = this.getSafeDisplayLimit();
         const visible = this.visibleActionsUnlimited();
         if (limit === 0 || visible.length < limit) return;
 
@@ -169,7 +180,7 @@ export class PendingActionsComponent {
     return item.type === 'Vote' && !!item.voteUid;
   }
 
-  // Intrinsic IDs first (meetingUid for RSVP/Agenda, voteUid for Vote); composite fallback for action types without one.
+  // Mirror HiddenActionsService.getActionIdentifier so the row key, hidden-cookie identifier, and `@for` track key all stay in sync.
   private getRowKey(item: PendingActionItem): string {
     if (item.meetingUid) {
       return `${item.type}-${item.meetingUid}-${item.occurrenceId ?? ''}`;
@@ -177,7 +188,8 @@ export class PendingActionsComponent {
     if (item.voteUid) {
       return `${item.type}-${item.voteUid}`;
     }
-    return `${item.type}-${item.text}-${item.buttonLink ?? ''}`;
+    const base = `${item.type}-${item.badge}-${item.text}`;
+    return item.buttonLink ? `${base}|${item.buttonLink}` : base;
   }
 
   private formatResponse(response: RsvpResponse): string {
@@ -204,20 +216,25 @@ export class PendingActionsComponent {
   }
 
   private initVisibleActions(): Signal<PendingActionItem[]> {
-    return computed(() => {
-      const limit = this.displayLimit();
-      const safeLimit = Number.isFinite(limit) ? Math.max(0, limit) : 2;
-      return this.visibleActionsUnlimited().slice(0, safeLimit);
-    });
+    return computed(() => this.visibleActionsUnlimited().slice(0, this.getSafeDisplayLimit()));
+  }
+
+  // Single source of truth for the clamped display limit: rejects NaN/Infinity, floors fractional values, and falls back to the default of 2.
+  private getSafeDisplayLimit(): number {
+    const raw = this.displayLimit();
+    return Number.isFinite(raw) ? Math.max(0, Math.trunc(raw)) : 2;
   }
 
   private initDecoratedActions(): Signal<DecoratedPendingAction[]> {
     return computed(() => {
       const cache = this.rsvpMeetingCache();
       const loading = this.loadingMeetingUids();
+      const failed = this.failedMeetingUids();
       return this.visibleActions().map((item) => {
         const rowKey = this.getRowKey(item);
-        const isRsvpInline = this.isRsvpInline(item);
+        // When the meeting fetch fails, fall back to the regular buttonLink/CTA path so the user has a working action instead of perpetual skeletons.
+        const meetingFailed = !!item.meetingUid && failed.has(item.meetingUid);
+        const isRsvpInline = this.isRsvpInline(item) && !meetingFailed;
         const isVoteInline = this.isVoteInline(item);
         const meeting = item.meetingUid ? (cache[item.meetingUid] ?? null) : null;
         return {

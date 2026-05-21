@@ -82,6 +82,7 @@
     <div class="flex gap-[7px]" [attr.data-testid]="'meeting-rsvp-buttons'">
       <!-- Yes Button -->
       <button
+        type="button"
         (click)="handleRsvpClick('accepted')"
         [disabled]="isLoading() || disabled()"
         [ngClass]="{
@@ -98,6 +99,7 @@
 
       <!-- No Button -->
       <button
+        type="button"
         (click)="handleRsvpClick('declined')"
         [disabled]="isLoading() || disabled()"
         [ngClass]="{
@@ -114,6 +116,7 @@
 
       <!-- Maybe Button -->
       <button
+        type="button"
         (click)="handleRsvpClick('maybe')"
         [disabled]="isLoading() || disabled()"
         [ngClass]="{

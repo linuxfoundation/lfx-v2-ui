@@ -26,6 +26,7 @@ interface DrawerActionRow extends PendingActionItem {
   isVoteInline: boolean;
   meeting: Meeting | null;
   isMeetingLoading: boolean;
+  meetingLoadFailed: boolean;
 }
 
 @Component({
@@ -54,6 +55,7 @@ export class PendingActionsDrawerComponent {
   protected readonly completingRowKeys = signal<ReadonlySet<string>>(new Set());
   private readonly meetingCache = signal<Record<string, Meeting>>({});
   private readonly loadingMeetingUids = signal<ReadonlySet<string>>(new Set());
+  private readonly failedMeetingUids = signal<ReadonlySet<string>>(new Set());
 
   protected readonly visibleRows: Signal<DrawerActionRow[]> = this.initVisibleRows();
   protected readonly uncompletedCount: Signal<number> = computed(() => this.visibleRows().length);
@@ -63,7 +65,7 @@ export class PendingActionsDrawerComponent {
     effect(() => {
       if (!this.visible()) return;
       for (const row of this.visibleRows()) {
-        if (row.isRsvpInline && !row.meeting && !row.isMeetingLoading) {
+        if (row.isRsvpInline && !row.meeting && !row.isMeetingLoading && !row.meetingLoadFailed) {
           this.loadMeeting(row.meetingUid as string);
         }
       }
@@ -98,6 +100,7 @@ export class PendingActionsDrawerComponent {
   private loadMeeting(meetingUid: string): void {
     if (this.meetingCache()[meetingUid]) return;
     if (this.loadingMeetingUids().has(meetingUid)) return;
+    if (this.failedMeetingUids().has(meetingUid)) return;
 
     this.loadingMeetingUids.update((set) => new Set(set).add(meetingUid));
     this.meetingService
@@ -110,6 +113,14 @@ export class PendingActionsDrawerComponent {
         },
         error: () => {
           this.loadingMeetingUids.update((set) => this.removeFromSet(set, meetingUid));
+          this.failedMeetingUids.update((set) => new Set(set).add(meetingUid));
+          this.messageService.add({
+            key: 'pending-actions-toast',
+            severity: 'warn',
+            summary: 'Unable to load RSVP options',
+            detail: 'Open the meeting page to RSVP.',
+            life: 5000,
+          });
         },
       });
   }
@@ -136,7 +147,7 @@ export class PendingActionsDrawerComponent {
     return next;
   }
 
-  // Intrinsic IDs first (meetingUid for RSVP/Agenda, voteUid for Vote); composite fallback otherwise.
+  // Mirror HiddenActionsService.getActionIdentifier so the row key, hidden-cookie identifier, and `@for` track key all stay in sync.
   private getRowKey(item: PendingActionItem): string {
     if (item.meetingUid) {
       return `${item.type}-${item.meetingUid}-${item.occurrenceId ?? ''}`;
@@ -144,7 +155,8 @@ export class PendingActionsDrawerComponent {
     if (item.voteUid) {
       return `${item.type}-${item.voteUid}`;
     }
-    return `${item.type}-${item.text}-${item.buttonLink ?? ''}`;
+    const base = `${item.type}-${item.badge}-${item.text}`;
+    return item.buttonLink ? `${base}|${item.buttonLink}` : base;
   }
 
   private formatResponse(response: RsvpResponse): string {
@@ -166,11 +178,14 @@ export class PendingActionsDrawerComponent {
       const completing = this.completingRowKeys();
       const cache = this.meetingCache();
       const loading = this.loadingMeetingUids();
+      const failed = this.failedMeetingUids();
       return this.pendingActions()
         .filter((item) => completing.has(this.getRowKey(item)) || !this.hiddenActionsService.isActionHidden(item))
         .map((item) => {
           const rowKey = this.getRowKey(item);
-          const isRsvpInline = item.type === 'RSVP' && !!item.meetingUid;
+          // When the meeting fetch fails, fall back to the regular buttonLink/CTA branch so users still have a working action.
+          const meetingLoadFailed = !!item.meetingUid && failed.has(item.meetingUid);
+          const isRsvpInline = item.type === 'RSVP' && !!item.meetingUid && !meetingLoadFailed;
           const isVoteInline = item.type === 'Vote' && !!item.voteUid;
           return {
             ...item,
@@ -179,6 +194,7 @@ export class PendingActionsDrawerComponent {
             isVoteInline,
             meeting: item.meetingUid ? (cache[item.meetingUid] ?? null) : null,
             isMeetingLoading: !!item.meetingUid && loading.has(item.meetingUid),
+            meetingLoadFailed,
           };
         });
     });
