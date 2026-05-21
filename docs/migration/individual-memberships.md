@@ -449,14 +449,6 @@ All enrollment CTAs are wrapped with `v-if="!$user.inPreviewMode"` in
 `block-enrollments-list.vue:34, 92, 105`. LF staff who impersonate a user via
 `x-for-id` / `x-for-username` headers cannot trigger enrollment actions.
 
-### Demo user
-
-Username `johnlf2727` returns hardcoded mock data from `dummy-data.ts` for all enrollment
-endpoints in the legacy myprofile backend. Used for demos and onboarding.
-
-This short-circuit was **not carried into `lfx-self-serve`**. Use impersonation (Auth0 CTE) to
-demo against a real account in lower environments.
-
 ### Legacy / dead code
 
 The following files exist in myprofile but are not reachable from any current route or
