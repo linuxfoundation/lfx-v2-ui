@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 declare module 'jose' {
-  export interface JoseKey {
-    readonly [key: string]: unknown;
-  }
+  export type JoseKey = Readonly<Record<string, unknown>>;
 
   export const errors: {
     JWTExpired: new (message?: string) => Error;
@@ -15,10 +13,6 @@ declare module 'jose' {
   };
 
   export const JWT: {
-    verify: <TPayload extends Record<string, unknown> = Record<string, unknown>>(
-      token: string,
-      key: JoseKey,
-      options?: { algorithms?: string[] }
-    ) => TPayload;
+    verify: <TPayload extends Record<string, unknown> = Record<string, unknown>>(token: string, key: JoseKey, options?: { algorithms?: string[] }) => TPayload;
   };
 }

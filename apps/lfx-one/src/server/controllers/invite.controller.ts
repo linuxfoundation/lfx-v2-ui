@@ -140,7 +140,7 @@ export class InviteController {
   // Throws JoseErrors.JWTExpired for expired tokens and other JoseErrors for invalid/tampered ones.
   private verifyInviteToken(token: string, secret: string): InviteTokenPayload {
     const key = JWK.asKey(Buffer.from(secret, 'base64'));
-    const payload = JWT.verify(token, key, { algorithms: ['HS256'] }) as InviteTokenPayload;
+    const payload = JWT.verify<InviteTokenPayload>(token, key, { algorithms: ['HS256'] });
     if (typeof payload.exp !== 'number' || !isFinite(payload.exp)) {
       throw new Error('Token is missing required exp claim');
     }
