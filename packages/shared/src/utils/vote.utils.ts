@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { addDays } from 'date-fns';
-import { DRAFT_VOTE_DEFAULT_DURATION_DAYS, DRAFT_VOTE_PLACEHOLDER_QUESTION, VOTE_QUESTION_MIN_LENGTH } from '../constants/poll.constants';
+import { DRAFT_VOTE_DEFAULT_DURATION_DAYS, DRAFT_VOTE_PLACEHOLDER_QUESTION } from '../constants/poll.constants';
 import { CommitteeMemberVotingStatus } from '../enums/committee-member.enum';
 import { CommitteeReference } from '../interfaces/committee.interface';
 import { CreatePollQuestion, CreateVoteRequest, PollQuestion, QuestionFormValue, UpdateVoteRequest, Vote, VoteFormValue } from '../interfaces/poll.interface';
@@ -100,17 +100,35 @@ export function mapQuestionToApiFormat(question: QuestionFormValue): CreatePollQ
   };
 }
 
-/** Returns questions that pass the form's own length validator — anything shorter would fail on re-open. */
-function filterDraftQuestions(questions: QuestionFormValue[]): CreatePollQuestion[] {
-  return questions
-    .filter((q) => {
-      if (q.question.trim().length < VOTE_QUESTION_MIN_LENGTH) {
-        return false;
-      }
-      const nonEmptyOptionCount = (q.options ?? []).filter((option) => (option?.trim().length ?? 0) > 0).length;
-      return nonEmptyOptionCount >= 2;
-    })
-    .map(mapQuestionToApiFormat);
+const DRAFT_OPTION_PAD_LABELS = DRAFT_VOTE_PLACEHOLDER_QUESTION.choices.map((choice) => choice.choice_text);
+
+function hasDraftQuestionInput(question: QuestionFormValue): boolean {
+  const hasPrompt = (question.question?.trim().length ?? 0) > 0;
+  const hasOption = (question.options ?? []).some((option) => (option?.trim().length ?? 0) > 0);
+  return hasPrompt || hasOption;
+}
+
+/** Preserves in-progress draft work by padding missing prompt/options instead of dropping partial questions. */
+function normalizeDraftQuestion(question: QuestionFormValue): CreatePollQuestion {
+  const trimmedPrompt = question.question?.trim() ?? '';
+  const nonEmptyOptions = (question.options ?? []).map((option) => option?.trim() ?? '').filter((option) => option !== '');
+  const paddedOptions = [...nonEmptyOptions];
+
+  while (paddedOptions.length < 2) {
+    const nextPad =
+      DRAFT_OPTION_PAD_LABELS.find((label) => !paddedOptions.includes(label)) ?? `Option ${paddedOptions.length + 1}`;
+    paddedOptions.push(nextPad);
+  }
+
+  return {
+    prompt: trimmedPrompt.length > 0 ? trimmedPrompt : DRAFT_VOTE_PLACEHOLDER_QUESTION.prompt,
+    type: question.response_type === 'single' ? 'single_choice' : 'multiple_choice',
+    choices: paddedOptions.map((option) => ({ choice_text: option })),
+  };
+}
+
+function prepareDraftQuestions(questions: QuestionFormValue[]): CreatePollQuestion[] {
+  return questions.filter(hasDraftQuestionInput).map(normalizeDraftQuestion);
 }
 
 /**
@@ -133,8 +151,9 @@ export function buildCreateVoteRequest(formValue: VoteFormValue, projectUid: str
 
 /** Fills upstream-required fields with sensible defaults so a partial form can be saved as a draft. */
 export function buildDraftVoteRequest(formValue: VoteFormValue, projectUid: string): CreateVoteRequest {
-  const filledQuestions = filterDraftQuestions(formValue.questions);
-  const poll_questions: CreatePollQuestion[] = filledQuestions.length > 0 ? filledQuestions : [DRAFT_VOTE_PLACEHOLDER_QUESTION];
+  const preparedQuestions = prepareDraftQuestions(formValue.questions);
+  const poll_questions: CreatePollQuestion[] =
+    preparedQuestions.length > 0 ? preparedQuestions : [DRAFT_VOTE_PLACEHOLDER_QUESTION];
 
   return {
     name: formValue.title.trim(),
@@ -167,8 +186,9 @@ export function buildUpdateVoteRequest(formValue: VoteFormValue, projectUid: str
 
 /** Update-mode counterpart to buildDraftVoteRequest — fills upstream-required fields when the user clears them while editing an existing draft. */
 export function buildDraftUpdateVoteRequest(formValue: VoteFormValue, projectUid: string): UpdateVoteRequest {
-  const filledQuestions = filterDraftQuestions(formValue.questions);
-  const poll_questions: CreatePollQuestion[] = filledQuestions.length > 0 ? filledQuestions : [DRAFT_VOTE_PLACEHOLDER_QUESTION];
+  const preparedQuestions = prepareDraftQuestions(formValue.questions);
+  const poll_questions: CreatePollQuestion[] =
+    preparedQuestions.length > 0 ? preparedQuestions : [DRAFT_VOTE_PLACEHOLDER_QUESTION];
 
   return {
     name: formValue.title.trim(),
