@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { SALESFORCE_ACCOUNT_ID_PATTERN } from '@lfx-one/shared/constants';
 import { NextFunction, Request, Response } from 'express';
 
 import { AuthenticationError, ServiceValidationError } from '../errors';
@@ -2894,9 +2895,8 @@ export class AnalyticsController {
       throw ServiceValidationError.forField('accountIds', `Maximum of ${MAX_ACCOUNT_IDS} accountIds allowed per request`, { operation });
     }
 
-    const SALESFORCE_ID_PATTERN = /^[A-Za-z0-9]{15,18}$/;
     for (const id of ids) {
-      if (!SALESFORCE_ID_PATTERN.test(id)) {
+      if (!SALESFORCE_ACCOUNT_ID_PATTERN.test(id)) {
         throw ServiceValidationError.forField('accountIds', `Invalid Salesforce accountId format: ${id}`, { operation });
       }
     }

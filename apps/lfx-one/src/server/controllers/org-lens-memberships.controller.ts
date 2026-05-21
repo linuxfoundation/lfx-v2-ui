@@ -1,14 +1,15 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { SALESFORCE_ACCOUNT_ID_PATTERN } from '@lfx-one/shared/constants';
 import { NextFunction, Request, Response } from 'express';
 
 import { ServiceValidationError } from '../errors';
+import { getStringQueryParam } from '../helpers/validation.helper';
 import { logger } from '../services/logger.service';
 import { OrgLensMembershipsService } from '../services/org-lens-memberships.service';
 
-const ACCOUNT_ID_PATTERN = /^001[A-Za-z0-9]{12,15}$/;
-
+/** HTTP boundary for the Org Lens Memberships endpoints — validation, lifecycle logging, error propagation. */
 export class OrgLensMembershipsController {
   private readonly service: OrgLensMembershipsService;
 
@@ -16,6 +17,7 @@ export class OrgLensMembershipsController {
     this.service = new OrgLensMembershipsService();
   }
 
+  /** GET /api/orgs/:accountId/lens/memberships/active */
   public async getActiveMemberships(req: Request, res: Response, next: NextFunction): Promise<void> {
     const accountId = req.params['accountId'];
     const startTime = logger.startOperation(req, 'get_org_lens_memberships_active', {
@@ -23,21 +25,11 @@ export class OrgLensMembershipsController {
     });
 
     try {
-      if (!accountId || typeof accountId !== 'string') {
-        throw ServiceValidationError.forField('accountId', 'accountId path parameter is required', {
-          operation: 'get_org_lens_memberships_active',
-        });
-      }
+      this.assertAccountId(accountId, 'get_org_lens_memberships_active');
 
-      if (!ACCOUNT_ID_PATTERN.test(accountId)) {
-        throw ServiceValidationError.forField('accountId', 'Invalid Salesforce accountId format', {
-          operation: 'get_org_lens_memberships_active',
-        });
-      }
-
-      const search = req.query['search'] as string | undefined;
-      const tier = req.query['tier'] as string | undefined;
-      const renewal = req.query['renewal'] as string | undefined;
+      const search = getStringQueryParam(req, 'search');
+      const tier = getStringQueryParam(req, 'tier');
+      const renewal = getStringQueryParam(req, 'renewal');
 
       const response = await this.service.getActiveMemberships(accountId, search, tier, renewal);
 
@@ -53,6 +45,7 @@ export class OrgLensMembershipsController {
     }
   }
 
+  /** GET /api/orgs/:accountId/lens/memberships/expired */
   public async getExpiredMemberships(req: Request, res: Response, next: NextFunction): Promise<void> {
     const accountId = req.params['accountId'];
     const startTime = logger.startOperation(req, 'get_org_lens_memberships_expired', {
@@ -60,19 +53,9 @@ export class OrgLensMembershipsController {
     });
 
     try {
-      if (!accountId || typeof accountId !== 'string') {
-        throw ServiceValidationError.forField('accountId', 'accountId path parameter is required', {
-          operation: 'get_org_lens_memberships_expired',
-        });
-      }
+      this.assertAccountId(accountId, 'get_org_lens_memberships_expired');
 
-      if (!ACCOUNT_ID_PATTERN.test(accountId)) {
-        throw ServiceValidationError.forField('accountId', 'Invalid Salesforce accountId format', {
-          operation: 'get_org_lens_memberships_expired',
-        });
-      }
-
-      const search = req.query['search'] as string | undefined;
+      const search = getStringQueryParam(req, 'search');
 
       const response = await this.service.getExpiredMemberships(accountId, search);
 
@@ -88,6 +71,7 @@ export class OrgLensMembershipsController {
     }
   }
 
+  /** GET /api/orgs/:accountId/lens/memberships/discover */
   public async getDiscoverOpportunities(req: Request, res: Response, next: NextFunction): Promise<void> {
     const accountId = req.params['accountId'];
     const startTime = logger.startOperation(req, 'get_org_lens_memberships_discover', {
@@ -95,17 +79,7 @@ export class OrgLensMembershipsController {
     });
 
     try {
-      if (!accountId || typeof accountId !== 'string') {
-        throw ServiceValidationError.forField('accountId', 'accountId path parameter is required', {
-          operation: 'get_org_lens_memberships_discover',
-        });
-      }
-
-      if (!ACCOUNT_ID_PATTERN.test(accountId)) {
-        throw ServiceValidationError.forField('accountId', 'Invalid Salesforce accountId format', {
-          operation: 'get_org_lens_memberships_discover',
-        });
-      }
+      this.assertAccountId(accountId, 'get_org_lens_memberships_discover');
 
       const response = await this.service.getDiscoverOpportunities(accountId);
 
@@ -118,6 +92,15 @@ export class OrgLensMembershipsController {
       res.json(response);
     } catch (error) {
       next(error);
+    }
+  }
+
+  private assertAccountId(accountId: string | undefined, operation: string): asserts accountId is string {
+    if (!accountId || typeof accountId !== 'string') {
+      throw ServiceValidationError.forField('accountId', 'accountId path parameter is required', { operation });
+    }
+    if (!SALESFORCE_ACCOUNT_ID_PATTERN.test(accountId)) {
+      throw ServiceValidationError.forField('accountId', 'Invalid Salesforce accountId format', { operation });
     }
   }
 }

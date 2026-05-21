@@ -21,7 +21,7 @@ export interface OrgFoundationCoverageResponse {
 }
 
 /**
- * GET /api/analytics/org-contributors-monthly
+ * GET /api/analytics/org-involvement-contributors-monthly
  * Cross-foundation active contributors aggregated monthly (12-month window)
  */
 export interface OrgInvolvementContributorsMonthlyResponse {
@@ -32,7 +32,7 @@ export interface OrgInvolvementContributorsMonthlyResponse {
 }
 
 /**
- * GET /api/analytics/org-maintainers-monthly
+ * GET /api/analytics/org-involvement-maintainers-monthly
  * Cross-foundation maintainers aggregated monthly (12-month window)
  */
 export interface OrgInvolvementMaintainersMonthlyResponse {
@@ -45,7 +45,7 @@ export interface OrgInvolvementMaintainersMonthlyResponse {
 }
 
 /**
- * GET /api/analytics/org-event-attendance-monthly
+ * GET /api/analytics/org-involvement-event-attendance-monthly
  * Cross-foundation event attendance aggregated monthly (12-month window)
  */
 export interface OrgInvolvementEventAttendanceMonthlyResponse {
@@ -59,7 +59,7 @@ export interface OrgInvolvementEventAttendanceMonthlyResponse {
 }
 
 /**
- * GET /api/analytics/org-certified-employees-monthly
+ * GET /api/analytics/org-involvement-certified-employees-monthly
  * Cross-foundation certified employees aggregated monthly (12-month window)
  */
 export interface OrgInvolvementCertifiedEmployeesMonthlyResponse {
@@ -80,7 +80,7 @@ export interface OrgTrainingEnrollmentDailyDataPoint {
 }
 
 /**
- * GET /api/analytics/org-training-enrollments
+ * GET /api/analytics/org-involvement-training-enrollments
  * Cross-foundation training enrollments YTD (daily grain)
  */
 export interface OrgTrainingEnrollmentsResponse {

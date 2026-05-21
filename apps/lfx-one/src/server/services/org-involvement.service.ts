@@ -10,8 +10,9 @@ import {
   OrgTrainingEnrollmentsResponse,
 } from '@lfx-one/shared';
 
-import { ResourceNotFoundError } from '../errors';
 import { SnowflakeService } from './snowflake.service';
+
+const formatMonthLabel = (date: Date): string => date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
 interface FoundationCoverageRow {
   ACCOUNT_ID: string;
@@ -68,10 +69,7 @@ interface TrainingEnrollmentRow {
   TOTAL_ENROLLMENTS: number;
 }
 
-/**
- * Service for cross-foundation organization involvement analytics.
- * Queries the org_* platinum tables (account-level, no foundation filter).
- */
+/** Cross-foundation organization involvement analytics against the org_* platinum tables (account-level). */
 export class OrgInvolvementService {
   private snowflakeService: SnowflakeService;
 
@@ -79,6 +77,11 @@ export class OrgInvolvementService {
     this.snowflakeService = SnowflakeService.getInstance();
   }
 
+  /**
+   * Empty rows are a legitimate result (the org has zero coverage), not a not-found.
+   * Endpoints in this service return a zero-shaped envelope so the client renders
+   * an empty state instead of treating the call as an error.
+   */
   public async getFoundationCoverage(accountId: string): Promise<OrgFoundationCoverageResponse> {
     const query = `
       SELECT
@@ -95,9 +98,7 @@ export class OrgInvolvementService {
     const result = await this.snowflakeService.execute<FoundationCoverageRow>(query, [accountId]);
 
     if (result.rows.length === 0) {
-      throw new ResourceNotFoundError('Foundation coverage data', accountId, {
-        operation: 'get_foundation_coverage',
-      });
+      return { accountId, foundationCount: 0, foundations: [] };
     }
 
     return {
@@ -126,9 +127,7 @@ export class OrgInvolvementService {
     const result = await this.snowflakeService.execute<ContributorsMonthlyRow>(query, [accountId]);
 
     if (result.rows.length === 0) {
-      throw new ResourceNotFoundError('Contributors monthly data', accountId, {
-        operation: 'get_contributors_monthly',
-      });
+      return { accountId, totalActiveContributors: 0, monthlyData: [], monthlyLabels: [] };
     }
 
     const firstRow = result.rows[0];
@@ -137,7 +136,7 @@ export class OrgInvolvementService {
       accountId: firstRow.ACCOUNT_ID,
       totalActiveContributors: firstRow.TOTAL_ACTIVE_CONTRIBUTORS || 0,
       monthlyData: result.rows.map((row) => row.UNIQUE_CONTRIBUTORS || 0),
-      monthlyLabels: result.rows.map((row) => row.MONTH_START_DATE.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })),
+      monthlyLabels: result.rows.map((row) => formatMonthLabel(row.MONTH_START_DATE)),
     };
   }
 
@@ -159,9 +158,7 @@ export class OrgInvolvementService {
     const result = await this.snowflakeService.execute<MaintainersMonthlyRow>(query, [accountId]);
 
     if (result.rows.length === 0) {
-      throw new ResourceNotFoundError('Maintainers monthly data', accountId, {
-        operation: 'get_maintainers_monthly',
-      });
+      return { accountId, accountName: '', totalMaintainersYearly: 0, totalProjectsYearly: 0, monthlyData: [], monthlyLabels: [] };
     }
 
     const firstRow = result.rows[0];
@@ -172,7 +169,7 @@ export class OrgInvolvementService {
       totalMaintainersYearly: firstRow.TOTAL_MAINTAINERS_YEARLY || 0,
       totalProjectsYearly: firstRow.TOTAL_PROJECTS_YEARLY || 0,
       monthlyData: result.rows.map((row) => row.ACTIVE_MAINTAINERS || 0),
-      monthlyLabels: result.rows.map((row) => row.METRIC_MONTH.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })),
+      monthlyLabels: result.rows.map((row) => formatMonthLabel(row.METRIC_MONTH)),
     };
   }
 
@@ -196,9 +193,15 @@ export class OrgInvolvementService {
     const result = await this.snowflakeService.execute<EventAttendanceMonthlyRow>(query, [accountId]);
 
     if (result.rows.length === 0) {
-      throw new ResourceNotFoundError('Event attendance monthly data', accountId, {
-        operation: 'get_event_attendance_monthly',
-      });
+      return {
+        accountId,
+        accountName: '',
+        totalAttended: 0,
+        totalSpeakers: 0,
+        attendeesMonthlyData: [],
+        speakersMonthlyData: [],
+        monthlyLabels: [],
+      };
     }
 
     const firstRow = result.rows[0];
@@ -210,7 +213,7 @@ export class OrgInvolvementService {
       totalSpeakers: firstRow.TOTAL_SPEAKERS || 0,
       attendeesMonthlyData: result.rows.map((row) => row.ATTENDED_COUNT || 0),
       speakersMonthlyData: result.rows.map((row) => row.SPEAKER_COUNT || 0),
-      monthlyLabels: result.rows.map((row) => row.MONTH_START_DATE.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })),
+      monthlyLabels: result.rows.map((row) => formatMonthLabel(row.MONTH_START_DATE)),
     };
   }
 
@@ -231,9 +234,7 @@ export class OrgInvolvementService {
     const result = await this.snowflakeService.execute<CertifiedEmployeesMonthlyRow>(query, [accountId]);
 
     if (result.rows.length === 0) {
-      throw new ResourceNotFoundError('Certified employees monthly data', accountId, {
-        operation: 'get_certified_employees_monthly',
-      });
+      return { accountId, totalCertifications: 0, totalCertifiedEmployees: 0, monthlyData: [], monthlyLabels: [] };
     }
 
     const firstRow = result.rows[0];
@@ -243,7 +244,7 @@ export class OrgInvolvementService {
       totalCertifications: firstRow.TOTAL_CERTIFICATIONS || 0,
       totalCertifiedEmployees: firstRow.TOTAL_CERTIFIED_EMPLOYEES || 0,
       monthlyData: result.rows.map((row) => row.MONTHLY_CERTIFICATIONS || 0),
-      monthlyLabels: result.rows.map((row) => row.MONTH_START_DATE.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })),
+      monthlyLabels: result.rows.map((row) => formatMonthLabel(row.MONTH_START_DATE)),
     };
   }
 

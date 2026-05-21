@@ -6,8 +6,8 @@
 import {
   CertifiedEmployeesMonthlyRow,
   CertifiedEmployeesResponse,
+  MembershipTierClass,
   OrgLensAccountContextResponse,
-  OrgLensAccountContextRow,
   FoundationCompanyBusFactorResponse,
   FoundationCompanyBusFactorRow,
   MembershipTierResponse,
@@ -48,6 +48,24 @@ import { ResourceNotFoundError } from '../errors';
 import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
 import { SnowflakeService } from './snowflake.service';
+
+/** Raw row shape for ANALYTICS.PLATINUM_LFX_ONE.ORG_LENS_ACCOUNT_CONTEXT — server-only, mirrors Snowflake column names. */
+interface OrgLensAccountContextRow {
+  ACCOUNT_ID: string;
+  ACCOUNT_NAME: string;
+  ACCOUNT_SLUG: string | null;
+  LOGO_URL: string | null;
+  CDEV_ORG_ID: string | null;
+  CDEV_ORG_NAME: string | null;
+  CDEV_ORG_LOGO: string | null;
+  IS_MEMBER: boolean;
+  MEMBER_ACCOUNT_TYPE: string | null;
+  MEMBERSHIP_ID: string | null;
+  MEMBERSHIP_PROJECT_ID: string | null;
+  MEMBERSHIP_PROJECT_NAME: string | null;
+  MEMBERSHIP_TIER_DISPLAY_NAME: string | null;
+  MEMBERSHIP_TIER_CLASS: MembershipTierClass | null;
+}
 
 /**
  * Service for handling organization-related operations and analytics
@@ -873,17 +891,7 @@ export class OrganizationService {
     return { programs };
   }
 
-  /**
-   * Resolve LFX One Org Lens account context for a set of Salesforce
-   * accounts (typically the user's persona-authorised organizations).
-   *
-   * Single-table read against
-   * platinum_lfx_one_org_lens_account_context — one denormalised
-   * platinum row per account_id with display attributes, Crowd.dev
-   * mapping, and the highest active corporate membership tier
-   * pre-joined inside dbt. No application-layer joins, no conglomerate
-   * expansion (the UI renders a flat list).
-   */
+  /** Resolve Org Lens display context for the given accountIds — one denormalised row per account_id, pre-joined in dbt. */
   public async getOrgLensAccountContext(accountIds: string[]): Promise<OrgLensAccountContextResponse[]> {
     if (accountIds.length === 0) {
       return [];
