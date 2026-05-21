@@ -11,6 +11,7 @@ import { ALL_LENSES, COMMITTEE_LABEL, DOCUMENT_LABEL, MAILING_LIST_LABEL, SURVEY
 import { Lens, SidebarMenuItem } from '@lfx-one/shared/interfaces';
 import { AnalyticsService } from '@services/analytics.service';
 import { AppService } from '@services/app.service';
+import { FeatureFlagService } from '@services/feature-flag.service';
 import { ImpersonationService } from '@services/impersonation.service';
 import { LensService } from '@services/lens.service';
 import { PersonaService } from '@services/persona.service';
@@ -39,7 +40,12 @@ export class MainLayoutComponent {
   private readonly impersonationService = inject(ImpersonationService);
   private readonly projectContextService = inject(ProjectContextService);
   private readonly analyticsService = inject(AnalyticsService);
+  private readonly featureFlagService = inject(FeatureFlagService);
   protected readonly userService = inject(UserService);
+
+  // Dark-launch gate for the Org Lens sidebar branch — when the flag is off
+  // the lens is invisible everywhere and we fall back to the Me Lens nav.
+  private readonly isOrgLensEnabled = this.featureFlagService.getBooleanFlag('org-lens-enabled', false);
 
   // Expose mobile sidebar state from service (writable for two-way binding with p-drawer)
   protected readonly showMobileSidebar = this.appService.showMobileSidebar;
@@ -62,7 +68,7 @@ export class MainLayoutComponent {
         // implemented; pre-existing gaps in those gates are tracked separately.
         return this.projectLensItemsWithGovernance;
       case 'org':
-        return this.orgLensItems;
+        return this.isOrgLensEnabled() ? this.orgLensItems : this.meLensItems;
       default:
         return this.meLensItems;
     }

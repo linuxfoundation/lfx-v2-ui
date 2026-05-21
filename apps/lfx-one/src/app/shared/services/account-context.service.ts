@@ -5,6 +5,7 @@ import { computed, inject, Injectable, Signal, signal, WritableSignal } from '@a
 import { ACCOUNT_COOKIE_KEY } from '@lfx-one/shared/constants';
 import { Account, OrgLensAccountContextResponse } from '@lfx-one/shared/interfaces';
 import { SsrCookieService } from 'ngx-cookie-service-ssr';
+import { take } from 'rxjs/operators';
 
 import { AnalyticsService } from './analytics.service';
 import { CookieRegistryService } from './cookie-registry.service';
@@ -118,26 +119,29 @@ export class AccountContextService {
       return;
     }
 
-    this.analyticsService.getOrgLensAccountContext(ids).subscribe((rows) => {
-      if (rows.length === 0) {
-        return;
-      }
-      const live = this.buildLiveAccounts(rows);
-      this.liveAccounts.set(live);
-
-      const current = this.selectedAccount();
-      const liveCurrent = live.get(current.accountId);
-      if (liveCurrent) {
-        this.selectedAccount.set(liveCurrent);
-      } else if (!current.accountId) {
-        const firstSeed = this.userOrganizations()[0];
-        if (firstSeed) {
-          const liveSeed = live.get(firstSeed.accountId) ?? firstSeed;
-          this.selectedAccount.set(liveSeed);
-          this.persistToStorage(liveSeed);
+    this.analyticsService
+      .getOrgLensAccountContext(ids)
+      .pipe(take(1))
+      .subscribe((rows) => {
+        if (rows.length === 0) {
+          return;
         }
-      }
-    });
+        const live = this.buildLiveAccounts(rows);
+        this.liveAccounts.set(live);
+
+        const current = this.selectedAccount();
+        const liveCurrent = live.get(current.accountId);
+        if (liveCurrent) {
+          this.selectedAccount.set(liveCurrent);
+        } else if (!current.accountId) {
+          const firstSeed = this.userOrganizations()[0];
+          if (firstSeed) {
+            const liveSeed = live.get(firstSeed.accountId) ?? firstSeed;
+            this.selectedAccount.set(liveSeed);
+            this.persistToStorage(liveSeed);
+          }
+        }
+      });
   }
 
   private buildLiveAccounts(rows: OrgLensAccountContextResponse[]): Map<string, Account> {

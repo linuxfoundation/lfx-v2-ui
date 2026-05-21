@@ -5,12 +5,7 @@ import { Component, computed, inject, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Data } from '@angular/router';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
-
-interface OrgPlaceholderRouteData {
-  title?: string;
-  description?: string;
-  icon?: string;
-}
+import { OrgPlaceholderRouteData } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-org-placeholder-page',

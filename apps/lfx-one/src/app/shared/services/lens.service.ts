@@ -7,6 +7,7 @@ import { Lens, LensOption } from '@lfx-one/shared/interfaces';
 import { SsrCookieService } from 'ngx-cookie-service-ssr';
 
 import { CookieRegistryService } from './cookie-registry.service';
+import { FeatureFlagService } from './feature-flag.service';
 import { PersonaService } from './persona.service';
 
 @Injectable({
@@ -16,6 +17,11 @@ export class LensService {
   private readonly cookieService = inject(SsrCookieService);
   private readonly cookieRegistry = inject(CookieRegistryService);
   private readonly personaService = inject(PersonaService);
+  private readonly featureFlagService = inject(FeatureFlagService);
+
+  // Dark-launch gate for the Org Lens. Default false so the lens is invisible
+  // until the LaunchDarkly flag is flipped per-user / per-environment.
+  private readonly isOrgLensEnabled = this.featureFlagService.getBooleanFlag('org-lens-enabled', false);
 
   private readonly selectedLens: WritableSignal<Lens>;
 
@@ -81,7 +87,9 @@ export class LensService {
     if (showProject) {
       lenses.push('project');
     }
-    lenses.push('org');
+    if (this.isOrgLensEnabled()) {
+      lenses.push('org');
+    }
     return lenses;
   }
 

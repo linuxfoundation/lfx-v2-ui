@@ -156,3 +156,14 @@ export interface OrgLensFoundationsAndProjectsResponse {
   /** Render-ordered: member tier-ranked → non-member by project count → outside-lf last. */
   rows: OrgLensFoundationRow[];
 }
+
+/**
+ * Route `data` payload attached to each /org/* placeholder route.
+ * Drives the shared OrgPlaceholderPageComponent header + empty-state
+ * copy until each leaf route gets a real component.
+ */
+export interface OrgPlaceholderRouteData {
+  title?: string;
+  description?: string;
+  icon?: string;
+}
