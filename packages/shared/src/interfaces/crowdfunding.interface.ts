@@ -51,3 +51,43 @@ export interface CrowdfundingInitiativeDetail extends CrowdfundingInitiative {
   matchDesc?: string;
   matchPct?: number;
 }
+
+export interface DonationStats {
+  totalDonated: number;
+  initiativesSupported: number;
+  activeRecurringAmount: number;
+  activeRecurringCount: number;
+}
+
+export type RecurringDonationStatus = 'active' | 'paused';
+export type DonationKind = 'one-time' | 'monthly';
+
+export interface RecurringDonation {
+  id: string;
+  name: string;
+  icon: string;
+  status: RecurringDonationStatus;
+  amount: number;
+  billingDescription: string;
+  startDate: string;
+  nextChargeDate?: string;
+  pausedSince?: string;
+}
+
+export interface DonationHistoryItem {
+  id: string;
+  initiativeName: string;
+  initiativeIcon: string;
+  fundType: string;
+  fundTypeIcon: string;
+  date: string;
+  kind: DonationKind;
+  amount: number;
+}
+
+export interface PaymentMethod {
+  id: string;
+  brand: string;
+  last4: string;
+  expiry: string;
+}

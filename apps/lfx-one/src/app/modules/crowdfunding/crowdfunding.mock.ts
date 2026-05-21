@@ -3,7 +3,14 @@
 
 import { environment } from '@environments/environment';
 import { FundType } from '@lfx-one/shared/enums';
-import { CrowdfundingInitiative, CrowdfundingInitiativeDetail } from '@lfx-one/shared/interfaces';
+import {
+  CrowdfundingInitiative,
+  CrowdfundingInitiativeDetail,
+  DonationHistoryItem,
+  DonationStats,
+  PaymentMethod,
+  RecurringDonation,
+} from '@lfx-one/shared/interfaces';
 
 export const MOCK_INITIATIVES: CrowdfundingInitiative[] = [
   {
@@ -79,3 +86,148 @@ export const MOCK_INITIATIVE_DETAIL: CrowdfundingInitiativeDetail = {
     { who: 'KubeCon Community Meetup', amount: 5000, date: 'Mar 22, 2026' },
   ],
 };
+
+export const MOCK_DONATION_STATS: DonationStats = {
+  totalDonated: 1450,
+  initiativesSupported: 6,
+  activeRecurringAmount: 50,
+  activeRecurringCount: 1,
+};
+
+export const MOCK_RECURRING_DONATIONS: RecurringDonation[] = [
+  {
+    id: 'curl',
+    name: 'curl Maintenance Fund',
+    icon: '🌀',
+    status: 'active',
+    amount: 50,
+    billingDescription: 'Billed monthly on the 1st',
+    startDate: 'Jan 2025',
+    nextChargeDate: 'Jun 1, 2026',
+  },
+  {
+    id: 'rust-for-linux',
+    name: 'Rust for Linux',
+    icon: '🦀',
+    status: 'paused',
+    amount: 25,
+    billingDescription: 'Billed monthly on the 5th',
+    startDate: 'Dec 2025',
+    pausedSince: 'Feb 5, 2026',
+  },
+];
+
+export const MOCK_DONATION_HISTORY: DonationHistoryItem[] = [
+  {
+    id: 'd1',
+    initiativeName: 'Kubernetes Security Audit',
+    initiativeIcon: '🔐',
+    fundType: 'Security Audit',
+    fundTypeIcon: 'fa-shield-halved',
+    date: 'Apr 2, 2026',
+    kind: 'one-time',
+    amount: 500,
+  },
+  {
+    id: 'd2',
+    initiativeName: 'curl Maintenance Fund',
+    initiativeIcon: '🌀',
+    fundType: 'General Fund',
+    fundTypeIcon: 'fa-piggy-bank',
+    date: 'Apr 1, 2026',
+    kind: 'monthly',
+    amount: 50,
+  },
+  {
+    id: 'd3',
+    initiativeName: 'Linux Kernel Mentorship',
+    initiativeIcon: '🐧',
+    fundType: 'Mentorship',
+    fundTypeIcon: 'fa-user-group',
+    date: 'Mar 15, 2026',
+    kind: 'one-time',
+    amount: 250,
+  },
+  {
+    id: 'd4',
+    initiativeName: 'curl Maintenance Fund',
+    initiativeIcon: '🌀',
+    fundType: 'General Fund',
+    fundTypeIcon: 'fa-piggy-bank',
+    date: 'Mar 1, 2026',
+    kind: 'monthly',
+    amount: 50,
+  },
+  {
+    id: 'd5',
+    initiativeName: "Let's Encrypt Infrastructure",
+    initiativeIcon: '🔒',
+    fundType: 'Security Audit',
+    fundTypeIcon: 'fa-shield-halved',
+    date: 'Jan 20, 2026',
+    kind: 'one-time',
+    amount: 100,
+  },
+  {
+    id: 'd6',
+    initiativeName: 'curl Maintenance Fund',
+    initiativeIcon: '🌀',
+    fundType: 'General Fund',
+    fundTypeIcon: 'fa-piggy-bank',
+    date: 'Jan 1, 2026',
+    kind: 'monthly',
+    amount: 50,
+  },
+  {
+    id: 'd7',
+    initiativeName: 'Rust for Linux',
+    initiativeIcon: '🦀',
+    fundType: 'Project',
+    fundTypeIcon: 'fa-display',
+    date: 'Dec 5, 2025',
+    kind: 'one-time',
+    amount: 100,
+  },
+  {
+    id: 'd8',
+    initiativeName: 'curl Maintenance Fund',
+    initiativeIcon: '🌀',
+    fundType: 'General Fund',
+    fundTypeIcon: 'fa-piggy-bank',
+    date: 'Dec 1, 2025',
+    kind: 'monthly',
+    amount: 50,
+  },
+  {
+    id: 'd9',
+    initiativeName: 'Node.js Sustainability',
+    initiativeIcon: '⬡',
+    fundType: 'General Fund',
+    fundTypeIcon: 'fa-piggy-bank',
+    date: 'Nov 12, 2025',
+    kind: 'one-time',
+    amount: 200,
+  },
+  {
+    id: 'd10',
+    initiativeName: 'curl Maintenance Fund',
+    initiativeIcon: '🌀',
+    fundType: 'General Fund',
+    fundTypeIcon: 'fa-piggy-bank',
+    date: 'Nov 1, 2025',
+    kind: 'monthly',
+    amount: 50,
+  },
+  {
+    id: 'd11',
+    initiativeName: 'curl Maintenance Fund',
+    initiativeIcon: '🌀',
+    fundType: 'General Fund',
+    fundTypeIcon: 'fa-piggy-bank',
+    date: 'Oct 1, 2025',
+    kind: 'monthly',
+    amount: 50,
+  },
+];
+
+export const MOCK_PAYMENT_METHODS: PaymentMethod[] = [{ id: 'pm1', brand: 'VISA', last4: '4567', expiry: '04/26' }];
