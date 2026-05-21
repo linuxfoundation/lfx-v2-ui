@@ -59,10 +59,21 @@
   }
 </div>
 
-<!-- Vote Results Drawer -->
+<!-- Vote Results Drawer — passes audience='voter' in Me lens so the drawer renders the
+     LFXV2-1917 blind-results / submitted-confirmation / closed-results panel and skips
+     the creator stats + "As the creator..." note. Creator lens is unchanged. -->
 <lfx-vote-results-drawer
   [(visible)]="resultsDrawerVisible"
   [voteId]="selectedVoteId()"
   [listVote]="selectedListVote()"
+  [audience]="isMeLens() ? 'voter' : 'creator'"
   [userResponseUid]="selectedUserResponseUid()"
   data-testid="votes-results-drawer"></lfx-vote-results-drawer>
+
+<!-- Vote Cast Drawer — opens for active GENERIC votes the user has not yet responded to (Me lens). -->
+<lfx-vote-cast-drawer
+  [(visible)]="castDrawerVisible"
+  [voteId]="selectedVoteId()"
+  [listVote]="selectedListVote()"
+  (voteSubmitted)="onVoteSubmitted()"
+  data-testid="votes-dashboard-cast-drawer"></lfx-vote-cast-drawer>

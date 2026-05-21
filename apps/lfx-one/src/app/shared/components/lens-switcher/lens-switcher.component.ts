@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 import { NgClass } from '@angular/common';
-import { afterNextRender, Component, inject, input, signal, viewChild } from '@angular/core';
+import { afterNextRender, Component, computed, inject, input, signal, Signal, viewChild } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AvatarComponent } from '@components/avatar/avatar.component';
-import { BadgeComponent } from '@components/badge/badge.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { ChangelogDrawerComponent } from '@components/changelog-drawer/changelog-drawer.component';
 import { ImpersonationDialogComponent } from '@components/impersonation-dialog/impersonation-dialog.component';
@@ -21,7 +20,7 @@ import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'lfx-lens-switcher',
-  imports: [NgClass, RouterLink, TooltipModule, PopoverModule, AvatarComponent, BadgeComponent, ButtonComponent, ChangelogDrawerComponent],
+  imports: [NgClass, RouterLink, TooltipModule, PopoverModule, AvatarComponent, ButtonComponent, ChangelogDrawerComponent],
   providers: [DialogService],
   templateUrl: './lens-switcher.component.html',
   styleUrl: './lens-switcher.component.scss',
@@ -36,7 +35,13 @@ export class LensSwitcherComponent {
   public readonly mobile = input<boolean>(false);
 
   protected readonly activeLens = this.lensService.activeLens;
-  protected readonly lenses = this.lensService.availableLenses;
+  protected readonly lenses = this.lensService.displayLenses;
+  protected readonly isHybrid = this.lensService.isHybridPersona;
+  // Hybrid personas merge the 'project' button with the 'foundation' lens state — both map to 'project' for highlighting.
+  protected readonly activeLensId: Signal<Lens> = computed(() => {
+    const active = this.activeLens();
+    return this.isHybrid() && active === 'foundation' ? 'project' : active;
+  });
   protected readonly user = this.userService.user;
   protected readonly insightsUrl = buildInsightsUrl();
   protected readonly userMenu = viewChild<Popover>('userMenu');
@@ -46,6 +51,11 @@ export class LensSwitcherComponent {
   protected readonly isImpersonating = this.userService.impersonating;
   protected readonly unseenChangelogCount = this.changelogService.unseenChangelogCount;
   protected readonly changelogDrawerVisible = signal(false);
+  protected readonly changelogAriaLabel = computed(() => {
+    const count = this.unseenChangelogCount();
+    if (count === 0) return "What's New";
+    return `What's New (${count} unseen ${count === 1 ? 'update' : 'updates'})`;
+  });
 
   public constructor() {
     // afterNextRender so input bindings have settled — the duplicate `[mobile]="true"` instance correctly skips.

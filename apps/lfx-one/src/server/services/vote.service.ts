@@ -1,11 +1,13 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { IndexedVoteResponseStatus, VoteResponseStatus } from '@lfx-one/shared/enums';
 import {
   CreateVoteRequest,
   CreateVoteResponseRequest,
   IndexedVote,
   IndexedVoteResponse,
+  MyVoteResponse,
   QueryServiceCountResponse,
   QueryServiceResponse,
   UpdateVoteRequest,
@@ -250,7 +252,7 @@ export class VoteService {
 
   /**
    * Submits a ballot via POST /vote_responses using the user's bearer token (no M2M),
-   * then polls until the query service indexes the response as 'submitted'.
+   * then polls until the query service indexes the response as 'responded'.
    */
   public async createVoteResponse(req: Request, payload: CreateVoteResponseRequest): Promise<void> {
     logger.debug(req, 'create_vote_response', 'Submitting vote response', {
@@ -284,7 +286,7 @@ export class VoteService {
             filters: [`vote_uid:${payload.vote_uid}`],
           }
         );
-        return resources.some((r) => r.data.uid === payload.vote_response_uid && r.data.vote_status === 'submitted');
+        return resources.some((r) => r.data.uid === payload.vote_response_uid && r.data.vote_status === IndexedVoteResponseStatus.RESPONDED);
       },
       maxRetries: 5,
       retryDelayMs: 1000,
@@ -321,14 +323,10 @@ export class VoteService {
       return [];
     }
 
-    // Build filters_or array — note: vote_response uses 'user_email' not 'email'
+    // vote_response uses 'user_email' not 'email'.
     const filtersOr: string[] = [];
-    if (email) {
-      filtersOr.push(`user_email:${email}`);
-    }
-    if (username) {
-      filtersOr.push(`username:${username}`);
-    }
+    if (email) filtersOr.push(`user_email:${email}`);
+    if (username) filtersOr.push(`username:${username}`);
 
     // Query vote_response records using filters_or (OR logic on data fields)
     const responses = await fetchAllQueryResources<IndexedVoteResponse>(req, (pageToken) =>
@@ -343,10 +341,19 @@ export class VoteService {
     // Only include pending responses — submitted/removed ones shouldn't enable inline voting.
     const responseUidByVoteUid = new Map<string, string>(
       responses
-        .filter((r): r is IndexedVoteResponse & { uid: string } => !!r.uid && r.vote_status !== 'submitted' && !r.voter_removed)
+        .filter(
+          (r): r is IndexedVoteResponse & { uid: string } =>
+            !!r.uid && r.vote_status === IndexedVoteResponseStatus.AWAITING_RESPONSE && !r.voter_removed
+        )
         .map((r) => [r.vote_uid ?? r.vote_id ?? r.poll_id ?? '', r.uid] as [string, string])
         .filter(([voteKey]) => !!voteKey)
     );
+
+    const respondedVoteUids = new Set<string>();
+    for (const r of responses) {
+      const voteKey = r.vote_uid ?? r.vote_id ?? r.poll_id;
+      if (voteKey && r.vote_status === IndexedVoteResponseStatus.RESPONDED) respondedVoteUids.add(voteKey);
+    }
 
     // Extract unique vote UIDs (fall back to vote_id/poll_id for v1 rows)
     const voteUids = [...new Set(responses.map((r) => r.vote_uid ?? r.vote_id ?? r.poll_id).filter((uid): uid is string => !!uid))];
@@ -358,18 +365,24 @@ export class VoteService {
     logger.debug(req, 'get_my_votes', 'Found user vote responses', {
       response_count: responses.length,
       unique_vote_count: voteUids.length,
+      responded_count: respondedVoteUids.size,
     });
 
-    // Fetch vote details in parallel via the voting microservice
+    // Decorate each Vote with response_status so the Me-lens UI can branch cast vs view.
     const votes = await Promise.all(
-      voteUids.map(async (uid) => {
+      voteUids.map(async (uid): Promise<Vote | null> => {
         try {
           const vote = await this.microserviceProxy.proxyRequest<Vote>(req, 'LFX_V2_SERVICE', `/votes/${uid}`, 'GET');
+          if (!vote) return vote;
           const responseUid = responseUidByVoteUid.get(uid);
+          const decorated: Vote = {
+            ...vote,
+            response_status: respondedVoteUids.has(uid) ? VoteResponseStatus.RESPONDED : VoteResponseStatus.AWAITING_RESPONSE,
+          };
           if (responseUid) {
-            vote.my_vote_response_uid = responseUid;
+            decorated.my_vote_response_uid = responseUid;
           }
-          return vote;
+          return decorated;
         } catch (error) {
           logger.warning(req, 'get_my_votes', 'Failed to fetch vote details, skipping', {
             vote_uid: uid,
@@ -393,6 +406,39 @@ export class VoteService {
       });
 
     return this.projectService.enrichWithProjectData(req, sorted);
+  }
+
+  /** POST /vote_responses requires the pre-allocated invitation row's UID — a fresh UUID returns 404 upstream. */
+  public async getMyVoteResponse(req: Request, voteUid: string): Promise<MyVoteResponse | null> {
+    const rawUsername = await getUsernameFromAuth(req);
+    const username = rawUsername ? stripAuthPrefix(rawUsername) : null;
+    const email = getEffectiveEmail(req);
+
+    if (!username && !email) return null;
+
+    const filtersOr: string[] = [];
+    if (email) filtersOr.push(`user_email:${email}`);
+    if (username) filtersOr.push(`username:${username}`);
+
+    // `filters` narrows on vote_uid at the index, avoiding a full-history scan per drawer open;
+    // `filters_or` then disjuncts the user-identity match. Both AND together.
+    const responses = await fetchAllQueryResources<MyVoteResponse>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<MyVoteResponse>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        type: 'vote_response',
+        filters: [`vote_uid:${voteUid}`],
+        filters_or: filtersOr,
+        ...(pageToken && { page_token: pageToken }),
+      })
+    );
+
+    // Defensive: `r.uid` should always be populated by the indexer, but fall back to `vote_id`
+    // (the v1 alias) if it isn't — logging the anomaly so we catch any indexer drift.
+    const match = responses.find((r) => r?.vote_uid === voteUid && (!!r?.uid || !!r?.vote_id));
+    if (match && !match.uid && match.vote_id) {
+      logger.warning(req, 'get_my_vote_response', 'vote_response row missing uid; falling back to vote_id', { vote_uid: voteUid, vote_id: match.vote_id });
+      return { ...match, uid: match.vote_id };
+    }
+    return match ?? null;
   }
 
   // ============================================

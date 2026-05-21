@@ -36,9 +36,49 @@ export class NavigationService {
       map((lens): NavLens | null => (lens === 'foundation' || lens === 'project' ? lens : null)),
       distinctUntilChanged(),
       filter((lens): lens is NavLens => lens !== null),
-      tap((lens) => this.resetAndReload(lens))
+      tap((lens) => {
+        this.resetAndReload(lens);
+        // For hybrid personas, preload the sibling lens so the merged dropdown has both sets ready.
+        // preloadSibling() skips default-selection side effects so it can't overwrite the active
+        // lens's context/URL, and it bails out if the sibling is already loaded or in flight.
+        if (this.lensService.isHybridPersona()) {
+          const sibling: NavLens = lens === 'foundation' ? 'project' : 'foundation';
+          this.preloadSibling(sibling);
+        }
+      })
     ),
     { initialValue: null }
+  );
+
+  // Re-fetch the project lens if foundation visibility flips mid-session (e.g. persona refresh
+  // expands allowed lenses) so accumulated items get re-filtered through applyVisibilityFilters.
+  private readonly foundationVisibilityWatcher = toSignal(
+    toObservable(this.lensService.availableLenses).pipe(
+      map((options) => options.some((option) => option.id === 'foundation')),
+      distinctUntilChanged(),
+      skip(1),
+      filter(() => this.lensService.activeLens() === 'project'),
+      tap(() => this.resetAndReload('project'))
+    ),
+    { initialValue: false }
+  );
+
+  // Persona refresh can promote a user to hybrid without changing activeLens — in that case the
+  // activeLensPreloader doesn't re-run, leaving the sibling lens unloaded and the merged tabs empty.
+  private readonly hybridTransitionPreloader = toSignal(
+    toObservable(this.lensService.isHybridPersona).pipe(
+      distinctUntilChanged(),
+      skip(1),
+      filter((isHybrid) => isHybrid),
+      tap(() => {
+        const active = this.lensService.activeLens();
+        if (active === 'foundation' || active === 'project') {
+          const sibling: NavLens = active === 'foundation' ? 'project' : 'foundation';
+          this.preloadSibling(sibling);
+        }
+      })
+    ),
+    { initialValue: false }
   );
 
   public items(lens: NavLens): Signal<LensItem[]> {
@@ -80,12 +120,32 @@ export class NavigationService {
     state.reload$.next();
   }
 
+  private preloadSibling(lens: NavLens): void {
+    const state = this.getState(lens);
+    if (state.loaded() || state.loading()) {
+      return;
+    }
+    // Deliberately do NOT set pendingDefaultSelection — preload must not race with the active
+    // lens's selection and can't be allowed to overwrite the URL/context.
+    state.reload$.next();
+  }
+
   private getState(lens: NavLens): LensState {
     return lens === 'foundation' ? this.foundationState : this.projectState;
   }
 
   private applyDefaultSelection(lens: NavLens, page: LensPage): void {
+    const state = this.getState(lens);
+
     if (page.items.length === 0) {
+      // Client-side filtering (e.g. hiding foundations from the project lens) can empty a page
+      // even when more upstream pages remain — keep paginating rather than redirecting users
+      // to Me lens for a page boundary that the upstream didn't know about.
+      if (page.nextPageToken && !page.upstreamFailed) {
+        this.loadNextPage(lens);
+        return;
+      }
+      state.pendingDefaultSelection.set(false);
       if (lens === 'foundation') {
         this.projectContextService.clearFoundation();
       } else {
@@ -94,6 +154,8 @@ export class NavigationService {
       this.handleEmptyLensResponse(lens, page);
       return;
     }
+
+    state.pendingDefaultSelection.set(false);
 
     // Preserve an explicit selection (e.g., Me lens → Open) — selected_uid ensures it's in the page.
     const existing = lens === 'foundation' ? this.projectContextService.selectedFoundation() : this.projectContextService.selectedProject();
@@ -221,8 +283,10 @@ export class NavigationService {
         tap((page) => {
           nextPageToken.set(page.nextPageToken);
           loaded.set(true);
-          if (page.reset && pendingDefaultSelection()) {
-            pendingDefaultSelection.set(false);
+          // Pending stays alive across pages so a first page emptied by client-side filtering
+          // can auto-fetch the next page and still drive default-selection; applyDefaultSelection
+          // is responsible for clearing the flag once a default is chosen or pages are exhausted.
+          if (pendingDefaultSelection()) {
             this.applyDefaultSelection(lens, page);
           }
         }),
@@ -291,10 +355,19 @@ export class NavigationService {
 
   private toLensPage(response: LensItemsResponse, reset: boolean): LensPage {
     return {
-      items: response.items,
+      items: this.applyVisibilityFilters(response.items, response.lens),
       nextPageToken: response.next_page_token,
       upstreamFailed: response.upstream_failed,
       reset,
     };
+  }
+
+  // Foundations have their own lens — drop them from the project dropdown for users
+  // who can switch to the foundation lens so the two dropdowns don't duplicate entries.
+  private applyVisibilityFilters(items: LensItem[], lens: NavLens): LensItem[] {
+    if (lens !== 'project') return items;
+    const foundationVisible = this.lensService.availableLenses().some((option) => option.id === 'foundation');
+    if (!foundationVisible) return items;
+    return items.filter((item) => !item.isFoundation);
   }
 }

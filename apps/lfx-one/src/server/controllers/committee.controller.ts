@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { ALLOWED_FILE_TYPES } from '@lfx-one/shared/constants';
+import { MeetingVisibility } from '@lfx-one/shared/enums';
 import {
   CommitteeCreateData,
   CommitteeUpdateData,
@@ -17,25 +18,13 @@ import { ReadableStream as NodeReadableStream } from 'node:stream/web';
 import { pipeline } from 'node:stream/promises';
 
 import { ServiceValidationError } from '../errors';
+import { contentDispositionAttachment } from '../helpers/content-disposition.helper';
 import { buildVCalendar, fetchAllMeetingPages, meetingsToVEvents } from '../helpers/ics.helper';
 import { getStringQueryParam } from '../helpers/validation.helper';
 import { logger } from '../services/logger.service';
 import { CommitteeService } from '../services/committee.service';
 import { MeetingService } from '../services/meeting.service';
 import { generateM2MToken } from '../utils/m2m-token.util';
-
-/**
- * Build an RFC 5987 compliant `Content-Disposition: attachment` header value
- * with both an ASCII fallback (`filename=`) and a UTF-8 encoded variant
- * (`filename*=UTF-8''...`). The ASCII fallback strips non-ASCII characters and
- * neutralizes quotes / backslashes / control chars to prevent header injection
- * (CR/LF) and broken responses. Mirrors the pattern in `document.controller.ts`.
- */
-function contentDispositionAttachment(fileName: string): string {
-  const safeAscii = fileName.replace(/[^\x20-\x7E]/g, '_').replace(/["\\]/g, '_');
-  const encoded = encodeURIComponent(fileName);
-  return `attachment; filename="${safeAscii}"; filename*=UTF-8''${encoded}`;
-}
 
 const FOLDER_UID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -134,8 +123,10 @@ export class CommitteeController {
       }
 
       // Get the committee by ID — include caller membership so the UI can render
-      // visitor / member / chair states without a second round-trip.
-      const committee = await this.committeeService.getCommitteeById(req, id, { includeMembership: true });
+      // visitor / member / chair states without a second round-trip, and enrich with
+      // project metadata so the detail page's Parent Project link can resolve project_uid
+      // -> project_slug for navigation.
+      const committee = await this.committeeService.getCommitteeById(req, id, { includeMembership: true, includeProjectMetadata: true });
 
       // Log the success
       logger.success(req, 'get_committee_by_id', startTime, {
@@ -1053,13 +1044,15 @@ export class CommitteeController {
         fetchAllMeetingPages((token) => this.meetingService.getMeetings(req, token ? { ...query, page_token: token } : query, 'v1_past_meeting', false)),
       ]);
 
-      const allMeetings = [...upcoming, ...past];
+      // Filter PRIVATE/restricted meetings from the public feed (mirrors PublicMeetingController visibility guard).
+      const allMeetings = [...upcoming, ...past].filter((m) => m.visibility === MeetingVisibility.PUBLIC && !m.restricted);
       const events = meetingsToVEvents(allMeetings);
-      const ics = buildVCalendar(events);
+      const ics = buildVCalendar(events, '-//LFX//Committee Calendar//EN');
 
       logger.success(req, 'get_committee_calendar', startTime, {
         committee_id: id,
         event_count: events.length,
+        filtered_out: upcoming.length + past.length - allMeetings.length,
       });
 
       res.setHeader('Content-Type', 'text/calendar; charset=utf-8');

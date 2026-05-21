@@ -35,6 +35,8 @@ export class PendingActionsComponent {
   public readonly displayLimit = input<number>(5);
 
   public readonly actionClick = output<PendingActionItem>();
+  // Emits the voteUid when a Vote pending-action is clicked, so the parent dashboard can open the cast drawer inline instead of navigating to /votes.
+  public readonly castVoteRequested = output<string>();
 
   // Cookie-backed dismissals live outside the signal graph; bumping forces the computed to recompute.
   private readonly hiddenActionsVersion = signal(0);
@@ -72,6 +74,7 @@ export class PendingActionsComponent {
       this.loadVoteForRow(item);
       return;
     }
+
     this.hiddenActionsService.hideAction(item);
     this.hiddenActionsVersion.update((v) => v + 1);
     this.actionClick.emit(item);

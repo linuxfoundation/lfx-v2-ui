@@ -30,6 +30,14 @@ export type OversightSubType = 'governance' | 'advisory';
  */
 export type GroupBehavioralClass = 'governing-board' | 'oversight-committee' | 'working-group' | 'special-interest-group' | 'ambassador-program' | 'other';
 
+/** Display metadata for a behavioral class — used by filter chips and badges. */
+export interface BehavioralClassDisplayConfig {
+  label: string;
+  icon: string;
+  color: string;
+  bgColor: string;
+}
+
 // ── Join & Invite Types (Phase 1) ───────────────────────────────────────────
 
 /**
@@ -128,6 +136,10 @@ export interface Committee {
   writer?: boolean;
   /** Committee category/type (e.g., "Technical", "Legal", "Board") */
   category: string;
+  /** Behavioral class derived from category — populated by the UI before binding to list views to avoid per-row function calls in templates. */
+  behavioralClass?: GroupBehavioralClass;
+  /** Resolved display metadata for behavioralClass — populated by the UI alongside behavioralClass so templates read pure properties. */
+  classDisplay?: BehavioralClassDisplayConfig;
   /** Optional description of the committee's purpose */
   description?: string;
   /** UID of parent committee for hierarchical structures */
@@ -310,6 +322,16 @@ export interface CommitteeSettingsData {
 /** Status of an open vote */
 export type CommitteeVoteStatus = 'open' | 'closed' | 'cancelled';
 
+/** Quick-filter chip keys for the committee Members tab; `'all'` is the default. */
+export type CommitteeMemberFilterChip = 'all' | 'voting' | 'observers' | 'chairs';
+
+/** A single chip entry in the committee Members quick-filter row. */
+export interface CommitteeMemberFilterChipConfig {
+  key: CommitteeMemberFilterChip;
+  label: string;
+  count: number;
+}
+
 /**
  * An open or recent vote in a governing board or oversight committee.
  */
@@ -481,6 +503,9 @@ export type CreateCommitteeDocumentType = 'link' | 'folder';
  * `CreateCommitteeDocumentType` because the file mode dispatches to the upload endpoint.
  */
 export type DocumentFormMode = CreateCommitteeDocumentType | 'file';
+
+/** Which resource type the shared document form dialog operates against. Drives service dispatch + copy. */
+export type DocumentFormEntityType = 'committee' | 'project';
 
 /**
  * A document or resource link associated with a committee.
@@ -684,6 +709,11 @@ export interface MailingListPickerDialogResult {
 export interface DescriptionDialogData {
   mode: 'view' | 'edit';
   description: string;
+}
+
+export interface IcalSubscribeDialogData {
+  feedUrl: string;
+  name: string;
 }
 
 export interface EditChairsDialogData {

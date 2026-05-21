@@ -474,7 +474,7 @@ export interface ProgressItemWithChart extends ProgressItem {
  * Pending-action row discriminator. String union (not enum) so it round-trips through JSON
  * without value-vs-key reverse-mapping footguns.
  */
-export type PendingActionType = 'RSVP' | 'Vote' | 'Survey' | 'Agenda';
+export type PendingActionType = 'RSVP' | 'Vote' | 'Survey' | 'Agenda' | 'Submitted';
 
 /**
  * Pending action item for task list
@@ -516,16 +516,16 @@ export interface DecoratedPendingAction extends PendingActionItem {
   rowKey: string;
   /** True when the action is an RSVP that should expand inline (RSVP type with a meetingUid) */
   isRsvpInline: boolean;
+  /** True when the action is a Vote that should expand inline (Vote type with voteUid + voteResponseUid) */
+  isVoteInline: boolean;
   /** True when the row's title should render as an external meeting link */
   isRsvpInlineLink: boolean;
   /** True when this row's inline RSVP button group is currently visible */
   isExpanded: boolean;
-  /** True while the Meeting payload for this RSVP row is being fetched */
+  /** True while the Meeting or Vote payload for this row is being fetched */
   isLoading: boolean;
   /** Lazily-loaded Meeting passed to RsvpButtonGroupComponent; null until fetched */
   meeting: Meeting | null;
-  /** True when the action is a Vote that should expand inline (Vote type with voteUid + voteResponseUid) */
-  isVoteInline: boolean;
   /** Lazily-loaded Vote passed to VoteBallotComponent; null until fetched */
   vote: Vote | null;
   /** Tailwind background class for the row — encodes zebra striping, RSVP amber tint, and post-RSVP emerald confirmation */

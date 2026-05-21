@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { IndividualVoteStatus, PollStatus, PollType, VoteResponseStatus } from '../enums/poll.enum';
+import { IndexedVoteResponseStatus, IndividualVoteStatus, PollStatus, PollType, VoteResponseStatus } from '../enums/poll.enum';
 import { CommitteeReference } from './committee.interface';
 
 /**
@@ -217,16 +217,26 @@ export interface Vote {
   num_response_received?: number;
   /** The current user's vote_response UID for this poll (only present on getMyVotes results) */
   my_vote_response_uid?: string;
+  /** Server-decorated by getMyVotes (Me-lens only) — RESPONDED iff the indexed vote_response row has IndexedVoteResponseStatus.RESPONDED. Absent on raw upstream Vote responses. */
+  response_status?: VoteResponseStatus;
 }
 
-/**
- * Vote resource shape as returned by the query service indexer.
- * Uses `vote_uid` (v2 primary key) — NOT `uid`.
- * Normalize to canonical `Vote` shape before passing to downstream consumers.
- */
+/** Vote shape as returned by the query service indexer; uses `vote_uid` (v2 PK) not `uid`. Normalize before passing downstream. */
 export interface IndexedVote extends Omit<Vote, 'uid'> {
   vote_uid: string;
   uid?: string;
+}
+
+/** Current user's vote_response row, returned by GET /api/votes/:uid/my-response. `uid` is the pre-allocated invitation row — POST /vote_responses must reuse it (a fresh UUID returns 404 upstream). */
+export interface MyVoteResponse {
+  uid: string;
+  vote_uid: string;
+  /** v1 alias for the response row id; identical value to `uid` when indexer populates it. */
+  vote_id?: string;
+  vote_status?: IndexedVoteResponseStatus;
+  voter_removed?: boolean;
+  user_email?: string;
+  username?: string;
 }
 
 /**
@@ -246,7 +256,7 @@ export interface IndexedVoteResponse {
   poll_id?: string;
   /** V2 project UID the response belongs to */
   project_uid?: string;
-  /** Upstream submission status (e.g. `'submitted'`, `'awaiting_response'`) */
+  /** Upstream submission status (e.g. `'responded'`, `'awaiting_response'`, `'ended'`, `'awaiting_response_but_poll_ended'`) */
   vote_status?: string;
   /** Whether the voter has been removed from the poll's eligible list */
   voter_removed?: boolean;
@@ -677,4 +687,27 @@ export interface UpdateVoteRequest {
   quorum_percentage?: number;
   /** Winning threshold percentage required */
   winning_threshold_percentage?: number;
+}
+
+/** Per-rank distribution row for a ranked-choice question (drawer-side projection of RankedChoiceVoteResult.rank_counts). */
+export interface RankCountDistribution {
+  rank: number;
+  count: number;
+  percentage: number;
+}
+
+/** Per-choice rank distribution for a ranked-choice question (drawer-side projection of PollQuestionResult.ranked_choice_votes). */
+export interface RankedChoiceDistribution {
+  choiceId: string;
+  choiceText: string;
+  totalRanked: number;
+  rankCounts: RankCountDistribution[];
+}
+
+/** Drawer-side view model for a ranked-choice question — projection of PollQuestionResult assembled by VoteResultsDrawerComponent.initRankedQuestions. */
+export interface RankedQuestionView {
+  questionId: string;
+  prompt: string;
+  choiceDistributions: RankedChoiceDistribution[];
+  hasRoundSummary: boolean;
 }

@@ -14,6 +14,7 @@ import {
   CodeCommitsDailyResponse,
   CodeContributionRange,
   CodeContributionSummaryResponse,
+  CreateProjectDocumentRequest,
   EmailCtrResponse,
   EngagedCommunitySizeResponse,
   EventGrowthResponse,
@@ -75,6 +76,9 @@ import {
   PerFoundationAnalytics,
   Project,
   ProjectCodeCommitsDailyRow,
+  ProjectDocument,
+  ProjectDocumentQueryResult,
+  ProjectDocumentUpstreamResponse,
   ProjectHealthEventsMonthlyRow,
   ProjectHealthMetricsDailyRow,
   ProjectIssuesResolutionAggregatedRow,
@@ -95,13 +99,18 @@ import {
   UniqueContributorsDailyResponse,
   UniqueContributorsWeeklyResponse,
   UniqueContributorsWeeklyRow,
+  UploadProjectDocumentRequest,
   WebActivitiesSummaryResponse,
 } from '@lfx-one/shared/interfaces';
-import { computeIsFoundation } from '@lfx-one/shared/utils';
+import type { PaidProjectPerformance } from '@lfx-one/shared/interfaces';
+import { computeIsFoundation, nullifyEmptyStrings } from '@lfx-one/shared/utils';
 import { Request } from 'express';
+import FormData from 'form-data';
 
 import { ResourceNotFoundError, ServiceValidationError } from '../errors';
+import { pollEndpoint } from '../helpers/poll-endpoint.helper';
 import { fetchAllQueryResources } from '../helpers/query-service.helper';
+import { cleanUserDisplayName } from '../utils/auth-helper';
 import { AccessCheckService } from './access-check.service';
 import { ETagService } from './etag.service';
 import { logger } from './logger.service';
@@ -111,6 +120,67 @@ import { SnowflakeService } from './snowflake.service';
 
 /** Valid LifecycleStage values used to guard the Snowflake LIFECYCLE_STAGE string. Hoisted to module scope so the Set isn't re-created on every row mapping. */
 const VALID_LIFECYCLE_STAGES: ReadonlySet<LifecycleStage> = new Set(Object.values(LifecycleStage));
+
+/** Upstream response shape for project folders (POST response) */
+interface ProjectFolder {
+  uid: string;
+  project_uid?: string;
+  name: string;
+  created_by_uid?: string;
+  /** LF username of the creator, auto-populated by upstream from the JWT. */
+  created_by_username?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/** Upstream response shape for project links (POST response) */
+interface ProjectLink {
+  uid: string;
+  project_uid?: string;
+  name: string;
+  url?: string;
+  description?: string;
+  folder_uid?: string;
+  created_by_uid?: string;
+  /** LF username of the creator, auto-populated by upstream from the JWT. */
+  created_by_username?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/**
+ * Query-service shape for an indexed `project_folder` resource.
+ * Upstream `GET /projects/{uid}/folders` returns 403 in prod (LIST endpoint
+ * not yet authorized for callers), so reads happen via the indexer instead.
+ */
+interface ProjectFolderQueryResult {
+  uid: string;
+  name: string;
+  project_uid?: string;
+  created_by_uid?: string;
+  /** LF username of the creator, indexed from the upstream domain model. */
+  created_by_username?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/**
+ * Query-service shape for an indexed `project_link` resource.
+ * Same rationale as ProjectFolderQueryResult — LIST endpoint is 403.
+ */
+interface ProjectLinkQueryResult {
+  uid: string;
+  name: string;
+  url?: string;
+  description?: string;
+  folder_uid?: string;
+  project_uid?: string;
+  created_by_uid?: string;
+  /** LF username of the creator, indexed from the upstream domain model. */
+  created_by_username?: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 /**
  * Service for handling project business logic
@@ -384,31 +454,8 @@ export class ProjectService {
     }
     // For 'remove' operation, user is already removed from both arrays above
 
-    // Step 3: Clean up empty avatar fields before sending to API
-    // The API validation doesn't accept empty strings for avatar URLs
-    updatedSettings.writers = updatedSettings.writers.map((user) => {
-      const cleanUser: any = {
-        name: user.name,
-        email: user.email,
-        username: user.username,
-      };
-      if (user.avatar && user.avatar.trim() !== '') {
-        cleanUser.avatar = user.avatar;
-      }
-      return cleanUser;
-    });
-
-    updatedSettings.auditors = updatedSettings.auditors.map((user) => {
-      const cleanUser: any = {
-        name: user.name,
-        email: user.email,
-        username: user.username,
-      };
-      if (user.avatar && user.avatar.trim() !== '') {
-        cleanUser.avatar = user.avatar;
-      }
-      return cleanUser;
-    });
+    // Upstream rejects empty strings on validated fields; send null instead so the key is preserved.
+    const sanitizedSettings = nullifyEmptyStrings(updatedSettings);
 
     // Step 4: Update settings with ETag
     const startTime = logger.startOperation(req, `${operation}_user_project_permissions`, {
@@ -422,7 +469,7 @@ export class ProjectService {
       'LFX_V2_SERVICE',
       `/projects/${uid}/settings`,
       etag,
-      updatedSettings,
+      sanitizedSettings,
       `${operation}_user_project_permissions`
     );
 
@@ -2148,59 +2195,54 @@ export class ProjectService {
 
     try {
       // Block 1: Total impressions, spend, revenue (last 6 months)
+      // Uses LAST_TOUCH_REVENUE as the default attribution model across all blocks
       const impressionsQuery = `
-      SELECT SUM(IMPRESSIONS) AS TOTAL_IMPRESSIONS, SUM(SPEND) AS TOTAL_SPEND, SUM(FIRST_TOUCH_REVENUE) AS TOTAL_REVENUE
-      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
+      SELECT SUM(IMPRESSIONS) AS TOTAL_IMPRESSIONS, SUM(SPEND) AS TOTAL_SPEND, SUM(LAST_TOUCH_REVENUE) AS TOTAL_REVENUE
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
       WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         AND FOUNDATION_SLUG = ?
     `;
 
-      // Block 2: ROAS KPI — latest completed month
+      // Block 2: ROAS KPI — last two completed months for MoM (last-touch attribution)
       const roasKpiQuery = `
-      SELECT FIRST_TOUCH_ROAS AS ROAS, ROAS_MOM_PCT
-      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
+      SELECT
+        CAMPAIGN_MONTH,
+        ROUND(DIV0(SUM(LAST_TOUCH_REVENUE), NULLIF(SUM(SPEND), 0)), 2) AS ROAS
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
       WHERE FOUNDATION_SLUG = ?
         AND CAMPAIGN_MONTH < DATE_TRUNC('MONTH', CURRENT_DATE())
-      QUALIFY ROW_NUMBER() OVER (ORDER BY CAMPAIGN_MONTH DESC) = 1
+        AND CAMPAIGN_MONTH >= DATEADD('MONTH', -2, DATE_TRUNC('MONTH', CURRENT_DATE()))
+      GROUP BY CAMPAIGN_MONTH
+      ORDER BY CAMPAIGN_MONTH DESC
     `;
 
-      // Block 3: Monthly ROAS trend (bar chart, last 6 months)
+      // Block 3: Monthly ROAS trend (bar chart, last 6 months, last-touch attribution)
       const monthlyRoasQuery = `
-      SELECT CAMPAIGN_MONTH, FIRST_TOUCH_ROAS AS ROAS
-      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
+      SELECT CAMPAIGN_MONTH, ROUND(DIV0(SUM(LAST_TOUCH_REVENUE), NULLIF(SUM(SPEND), 0)), 2) AS ROAS
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
       WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         AND FOUNDATION_SLUG = ?
+      GROUP BY CAMPAIGN_MONTH
       ORDER BY CAMPAIGN_MONTH
     `;
 
       // Block 4: Monthly impressions (bar chart, last 6 months)
       const monthlyImpressionsQuery = `
-      SELECT CAMPAIGN_MONTH, IMPRESSIONS
-      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
-      WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
-        AND FOUNDATION_SLUG = ?
-      ORDER BY CAMPAIGN_MONTH
-    `;
-
-      // Block 5: Impressions by channel (horizontal bar chart, last 6 months)
-      const channelQuery = `
-      SELECT CHANNEL, SUM(IMPRESSIONS) AS IMPRESSIONS
+      SELECT CAMPAIGN_MONTH, SUM(IMPRESSIONS) AS IMPRESSIONS
       FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
       WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         AND FOUNDATION_SLUG = ?
-      GROUP BY CHANNEL
-      ORDER BY IMPRESSIONS DESC
+      GROUP BY CAMPAIGN_MONTH
+      ORDER BY CAMPAIGN_MONTH
     `;
 
-      // Block 6: Project + campaign level performance breakdown (last 6 months)
-      // Uses LINEAR_REVENUE (not FIRST_TOUCH) — the per-campaign drill-down uses linear
-      // attribution to distribute credit fairly across touchpoints, while the top-level
-      // KPI (Blocks 1–2) uses first-touch for the headline ROAS.
+      // Block 5: Project + campaign level performance breakdown (last 6 months)
+      // All blocks use LAST_TOUCH_REVENUE as the default attribution model
       const projectPerfQuery = `
       SELECT
         PROJECT_NAME, CAMPAIGN_NAME, FUNNEL_STAGE,
-        SUM(SPEND) AS SPEND, SUM(LINEAR_REVENUE) AS REVENUE,
-        ROUND(DIV0(SUM(LINEAR_REVENUE), SUM(SPEND)), 2) AS ROAS,
+        SUM(SPEND) AS SPEND, SUM(LAST_TOUCH_REVENUE) AS REVENUE,
+        ROUND(DIV0(SUM(LAST_TOUCH_REVENUE), SUM(SPEND)), 2) AS ROAS,
         SUM(CONV) AS CONVERSIONS,
         ROUND(DIV0(SUM(CONV), NULLIF(SUM(CLICKS), 0)) * 100, 2) AS CONV_RATE,
         ROUND(DIV0(SUM(SPEND), NULLIF(SUM(CLICKS), 0)), 2) AS CPC,
@@ -2214,12 +2256,32 @@ export class ProjectService {
       ORDER BY SPEND DESC
     `;
 
-      const [impressionsResult, roasKpiResult, monthlyRoasResult, monthlyImpressionsResult, channelResult, projectPerfResult] = await Promise.all([
+      // Block 6: Platform-level performance breakdown (aggregated by CHANNEL)
+      // All blocks use LAST_TOUCH_REVENUE as the default attribution model
+      // Also used to derive channelGroups (impressions by channel) — eliminates a separate query
+      const platformPerfQuery = `
+      SELECT
+        CHANNEL,
+        SUM(SPEND) AS SPEND, SUM(LAST_TOUCH_REVENUE) AS REVENUE,
+        ROUND(DIV0(SUM(LAST_TOUCH_REVENUE), SUM(SPEND)), 2) AS ROAS,
+        SUM(CLICKS) AS CLICKS,
+        SUM(IMPRESSIONS) AS IMPRESSIONS,
+        ROUND(DIV0(SUM(CLICKS), NULLIF(SUM(IMPRESSIONS), 0)) * 100, 2) AS CTR,
+        ROUND(DIV0(SUM(SPEND), NULLIF(SUM(CLICKS), 0)), 2) AS CPC,
+        ROUND(DIV0(SUM(CONV), NULLIF(SUM(CLICKS), 0)) * 100, 2) AS CONV_RATE,
+        SUM(CONV) AS CONVERSIONS
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
+      WHERE FOUNDATION_SLUG = ?
+        AND CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
+      GROUP BY CHANNEL
+      ORDER BY SPEND DESC
+    `;
+
+      const [impressionsResult, roasKpiResult, monthlyRoasResult, monthlyImpressionsResult, projectPerfResult, platformPerfResult] = await Promise.all([
         this.snowflakeService.execute<{ TOTAL_IMPRESSIONS: number; TOTAL_SPEND: number; TOTAL_REVENUE: number }>(impressionsQuery, [foundationSlug]),
-        this.snowflakeService.execute<{ ROAS: number; ROAS_MOM_PCT: number }>(roasKpiQuery, [foundationSlug]),
+        this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; ROAS: number }>(roasKpiQuery, [foundationSlug]),
         this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; ROAS: number }>(monthlyRoasQuery, [foundationSlug]),
         this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; IMPRESSIONS: number }>(monthlyImpressionsQuery, [foundationSlug]),
-        this.snowflakeService.execute<{ CHANNEL: string; IMPRESSIONS: number }>(channelQuery, [foundationSlug]),
         this.snowflakeService
           .execute<{
             PROJECT_NAME: string;
@@ -2257,13 +2319,48 @@ export class ProjectService {
               }[],
             };
           }),
+        this.snowflakeService
+          .execute<{
+            CHANNEL: string;
+            SPEND: number;
+            REVENUE: number;
+            ROAS: number;
+            CLICKS: number;
+            IMPRESSIONS: number;
+            CTR: number;
+            CPC: number;
+            CONV_RATE: number;
+            CONVERSIONS: number;
+          }>(platformPerfQuery, [foundationSlug])
+          .catch((error) => {
+            logger.warning(undefined, 'get_social_reach', 'Optional platform breakdown query failed, degrading gracefully', {
+              foundation_slug: foundationSlug,
+              err: error,
+            });
+            return {
+              rows: [] as {
+                CHANNEL: string;
+                SPEND: number;
+                REVENUE: number;
+                ROAS: number;
+                CLICKS: number;
+                IMPRESSIONS: number;
+                CTR: number;
+                CPC: number;
+                CONV_RATE: number;
+                CONVERSIONS: number;
+              }[],
+            };
+          }),
       ]);
 
       const totalReach = impressionsResult.rows[0]?.TOTAL_IMPRESSIONS ?? 0;
       const totalSpend = impressionsResult.rows[0]?.TOTAL_SPEND ?? 0;
       const totalRevenue = impressionsResult.rows[0]?.TOTAL_REVENUE ?? 0;
-      const roas = roasKpiResult.rows[0]?.ROAS ?? 0;
-      const roasMomPct = roasKpiResult.rows[0]?.ROAS_MOM_PCT ?? 0;
+      const currentRoas = roasKpiResult.rows[0]?.ROAS ?? 0;
+      const previousRoas = roasKpiResult.rows[1]?.ROAS ?? 0;
+      const roas = currentRoas;
+      const roasMomPct = previousRoas > 0 ? ((currentRoas - previousRoas) / previousRoas) * 100 : 0;
 
       if (monthlyImpressionsResult.rows.length === 0) {
         return {
@@ -2277,6 +2374,8 @@ export class ProjectService {
           monthlyLabels: [],
           monthlyRoas: [],
           channelGroups: [],
+          projectBreakdown: [],
+          platformBreakdown: [],
         };
       }
 
@@ -2287,10 +2386,12 @@ export class ProjectService {
         return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
       });
 
-      const channelGroups = channelResult.rows.map((row) => ({
-        channel: row.CHANNEL,
-        totalImpressions: row.IMPRESSIONS,
-      }));
+      const channelGroups = platformPerfResult.rows
+        .map((row) => ({
+          channel: row.CHANNEL,
+          totalImpressions: row.IMPRESSIONS,
+        }))
+        .sort((a, b) => b.totalImpressions - a.totalImpressions);
 
       // Shape project breakdown with nested campaigns
       const projectMap = new Map<
@@ -2330,11 +2431,11 @@ export class ProjectService {
         projectMap.set(row.PROJECT_NAME, existing);
       }
 
-      const getPaidPerformance = (projectRoas: number): string => {
+      const getPaidPerformance = (projectRoas: number): PaidProjectPerformance => {
         if (projectRoas >= 2) return 'EXCELLENT';
         if (projectRoas >= 1) return 'GOOD';
-        if (projectRoas > 0) return 'POOR';
-        return 'NO REVENUE';
+        if (projectRoas > 0) return 'AVERAGE';
+        return 'EMERGING';
       };
 
       const formatFunnel = (stages: Set<string>): string => {
@@ -2384,6 +2485,20 @@ export class ProjectService {
         })
         .sort((a, b) => b.spend - a.spend);
 
+      const platformBreakdown = platformPerfResult.rows.map((row) => ({
+        platform: row.CHANNEL,
+        spend: Math.round((row.SPEND ?? 0) * 100) / 100,
+        revenue: Math.round((row.REVENUE ?? 0) * 100) / 100,
+        roas: row.ROAS ?? 0,
+        clicks: row.CLICKS ?? 0,
+        impressions: row.IMPRESSIONS ?? 0,
+        ctr: row.CTR ?? 0,
+        cpc: row.CPC ?? 0,
+        convRate: row.CONV_RATE ?? 0,
+        conversions: row.CONVERSIONS ?? 0,
+        performance: getPaidPerformance(row.ROAS ?? 0),
+      }));
+
       return {
         totalReach,
         roas: Math.round(roas * 100) / 100,
@@ -2396,6 +2511,7 @@ export class ProjectService {
         monthlyRoas,
         channelGroups,
         projectBreakdown,
+        platformBreakdown,
       };
     } catch (error) {
       logger.warning(undefined, 'get_social_reach', 'Failed to fetch social reach data, returning defaults', {
@@ -2413,6 +2529,8 @@ export class ProjectService {
         monthlyLabels: [],
         monthlyRoas: [],
         channelGroups: [],
+        projectBreakdown: [],
+        platformBreakdown: [],
       };
     }
   }
@@ -5211,6 +5329,384 @@ export class ProjectService {
     });
 
     return { aggregated, perFoundation };
+  }
+
+  // ── Project Documents ──────────────────────────────────────────────────────
+
+  public async getProjectDocuments(req: Request, projectId: string): Promise<ProjectDocument[]> {
+    logger.debug(req, 'get_project_documents', 'Fetching project folders, links, and files via indexer', {
+      project_uid: projectId,
+    });
+
+    // All three resource types come from the indexer:
+    // - project_document (files): no upstream LIST endpoint exists.
+    // - project_folder / project_link: upstream GET /projects/{uid}/folders and /links return
+    //   403 (LIST endpoints not authorized for callers in prod). Indexer reads work because
+    //   project_folder / project_link writes publish to NATS index subjects on every create.
+    const [folders, links, files] = await Promise.all([
+      fetchAllQueryResources<ProjectFolderQueryResult>(req, (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<ProjectFolderQueryResult>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+          type: 'project_folder',
+          tags: `project_uid:${projectId}`,
+          ...(pageToken && { page_token: pageToken }),
+        })
+      ).catch((err) => {
+        logger.warning(req, 'get_project_documents', 'Failed to fetch project folders via query service, returning empty list', {
+          project_uid: projectId,
+          err,
+        });
+        return [] as ProjectFolderQueryResult[];
+      }),
+      fetchAllQueryResources<ProjectLinkQueryResult>(req, (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<ProjectLinkQueryResult>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+          type: 'project_link',
+          tags: `project_uid:${projectId}`,
+          ...(pageToken && { page_token: pageToken }),
+        })
+      ).catch((err) => {
+        logger.warning(req, 'get_project_documents', 'Failed to fetch project links via query service, returning empty list', {
+          project_uid: projectId,
+          err,
+        });
+        return [] as ProjectLinkQueryResult[];
+      }),
+      fetchAllQueryResources<ProjectDocumentQueryResult>(req, (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<ProjectDocumentQueryResult>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+          type: 'project_document',
+          tags: `project_uid:${projectId}`,
+          ...(pageToken && { page_token: pageToken }),
+        })
+      ).catch((err) => {
+        logger.warning(req, 'get_project_documents', 'Failed to fetch project files via query service, returning empty list', {
+          project_uid: projectId,
+          err,
+        });
+        return [] as ProjectDocumentQueryResult[];
+      }),
+    ]);
+
+    const folderDocs: ProjectDocument[] = (folders || []).map((f) => ({
+      uid: f.uid,
+      type: 'folder' as const,
+      name: f.name,
+      created_at: f.created_at,
+      updated_at: f.updated_at,
+      created_by: f.created_by_uid,
+      uploaded_by: cleanUserDisplayName(f.created_by_username),
+      project_uid: f.project_uid,
+    }));
+
+    const linkDocs: ProjectDocument[] = (links || []).map((l) => ({
+      uid: l.uid,
+      type: 'link' as const,
+      name: l.name,
+      url: l.url,
+      description: l.description,
+      created_at: l.created_at,
+      updated_at: l.updated_at,
+      created_by: l.created_by_uid,
+      uploaded_by: cleanUserDisplayName(l.created_by_username),
+      parent_uid: l.folder_uid,
+      project_uid: l.project_uid,
+    }));
+
+    const fileDocs: ProjectDocument[] = (files || []).map((f) => ({
+      uid: f.uid,
+      type: 'file' as const,
+      name: f.name,
+      description: f.description,
+      file_size: f.file_size,
+      mime_type: f.content_type,
+      created_at: f.created_at,
+      updated_at: f.updated_at,
+      uploaded_by: cleanUserDisplayName(f.uploaded_by_username),
+      parent_uid: f.folder_uid,
+      project_uid: f.project_uid,
+    }));
+
+    return [...folderDocs, ...linkDocs, ...fileDocs];
+  }
+
+  /**
+   * Creates a new folder or link for a project.
+   * Routes to the correct upstream endpoint based on type.
+   */
+  public async createProjectDocument(req: Request, projectId: string, data: CreateProjectDocumentRequest): Promise<ProjectDocument> {
+    if (data.type !== 'folder' && data.type !== 'link') {
+      throw ServiceValidationError.forField('type', `Unsupported document type: ${data.type}. Only 'link' and 'folder' are supported.`, {
+        operation: 'create_project_document',
+        service: 'project_service',
+      });
+    }
+
+    if (data.type === 'folder') {
+      // X-Sync=true blocks until the upstream indexer ACKs the publish, preventing stale list reads.
+      const folder = await this.microserviceProxy.proxyRequest<ProjectFolder>(
+        req,
+        'LFX_V2_SERVICE',
+        `/projects/${projectId}/folders`,
+        'POST',
+        undefined,
+        {
+          name: data.name,
+          created_by_name: data.created_by_name,
+        },
+        { 'X-Sync': 'true' }
+      );
+
+      logger.debug(req, 'create_project_folder', 'Project folder created successfully', {
+        project_uid: projectId,
+        folder_uid: folder.uid,
+      });
+
+      // Poll the indexer until the new folder is visible — list reads use the indexer
+      // because the upstream LIST endpoint is 403'd in prod.
+      await pollEndpoint({
+        req,
+        operation: 'create_project_folder_index_poll',
+        pollFn: async () => {
+          const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<{ uid: string }>>(
+            req,
+            'LFX_V2_SERVICE',
+            '/query/resources',
+            'GET',
+            {
+              type: 'project_folder',
+              tags: `project_folder_uid:${folder.uid}`,
+            }
+          );
+          return (resources?.length ?? 0) > 0;
+        },
+        maxRetries: 5,
+        retryDelayMs: 400,
+        metadata: { project_uid: projectId, folder_uid: folder.uid },
+      });
+
+      return {
+        uid: folder.uid,
+        type: 'folder',
+        name: folder.name,
+        created_at: folder.created_at,
+        updated_at: folder.updated_at,
+        created_by: folder.created_by_uid,
+        uploaded_by: cleanUserDisplayName(folder.created_by_username),
+        project_uid: folder.project_uid,
+      };
+    }
+
+    // Link
+    const link = await this.microserviceProxy.proxyRequest<ProjectLink>(
+      req,
+      'LFX_V2_SERVICE',
+      `/projects/${projectId}/links`,
+      'POST',
+      undefined,
+      {
+        name: data.name,
+        url: data.url,
+        description: data.description,
+        folder_uid: data.parent_uid,
+        created_by_name: data.created_by_name,
+      },
+      { 'X-Sync': 'true' }
+    );
+
+    logger.debug(req, 'create_project_link', 'Project link created successfully', {
+      project_uid: projectId,
+      link_uid: link.uid,
+    });
+
+    await pollEndpoint({
+      req,
+      operation: 'create_project_link_index_poll',
+      pollFn: async () => {
+        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<{ uid: string }>>(
+          req,
+          'LFX_V2_SERVICE',
+          '/query/resources',
+          'GET',
+          {
+            type: 'project_link',
+            tags: `project_link_uid:${link.uid}`,
+          }
+        );
+        return (resources?.length ?? 0) > 0;
+      },
+      maxRetries: 5,
+      retryDelayMs: 400,
+      metadata: { project_uid: projectId, link_uid: link.uid },
+    });
+
+    return {
+      uid: link.uid,
+      type: 'link',
+      name: link.name,
+      url: link.url,
+      description: link.description,
+      created_at: link.created_at,
+      updated_at: link.updated_at,
+      created_by: link.created_by_uid,
+      uploaded_by: cleanUserDisplayName(link.created_by_username),
+      parent_uid: link.folder_uid,
+      project_uid: link.project_uid,
+    };
+  }
+
+  /**
+   * Uploads a file document to a project via multipart/form-data.
+   */
+  public async uploadProjectDocument(req: Request, projectId: string, fileBuffer: Buffer, uploadData: UploadProjectDocumentRequest): Promise<ProjectDocument> {
+    logger.debug(req, 'upload_project_document', 'Uploading file to project service', {
+      project_uid: projectId,
+      file_name: uploadData.file_name,
+      file_size: uploadData.file_size,
+    });
+
+    // file_size is intentionally omitted — upstream UploadProjectDocumentRequestBody declares
+    // name, file_name, content_type, file, description, folder_uid. Goa drops unknown fields.
+    const formData = new FormData();
+    formData.append('file', fileBuffer, {
+      filename: uploadData.file_name,
+      contentType: uploadData.content_type,
+    });
+    formData.append('name', uploadData.name);
+    formData.append('file_name', uploadData.file_name);
+    formData.append('content_type', uploadData.content_type);
+    if (uploadData.description) {
+      formData.append('description', uploadData.description);
+    }
+    if (uploadData.folder_uid) {
+      formData.append('folder_uid', uploadData.folder_uid);
+    }
+
+    // X-Sync=true blocks until the upstream indexer ACKs the publish, preventing stale list reads.
+    const result = await this.microserviceProxy.proxyRequest<ProjectDocumentUpstreamResponse>(
+      req,
+      'LFX_V2_SERVICE',
+      `/projects/${projectId}/documents`,
+      'POST',
+      undefined,
+      formData,
+      { 'X-Sync': 'true' }
+    );
+
+    logger.info(req, 'upload_project_document', 'Project document uploaded successfully', {
+      project_uid: projectId,
+      document_uid: result.uid,
+      file_name: result.file_name,
+      file_size: result.file_size,
+    });
+
+    // Poll until the query service sees the new doc — indexer is async to the upstream write.
+    await pollEndpoint({
+      req,
+      operation: 'upload_project_document_index_poll',
+      pollFn: async () => {
+        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<{ uid: string }>>(
+          req,
+          'LFX_V2_SERVICE',
+          '/query/resources',
+          'GET',
+          {
+            type: 'project_document',
+            tags: `project_document_uid:${result.uid}`,
+          }
+        );
+        return (resources?.length ?? 0) > 0;
+      },
+      maxRetries: 5,
+      retryDelayMs: 400,
+      metadata: { project_uid: projectId, document_uid: result.uid },
+    });
+
+    return {
+      uid: result.uid,
+      type: 'file',
+      name: result.name,
+      description: result.description,
+      file_size: result.file_size,
+      mime_type: result.content_type,
+      created_at: result.created_at,
+      updated_at: result.updated_at,
+      uploaded_by: cleanUserDisplayName(result.uploaded_by_username),
+      project_uid: result.project_uid,
+    };
+  }
+
+  /**
+   * Fetches indexed metadata for a single project document file. Used by the controller
+   * to set Content-Type / Content-Disposition headers before streaming the binary back.
+   * Scoped by both `project_document_uid` AND `project_uid` so a leaked or guessed
+   * documentId can't surface metadata for a doc owned by another project.
+   */
+  public async getProjectDocumentMetadata(req: Request, projectId: string, documentId: string): Promise<{ contentType: string; fileName: string }> {
+    logger.debug(req, 'get_project_document_metadata', 'Fetching document metadata from indexer', {
+      project_uid: projectId,
+      document_uid: documentId,
+    });
+
+    const metadata = await this.microserviceProxy
+      .proxyRequest<QueryServiceResponse<ProjectDocumentQueryResult>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        type: 'project_document',
+        tags_all: [`project_document_uid:${documentId}`, `project_uid:${projectId}`],
+      })
+      .then((resp) => resp.resources?.[0]?.data ?? null)
+      .catch((err) => {
+        logger.warning(req, 'get_project_document_metadata', 'Failed to fetch document metadata, using fallback values', {
+          document_uid: documentId,
+          err,
+        });
+        return null;
+      });
+
+    return {
+      contentType: metadata?.content_type || 'application/octet-stream',
+      fileName: metadata?.file_name || `${documentId}.bin`,
+    };
+  }
+
+  /**
+   * Opens a streaming HTTP request against the upstream document download endpoint
+   * and returns the raw fetch Response. Caller pipes `response.body` directly to its
+   * Express response — buffering would cause memory pressure under concurrent
+   * downloads given the 100MB upload limit.
+   */
+  public async getProjectDocumentStream(req: Request, projectId: string, documentId: string): Promise<Response> {
+    logger.debug(req, 'get_project_document_stream', 'Opening upstream stream for project document', {
+      project_uid: projectId,
+      document_uid: documentId,
+    });
+
+    return this.microserviceProxy.proxyStreamRequest(req, 'LFX_V2_SERVICE', `/projects/${projectId}/documents/${documentId}/download`, 'GET');
+  }
+
+  /**
+   * Deletes a project folder or link using ETag for concurrency control.
+   * @param documentType 'folder' or 'link' — determines which upstream endpoint to call
+   */
+  public async deleteProjectDocument(req: Request, projectId: string, documentId: string, documentType: string): Promise<void> {
+    // Defense-in-depth: controller validates this too, but a typo like `type=file` should
+    // never silently fall through to the link path on a destructive route.
+    if (documentType !== 'folder' && documentType !== 'link') {
+      throw ServiceValidationError.forField('type', `Unsupported document type: ${documentType}. Only 'folder' and 'link' are supported.`, {
+        operation: 'delete_project_document',
+        service: 'project_service',
+      });
+    }
+
+    const resourcePath = documentType === 'folder' ? `/projects/${projectId}/folders/${documentId}` : `/projects/${projectId}/links/${documentId}`;
+
+    // Step 1: Fetch resource with ETag
+    const { etag } = await this.etagService.fetchWithETag<ProjectDocument>(req, 'LFX_V2_SERVICE', resourcePath, 'delete_project_document');
+
+    // Step 2: Delete resource with ETag
+    await this.etagService.deleteWithETag(req, 'LFX_V2_SERVICE', resourcePath, etag, 'delete_project_document');
+
+    logger.debug(req, 'delete_project_document', `Project ${documentType} deleted successfully`, {
+      project_uid: projectId,
+      document_uid: documentId,
+      document_type: documentType,
+    });
   }
 
   // Runs one IN-clause Snowflake query per source table instead of 4 queries per slug, so a 25-foundation summary fires 4 queries rather than 100.
