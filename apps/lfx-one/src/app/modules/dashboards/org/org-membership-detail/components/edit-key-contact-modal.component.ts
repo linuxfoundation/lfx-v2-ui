@@ -4,7 +4,7 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectorRef, Component, computed, DestroyRef, inject, signal, type Signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { EMAIL_REGEX, MOCK_SAVE_LATENCY_MS } from '@lfx-one/shared/constants';
+import { EMAIL_REGEX, SIMULATED_SAVE_DELAY_MS } from '@lfx-one/shared/constants';
 import type {
   EditKeyContactDialogData,
   EditKeyContactDialogResult,
@@ -240,7 +240,7 @@ export class EditKeyContactModalComponent {
       } finally {
         this.isSaving.set(false);
       }
-    }, MOCK_SAVE_LATENCY_MS);
+    }, SIMULATED_SAVE_DELAY_MS);
   }
 
   private focusInitialElement(): void {

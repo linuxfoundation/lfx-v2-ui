@@ -47,14 +47,7 @@ export class OrgMembershipDetailComponent {
   private readonly messageService = inject(MessageService);
   private readonly dialogService = inject(DialogService);
 
-  /**
-   * Active tab signal. Synced two-way with the URL fragment (`#key-contacts`,
-   * `#board`, `#docs`, `#governance`). Initial value comes from
-   * `route.snapshot.fragment`; subsequent fragment changes (browser back/forward
-   * or external link) update the signal; user tab clicks update the URL via
-   * `switchTab()`. (Spec 016 round 7 enhancement — reverses spec 015 round 2
-   * "tab state is component-local" clarification to simplify e2e navigation.)
-   */
+  // Two-way sync with URL fragment; switchTab() writes, route.fragment subscription reads back.
   protected readonly activeTab = signal<MembershipDetailTab>(fragmentToTab(this.route.snapshot.fragment));
   protected readonly retryTrigger = signal(0);
   protected readonly fetchLoading = signal(true);
@@ -72,9 +65,7 @@ export class OrgMembershipDetailComponent {
   ];
 
   private readonly accountId$ = toObservable(computed(() => this.accountContext.selectedAccount()?.accountId));
-  /** Reactive route params: emits a new value on every `/org/memberships/:foundationId` navigation,
-   * including same-component reuse cases (router reuse, RouterLink to a different foundationId).
-   * Replaces an earlier `route.snapshot.paramMap` read which only captured the first navigation. */
+  // Reactive paramMap stream; re-emits on every :foundationId navigation including same-component reuse.
   private readonly foundationId$ = this.route.paramMap.pipe(map((params) => params.get('foundationId')));
   private readonly retryTrigger$ = toObservable(this.retryTrigger);
 

@@ -239,7 +239,7 @@ test.describe('US2 — Reassign Board Roles modal (FR-008)', () => {
     await expect(primary).toBeEnabled();
     await primary.click();
 
-    // Modal closes within ~1s (400 ms MOCK_SAVE_LATENCY_MS + buffer)
+    // Modal closes within ~1s (400 ms SIMULATED_SAVE_DELAY_MS + buffer)
     await expect(page.getByTestId('reassign-board-modal')).not.toBeVisible({ timeout: 5_000 });
 
     // Success toast appears. Note: the testid `board-toast-success-reassigned` is on the

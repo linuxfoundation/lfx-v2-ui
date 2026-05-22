@@ -61,13 +61,7 @@ export class BoardCommitteeCardComponent {
   protected readonly committeeState = signal<SectionLoadState>('idle');
   protected readonly votingState = signal<SectionLoadState>('idle');
 
-  /** True when ANY of the three sections has not yet resolved (idle/loading still pending). */
-  protected readonly initialLoading = computed(
-    () =>
-      (this.boardState() !== 'success' && this.boardState() !== 'error') ||
-      (this.committeeState() !== 'success' && this.committeeState() !== 'error') ||
-      (this.votingState() !== 'success' && this.votingState() !== 'error')
-  );
+  protected readonly initialLoading = computed(() => this.initInitialLoading());
 
   // === Accordion state ===
   protected readonly boardExpanded = signal(true);
@@ -293,6 +287,14 @@ export class BoardCommitteeCardComponent {
   }
 
   // === Private helpers ===
+  private initInitialLoading(): boolean {
+    return (
+      (this.boardState() !== 'success' && this.boardState() !== 'error') ||
+      (this.committeeState() !== 'success' && this.committeeState() !== 'error') ||
+      (this.votingState() !== 'success' && this.votingState() !== 'error')
+    );
+  }
+
   private initVotingHistoryWithMeta(): VotingRecordRow[] {
     return this.votingHistory().map((v) => ({
       ...v,

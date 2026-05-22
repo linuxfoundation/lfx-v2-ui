@@ -3,7 +3,7 @@
 
 import { Component, computed, DestroyRef, inject, signal, type Signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { EMAIL_REGEX, MOCK_SAVE_LATENCY_MS } from '@lfx-one/shared/constants';
+import { EMAIL_REGEX, SIMULATED_SAVE_DELAY_MS } from '@lfx-one/shared/constants';
 import type { BoardSeat, CommitteeSeat, ReassignBoardRolesDialogData, ReassignBoardRolesDialogResult } from '@lfx-one/shared/interfaces';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
@@ -109,7 +109,7 @@ export class ReassignBoardRolesModalComponent {
           email: this.emailField().trim(),
         },
       } satisfies ReassignBoardRolesDialogResult);
-    }, MOCK_SAVE_LATENCY_MS);
+    }, SIMULATED_SAVE_DELAY_MS);
   }
 
   /** Handle Enter key inside any text input — fire Save Changes when enabled (FR-017b). */

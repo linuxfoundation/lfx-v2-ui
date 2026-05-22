@@ -3,19 +3,13 @@
 
 import type { MembershipDetailTab } from '../interfaces/org-memberships.interface';
 
-/** FR-018b — single tunable constant for the simulated save latency window. */
-export const MOCK_SAVE_LATENCY_MS = 400;
+// TODO: replace with real API call latency once write endpoints are wired (FR-018b).
+export const SIMULATED_SAVE_DELAY_MS = 400;
 
 export const TAB_FRAGMENTS: readonly MembershipDetailTab[] = ['key-contacts', 'board', 'docs', 'governance'] as const;
 export const DEFAULT_TAB: MembershipDetailTab = 'key-contacts';
 
-/**
- * Map a URL-fragment string to a {@link MembershipDetailTab}.
- *
- * Accepts the canonical tab ids (`key-contacts`, `board`, `docs`, `governance`)
- * AND the longer aliases used in the PR description / external deep links
- * (`board-committee` → `board`, `documentation` → `docs`).
- */
+// Also accepts 'board-committee' → 'board' and 'documentation' → 'docs' aliases.
 const TAB_FRAGMENT_ALIASES: Readonly<Record<string, MembershipDetailTab>> = {
   'board-committee': 'board',
   documentation: 'docs',

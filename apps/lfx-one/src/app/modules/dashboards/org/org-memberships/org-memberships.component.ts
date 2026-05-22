@@ -126,15 +126,8 @@ export class OrgMembershipsComponent {
 
   protected readonly discoverState: Signal<OrgMembershipsPageState> = computed(() => this.initDiscoverState());
 
-  private readonly renewBaseUrl = computed(() => {
-    const slug = encodeURIComponent(this.accountContext.selectedAccount()?.accountSlug ?? '');
-    return `https://myorg.lfx.dev/${slug}/project/project-group-membership`;
-  });
-
-  private readonly joinBaseUrl = computed(() => {
-    const slug = encodeURIComponent(this.accountContext.selectedAccount()?.accountSlug ?? '');
-    return `https://myorg.lfx.dev/${slug}/project`;
-  });
+  private readonly renewBaseUrl = computed(() => this.initRenewBaseUrl());
+  private readonly joinBaseUrl = computed(() => this.initJoinBaseUrl());
 
   private lastAccountId: string | null = null;
 
@@ -188,6 +181,16 @@ export class OrgMembershipsComponent {
   }
 
   // --- Private init methods for multi-line computed() (component-organization convention) ---
+
+  private initRenewBaseUrl(): string {
+    const slug = encodeURIComponent(this.accountContext.selectedAccount()?.accountSlug ?? '');
+    return `https://myorg.lfx.dev/${slug}/project/project-group-membership`;
+  }
+
+  private initJoinBaseUrl(): string {
+    const slug = encodeURIComponent(this.accountContext.selectedAccount()?.accountSlug ?? '');
+    return `https://myorg.lfx.dev/${slug}/project`;
+  }
 
   private initTierOptions(): OrgDropdownOption[] {
     return [{ label: 'All Membership Levels', value: '' }, ...this.allTiers().map((t) => ({ label: t, value: t }))];
