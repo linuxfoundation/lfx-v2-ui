@@ -408,11 +408,8 @@ export class ProjectService {
     // a username (manually added, not in NATS), skip resolveEmailToSub and use the
     // email directly — calling NATS for such users would fail with NOT_FOUND.
     const originalEmail = usernameOrEmail.includes('@') ? usernameOrEmail.trim().toLowerCase() : '';
-    const matchesByEmail = (u: { username?: string; email?: string }): boolean =>
-      !u.username && !!originalEmail && u.email?.toLowerCase() === originalEmail;
-    const existingByEmail = originalEmail
-      ? (updatedSettings.writers.find(matchesByEmail) || updatedSettings.auditors.find(matchesByEmail))
-      : undefined;
+    const matchesByEmail = (u: { username?: string; email?: string }): boolean => !u.username && !!originalEmail && u.email?.toLowerCase() === originalEmail;
+    const existingByEmail = originalEmail ? updatedSettings.writers.find(matchesByEmail) || updatedSettings.auditors.find(matchesByEmail) : undefined;
 
     let backendIdentifier = usernameOrEmail.trim();
     if (originalEmail) {
