@@ -213,15 +213,15 @@ export class OrgLensMembershipsService {
       membershipTier: raw.MEMBERSHIP_TIER_DISPLAY_NAME,
       tierStartDate: this.formatDate(raw.TIER_START_DATE),
       tierEndDate: this.formatDate(raw.TIER_END_DATE),
-      memberSince: raw.FIRST_MEMBERSHIP_STARTED_AT ? this.formatDate(raw.FIRST_MEMBERSHIP_STARTED_AT) : null,
+      memberSince: this.formatDate(raw.FIRST_MEMBERSHIP_STARTED_AT),
       boardMembers: raw.BOARD_MEMBER_SEAT_COUNT,
       committeeMembers: raw.COMMITTEE_MEMBER_SEAT_COUNT,
       orgProjects: raw.ORG_PROJECTS_COUNT,
     };
   }
 
-  private formatDate(dateValue: string | null): string {
-    if (!dateValue) return '';
+  private formatDate(dateValue: string | null): string | null {
+    if (!dateValue) return null;
     const d = new Date(dateValue);
     return d.toISOString().split('T')[0];
   }
