@@ -35,3 +35,12 @@ export const ORG_LENS_FOUNDATIONS_EMPTY_RESPONSE: OrgLensFoundationsAndProjectsR
 
 /** Initial section state for the foundations-and-projects component — loading until the first response arrives. */
 export const ORG_LENS_FOUNDATIONS_INITIAL_STATE: OrgLensFoundationsSectionState = { status: 'loading', data: null };
+
+/** Foundation-logo letter-square fallback palette: deterministic `djb2(foundationId) % 5` map into the chromatic LFX families (excludes `gray` so squares never blend into the Outside-LF umbrella row). */
+export const FOUNDATION_LOGO_SQUARE_PALETTE: readonly string[] = [
+  'bg-blue-600 text-white',
+  'bg-emerald-600 text-white',
+  'bg-amber-600 text-white',
+  'bg-red-600 text-white',
+  'bg-violet-600 text-white',
+];
