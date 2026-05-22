@@ -23,12 +23,12 @@ export class PermissionsService {
 
   // Update user role in project
   public updateUserRole(project: string, username: string, request: UpdateUserRoleRequest): Observable<void> {
-    return this.http.put<void>(`/api/projects/${project}/permissions/${username}`, request);
+    return this.http.put<void>(`/api/projects/${project}/permissions/${encodeURIComponent(username)}`, request);
   }
 
   // Remove user from project (removes from both writers and auditors)
   public removeUserFromProject(project: string, username: string): Observable<void> {
-    return this.http.delete<void>(`/api/projects/${project}/permissions/${username}`);
+    return this.http.delete<void>(`/api/projects/${project}/permissions/${encodeURIComponent(username)}`);
   }
 
   // Fetch the raw project settings document. Errors are NOT swallowed — callers track their own

@@ -172,9 +172,12 @@ export class UserFormComponent {
         this.showManualFields.set(true);
         this.submitting.set(false);
 
-        // Add validator to name field only — username is optional per upstream UserInfo schema
+        // In manual-add mode username is required — the add endpoint validates it server-side.
+        // (Username is still optional for existing users whose records pre-date normalization.)
         this.form().get('name')?.setValidators([Validators.required]);
+        this.form().get('username')?.setValidators([Validators.required]);
         this.form().get('name')?.updateValueAndValidity();
+        this.form().get('username')?.updateValueAndValidity();
 
         // Close the confirmation dialog
         this.confirmationService.close();
