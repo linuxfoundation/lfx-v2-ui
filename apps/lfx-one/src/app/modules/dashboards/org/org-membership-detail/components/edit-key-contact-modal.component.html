@@ -55,8 +55,8 @@
     @case ('remove-list') {
       <ng-container *ngTemplateOutlet="chooserCards; context: { active: 'remove' }" />
       <div class="flex flex-col gap-2">
-        <h4 class="text-sm font-semibold text-gray-900">Select contact to remove</h4>
-        <div class="flex flex-col gap-2" data-testid="edit-key-contact-remove-list">
+        <h4 class="text-sm font-semibold text-gray-900" id="edit-key-contact-remove-heading">Select contact to remove</h4>
+        <div class="flex flex-col gap-2" role="radiogroup" aria-labelledby="edit-key-contact-remove-heading" data-testid="edit-key-contact-remove-list">
           @for (person of people(); track person.personId) {
             <button
               type="button"

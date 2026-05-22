@@ -4,18 +4,10 @@
 import { Component, computed, DestroyRef, inject, signal, type Signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { EMAIL_REGEX, MOCK_SAVE_LATENCY_MS } from '@lfx-one/shared/constants';
-import type { BoardSeat, CommitteeSeat, ReassignSubmitEvent } from '@lfx-one/shared/interfaces';
+import type { BoardSeat, CommitteeSeat, ReassignBoardRolesDialogData, ReassignBoardRolesDialogResult } from '@lfx-one/shared/interfaces';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { InputTextModule } from 'primeng/inputtext';
-
-export interface ReassignBoardRolesDialogData {
-  seat: BoardSeat | CommitteeSeat;
-  seatKind: 'board' | 'committee';
-  foundationName: string;
-}
-
-export type ReassignBoardRolesDialogResult = ReassignSubmitEvent | null;
 
 @Component({
   selector: 'lfx-reassign-board-roles-modal',

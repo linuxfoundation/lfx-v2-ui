@@ -14,6 +14,8 @@ import type {
   OrgMembershipKeyContactPerson,
   OrgMembershipDetailPageState,
   MembershipDetailTab,
+  EditKeyContactDialogData,
+  EditKeyContactDialogResult,
   EditKeyContactRemoveEvent,
   EditKeyContactSubmitEvent,
 } from '@lfx-one/shared/interfaces';
@@ -26,7 +28,7 @@ import { catchError, combineLatest, filter, map, of, switchMap, take, tap } from
 
 import { BoardCommitteeCardComponent } from './components/board-committee-card.component';
 import { DocumentationTabComponent } from './components/documentation-tab.component';
-import { EditKeyContactDialogData, EditKeyContactDialogResult, EditKeyContactModalComponent } from './components/edit-key-contact-modal.component';
+import { EditKeyContactModalComponent } from './components/edit-key-contact-modal.component';
 
 @Component({
   selector: 'lfx-org-membership-detail',
@@ -133,6 +135,21 @@ export class OrgMembershipDetailComponent {
       replaceUrl: true,
       queryParamsHandling: 'preserve',
     });
+  }
+
+  protected onTabKeydown(event: KeyboardEvent): void {
+    const ids = this.tabs.map((t) => t.id);
+    const idx = ids.indexOf(this.activeTab());
+    let next: number | null = null;
+    if (event.key === 'ArrowRight') next = (idx + 1) % ids.length;
+    else if (event.key === 'ArrowLeft') next = (idx - 1 + ids.length) % ids.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = ids.length - 1;
+    if (next !== null) {
+      event.preventDefault();
+      this.switchTab(ids[next]);
+      (document.getElementById(`membership-detail-tab-trigger-${ids[next]}`) as HTMLElement | null)?.focus();
+    }
   }
 
   protected retry(): void {

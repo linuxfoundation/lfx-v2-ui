@@ -6,8 +6,8 @@ import { ChangeDetectorRef, Component, computed, DestroyRef, inject, signal, typ
 import { FormsModule } from '@angular/forms';
 import { EMAIL_REGEX, MOCK_SAVE_LATENCY_MS } from '@lfx-one/shared/constants';
 import type {
-  EditKeyContactRemoveEvent,
-  EditKeyContactSubmitEvent,
+  EditKeyContactDialogData,
+  EditKeyContactDialogResult,
   ModalKind,
   OrgMembershipKeyContact,
   OrgMembershipKeyContactPerson,
@@ -15,18 +15,6 @@ import type {
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TooltipModule } from 'primeng/tooltip';
-
-export interface EditKeyContactDialogData {
-  contact: OrgMembershipKeyContact;
-  foundationName: string;
-  editingPersonId: string | null;
-}
-
-export type EditKeyContactDialogResult =
-  | { kind: 'replace'; event: EditKeyContactSubmitEvent }
-  | { kind: 'add'; event: EditKeyContactSubmitEvent }
-  | { kind: 'remove'; event: EditKeyContactRemoveEvent }
-  | null;
 
 @Component({
   selector: 'lfx-edit-key-contact-modal',

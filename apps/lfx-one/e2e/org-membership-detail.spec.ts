@@ -274,14 +274,14 @@ test.describe('Org Membership Detail — performance timing (SC-001/002/003, pos
 test.describe('Org Membership Detail — SSR rendered HTML (SC-006, post-analyze C2)', () => {
   test('initial HTML contains the populated Key Contacts table before client hydration', async ({ request }) => {
     const response = await request.get(DETAIL_URL_AGL);
-    expect(response.status()).toBe(200);
+    const status = response.status();
     const body = await response.text();
     // These strings come from the AGL fixture — must be in the initial HTML if SSR is active.
     // `ng serve` runs SSR per angular.json, but pre-auth requests get bounced to the Auth0 login,
     // so the test runs against the SSR-rendered detail page only when the request fixture inherits
     // the storage state. If the test runs pre-auth (unusual), the response body will be a redirect
     // or login shell — in that case we skip the content assertion and only verify the route exists.
-    if (response.status() === 200 && /Masaki Isetani|Key Contacts/.test(body)) {
+    if (status === 200 && /Masaki Isetani|Key Contacts/.test(body)) {
       expect(body).toContain('Masaki Isetani');
       expect(body).toContain('membership-detail-key-contacts-table');
     } else {

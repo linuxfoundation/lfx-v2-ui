@@ -4,7 +4,7 @@
 <div class="flex flex-col gap-6">
   <h1 class="text-2xl font-semibold text-gray-900" data-testid="memberships-page-title">Membership — {{ companyName() }}</h1>
 
-  <div role="tablist" aria-label="Memberships sections" class="flex items-center gap-1 border-b border-gray-200" data-testid="memberships-tab-bar">
+  <div role="tablist" aria-label="Memberships sections" class="flex items-center gap-1 border-b border-gray-200" data-testid="memberships-tab-bar" (keydown)="onTabKeydown($event)">
     @for (tab of tabs; track tab.id) {
       <button
         type="button"
@@ -28,6 +28,7 @@
   </div>
 
   @if (activeTab() === 'active') {
+    <div role="tabpanel" id="memberships-tab-panel-active" [attr.aria-labelledby]="'memberships-tab-trigger-active'">
     <lfx-card styleClass="[&_.p-card-body]:p-0 [&_.p-card-content]:p-0" data-testid="active-memberships-summary">
       <div class="grid w-full grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-200">
         <div class="flex items-center gap-3 p-4" data-testid="memberships-stat-active">
@@ -197,9 +198,11 @@
         }
       </div>
     </lfx-card>
+    </div>
   }
 
   @if (activeTab() === 'expired') {
+    <div role="tabpanel" id="memberships-tab-panel-expired" [attr.aria-labelledby]="'memberships-tab-trigger-expired'">
     <lfx-card styleClass="[&_.p-card-body]:p-0 [&_.p-card-content]:p-0">
       <div class="px-5 pt-4 pb-3" data-testid="expired-memberships-title">
         <div class="flex flex-col gap-1 mb-3">
@@ -306,9 +309,11 @@
         }
       </div>
     </lfx-card>
+    </div>
   }
 
   @if (activeTab() === 'discover') {
+    <div role="tabpanel" id="memberships-tab-panel-discover" [attr.aria-labelledby]="'memberships-tab-trigger-discover'">
     <lfx-card styleClass="[&_.p-card-body]:p-0 [&_.p-card-content]:p-0">
       <div class="px-5 pt-4 pb-3" data-testid="discover-opportunities-title">
         <h2 class="text-xl font-semibold text-gray-900">Discover Opportunities</h2>
@@ -392,5 +397,6 @@
         }
       </div>
     </lfx-card>
+    </div>
   }
 </div>

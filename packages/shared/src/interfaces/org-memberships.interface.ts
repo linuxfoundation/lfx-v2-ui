@@ -250,6 +250,35 @@ export interface VotingRecordRow extends VotingRecord {
   chipClass: string;
 }
 
+// Membership Detail page — Dialog contracts (centralised per coderabbitai review) --------------
+
+export interface EditKeyContactDialogData {
+  contact: OrgMembershipKeyContact;
+  foundationName: string;
+  editingPersonId: string | null;
+}
+
+export type EditKeyContactDialogResult =
+  | { kind: 'replace'; event: EditKeyContactSubmitEvent }
+  | { kind: 'add'; event: EditKeyContactSubmitEvent }
+  | { kind: 'remove'; event: EditKeyContactRemoveEvent }
+  | null;
+
+export interface ReassignBoardRolesDialogData {
+  seat: BoardSeat | CommitteeSeat;
+  seatKind: 'board' | 'committee';
+  foundationName: string;
+}
+
+export type ReassignBoardRolesDialogResult = ReassignSubmitEvent | null;
+
+export interface WhyCantEditDialogData {
+  reason: string | null;
+  seatId: string;
+}
+
+export type WhyCantEditDialogResult = { contactFoundation: boolean } | null;
+
 // Membership Detail page — Documentation tab (spec 017) --------------------------------------
 
 /** One agreement document in the Documentation tab list. */

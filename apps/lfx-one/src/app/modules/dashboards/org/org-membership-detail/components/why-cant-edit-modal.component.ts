@@ -2,16 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, inject } from '@angular/core';
+import type { WhyCantEditDialogData } from '@lfx-one/shared/interfaces';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 
 const DEFAULT_REASON = "This seat is controlled by the foundation and cannot be edited from your organization's view.";
-
-export interface WhyCantEditDialogData {
-  reason: string | null;
-  seatId: string;
-}
-
-export type WhyCantEditDialogResult = { contactFoundation: boolean } | null;
 
 @Component({
   selector: 'lfx-why-cant-edit-modal',

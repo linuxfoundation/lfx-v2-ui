@@ -11,6 +11,10 @@ import type {
   VotingRecord,
   SectionLoadState,
   ReassignSubmitEvent,
+  ReassignBoardRolesDialogData,
+  ReassignBoardRolesDialogResult,
+  WhyCantEditDialogData,
+  WhyCantEditDialogResult,
   VotingRecordRow,
 } from '@lfx-one/shared/interfaces';
 import { MessageService } from 'primeng/api';
@@ -25,8 +29,8 @@ import { CardComponent } from '@components/card/card.component';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { OrgLensBoardCommitteeService } from '@services/org-lens-board-committee.service';
 
-import { ReassignBoardRolesDialogData, ReassignBoardRolesDialogResult, ReassignBoardRolesModalComponent } from './reassign-board-roles-modal.component';
-import { WhyCantEditDialogData, WhyCantEditDialogResult, WhyCantEditModalComponent } from './why-cant-edit-modal.component';
+import { ReassignBoardRolesModalComponent } from './reassign-board-roles-modal.component';
+import { WhyCantEditModalComponent } from './why-cant-edit-modal.component';
 
 @Component({
   selector: 'lfx-board-committee-card',

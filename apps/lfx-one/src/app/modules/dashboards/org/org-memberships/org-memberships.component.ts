@@ -96,7 +96,7 @@ export class OrgMembershipsComponent {
     ),
     tap((response) => {
       this.fetchLoading.set(false);
-      if (response && !this.selectedTier()) {
+      if (response) {
         const tiers = [...new Set(response.memberships.map((m) => m.membershipTier))].sort();
         this.allTiers.set(tiers);
       }
@@ -153,6 +153,21 @@ export class OrgMembershipsComponent {
 
   protected switchTab(tab: OrgMembershipTab): void {
     this.activeTab.set(tab);
+  }
+
+  protected onTabKeydown(event: KeyboardEvent): void {
+    const ids = this.tabs.map((t) => t.id);
+    const idx = ids.indexOf(this.activeTab());
+    let next: number | null = null;
+    if (event.key === 'ArrowRight') next = (idx + 1) % ids.length;
+    else if (event.key === 'ArrowLeft') next = (idx - 1 + ids.length) % ids.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = ids.length - 1;
+    if (next !== null) {
+      event.preventDefault();
+      this.switchTab(ids[next]);
+      (document.getElementById(`memberships-tab-trigger-${ids[next]}`) as HTMLElement | null)?.focus();
+    }
   }
 
   protected retry(): void {

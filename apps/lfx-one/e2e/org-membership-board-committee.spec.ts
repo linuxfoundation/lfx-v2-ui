@@ -353,25 +353,23 @@ test.describe("US3 — Why-can't-I-edit explainer modal (FR-012)", () => {
   });
 
   test('Contact Foundation is a no-op (FR-012c) — emits console event, no navigation', async ({ page }) => {
-    const consoleEvents: string[] = [];
-    page.on('console', (msg) => {
-      if (msg.type() === 'info' && msg.text().includes('[board] contact foundation clicked for')) {
-        consoleEvents.push(msg.text());
-      }
-    });
-
     const urlBefore = page.url();
     await page.getByTestId('board-committee-committee-why-agl-com-1').click();
     await expect(page.getByTestId('why-cant-edit-modal')).toBeVisible();
 
+    const consolePromise = page.waitForEvent('console', {
+      predicate: (msg) => msg.type() === 'info' && msg.text().includes('[board] contact foundation clicked for'),
+      timeout: 5_000,
+    });
     await page.getByTestId('why-cant-edit-contact-foundation').click();
+    const consoleMsg = await consolePromise;
 
     // URL did not change (no navigation, no mailto handler)
     expect(page.url()).toBe(urlBefore);
     // Modal stays open
     await expect(page.getByTestId('why-cant-edit-modal')).toBeVisible();
     // Console event fired with the expected seatId payload
-    expect(consoleEvents.some((e) => e.includes('agl-com-1'))).toBe(true);
+    expect(consoleMsg.text()).toContain('agl-com-1');
 
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('why-cant-edit-modal')).not.toBeVisible({ timeout: 3_000 });

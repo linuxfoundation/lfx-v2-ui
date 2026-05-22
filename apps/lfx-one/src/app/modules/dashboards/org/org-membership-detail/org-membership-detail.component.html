@@ -89,10 +89,15 @@
       }
 
       <!-- Tab strip -->
-      <div class="flex items-center gap-1 border-b border-gray-200" data-testid="membership-detail-tab-bar">
+      <div role="tablist" aria-label="Membership detail sections" class="flex items-center gap-1 border-b border-gray-200" data-testid="membership-detail-tab-bar" (keydown)="onTabKeydown($event)">
         @for (tab of tabs; track tab.id) {
           <button
             type="button"
+            role="tab"
+            [id]="'membership-detail-tab-trigger-' + tab.id"
+            [attr.aria-selected]="activeTab() === tab.id"
+            [attr.aria-controls]="'membership-detail-tab-panel-' + tab.id"
+            [attr.tabindex]="activeTab() === tab.id ? 0 : -1"
             class="flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors"
             [class.border-blue-600]="activeTab() === tab.id"
             [class.text-blue-600]="activeTab() === tab.id"
@@ -101,7 +106,7 @@
             [class.hover:text-gray-700]="activeTab() !== tab.id"
             [attr.data-testid]="'membership-detail-tab-' + tab.id"
             (click)="switchTab(tab.id)">
-            <i [class]="tab.icon"></i>
+            <i [class]="tab.icon" aria-hidden="true"></i>
             {{ tab.label }}
           </button>
         }
@@ -110,6 +115,7 @@
       <!-- Tab content -->
       @switch (activeTab()) {
         @case ('key-contacts') {
+          <div role="tabpanel" id="membership-detail-tab-panel-key-contacts" [attr.aria-labelledby]="'membership-detail-tab-trigger-key-contacts'">
           <lfx-card styleClass="[&_.p-card-body]:p-0 [&_.p-card-content]:p-0" data-testid="membership-detail-key-contacts-card">
             <div class="flex flex-col gap-3 px-5 py-4">
               <h2 class="text-lg font-semibold text-gray-900">Key Contacts</h2>
@@ -172,16 +178,20 @@
               </div>
             </div>
           </lfx-card>
+          </div>
         }
         @case ('board') {
+          <div role="tabpanel" id="membership-detail-tab-panel-board" [attr.aria-labelledby]="'membership-detail-tab-trigger-board'">
           @if (foundation(); as f) {
             <lfx-board-committee-card
               [accountId]="accountContext.selectedAccount().accountId"
               [foundationId]="f.foundationId"
               [foundationName]="f.foundationName" />
           }
+          </div>
         }
         @case ('docs') {
+          <div role="tabpanel" id="membership-detail-tab-panel-docs" [attr.aria-labelledby]="'membership-detail-tab-trigger-docs'">
           @if (foundation(); as f) {
             <lfx-documentation-tab
               [accountId]="accountContext.selectedAccount().accountId"
@@ -190,14 +200,17 @@
               [memberSince]="f.memberSince"
               [orgName]="accountContext.selectedAccount().accountName" />
           }
+          </div>
         }
         @case ('governance') {
+          <div role="tabpanel" id="membership-detail-tab-panel-governance" [attr.aria-labelledby]="'membership-detail-tab-trigger-governance'">
           <lfx-empty-state
             icon="fa-light fa-layer-group"
             title="Governance"
             subtitle="Governance roles and seats for this membership will appear here."
             data-testid="membership-detail-governance-empty-state">
           </lfx-empty-state>
+          </div>
         }
       }
     }
