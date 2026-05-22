@@ -163,4 +163,15 @@ export interface PlatformPerformanceRow {
   conversions: string;
   performance: PaidProjectPerformance;
   performanceClass: string;
+  campaigns: PlatformCampaignRow[];
+}
+
+/** View-model row for a nested campaign under a platform. */
+export interface PlatformCampaignRow {
+  campaignName: string;
+  spend: string;
+  revenue: string;
+  roas: string;
+  clicks: string;
+  impressions: string;
 }

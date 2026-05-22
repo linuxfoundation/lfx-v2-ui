@@ -155,8 +155,25 @@
 
               <!-- Rows -->
               @for (row of platformRows(); track row.platform) {
-                <div class="flex items-center gap-2 border-b border-gray-100 py-2.5" role="row" [attr.data-testid]="'platform-row-' + row.platform">
-                  <span class="w-32 truncate text-xs font-medium text-gray-700" role="cell">{{ row.platform }}</span>
+                <div
+                  class="flex cursor-pointer items-center gap-2 border-b border-gray-100 py-2.5 transition-colors hover:bg-gray-50"
+                  role="row"
+                  [attr.data-testid]="'platform-row-' + row.platform"
+                  [attr.aria-expanded]="row.campaigns.length > 0 ? isPlatformExpanded(row.platform) : null"
+                  (click)="row.campaigns.length > 0 && togglePlatformExpand(row.platform)"
+                  (keydown.enter)="row.campaigns.length > 0 && togglePlatformExpand(row.platform)"
+                  [attr.tabindex]="row.campaigns.length > 0 ? 0 : null">
+                  <div class="flex w-32 items-center gap-1.5" role="cell">
+                    @if (row.campaigns.length > 0) {
+                      <i
+                        class="fa-solid fa-chevron-right text-[9px] text-gray-400 transition-transform"
+                        [class.rotate-90]="isPlatformExpanded(row.platform)"
+                        aria-hidden="true"></i>
+                    } @else {
+                      <span class="w-[9px]"></span>
+                    }
+                    <span class="truncate text-xs font-medium text-gray-700">{{ row.platform }}</span>
+                  </div>
                   <span class="w-20 text-right text-xs text-gray-900" role="cell">{{ row.spend }}</span>
                   <span class="w-20 text-right text-xs text-gray-900" role="cell">{{ row.revenue }}</span>
                   <span class="w-14 text-right text-xs font-medium text-gray-900" role="cell">{{ row.roas }}</span>
@@ -172,6 +189,28 @@
                     </span>
                   </div>
                 </div>
+
+                <!-- Expanded platform campaign rows -->
+                @if (isPlatformExpanded(row.platform)) {
+                  @for (campaign of row.campaigns; track campaign.campaignName) {
+                    <div
+                      class="flex items-center gap-2 border-b border-gray-50 bg-gray-50/50 py-2 pl-6"
+                      role="row"
+                      [attr.data-testid]="'platform-campaign-row-' + campaign.campaignName">
+                      <span class="w-[calc(8rem-1.5rem)] truncate text-[11px] text-gray-500" role="cell">{{ campaign.campaignName }}</span>
+                      <span class="w-20 text-right text-[11px] text-gray-500" role="cell">{{ campaign.spend }}</span>
+                      <span class="w-20 text-right text-[11px] text-gray-500" role="cell">{{ campaign.revenue }}</span>
+                      <span class="w-14 text-right text-[11px] text-gray-500" role="cell">{{ campaign.roas }}</span>
+                      <span class="w-16 text-right text-[11px] text-gray-400" role="cell">{{ campaign.clicks }}</span>
+                      <span class="w-24 text-right text-[11px] text-gray-400" role="cell">{{ campaign.impressions }}</span>
+                      <span class="w-14" role="cell"></span>
+                      <span class="w-16" role="cell"></span>
+                      <span class="w-20" role="cell"></span>
+                      <span class="w-24" role="cell"></span>
+                      <div class="flex-1" role="cell"></div>
+                    </div>
+                  }
+                }
               }
 
               <!-- Total row -->
