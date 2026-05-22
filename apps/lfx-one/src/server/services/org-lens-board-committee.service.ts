@@ -52,7 +52,7 @@ export class OrgLensBoardCommitteeService {
     return {
       accountId,
       foundationId,
-      boardSeats: SHARED_FIXTURE.sharedBoardSeats,
+      boardSeats: structuredClone(SHARED_FIXTURE.sharedBoardSeats),
     };
   }
 
@@ -61,7 +61,7 @@ export class OrgLensBoardCommitteeService {
     return {
       accountId,
       foundationId,
-      committeeSeats: SHARED_FIXTURE.sharedCommitteeSeats,
+      committeeSeats: structuredClone(SHARED_FIXTURE.sharedCommitteeSeats),
     };
   }
 
@@ -70,7 +70,7 @@ export class OrgLensBoardCommitteeService {
     return {
       accountId,
       foundationId,
-      votingHistory: SHARED_FIXTURE.sharedVotingHistory,
+      votingHistory: structuredClone(SHARED_FIXTURE.sharedVotingHistory),
     };
   }
 }

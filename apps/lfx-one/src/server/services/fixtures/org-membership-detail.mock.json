@@ -11,7 +11,7 @@
           "firstName": "Masaki",
           "lastName": "Isetani",
           "fullName": "Masaki Isetani",
-          "email": "masaki_isetani@mail.toyota.co.jp",
+          "email": "masaki_isetani@example.com",
           "jobTitle": null,
           "initials": "MI"
         }
@@ -28,7 +28,7 @@
           "firstName": "Masaki",
           "lastName": "Isetani",
           "fullName": "Masaki Isetani",
-          "email": "masaki_isetani@mail.toyota.co.jp",
+          "email": "masaki_isetani@example.com",
           "jobTitle": null,
           "initials": "MI"
         }
@@ -45,7 +45,7 @@
           "firstName": "Masaki",
           "lastName": "Isetani",
           "fullName": "Masaki Isetani",
-          "email": "masaki_isetani@mail.toyota.co.jp",
+          "email": "masaki_isetani@example.com",
           "jobTitle": null,
           "initials": "MI"
         }
@@ -62,7 +62,7 @@
           "firstName": "Takanori",
           "lastName": "Yokoi",
           "fullName": "Takanori Yokoi",
-          "email": "takanori_yokoi@mail.toyota.co.jp",
+          "email": "takanori_yokoi@example.com",
           "jobTitle": null,
           "initials": "TY"
         }
@@ -79,7 +79,7 @@
           "firstName": "Hideo",
           "lastName": "Hasegawa",
           "fullName": "Hideo Hasegawa",
-          "email": "hideo_hasegawa@mail.toyota.co.jp",
+          "email": "hideo_hasegawa@example.com",
           "jobTitle": "Assistant Manager",
           "initials": "HH"
         }
@@ -96,7 +96,7 @@
           "firstName": "Tomoya",
           "lastName": "Suzuki",
           "fullName": "Tomoya Suzuki",
-          "email": "tomoya_suzuki@mail.toyota.co.jp",
+          "email": "tomoya_suzuki@example.com",
           "jobTitle": null,
           "initials": "TS"
         },
@@ -105,7 +105,7 @@
           "firstName": "Yasushi",
           "lastName": "Ando",
           "fullName": "Yasushi Ando",
-          "email": "yasushi_ando@mail.toyota.co.jp",
+          "email": "yasushi_ando@example.com",
           "jobTitle": null,
           "initials": "YA"
         }

@@ -266,10 +266,13 @@ export class OrgMembershipsComponent {
       .pipe(take(1))
       .subscribe({
         next: (data) => {
+          // Ignore stale responses if the user switched accounts before this resolved.
+          if (this.accountContext.selectedAccount()?.accountId !== accountId) return;
           this.expiredData.set(data);
           this.expiredLoading.set(false);
         },
         error: () => {
+          if (this.accountContext.selectedAccount()?.accountId !== accountId) return;
           this.expiredError.set(true);
           this.expiredLoading.set(false);
         },
@@ -284,10 +287,13 @@ export class OrgMembershipsComponent {
       .pipe(take(1))
       .subscribe({
         next: (data) => {
+          // Ignore stale responses if the user switched accounts before this resolved.
+          if (this.accountContext.selectedAccount()?.accountId !== accountId) return;
           this.discoverData.set(data);
           this.discoverLoading.set(false);
         },
         error: () => {
+          if (this.accountContext.selectedAccount()?.accountId !== accountId) return;
           this.discoverError.set(true);
           this.discoverLoading.set(false);
         },

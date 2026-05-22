@@ -242,7 +242,7 @@ export class OrgLensMembershipsService {
 
     return {
       foundation,
-      keyContacts: SHARED_FIXTURE.sharedKeyContacts,
+      keyContacts: structuredClone(SHARED_FIXTURE.sharedKeyContacts),
     };
   }
 

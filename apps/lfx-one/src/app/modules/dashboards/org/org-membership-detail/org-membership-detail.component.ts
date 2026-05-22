@@ -22,7 +22,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
-import { catchError, combineLatest, filter, of, switchMap, take, tap } from 'rxjs';
+import { catchError, combineLatest, filter, map, of, switchMap, take, tap } from 'rxjs';
 
 import { BoardCommitteeCardComponent } from './components/board-committee-card.component';
 import { DocumentationTabComponent } from './components/documentation-tab.component';
@@ -69,13 +69,10 @@ export class OrgMembershipDetailComponent {
   ];
 
   private readonly accountId$ = toObservable(computed(() => this.accountContext.selectedAccount()?.accountId));
-  private readonly foundationId$ = toObservable(
-    computed(() => {
-      // Use snapshot via signal — paramMap is hot-reload reactive
-      const params = this.route.snapshot.paramMap;
-      return params.get('foundationId');
-    })
-  );
+  /** Reactive route params: emits a new value on every `/org/memberships/:foundationId` navigation,
+   * including same-component reuse cases (router reuse, RouterLink to a different foundationId).
+   * Replaces an earlier `route.snapshot.paramMap` read which only captured the first navigation. */
+  private readonly foundationId$ = this.route.paramMap.pipe(map((params) => params.get('foundationId')));
   private readonly retryTrigger$ = toObservable(this.retryTrigger);
 
   private readonly detail$ = combineLatest([

@@ -15,8 +15,8 @@ export class OrgLensDocumentsService {
     return {
       accountId,
       foundationId,
-      agreements: SHARED_FIXTURE.agreements,
-      certificateTemplate: SHARED_FIXTURE.certificateTemplate,
+      agreements: structuredClone(SHARED_FIXTURE.agreements),
+      certificateTemplate: structuredClone(SHARED_FIXTURE.certificateTemplate),
     };
   }
 }
