@@ -68,19 +68,23 @@
 
           <!-- Rows -->
           @for (row of projectRows(); track row.funnelStage + '|' + row.name) {
+            @let projectKey = row.funnelStage + '|' + row.name;
             <div
-              class="flex cursor-pointer items-center gap-3 border-b border-gray-100 py-2.5 transition-colors hover:bg-gray-50"
+              class="flex items-center gap-3 border-b border-gray-100 py-2.5 transition-colors"
+              [class.cursor-pointer]="row.campaigns.length > 0"
+              [class.hover:bg-gray-50]="row.campaigns.length > 0"
               role="row"
               [attr.data-testid]="'performance-marketing-row-' + row.name"
-              [attr.aria-expanded]="row.campaigns.length > 0 ? isProjectExpanded(row.funnelStage + '|' + row.name) : null"
-              (click)="row.campaigns.length > 0 && toggleProjectExpand(row.funnelStage + '|' + row.name)"
-              (keydown.enter)="row.campaigns.length > 0 && toggleProjectExpand(row.funnelStage + '|' + row.name)"
+              [attr.aria-expanded]="row.campaigns.length > 0 ? isProjectExpanded(projectKey) : null"
+              (click)="row.campaigns.length > 0 && toggleProjectExpand(projectKey)"
+              (keydown.enter)="row.campaigns.length > 0 && toggleProjectExpand(projectKey)"
+              (keydown.space)="$event.preventDefault(); row.campaigns.length > 0 && toggleProjectExpand(projectKey)"
               [attr.tabindex]="row.campaigns.length > 0 ? 0 : null">
               <div class="flex w-40 items-center gap-1.5" role="cell">
                 @if (row.campaigns.length > 0) {
                   <i
                     class="fa-solid fa-chevron-right text-[9px] text-gray-400 transition-transform"
-                    [class.rotate-90]="isProjectExpanded(row.funnelStage + '|' + row.name)"
+                    [class.rotate-90]="isProjectExpanded(projectKey)"
                     aria-hidden="true"></i>
                 } @else {
                   <span class="w-[9px]"></span>
@@ -100,7 +104,7 @@
             </div>
 
             <!-- Expanded campaign rows -->
-            @if (isProjectExpanded(row.funnelStage + '|' + row.name)) {
+            @if (isProjectExpanded(projectKey)) {
               @for (campaign of row.campaigns; track campaign.campaignName) {
                 <div
                   class="flex items-center gap-3 border-b border-gray-50 bg-gray-50/50 py-2 pl-6"
