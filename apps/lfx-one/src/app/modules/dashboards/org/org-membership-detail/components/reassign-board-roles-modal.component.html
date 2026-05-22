@@ -97,7 +97,8 @@
           (blur)="onEmailBlur()"
           [disabled]="isSaving()"
           data-testid="reassign-board-email-input"
-          [attr.aria-describedby]="emailFormatError() || duplicateError() ? 'reassign-board-email-error reassign-board-duplicate-error' : null"
+          [attr.aria-describedby]="(emailFormatError() ? 'reassign-board-email-error' : null) || (duplicateError() ? 'reassign-board-duplicate-error' : null)"
+          [attr.aria-invalid]="!!emailFormatError() || !!duplicateError()"
           autocomplete="off" />
         @if (emailFormatError()) {
           <p class="text-xs text-red-600" id="reassign-board-email-error" data-testid="reassign-board-email-error">

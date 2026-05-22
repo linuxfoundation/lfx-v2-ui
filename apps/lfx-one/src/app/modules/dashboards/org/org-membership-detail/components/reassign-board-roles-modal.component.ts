@@ -8,7 +8,6 @@ import type { BoardSeat, CommitteeSeat, ReassignSubmitEvent } from '@lfx-one/sha
 import { CheckboxModule } from 'primeng/checkbox';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { InputTextModule } from 'primeng/inputtext';
-import { TooltipModule } from 'primeng/tooltip';
 
 export interface ReassignBoardRolesDialogData {
   seat: BoardSeat | CommitteeSeat;
@@ -21,7 +20,7 @@ export type ReassignBoardRolesDialogResult = ReassignSubmitEvent | null;
 @Component({
   selector: 'lfx-reassign-board-roles-modal',
   standalone: true,
-  imports: [FormsModule, InputTextModule, CheckboxModule, TooltipModule],
+  imports: [FormsModule, InputTextModule, CheckboxModule],
   templateUrl: './reassign-board-roles-modal.component.html',
 })
 export class ReassignBoardRolesModalComponent {
