@@ -855,8 +855,8 @@ export interface FoundationValueConcentrationResponse {
 }
 
 /**
- * Foundation maintainers daily row from Snowflake
- * Raw response from FOUNDATION_MAINTAINERS_YEARLY table (despite name, contains daily data)
+ * Foundation maintainers daily row from Snowflake.
+ * Raw response from ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_MAINTAINERS_DAILY.
  */
 export interface FoundationMaintainersDailyRow {
   /**

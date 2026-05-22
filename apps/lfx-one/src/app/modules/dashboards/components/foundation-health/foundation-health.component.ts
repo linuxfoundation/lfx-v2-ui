@@ -477,7 +477,7 @@ export class FoundationHealthComponent {
               title: (context) => context[0]?.label ?? '',
               label: (context) => {
                 const count = context.parsed.y ?? 0;
-                return `Active maintainers: ${count}`;
+                return `Active maintainers: ${count.toLocaleString()}`;
               },
             },
           },

@@ -1413,14 +1413,18 @@ export class ProjectService {
     // of toISOString() is the correct calendar key. String()-then-slice was
     // tried first but breaks in non-UTC server TZs (returns the local-formatted
     // weekday-month prefix, e.g. "Tue May 19", not "2026-05-20").
-    const asOfDate = latest ? new Date(latest.METRIC_DATE).toISOString().split('T')[0] : null;
+    const asOfDate = latest?.METRIC_DATE ? new Date(latest.METRIC_DATE).toISOString().split('T')[0] : null;
 
     // Extract daily data and labels. Format trend labels in UTC to match the
     // UTC-anchored asOfDate the card subtitle renders — otherwise non-UTC server
     // deployments would show "May 19" on the chart's rightmost tick while the
     // card subtitle reads "As of May 20".
-    const trendData = result.rows.map((row) => row.ACTIVE_MAINTAINERS);
+    // Coerce per-row nulls the same way the snapshot does, so a data-gap day
+    // never leaks `null` into the chart series or "Invalid Date" into the
+    // x-axis labels.
+    const trendData = result.rows.map((row) => row.ACTIVE_MAINTAINERS ?? 0);
     const trendLabels = result.rows.map((row) => {
+      if (!row.METRIC_DATE) return '';
       const date = new Date(row.METRIC_DATE);
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
     });
