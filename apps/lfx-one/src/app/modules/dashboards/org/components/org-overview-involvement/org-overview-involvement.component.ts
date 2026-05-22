@@ -46,7 +46,7 @@ export class OrgOverviewInvolvementComponent {
 
   public readonly filterOptions: FilterPillOption[] = [
     { id: 'all', label: 'All' },
-    { id: 'contributions', label: 'Contribution' },
+    { id: 'contributors', label: 'Contribution' },
     { id: 'events', label: 'Event' },
     { id: 'education', label: 'Education' },
   ];
@@ -182,8 +182,8 @@ export class OrgOverviewInvolvementComponent {
   private computePrimaryMetrics(): DashboardMetricCard[] {
     const filter = this.selectedFilter();
     const allCards = [
-      { card: this.activeContributorsCard(), category: 'contributions' },
-      { card: this.maintainersCard(), category: 'contributions' },
+      { card: this.activeContributorsCard(), category: 'contributors' },
+      { card: this.maintainersCard(), category: 'contributors' },
       { card: this.eventAttendeesCard(), category: 'events' },
       { card: this.eventSpeakersCard(), category: 'events' },
       { card: this.certifiedEmployeesCard(), category: 'education' },
