@@ -135,7 +135,7 @@ export class MaintainersDrawerComponent {
   );
 
   protected readonly metricValue: Signal<string> = computed(() => this.data().currentMaintainers.toLocaleString());
-  protected readonly hasData: Signal<boolean> = computed(() => this.data().currentMaintainers > 0);
+  protected readonly hasData: Signal<boolean> = computed(() => this.data().asOfDate !== null);
 
   private readonly drawerData = this.initDrawerData();
   protected readonly monthlyTrendData: Signal<FoundationMaintainersMonthlyResponse> = computed(() => this.drawerData().monthly);

@@ -1384,13 +1384,7 @@ export class ProjectService {
     };
   }
 
-  /**
-   * Get foundation maintainers data from Snowflake.
-   * Queries FOUNDATION_MAINTAINERS_DAILY and returns the latest-day distinct-maintainer
-   * snapshot (currentMaintainers + asOfDate) alongside the full daily trend.
-   * @param foundationSlug - Foundation slug to filter by (e.g., 'tlf', 'cncf')
-   * @returns Foundation maintainers response with latest snapshot and daily trend
-   */
+  /** Latest-day distinct-maintainer snapshot + full daily trend for a foundation (LFXV2-1625). */
   public async getFoundationMaintainers(foundationSlug: string): Promise<FoundationMaintainersResponse> {
     const query = `
       SELECT
@@ -1403,28 +1397,15 @@ export class ProjectService {
 
     const result = await this.snowflakeService.execute<FoundationMaintainersDailyRow>(query, [foundationSlug]);
 
-    // Filter rows with a missing METRIC_DATE up-front so trendData and
-    // trendLabels stay index-aligned, and so the snapshot picks the latest
-    // *labeled* day — the chart and the card always agree on which day
-    // "current" refers to.
+    // Filter null-METRIC_DATE rows up-front so trendData/trendLabels stay index-aligned and the snapshot picks the latest *labeled* day.
     const trendRows = result.rows.filter((row) => row.METRIC_DATE);
 
-    // The rows are ordered ASC by date, so the last labeled row carries the
-    // latest snapshot. Shane's dbt fix (2026-05-20) made ACTIVE_MAINTAINERS
-    // distinct per foundation, so this snapshot now reconciles with
-    // FOUNDATION_TOTAL_PROJECTS_DETAIL.MAINTAINERS_CURRENT_COUNT.
     const latest = trendRows.length > 0 ? trendRows[trendRows.length - 1] : null;
     const currentMaintainers = latest?.ACTIVE_MAINTAINERS ?? 0;
-    // The Snowflake Node SDK returns DATE columns as a JS Date pinned to UTC
-    // midnight for the calendar day Snowflake stored, so the UTC date portion
-    // of toISOString() is the correct calendar key. String()-then-slice was
-    // tried first but breaks in non-UTC server TZs (returns the local-formatted
-    // weekday-month prefix, e.g. "Tue May 19", not "2026-05-20").
+    // Snowflake SDK returns DATE columns as a JS Date at UTC midnight; toISOString().split('T')[0] gives the calendar key (String().slice gave "Tue May 19" in PT).
     const asOfDate = latest ? new Date(latest.METRIC_DATE).toISOString().split('T')[0] : null;
 
-    // Format trend labels in UTC to match the UTC-anchored asOfDate the card
-    // subtitle renders — otherwise non-UTC server deployments would show
-    // "May 19" on the chart's rightmost tick while the card reads "As of May 20".
+    // Anchor trend labels to UTC so the chart's rightmost tick matches the asOfDate the card subtitle renders.
     const trendData = trendRows.map((row) => row.ACTIVE_MAINTAINERS ?? 0);
     const trendLabels = trendRows.map((row) => {
       const date = new Date(row.METRIC_DATE);

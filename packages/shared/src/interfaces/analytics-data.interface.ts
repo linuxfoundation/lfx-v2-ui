@@ -854,45 +854,17 @@ export interface FoundationValueConcentrationResponse {
   allOtherPercentage: number;
 }
 
-/**
- * Foundation maintainers daily row from Snowflake.
- * Raw response from ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_MAINTAINERS_DAILY.
- */
+/** Row from ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_MAINTAINERS_DAILY. */
 export interface FoundationMaintainersDailyRow {
-  /**
-   * Foundation ID. Optional — not selected by `getFoundationMaintainers`
-   * after the LFXV2-1625 query trim; kept on the interface for any future
-   * caller that wants to project it.
-   */
+  /** Optional — not projected by getFoundationMaintainers after LFXV2-1625. */
   FOUNDATION_ID?: string;
-
-  /**
-   * Foundation name. Optional for the same reason as FOUNDATION_ID.
-   */
+  /** Optional — not projected by getFoundationMaintainers after LFXV2-1625. */
   FOUNDATION_NAME?: string;
-
-  /**
-   * Foundation URL slug. Optional because `getFoundationMaintainers` no
-   * longer selects this column — the slug is supplied as a WHERE-clause
-   * bind param, not read back from the result rows (LFXV2-1625).
-   */
+  /** Optional — supplied as WHERE bind param, not read back from rows. */
   FOUNDATION_SLUG?: string;
-
-  /**
-   * Metric date (daily granularity)
-   */
   METRIC_DATE: string;
-
-  /**
-   * Number of active maintainers on this date
-   */
   ACTIVE_MAINTAINERS: number;
-
-  /**
-   * Average maintainers yearly (calculated aggregate). Optional because
-   * `getFoundationMaintainers` no longer selects this column after the
-   * card switched to the latest-day snapshot (LFXV2-1625).
-   */
+  /** Optional — card switched to latest-day snapshot (LFXV2-1625). */
   AVG_MAINTAINERS_YEARLY?: number;
 }
 
@@ -916,32 +888,15 @@ export interface WeeklyMaintainersRow {
   AVG_MAINTAINERS_YEARLY: number;
 }
 
-/**
- * API response for foundation maintainers query
- * Contains the latest distinct-maintainer snapshot and the daily trend.
- */
+/** Latest-day distinct-maintainer snapshot + daily trend for a foundation. */
 export interface FoundationMaintainersResponse {
-  /**
-   * Distinct active maintainers as of the latest snapshot date
-   * (last row of FOUNDATION_MAINTAINERS_DAILY for the foundation).
-   */
+  /** Distinct active maintainers as of asOfDate (latest row of FOUNDATION_MAINTAINERS_DAILY). */
   currentMaintainers: number;
-
-  /**
-   * Snapshot date for `currentMaintainers` (ISO yyyy-mm-dd, or null when
-   * no rows are returned).
-   */
+  /** ISO yyyy-mm-dd, or null when no rows returned. */
   asOfDate: string | null;
-
-  /**
-   * Daily maintainer count data for trend visualization
-   */
+  /** Daily maintainer count data for trend visualization. */
   trendData: number[];
-
-  /**
-   * Date labels for chart visualization
-   * Array of date strings matching trendData
-   */
+  /** Date labels matching trendData (UTC-anchored, formatted server-side). */
   trendLabels: string[];
 }
 

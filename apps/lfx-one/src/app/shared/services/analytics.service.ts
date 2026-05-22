@@ -412,11 +412,7 @@ export class AnalyticsService {
     );
   }
 
-  /**
-   * Get foundation maintainers data from Snowflake
-   * @param foundationSlug - Required foundation slug to filter by (e.g., 'tlf', 'cncf')
-   * @returns Observable of foundation maintainers response with average and daily trend data
-   */
+  /** Latest-day distinct-maintainer snapshot + daily trend for a foundation. */
   public getFoundationMaintainers(foundationSlug: string): Observable<FoundationMaintainersResponse> {
     return this.http.get<FoundationMaintainersResponse>('/api/analytics/foundation-maintainers', { params: { foundationSlug } }).pipe(
       catchError(() => {
