@@ -16,6 +16,7 @@ import {
   FilterPillOption,
   NewsletterContextType,
   NewsletterListItem,
+  NewsletterRow,
   NewsletterStatus,
   NewsletterStatusTabId,
   ProjectContext,
@@ -26,13 +27,6 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { combineLatest, distinctUntilChanged, finalize, take } from 'rxjs';
-
-interface NewsletterRow extends NewsletterListItem {
-  openRateLabel: string;
-  openRateTooltip: string;
-  recipientsLabel: string;
-  groupsLabel: string;
-}
 
 @Component({
   selector: 'lfx-newsletter-list',

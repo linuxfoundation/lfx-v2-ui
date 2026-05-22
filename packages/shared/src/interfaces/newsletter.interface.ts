@@ -134,3 +134,24 @@ export interface NewsletterAnalytics {
   dailyOpens: NewsletterDailyOpens[];
   lastEventAt?: string;
 }
+
+export interface NewsletterRow extends NewsletterListItem {
+  openRateLabel: string;
+  openRateTooltip: string;
+  recipientsLabel: string;
+  groupsLabel: string;
+}
+
+export interface NewsletterChartDataset {
+  label: string;
+  data: number[];
+  borderColor: string;
+  backgroundColor: string;
+  tension: number;
+  fill: boolean;
+}
+
+export interface NewsletterChartData {
+  labels: string[];
+  datasets: NewsletterChartDataset[];
+}

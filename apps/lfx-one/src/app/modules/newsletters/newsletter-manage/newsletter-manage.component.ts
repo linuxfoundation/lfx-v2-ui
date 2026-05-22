@@ -104,10 +104,7 @@ export class NewsletterManageComponent {
   public readonly edEmail: Signal<string> = computed(() => this.userService.user()?.email ?? '');
 
   // === Form mirrors ===
-  // Plain signals + manual subscription rather than toSignal(valueChanges)
-  // because populateFormFromDraft patches with { emitEvent: false } to suppress
-  // autosave on initial load. With toSignal these would never update from the
-  // initial empty value; we seed them manually in populateFormFromDraft instead.
+  // toSignal can't be used here — populateFormFromDraft patches with { emitEvent: false }; we seed manually.
   private readonly committeeUidsValue = signal<string[]>([]);
   private readonly subjectValue = signal<string>('');
   private readonly bodyValue = signal<string>('');
@@ -231,10 +228,7 @@ export class NewsletterManageComponent {
     });
   }
 
-  // The `:id/edit` route has two URL segments, so `['..']` resolves to `/<id>`
-  // which doesn't match any route. Anchoring to `this.route.parent` (the
-  // newsletter module root) and navigating to the explicit `list` child works
-  // for both create and edit modes.
+  // `['..']` on a 2-segment route resolves to `/<id>` — anchor to route.parent + explicit 'list' child.
   private goToList(): void {
     this.router.navigate(['list'], { relativeTo: this.route.parent });
   }
@@ -334,11 +328,7 @@ export class NewsletterManageComponent {
   }
 
   private initCurrentStep(): Signal<number> {
-    // Mode can flip mid-flow: a /create session that autosaves becomes edit
-    // mode once newsletterId is set, without a route change. So we react to
-    // isEditMode() and read from the matching source (URL in edit mode,
-    // internalStep otherwise) rather than committing to one source at
-    // construction time.
+    // Mode flips mid-flow when /create autosaves to edit — react to isEditMode() instead of fixing source at init.
     const initialStep = this.parseStepParam(this.route.snapshot.queryParamMap.get('step'));
     this.internalStep.set(initialStep);
 
@@ -407,9 +397,7 @@ export class NewsletterManageComponent {
     const subject = draft.subject ?? '';
     const bodyHtml = draft.bodyHtml ?? '';
     this.form.patchValue({ committeeUids, subject, bodyHtml }, { emitEvent: false });
-    // patchValue suppresses valueChanges, so mirror into the local signals
-    // manually — otherwise canProceed/canSend/audienceFilled stay false on
-    // initial draft load, disabling Next and Send buttons.
+    // patchValue suppresses valueChanges — mirror manually or canProceed/canSend stay false on initial draft load.
     this.committeeUidsValue.set(committeeUids);
     this.subjectValue.set(subject);
     this.bodyValue.set(bodyHtml);
@@ -418,10 +406,7 @@ export class NewsletterManageComponent {
   }
 
   private initAutosave(): void {
-    // Combine form changes with edEmail so a late-arriving user profile triggers
-    // an autosave even if the user hasn't typed since. Without this the first
-    // save can be skipped (user already filled the form before /user resolved)
-    // and the draft never persists until the next keystroke.
+    // Combine with edEmail so a late-arriving profile triggers autosave even when the user hasn't typed since.
     combineLatest([this.form.valueChanges, toObservable(this.edEmail)])
       .pipe(
         debounceTime(1000),
@@ -455,10 +440,7 @@ export class NewsletterManageComponent {
     return true;
   }
 
-  // The Go service requires committees + subject + body to all be present for
-  // any draft write — there's no concept of a partial draft. So we only fire
-  // autosave once the form has enough to satisfy that contract; otherwise the
-  // user just sees 400 errors in the console as they type.
+  // Go service rejects partial drafts — only autosave once all three fields are filled to avoid 400 spam.
   private hasAnythingToSave(): boolean {
     return this.audienceFilled() && this.subjectFilled() && this.bodyFilled();
   }
@@ -499,17 +481,8 @@ export class NewsletterManageComponent {
         this.newsletterId.set(draft.id);
         this.version.set(draft.version);
         this.savedAt.set(new Date());
-        // We intentionally do NOT navigate to /:id/edit here. Router.navigate
-        // tears down this component and recreates it on the :id/edit route,
-        // which wipes the form mid-typing while initLoadDraft re-fetches what
-        // we just saved. The draft id is held in memory so subsequent autosaves
-        // route through updateDraft; if the user refreshes, they'll lose the
-        // wizard URL but the draft is preserved in the list page.
-        //
-        // But isEditMode() just flipped to true, and currentStep now reads
-        // from queryParamMap. Seed the URL with the current step so Next stays
-        // in sync — otherwise the UI would freeze on whichever step the user
-        // was on when autosave landed.
+        // Skip /:id/edit navigation — it tears down the component and wipes the form mid-typing.
+        // Seed step in URL because isEditMode() just flipped — currentStep now reads from queryParamMap.
         this.router.navigate([], {
           relativeTo: this.route,
           queryParams: { step: this.internalStep() },
@@ -522,10 +495,7 @@ export class NewsletterManageComponent {
     );
   }
 
-  // Surface autosave failures: a silent stream meant the user could navigate
-  // away believing their draft was saved. 409 still shows the existing
-  // conflict-specific toast; other failures show a generic autosave-failed
-  // toast so the user knows to retry or copy their content out.
+  // Surface autosave failures — silent failures let the user navigate away believing the draft saved.
   private handleAutosaveError(err: HttpErrorResponse) {
     this.savingDraft.set(false);
     if (err.status === 409) {

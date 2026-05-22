@@ -494,7 +494,11 @@ export function formatDuration(seconds: number): string {
  * `formatDistanceToNow` — meant for autosave indicators and similar UI.
  */
 export function formatRelativeTime(date: Date): string {
-  const diffMs = Date.now() - date.getTime();
+  const timestamp = date.getTime();
+  if (!Number.isFinite(timestamp)) {
+    return 'unknown';
+  }
+  const diffMs = Date.now() - timestamp;
   const diffSec = Math.round(diffMs / 1000);
   if (diffSec < 5) return 'just now';
   if (diffSec < 60) return `${diffSec}s ago`;

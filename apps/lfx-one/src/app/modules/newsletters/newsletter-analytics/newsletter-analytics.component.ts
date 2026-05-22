@@ -10,25 +10,11 @@ import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { lfxColors } from '@lfx-one/shared/constants';
-import { NewsletterAnalytics } from '@lfx-one/shared/interfaces';
+import { NewsletterAnalytics, NewsletterChartData } from '@lfx-one/shared/interfaces';
 import { NewsletterService } from '@services/newsletter.service';
 import { MessageService } from 'primeng/api';
 import { SkeletonModule } from 'primeng/skeleton';
 import { catchError, finalize, of, switchMap, take } from 'rxjs';
-
-interface NewsletterChartDataset {
-  label: string;
-  data: number[];
-  borderColor: string;
-  backgroundColor: string;
-  tension: number;
-  fill: boolean;
-}
-
-interface NewsletterChartData {
-  labels: string[];
-  datasets: NewsletterChartDataset[];
-}
 
 @Component({
   selector: 'lfx-newsletter-analytics',
@@ -94,9 +80,7 @@ export class NewsletterAnalyticsComponent {
       });
   }
 
-  // The `:id/analytics` route has two URL segments, so `['..']` resolves to
-  // `/<id>` which doesn't match any route. Anchor to `this.route.parent` (the
-  // newsletter module root) and navigate to the explicit `list` child.
+  // `['..']` on a 2-segment route resolves to `/<id>` — anchor to route.parent + explicit 'list' child.
   protected goBack(): void {
     this.router.navigate(['list'], { relativeTo: this.route.parent });
   }
