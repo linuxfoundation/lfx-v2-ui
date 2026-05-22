@@ -89,7 +89,12 @@
       }
 
       <!-- Tab strip -->
-      <div role="tablist" aria-label="Membership detail sections" class="flex items-center gap-1 border-b border-gray-200" data-testid="membership-detail-tab-bar" (keydown)="onTabKeydown($event)">
+      <div
+        role="tablist"
+        aria-label="Membership detail sections"
+        class="flex items-center gap-1 border-b border-gray-200"
+        data-testid="membership-detail-tab-bar"
+        (keydown)="onTabKeydown($event)">
         @for (tab of tabs; track tab.id) {
           <button
             type="button"
@@ -116,100 +121,100 @@
       @switch (activeTab()) {
         @case ('key-contacts') {
           <div role="tabpanel" id="membership-detail-tab-panel-key-contacts" [attr.aria-labelledby]="'membership-detail-tab-trigger-key-contacts'">
-          <lfx-card styleClass="[&_.p-card-body]:p-0 [&_.p-card-content]:p-0" data-testid="membership-detail-key-contacts-card">
-            <div class="flex flex-col gap-3 px-5 py-4">
-              <h2 class="text-lg font-semibold text-gray-900">Key Contacts</h2>
-              <div class="overflow-x-auto">
-                <table class="w-full" data-testid="membership-detail-key-contacts-table">
-                  <thead class="border-b border-gray-200 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    <tr>
-                      <th scope="col" class="py-2 pr-4">Type</th>
-                      <th scope="col" class="py-2 pr-4">Name</th>
-                      <th scope="col" class="py-2 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-100">
-                    @for (contact of keyContacts(); track contact.contactType) {
-                      <tr [attr.data-testid]="'membership-detail-key-contacts-row-' + contact.contactType">
-                        <td class="py-3 pr-4 align-top text-sm text-gray-700">{{ contact.contactTypeLabel }}</td>
-                        <td class="py-3 pr-4 align-top">
-                          @if (contact.people.length === 0) {
-                            <span class="text-sm italic text-gray-400" [attr.data-testid]="'membership-detail-key-contacts-empty-' + contact.contactType">
-                              No {{ contact.contactTypeLabel }} assigned
-                            </span>
-                          } @else {
-                            <div class="flex flex-col gap-2">
-                              @for (person of contact.people; track person.personId) {
-                                <div class="flex items-center gap-3" [attr.data-testid]="'membership-detail-key-contacts-person-' + person.personId">
-                                  <div class="flex h-8 w-8 items-center justify-center rounded-full bg-purple-500 text-xs font-semibold text-white">
-                                    {{ person.initials }}
-                                  </div>
-                                  <div class="flex flex-col">
-                                    <span class="text-sm font-medium text-gray-900">{{ person.fullName }}</span>
-                                    @if (person.jobTitle) {
-                                      <span class="text-xs text-gray-500">{{ person.jobTitle }}</span>
-                                    }
-                                  </div>
-                                </div>
-                              }
-                            </div>
-                          }
-                        </td>
-                        <td class="py-3 align-top text-right">
-                          <button
-                            type="button"
-                            class="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                            [attr.aria-label]="
-                              contact.people.length === 0
-                                ? 'Add ' + contact.contactTypeLabel + ' for this membership'
-                                : 'Edit ' + contact.contactTypeLabel + ' for this membership'
-                            "
-                            [attr.data-testid]="'membership-detail-key-contacts-edit-' + contact.contactType"
-                            pTooltip="Edit contact"
-                            tooltipPosition="top"
-                            (click)="onPencilClick(contact)">
-                            <i class="fa-light fa-pencil"></i>
-                          </button>
-                        </td>
+            <lfx-card styleClass="[&_.p-card-body]:p-0 [&_.p-card-content]:p-0" data-testid="membership-detail-key-contacts-card">
+              <div class="flex flex-col gap-3 px-5 py-4">
+                <h2 class="text-lg font-semibold text-gray-900">Key Contacts</h2>
+                <div class="overflow-x-auto">
+                  <table class="w-full" data-testid="membership-detail-key-contacts-table">
+                    <thead class="border-b border-gray-200 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      <tr>
+                        <th scope="col" class="py-2 pr-4">Type</th>
+                        <th scope="col" class="py-2 pr-4">Name</th>
+                        <th scope="col" class="py-2 text-right">Actions</th>
                       </tr>
-                    }
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                      @for (contact of keyContacts(); track contact.contactType) {
+                        <tr [attr.data-testid]="'membership-detail-key-contacts-row-' + contact.contactType">
+                          <td class="py-3 pr-4 align-top text-sm text-gray-700">{{ contact.contactTypeLabel }}</td>
+                          <td class="py-3 pr-4 align-top">
+                            @if (contact.people.length === 0) {
+                              <span class="text-sm italic text-gray-400" [attr.data-testid]="'membership-detail-key-contacts-empty-' + contact.contactType">
+                                No {{ contact.contactTypeLabel }} assigned
+                              </span>
+                            } @else {
+                              <div class="flex flex-col gap-2">
+                                @for (person of contact.people; track person.personId) {
+                                  <div class="flex items-center gap-3" [attr.data-testid]="'membership-detail-key-contacts-person-' + person.personId">
+                                    <div class="flex h-8 w-8 items-center justify-center rounded-full bg-purple-500 text-xs font-semibold text-white">
+                                      {{ person.initials }}
+                                    </div>
+                                    <div class="flex flex-col">
+                                      <span class="text-sm font-medium text-gray-900">{{ person.fullName }}</span>
+                                      @if (person.jobTitle) {
+                                        <span class="text-xs text-gray-500">{{ person.jobTitle }}</span>
+                                      }
+                                    </div>
+                                  </div>
+                                }
+                              </div>
+                            }
+                          </td>
+                          <td class="py-3 align-top text-right">
+                            <button
+                              type="button"
+                              class="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                              [attr.aria-label]="
+                                contact.people.length === 0
+                                  ? 'Add ' + contact.contactTypeLabel + ' for this membership'
+                                  : 'Edit ' + contact.contactTypeLabel + ' for this membership'
+                              "
+                              [attr.data-testid]="'membership-detail-key-contacts-edit-' + contact.contactType"
+                              pTooltip="Edit contact"
+                              tooltipPosition="top"
+                              (click)="onPencilClick(contact)">
+                              <i class="fa-light fa-pencil"></i>
+                            </button>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          </lfx-card>
+            </lfx-card>
           </div>
         }
         @case ('board') {
           <div role="tabpanel" id="membership-detail-tab-panel-board" [attr.aria-labelledby]="'membership-detail-tab-trigger-board'">
-          @if (foundation(); as f) {
-            <lfx-board-committee-card
-              [accountId]="accountContext.selectedAccount().accountId"
-              [foundationId]="f.foundationId"
-              [foundationName]="f.foundationName" />
-          }
+            @if (foundation(); as f) {
+              <lfx-board-committee-card
+                [accountId]="accountContext.selectedAccount().accountId"
+                [foundationId]="f.foundationId"
+                [foundationName]="f.foundationName" />
+            }
           </div>
         }
         @case ('docs') {
           <div role="tabpanel" id="membership-detail-tab-panel-docs" [attr.aria-labelledby]="'membership-detail-tab-trigger-docs'">
-          @if (foundation(); as f) {
-            <lfx-documentation-tab
-              [accountId]="accountContext.selectedAccount().accountId"
-              [foundationId]="f.foundationId"
-              [membershipTier]="f.membershipTier"
-              [memberSince]="f.memberSince"
-              [orgName]="accountContext.selectedAccount().accountName" />
-          }
+            @if (foundation(); as f) {
+              <lfx-documentation-tab
+                [accountId]="accountContext.selectedAccount().accountId"
+                [foundationId]="f.foundationId"
+                [membershipTier]="f.membershipTier"
+                [memberSince]="f.memberSince"
+                [orgName]="accountContext.selectedAccount().accountName" />
+            }
           </div>
         }
         @case ('governance') {
           <div role="tabpanel" id="membership-detail-tab-panel-governance" [attr.aria-labelledby]="'membership-detail-tab-trigger-governance'">
-          <lfx-empty-state
-            icon="fa-light fa-layer-group"
-            title="Governance"
-            subtitle="Governance roles and seats for this membership will appear here."
-            data-testid="membership-detail-governance-empty-state">
-          </lfx-empty-state>
+            <lfx-empty-state
+              icon="fa-light fa-layer-group"
+              title="Governance"
+              subtitle="Governance roles and seats for this membership will appear here."
+              data-testid="membership-detail-governance-empty-state">
+            </lfx-empty-state>
           </div>
         }
       }
