@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 import { computed, inject, Injectable, Signal, signal, WritableSignal } from '@angular/core';
-import { ACCOUNT_COOKIE_KEY } from '@lfx-one/shared/constants';
+import { ACCOUNT_COOKIE_KEY, ORG_LENS_ENABLED_FLAG } from '@lfx-one/shared/constants';
 import { Account, OrgLensAccountContextResponse } from '@lfx-one/shared/interfaces';
 import { SsrCookieService } from 'ngx-cookie-service-ssr';
 import { take } from 'rxjs/operators';
 
 import { AnalyticsService } from './analytics.service';
 import { CookieRegistryService } from './cookie-registry.service';
+import { FeatureFlagService } from './feature-flag.service';
 
 const PLACEHOLDER_ACCOUNT: Account = {
   accountId: '',
@@ -24,6 +25,7 @@ export class AccountContextService {
   private readonly cookieService = inject(SsrCookieService);
   private readonly cookieRegistry = inject(CookieRegistryService);
   private readonly analyticsService = inject(AnalyticsService);
+  private readonly featureFlagService = inject(FeatureFlagService);
   private readonly storageKey = ACCOUNT_COOKIE_KEY;
 
   /** Persona-authorised accounts seeded at bootstrap; enriched from Snowflake via getOrgLensAccountContext. */
@@ -64,9 +66,9 @@ export class AccountContextService {
   public initializeUserOrganizations(organizations: Account[]): void {
     const seeds = organizations ?? [];
     this.userOrganizations.set(seeds);
+    this.liveAccounts.set(new Map());
 
     if (seeds.length === 0) {
-      this.liveAccounts.set(new Map());
       this.selectedAccount.set(PLACEHOLDER_ACCOUNT);
       this.clearStorage();
       return;
@@ -76,7 +78,9 @@ export class AccountContextService {
     const matchedSeed = storedId ? (seeds.find((seed) => seed.accountId === storedId) ?? null) : null;
     this.setAccount(matchedSeed ?? seeds[0]);
 
-    this.refreshFromSnowflake(seeds.map((seed) => seed.accountId));
+    if (this.featureFlagService.getBooleanFlag(ORG_LENS_ENABLED_FLAG, false)()) {
+      this.refreshFromSnowflake(seeds.map((seed) => seed.accountId));
+    }
   }
 
   public setAccount(account: Account): void {
