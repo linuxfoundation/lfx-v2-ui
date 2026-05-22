@@ -171,8 +171,8 @@ test.describe('Org Membership Detail — modal save flows + toasts', () => {
   test('in-row duplicate Email blocks Save with inline error (FR-016f)', async ({ page }) => {
     await page.getByTestId('membership-detail-key-contacts-edit-billing').click();
     await page.getByTestId('edit-key-contact-chooser-add').click();
-    // Type an email that already exists in Billing (Tomoya Suzuki)
-    await page.getByTestId('edit-key-contact-email-input').fill('tomoya_suzuki@mail.toyota.co.jp');
+    // Type an email that already exists in Billing (Tomoya Suzuki — fixture uses @example.com)
+    await page.getByTestId('edit-key-contact-email-input').fill('tomoya_suzuki@example.com');
     await page.getByTestId('edit-key-contact-first-name-input').fill('Dup');
     await page.getByTestId('edit-key-contact-last-name-input').fill('Person');
     await page.getByTestId('edit-key-contact-primary-button').click();

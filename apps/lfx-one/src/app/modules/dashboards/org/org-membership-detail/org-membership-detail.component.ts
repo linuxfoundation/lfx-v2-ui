@@ -168,6 +168,7 @@ export class OrgMembershipDetailComponent {
       modal: true,
       closable: true,
       dismissableMask: true,
+      showHeader: false,
       data: {
         contact,
         foundationName: this.foundation()?.foundationName ?? '',
