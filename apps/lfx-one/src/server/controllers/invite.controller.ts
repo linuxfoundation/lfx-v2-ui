@@ -126,7 +126,7 @@ export class InviteController {
     return payload;
   }
 
-  // Only LFX-owned domains are valid redirect destinations — prevents open-redirect.
+  // Only lfx.dev (apex) and *.lfx.dev (subdomains) are valid redirect destinations — prevents open-redirect.
   private validateReturnUrl(url: string): string | null {
     try {
       const parsed = new URL(url);
