@@ -1,7 +1,6 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { NATS_CONFIG } from '@lfx-one/shared/constants';
 import { NatsSubjects } from '@lfx-one/shared/enums';
 import { InviteTokenPayload } from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
@@ -101,28 +100,10 @@ export class InviteController {
       }
 
       const codec = this.natsService.getCodec();
-      const response = await this.natsService.request(
+      await this.natsService.publish(
         NatsSubjects.INVITE_ACCEPTED,
-        codec.encode(JSON.stringify({ invite_uid: payload.invite_uid, username })),
-        {
-          timeout: NATS_CONFIG.REQUEST_TIMEOUT,
-        }
+        codec.encode(JSON.stringify({ invite_uid: payload.invite_uid, username }))
       );
-
-      const responseText = codec.decode(response.data);
-      if (!responseText || responseText.startsWith('error:')) {
-        logger.warning(req, 'accept_invite', 'NATS handler rejected the invite acceptance', {
-          invite_uid: payload.invite_uid,
-          nats_response: responseText || '(empty)',
-        });
-        return next(
-          new AuthorizationError('Invite could not be accepted', {
-            operation: 'accept_invite',
-            service: 'invite_controller',
-            path: req.path,
-          })
-        );
-      }
 
       logger.success(req, 'accept_invite', startTime, {
         invite_uid: payload.invite_uid,
