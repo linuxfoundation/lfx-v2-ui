@@ -52,7 +52,6 @@
             class="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-50"
             [attr.aria-expanded]="boardExpanded()"
             (click)="toggleBoard()"
-            (keydown)="onAccordionKeydown($event, 'board')"
             data-testid="board-committee-section-board-header">
             <span class="text-sm font-semibold text-gray-900"> Board Seats ({{ boardState() === 'error' ? '?' : boardSeats().length }}) </span>
             <i class="fa-light" [class.fa-chevron-up]="boardExpanded()" [class.fa-chevron-down]="!boardExpanded()" aria-hidden="true"></i>
@@ -155,7 +154,6 @@
             class="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-50"
             [attr.aria-expanded]="committeeExpanded()"
             (click)="toggleCommittee()"
-            (keydown)="onAccordionKeydown($event, 'committee')"
             data-testid="board-committee-section-committee-header">
             <span class="text-sm font-semibold text-gray-900"> Committee Seats ({{ committeeState() === 'error' ? '?' : committeeSeats().length }}) </span>
             <i class="fa-light" [class.fa-chevron-up]="committeeExpanded()" [class.fa-chevron-down]="!committeeExpanded()" aria-hidden="true"></i>
@@ -262,7 +260,6 @@
             class="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-50"
             [attr.aria-expanded]="votingExpanded()"
             (click)="toggleVoting()"
-            (keydown)="onAccordionKeydown($event, 'voting')"
             data-testid="board-committee-section-voting-header">
             <span class="text-sm font-semibold text-gray-900"> Voting History ({{ votingState() === 'error' ? '?' : votingHistory().length }}) </span>
             <i class="fa-light" [class.fa-chevron-up]="votingExpanded()" [class.fa-chevron-down]="!votingExpanded()" aria-hidden="true"></i>

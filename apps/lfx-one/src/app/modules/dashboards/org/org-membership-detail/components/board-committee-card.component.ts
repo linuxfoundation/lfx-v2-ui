@@ -189,16 +189,6 @@ export class BoardCommitteeCardComponent {
     this.votingExpanded.update((v) => !v);
   }
 
-  /** Enter / Space keyboard activation on accordion headers (FR-017b). */
-  protected onAccordionKeydown(event: KeyboardEvent, section: 'board' | 'committee' | 'voting'): void {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      if (section === 'board') this.toggleBoard();
-      else if (section === 'committee') this.toggleCommittee();
-      else this.toggleVoting();
-    }
-  }
-
   // === Modal openers ===
   protected openReassignModal(seat: BoardSeat | CommitteeSeat, kind: 'board' | 'committee'): void {
     this.reassignModalSeat.set(seat);

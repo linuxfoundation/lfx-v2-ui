@@ -55,4 +55,3 @@ export * from './org-lens.constants';
 export * from './foundation-projects.constants';
 export * from './marketing-impact.constants';
 export * from './individual-enrollment-catalog';
-export * from './org-memberships.constants';
