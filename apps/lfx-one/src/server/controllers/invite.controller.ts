@@ -12,17 +12,11 @@ import { logger } from '../services/logger.service';
 import { NatsService } from '../services/nats.service';
 import { getEffectiveUsername } from '../utils/auth-helper';
 
-/**
- * Controller for handling invite acceptance for non-LF users arriving via a signed invite link.
- */
+/** Controller for non-LF user invite acceptance via signed JWT. */
 export class InviteController {
   private readonly natsService = new NatsService();
 
-  /**
-   * POST /api/invite/accept
-   * Verifies the invite JWT signature (HS256), publishes lfx.invite.accepted via NATS
-   * (fire-and-forget), and returns the return_url so the client can navigate to the intended resource.
-   */
+  /** POST /api/invite/accept — verify JWT (HS256), publish NATS fire-and-forget, return return_url. */
   public async acceptInvite(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'accept_invite');
 
@@ -114,9 +108,7 @@ export class InviteController {
     }
   }
 
-  // Verifies the JWT signature using HS256. The secret is used as raw UTF-8 bytes,
-  // matching how the invite service signs tokens (Go's []byte(secret) conversion).
-  // Throws JoseErrors.JWTExpired for expired tokens and other JoseErrors for invalid/tampered ones.
+  // Secret used as raw UTF-8 bytes to match Go invite service []byte(secret) key derivation.
   private verifyInviteToken(token: string, secret: string): InviteTokenPayload {
     const key = JWK.asKey(Buffer.from(secret));
     const payload = JWT.verify<InviteTokenPayload>(token, key, { algorithms: ['HS256'] });
@@ -130,7 +122,7 @@ export class InviteController {
   private validateReturnUrl(url: string): string | null {
     try {
       const parsed = new URL(url);
-      if (!['http:', 'https:'].includes(parsed.protocol)) return null;
+      if (parsed.protocol !== 'https:') return null;
       if (!parsed.hostname.endsWith('.lfx.dev') && parsed.hostname !== 'lfx.dev') return null;
       return validateAndSanitizeUrl(url) ?? null;
     } catch {

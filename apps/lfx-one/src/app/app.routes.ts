@@ -345,8 +345,7 @@ export const routes: Routes = [
     path: 'meetings/:id',
     loadComponent: () => import('./modules/meetings/meeting-join/meeting-join.component').then((m) => m.MeetingJoinComponent),
   },
-  // Invite acceptance — auth-protected so authGuard redirects to login (preserving ?token=)
-  // and the component runs after the user creates / signs into their account.
+  // Invite acceptance — authGuard preserves ?token= through the Auth0 login redirect.
   {
     path: 'invite',
     canActivate: [authGuard],

@@ -93,11 +93,7 @@ export class NatsService {
     );
   }
 
-  /**
-   * Publish a fire-and-forget message to NATS (no reply expected)
-   * @param subject - The NATS subject to publish to
-   * @param data - The data to send
-   */
+  /** Publish a fire-and-forget NATS message (no reply expected). */
   public async publish(subject: string, data: Uint8Array): Promise<void> {
     const connection = await this.ensureConnection();
 
