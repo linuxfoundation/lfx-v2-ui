@@ -1766,13 +1766,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_foundation_coverage');
 
     try {
-      const accountId = getStringQueryParam(req, 'accountId');
-
-      if (!accountId) {
-        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
-          operation: 'get_org_foundation_coverage',
-        });
-      }
+      const accountId = this.parseAccountIdParam(req, 'get_org_foundation_coverage');
 
       const response = await this.orgInvolvementService.getFoundationCoverage(accountId);
 
@@ -1796,13 +1790,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_involvement_contributors_monthly');
 
     try {
-      const accountId = getStringQueryParam(req, 'accountId');
-
-      if (!accountId) {
-        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
-          operation: 'get_org_involvement_contributors_monthly',
-        });
-      }
+      const accountId = this.parseAccountIdParam(req, 'get_org_involvement_contributors_monthly');
 
       const response = await this.orgInvolvementService.getContributorsMonthly(accountId);
 
@@ -1827,13 +1815,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_involvement_maintainers_monthly');
 
     try {
-      const accountId = getStringQueryParam(req, 'accountId');
-
-      if (!accountId) {
-        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
-          operation: 'get_org_involvement_maintainers_monthly',
-        });
-      }
+      const accountId = this.parseAccountIdParam(req, 'get_org_involvement_maintainers_monthly');
 
       const response = await this.orgInvolvementService.getMaintainersMonthly(accountId);
 
@@ -1859,13 +1841,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_involvement_event_attendance_monthly');
 
     try {
-      const accountId = getStringQueryParam(req, 'accountId');
-
-      if (!accountId) {
-        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
-          operation: 'get_org_involvement_event_attendance_monthly',
-        });
-      }
+      const accountId = this.parseAccountIdParam(req, 'get_org_involvement_event_attendance_monthly');
 
       const response = await this.orgInvolvementService.getEventAttendanceMonthly(accountId);
 
@@ -1891,13 +1867,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_involvement_certified_employees_monthly');
 
     try {
-      const accountId = getStringQueryParam(req, 'accountId');
-
-      if (!accountId) {
-        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
-          operation: 'get_org_involvement_certified_employees_monthly',
-        });
-      }
+      const accountId = this.parseAccountIdParam(req, 'get_org_involvement_certified_employees_monthly');
 
       const response = await this.orgInvolvementService.getCertifiedEmployeesMonthly(accountId);
 
@@ -1923,13 +1893,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_involvement_training_enrollments');
 
     try {
-      const accountId = getStringQueryParam(req, 'accountId');
-
-      if (!accountId) {
-        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
-          operation: 'get_org_involvement_training_enrollments',
-        });
-      }
+      const accountId = this.parseAccountIdParam(req, 'get_org_involvement_training_enrollments');
 
       const response = await this.orgInvolvementService.getTrainingEnrollments(accountId);
 
@@ -2864,6 +2828,18 @@ export class AnalyticsController {
     }
 
     return slugs;
+  }
+
+  /** Parse and validate the `accountId` query parameter (single Salesforce account ID); enforces presence and 15/18-char alphanumeric format. */
+  private parseAccountIdParam(req: Request, operation: string): string {
+    const accountId = getStringQueryParam(req, 'accountId');
+    if (!accountId) {
+      throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', { operation });
+    }
+    if (!SALESFORCE_ACCOUNT_ID_PATTERN.test(accountId)) {
+      throw ServiceValidationError.forField('accountId', `Invalid Salesforce accountId format: ${accountId}`, { operation });
+    }
+    return accountId;
   }
 
   /**
