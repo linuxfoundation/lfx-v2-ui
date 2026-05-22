@@ -166,7 +166,9 @@ export class OrgMembershipsComponent {
     if (next !== null) {
       event.preventDefault();
       this.switchTab(ids[next]);
-      (document.getElementById(`memberships-tab-trigger-${ids[next]}`) as HTMLElement | null)?.focus();
+      if (typeof document !== 'undefined') {
+        (document.getElementById(`memberships-tab-trigger-${ids[next]}`) as HTMLElement | null)?.focus();
+      }
     }
   }
 
