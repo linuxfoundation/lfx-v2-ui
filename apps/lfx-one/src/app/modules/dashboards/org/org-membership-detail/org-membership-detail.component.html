@@ -203,17 +203,3 @@
     }
   }
 </div>
-
-<!-- Edit Key Contact modal — mounted once, shows based on modalVisible signal -->
-@if (modalState(); as state) {
-  <lfx-edit-key-contact-modal
-    [visible]="modalVisible()"
-    (visibleChange)="modalVisible.set($event)"
-    [contact]="state.contact"
-    [editingPersonId]="state.editingPersonId"
-    [foundationName]="foundation()?.foundationName ?? ''"
-    (replaceSubmit)="onReplaceSubmit($event)"
-    (addSubmit)="onAddSubmit($event)"
-    (removeSubmit)="onRemoveSubmit($event)"
-    (modalHide)="onModalHide()" />
-}

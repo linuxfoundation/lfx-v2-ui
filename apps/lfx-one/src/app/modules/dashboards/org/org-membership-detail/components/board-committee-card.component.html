@@ -315,22 +315,3 @@
     </div>
   }
 </lfx-card>
-
-<!-- Reassign Board Roles modal -->
-@if (reassignModalSeat(); as seat) {
-  <lfx-reassign-board-roles-modal
-    [visible]="reassignModalVisible()"
-    (visibleChange)="reassignModalVisible.set($event)"
-    [seat]="seat"
-    [seatKind]="reassignModalKind()"
-    [foundationName]="foundationName()"
-    (reassignSubmit)="onReassignSubmit($event)" />
-}
-
-<!-- Why-can't-I-edit modal -->
-<lfx-why-cant-edit-modal
-  [visible]="whyCantEditVisible()"
-  (visibleChange)="whyCantEditVisible.set($event)"
-  [reason]="whyCantEditReason()"
-  [seatId]="whyCantEditSeatId()"
-  (contactFoundationClick)="onContactFoundationClick()" />

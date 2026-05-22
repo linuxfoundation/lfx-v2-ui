@@ -1,46 +1,41 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, input, model, output } from '@angular/core';
-import { DialogModule } from 'primeng/dialog';
+import { Component, computed, inject } from '@angular/core';
+import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 
 const DEFAULT_REASON = "This seat is controlled by the foundation and cannot be edited from your organization's view.";
+
+export interface WhyCantEditDialogData {
+  reason: string | null;
+  seatId: string;
+}
+
+export type WhyCantEditDialogResult = { contactFoundation: boolean } | null;
 
 @Component({
   selector: 'lfx-why-cant-edit-modal',
   standalone: true,
-  imports: [DialogModule],
   templateUrl: './why-cant-edit-modal.component.html',
 })
 export class WhyCantEditModalComponent {
-  // === Two-way bound visibility ===
-  public readonly visible = model<boolean>(false);
+  private readonly dialogConfig = inject<DynamicDialogConfig<WhyCantEditDialogData>>(DynamicDialogConfig);
+  private readonly dialogRef = inject(DynamicDialogRef);
 
-  // === Inputs ===
-  public readonly reason = input<string | null>(null);
-  public readonly seatId = input<string>('');
-
-  // === Outputs ===
-  public readonly modalHide = output<void>();
-  public readonly contactFoundationClick = output<void>();
+  protected readonly seatId = this.dialogConfig.data?.seatId ?? '';
+  private readonly reason = this.dialogConfig.data?.reason ?? null;
 
   /** FR-012a — render `reason` if non-null/non-empty, otherwise the generic fallback. */
   protected readonly displayedReason = computed(() => {
-    const r = this.reason();
+    const r = this.reason;
     return r && r.trim().length > 0 ? r : DEFAULT_REASON;
   });
 
   protected onGotIt(): void {
-    this.visible.set(false);
-    this.modalHide.emit();
+    this.dialogRef.close({ contactFoundation: false });
   }
 
   protected onContactFoundation(): void {
-    // V1: emit only. Parent handles the no-op console log per FR-012c.
-    this.contactFoundationClick.emit();
-  }
-
-  protected onHide(): void {
-    this.modalHide.emit();
+    this.dialogRef.close({ contactFoundation: true });
   }
 }

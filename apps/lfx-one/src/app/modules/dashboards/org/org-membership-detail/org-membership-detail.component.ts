@@ -14,7 +14,6 @@ import type {
   OrgMembershipKeyContactPerson,
   OrgMembershipDetailPageState,
   MembershipDetailTab,
-  ModalOpenState,
   EditKeyContactRemoveEvent,
   EditKeyContactSubmitEvent,
 } from '@lfx-one/shared/interfaces';
@@ -22,26 +21,18 @@ import { fragmentToTab } from '@lfx-one/shared/constants';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
-import { catchError, combineLatest, filter, of, switchMap, tap } from 'rxjs';
+import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
+import { catchError, combineLatest, filter, of, switchMap, take, tap } from 'rxjs';
 
 import { BoardCommitteeCardComponent } from './components/board-committee-card.component';
 import { DocumentationTabComponent } from './components/documentation-tab.component';
-import { EditKeyContactModalComponent } from './components/edit-key-contact-modal.component';
+import { EditKeyContactDialogData, EditKeyContactDialogResult, EditKeyContactModalComponent } from './components/edit-key-contact-modal.component';
 
 @Component({
   selector: 'lfx-org-membership-detail',
   standalone: true,
-  imports: [
-    RouterLink,
-    CardComponent,
-    EmptyStateComponent,
-    TooltipModule,
-    ToastModule,
-    EditKeyContactModalComponent,
-    BoardCommitteeCardComponent,
-    DocumentationTabComponent,
-  ],
-  providers: [MessageService],
+  imports: [RouterLink, CardComponent, EmptyStateComponent, TooltipModule, ToastModule, BoardCommitteeCardComponent, DocumentationTabComponent],
+  providers: [MessageService, DialogService],
   templateUrl: './org-membership-detail.component.html',
 })
 export class OrgMembershipDetailComponent {
@@ -51,6 +42,7 @@ export class OrgMembershipDetailComponent {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly messageService = inject(MessageService);
+  private readonly dialogService = inject(DialogService);
 
   /**
    * Active tab signal. Synced two-way with the URL fragment (`#key-contacts`,
@@ -68,9 +60,6 @@ export class OrgMembershipDetailComponent {
   // Local mutable copy of keyContacts so the modal can mutate without triggering a refetch
   protected readonly keyContacts = signal<OrgMembershipKeyContact[]>([]);
   protected readonly foundation = signal<OrgMembershipDetailResponse['foundation']>(null);
-
-  protected readonly modalState = signal<ModalOpenState | null>(null);
-  protected readonly modalVisible = signal(false);
 
   protected readonly tabs = [
     { id: 'key-contacts' as const, label: 'Key Contacts', icon: 'fa-light fa-address-card' },
@@ -155,14 +144,26 @@ export class OrgMembershipDetailComponent {
 
   protected onPencilClick(contact: OrgMembershipKeyContact): void {
     const editingPersonId = contact.maxContacts === 1 && contact.people.length === 1 ? contact.people[0].personId : null;
-    this.modalState.set({ contact, editingPersonId });
-    this.modalVisible.set(true);
-  }
 
-  protected onModalHide(): void {
-    this.modalVisible.set(false);
-    // Defer clearing state until after the close animation so the modal renders cleanly
-    setTimeout(() => this.modalState.set(null), 200);
+    const ref = this.dialogService.open(EditKeyContactModalComponent, {
+      header: 'Edit Key Contact',
+      width: '560px',
+      modal: true,
+      closable: true,
+      dismissableMask: true,
+      data: {
+        contact,
+        foundationName: this.foundation()?.foundationName ?? '',
+        editingPersonId,
+      } satisfies EditKeyContactDialogData,
+    }) as DynamicDialogRef;
+
+    ref.onClose.pipe(take(1), takeUntilDestroyed(this.destroyRef)).subscribe((result: EditKeyContactDialogResult) => {
+      if (!result) return;
+      if (result.kind === 'replace') this.onReplaceSubmit(result.event);
+      else if (result.kind === 'add') this.onAddSubmit(result.event);
+      else if (result.kind === 'remove') this.onRemoveSubmit(result.event);
+    });
   }
 
   protected onReplaceSubmit(event: EditKeyContactSubmitEvent): void {

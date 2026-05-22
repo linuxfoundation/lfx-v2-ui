@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectorRef, Component, computed, DestroyRef, inject, input, model, output, signal, type Signal } from '@angular/core';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { ChangeDetectorRef, Component, computed, DestroyRef, inject, signal, type Signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { EMAIL_REGEX, MOCK_SAVE_LATENCY_MS } from '@lfx-one/shared/constants';
 import type {
@@ -13,42 +12,45 @@ import type {
   OrgMembershipKeyContact,
   OrgMembershipKeyContactPerson,
 } from '@lfx-one/shared/interfaces';
-import { DialogModule } from 'primeng/dialog';
+import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TooltipModule } from 'primeng/tooltip';
+
+export interface EditKeyContactDialogData {
+  contact: OrgMembershipKeyContact;
+  foundationName: string;
+  editingPersonId: string | null;
+}
+
+export type EditKeyContactDialogResult =
+  | { kind: 'replace'; event: EditKeyContactSubmitEvent }
+  | { kind: 'add'; event: EditKeyContactSubmitEvent }
+  | { kind: 'remove'; event: EditKeyContactRemoveEvent }
+  | null;
 
 @Component({
   selector: 'lfx-edit-key-contact-modal',
   standalone: true,
-  imports: [NgTemplateOutlet, FormsModule, DialogModule, InputTextModule, TooltipModule],
+  imports: [NgTemplateOutlet, FormsModule, InputTextModule, TooltipModule],
   templateUrl: './edit-key-contact-modal.component.html',
 })
 export class EditKeyContactModalComponent {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly dialogConfig = inject<DynamicDialogConfig<EditKeyContactDialogData>>(DynamicDialogConfig);
+  private readonly dialogRef = inject(DynamicDialogRef);
 
   /** Save timer handle so we can cancel on destroy. */
   private saveTimerId: ReturnType<typeof setTimeout> | null = null;
 
-  // === Two-way bound visibility ===
-  public readonly visible = model<boolean>(false);
-
-  // === Inputs ===
-  public readonly contact = input<OrgMembershipKeyContact | null>(null);
-  public readonly foundationName = input<string>('');
-  /** Person being replaced in the single-contact Replace flow. Null for Add-only flows. */
-  public readonly editingPersonId = input<string | null>(null);
-
-  // === Outputs ===
-  public readonly replaceSubmit = output<EditKeyContactSubmitEvent>();
-  public readonly addSubmit = output<EditKeyContactSubmitEvent>();
-  public readonly removeSubmit = output<EditKeyContactRemoveEvent>();
-  public readonly modalHide = output<void>();
+  // === Dialog-injected data ===
+  protected readonly contact: OrgMembershipKeyContact | null = this.dialogConfig.data?.contact ?? null;
+  protected readonly foundationName: string = this.dialogConfig.data?.foundationName ?? '';
+  protected readonly editingPersonId: string | null = this.dialogConfig.data?.editingPersonId ?? null;
 
   // === Internal state ===
   protected readonly modalKind = signal<ModalKind>('closed');
   protected readonly isSaving = signal(false);
-  protected readonly previousFocus = signal<HTMLElement | null>(null);
 
   // Form fields
   protected readonly emailField = signal('');
@@ -61,10 +63,10 @@ export class EditKeyContactModalComponent {
   // Remove-flow state
   protected readonly selectedRemoveId = signal<string | null>(null);
 
-  protected readonly contactTypeLabel = computed(() => this.contact()?.contactTypeLabel ?? '');
-  protected readonly minContacts = computed(() => this.contact()?.minContacts ?? 0);
-  protected readonly maxContacts = computed(() => this.contact()?.maxContacts ?? 0);
-  protected readonly people = computed(() => this.contact()?.people ?? []);
+  protected readonly contactTypeLabel = computed(() => this.contact?.contactTypeLabel ?? '');
+  protected readonly minContacts = computed(() => this.contact?.minContacts ?? 0);
+  protected readonly maxContacts = computed(() => this.contact?.maxContacts ?? 0);
+  protected readonly people = computed(() => this.contact?.people ?? []);
   protected readonly currentPerson: Signal<OrgMembershipKeyContactPerson | null> = computed(() => this.initCurrentPerson());
 
   protected readonly canAdd = computed(() => this.people().length < this.maxContacts());
@@ -81,19 +83,10 @@ export class EditKeyContactModalComponent {
   protected readonly canSubmit: Signal<boolean> = computed(() => this.initCanSubmit());
 
   public constructor() {
-    toObservable(this.visible)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((isVisible) => {
-        if (isVisible) {
-          const c = this.contact();
-          if (!c) return;
-          this.resetFormState();
-          const initial = this.decideInitialKind(c);
-          this.modalKind.set(initial);
-        } else {
-          this.modalKind.set('closed');
-        }
-      });
+    if (this.contact) {
+      this.modalKind.set(this.decideInitialKind(this.contact));
+      setTimeout(() => this.focusInitialElement(), 0);
+    }
 
     this.destroyRef.onDestroy(() => {
       if (this.saveTimerId !== null) {
@@ -160,7 +153,7 @@ export class EditKeyContactModalComponent {
   protected onSaveClick(): void {
     if (!this.canSubmit()) return;
     const enteredEmail = this.emailField().trim().toLowerCase();
-    const editingId = this.modalKind() === 'replace-form' ? this.editingPersonId() : null;
+    const editingId = this.modalKind() === 'replace-form' ? this.editingPersonId : null;
     const duplicate = this.people().some((p) => p.personId !== editingId && p.email.trim().toLowerCase() === enteredEmail);
     if (duplicate) {
       this.duplicateError.set(`This person is already a ${this.contactTypeLabel()}.`);
@@ -179,61 +172,53 @@ export class EditKeyContactModalComponent {
     };
 
     this.simulateSave(() => {
-      const contact = this.contact();
+      const contact = this.contact;
       if (!contact) return;
       if (kind === 'replace-form') {
-        this.replaceSubmit.emit({
-          contactType: contact.contactType,
-          contactTypeLabel: contact.contactTypeLabel,
-          editingPersonId: this.editingPersonId(),
-          person: newPerson,
-        });
+        this.dialogRef.close({
+          kind: 'replace',
+          event: {
+            contactType: contact.contactType,
+            contactTypeLabel: contact.contactTypeLabel,
+            editingPersonId: this.editingPersonId,
+            person: newPerson,
+          },
+        } satisfies EditKeyContactDialogResult);
       } else {
-        this.addSubmit.emit({
-          contactType: contact.contactType,
-          contactTypeLabel: contact.contactTypeLabel,
-          editingPersonId: null,
-          person: newPerson,
-        });
+        this.dialogRef.close({
+          kind: 'add',
+          event: {
+            contactType: contact.contactType,
+            contactTypeLabel: contact.contactTypeLabel,
+            editingPersonId: null,
+            person: newPerson,
+          },
+        } satisfies EditKeyContactDialogResult);
       }
-      this.closeModal();
     });
   }
 
   protected onRemoveClick(): void {
     if (!this.canSubmit()) return;
-    const contact = this.contact();
+    const contact = this.contact;
     const personId = this.selectedRemoveId();
     if (!contact || !personId) return;
 
     this.simulateSave(() => {
-      this.removeSubmit.emit({
-        contactType: contact.contactType,
-        contactTypeLabel: contact.contactTypeLabel,
-        personId,
-      });
-      this.closeModal();
+      this.dialogRef.close({
+        kind: 'remove',
+        event: {
+          contactType: contact.contactType,
+          contactTypeLabel: contact.contactTypeLabel,
+          personId,
+        },
+      } satisfies EditKeyContactDialogResult);
     });
   }
 
   protected onCancelClick(): void {
     if (this.isSaving()) return;
-    this.closeModal();
-  }
-
-  // === A11y — FR-035 focus management ===
-  protected onModalShow(): void {
-    const active = typeof document !== 'undefined' ? (document.activeElement as HTMLElement | null) : null;
-    this.previousFocus.set(active);
-    setTimeout(() => this.focusInitialElement(), 0);
-  }
-
-  protected onModalHideEvent(): void {
-    const prev = this.previousFocus();
-    if (prev && typeof prev.focus === 'function') {
-      setTimeout(() => prev.focus(), 0);
-    }
-    this.modalHide.emit();
+    this.dialogRef.close(null);
   }
 
   // === Keyboard activation handlers (FR-035) ===
@@ -268,11 +253,6 @@ export class EditKeyContactModalComponent {
         this.isSaving.set(false);
       }
     }, MOCK_SAVE_LATENCY_MS);
-  }
-
-  private closeModal(): void {
-    this.visible.set(false);
-    this.modalHide.emit();
   }
 
   private focusInitialElement(): void {
@@ -318,7 +298,7 @@ export class EditKeyContactModalComponent {
   // === Extracted computed helpers ===
 
   private initCurrentPerson(): OrgMembershipKeyContactPerson | null {
-    const editingId = this.editingPersonId();
+    const editingId = this.editingPersonId;
     if (!editingId) return null;
     return this.people().find((p) => p.personId === editingId) ?? null;
   }

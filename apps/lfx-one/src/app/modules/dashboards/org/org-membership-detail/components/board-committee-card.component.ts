@@ -14,6 +14,7 @@ import type {
   VotingRecordRow,
 } from '@lfx-one/shared/interfaces';
 import { MessageService } from 'primeng/api';
+import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
@@ -24,22 +25,14 @@ import { CardComponent } from '@components/card/card.component';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { OrgLensBoardCommitteeService } from '@services/org-lens-board-committee.service';
 
-import { ReassignBoardRolesModalComponent } from './reassign-board-roles-modal.component';
-import { WhyCantEditModalComponent } from './why-cant-edit-modal.component';
+import { ReassignBoardRolesDialogData, ReassignBoardRolesDialogResult, ReassignBoardRolesModalComponent } from './reassign-board-roles-modal.component';
+import { WhyCantEditDialogData, WhyCantEditDialogResult, WhyCantEditModalComponent } from './why-cant-edit-modal.component';
 
 @Component({
   selector: 'lfx-board-committee-card',
   standalone: true,
-  imports: [
-    FormsModule,
-    InputTextModule,
-    ToastModule,
-    TooltipModule,
-    CardComponent,
-    EmptyStateComponent,
-    ReassignBoardRolesModalComponent,
-    WhyCantEditModalComponent,
-  ],
+  imports: [FormsModule, InputTextModule, ToastModule, TooltipModule, CardComponent, EmptyStateComponent],
+  providers: [DialogService],
   templateUrl: './board-committee-card.component.html',
 })
 export class BoardCommitteeCardComponent {
@@ -52,6 +45,7 @@ export class BoardCommitteeCardComponent {
   private readonly service = inject(OrgLensBoardCommitteeService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly messageService = inject(MessageService);
+  private readonly dialogService = inject(DialogService);
 
   // === Internal: per-section data + load state ===
   protected readonly boardSeats = signal<BoardSeat[]>([]);
@@ -84,15 +78,6 @@ export class BoardCommitteeCardComponent {
 
   // === Pre-computed voting history with formatted date and chip class ===
   protected readonly votingHistoryWithMeta: Signal<VotingRecordRow[]> = computed(() => this.initVotingHistoryWithMeta());
-
-  // === Modals ===
-  protected readonly reassignModalVisible = signal(false);
-  protected readonly reassignModalSeat = signal<BoardSeat | CommitteeSeat | null>(null);
-  protected readonly reassignModalKind = signal<'board' | 'committee'>('board');
-
-  protected readonly whyCantEditVisible = signal(false);
-  protected readonly whyCantEditReason = signal<string | null>(null);
-  protected readonly whyCantEditSeatId = signal<string>('');
 
   // === Private subjects ===
   private readonly searchInput$ = new Subject<string>();
@@ -194,15 +179,42 @@ export class BoardCommitteeCardComponent {
 
   // === Modal openers ===
   protected openReassignModal(seat: BoardSeat | CommitteeSeat, kind: 'board' | 'committee'): void {
-    this.reassignModalSeat.set(seat);
-    this.reassignModalKind.set(kind);
-    this.reassignModalVisible.set(true);
+    const ref = this.dialogService.open(ReassignBoardRolesModalComponent, {
+      header: 'Reassign Board Roles',
+      width: '560px',
+      modal: true,
+      closable: true,
+      dismissableMask: true,
+      showHeader: false,
+      data: {
+        seat,
+        seatKind: kind,
+        foundationName: this.foundationName(),
+      } satisfies ReassignBoardRolesDialogData,
+    }) as DynamicDialogRef;
+
+    ref.onClose.pipe(take(1), takeUntilDestroyed(this.destroyRef)).subscribe((result: ReassignBoardRolesDialogResult) => {
+      if (result) this.onReassignSubmit(result);
+    });
   }
 
   protected openWhyCantEditModal(seat: BoardSeat | CommitteeSeat): void {
-    this.whyCantEditReason.set(seat.reason);
-    this.whyCantEditSeatId.set(seat.seatId);
-    this.whyCantEditVisible.set(true);
+    const ref = this.dialogService.open(WhyCantEditModalComponent, {
+      header: '',
+      width: '440px',
+      modal: true,
+      closable: true,
+      dismissableMask: true,
+      showHeader: false,
+      data: {
+        reason: seat.reason,
+        seatId: seat.seatId,
+      } satisfies WhyCantEditDialogData,
+    }) as DynamicDialogRef;
+
+    ref.onClose.pipe(take(1), takeUntilDestroyed(this.destroyRef)).subscribe((result: WhyCantEditDialogResult) => {
+      if (result?.contactFoundation) this.onContactFoundationClick(seat.seatId);
+    });
   }
 
   /** Receives the reassign submit from the modal; applies optimistic update + refetch (FR-008h + FR-008j + FR-011d.4). */
@@ -271,8 +283,8 @@ export class BoardCommitteeCardComponent {
   }
 
   /** Why-can't-I-edit Contact Foundation handler — explicit no-op in v1 (FR-012c). */
-  protected onContactFoundationClick(): void {
-    console.info('[board] contact foundation clicked for', this.whyCantEditSeatId());
+  protected onContactFoundationClick(seatId: string): void {
+    console.info('[board] contact foundation clicked for', seatId);
   }
 
   // === Private helpers ===
