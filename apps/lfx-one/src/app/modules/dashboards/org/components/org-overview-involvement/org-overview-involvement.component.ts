@@ -46,7 +46,7 @@ export class OrgOverviewInvolvementComponent {
 
   public readonly filterOptions: FilterPillOption[] = [
     { id: 'all', label: 'All' },
-    { id: 'contributions', label: 'Contribution' },
+    { id: 'contributors', label: 'Contribution' },
     { id: 'events', label: 'Event' },
     { id: 'education', label: 'Education' },
   ];
@@ -65,13 +65,7 @@ export class OrgOverviewInvolvementComponent {
 
   public readonly accountName = computed<string>(() => this.accountContextService.selectedAccount().accountName || 'Organization');
 
-  public readonly subtitleText = computed<string>(() => {
-    const coverage = this.coverageData();
-    if (this.coverageLoading()) {
-      return '';
-    }
-    return coverage.foundationCount > 0 ? `across ${coverage.foundationCount} LF foundations` : 'No engagement yet';
-  });
+  public readonly subtitleText = computed<string>(() => this.initSubtitleText());
 
   private readonly activeContributorsCard = this.initializeActiveContributorsCard();
   private readonly maintainersCard = this.initializeMaintainersCard();
@@ -174,24 +168,33 @@ export class OrgOverviewInvolvementComponent {
   }
 
   private initializePrimaryMetrics(): Signal<DashboardMetricCard[]> {
-    return computed<DashboardMetricCard[]>(() => {
-      const filter = this.selectedFilter();
+    return computed<DashboardMetricCard[]>(() => this.computePrimaryMetrics());
+  }
 
-      const allCards = [
-        { card: this.activeContributorsCard(), category: 'contributions' },
-        { card: this.maintainersCard(), category: 'contributions' },
-        { card: this.eventAttendeesCard(), category: 'events' },
-        { card: this.eventSpeakersCard(), category: 'events' },
-        { card: this.certifiedEmployeesCard(), category: 'education' },
-        { card: this.trainingEnrollmentsCard(), category: 'education' },
-      ];
+  private initSubtitleText(): string {
+    if (this.coverageLoading()) {
+      return '';
+    }
+    const coverage = this.coverageData();
+    return coverage.foundationCount > 0 ? `across ${coverage.foundationCount} LF foundations` : 'No engagement yet';
+  }
 
-      if (filter === 'all') {
-        return allCards.map((item) => item.card);
-      }
+  private computePrimaryMetrics(): DashboardMetricCard[] {
+    const filter = this.selectedFilter();
+    const allCards = [
+      { card: this.activeContributorsCard(), category: 'contributors' },
+      { card: this.maintainersCard(), category: 'contributors' },
+      { card: this.eventAttendeesCard(), category: 'events' },
+      { card: this.eventSpeakersCard(), category: 'events' },
+      { card: this.certifiedEmployeesCard(), category: 'education' },
+      { card: this.trainingEnrollmentsCard(), category: 'education' },
+    ];
 
-      return allCards.filter((item) => item.category === filter).map((item) => item.card);
-    });
+    if (filter === 'all') {
+      return allCards.map((item) => item.card);
+    }
+
+    return allCards.filter((item) => item.category === filter).map((item) => item.card);
   }
 
   /** Skip HTTP on empty accountId, echo accountId in the empty envelope, and rely on the service's catchError. */
@@ -246,7 +249,7 @@ export class OrgOverviewInvolvementComponent {
       ...metric,
       loading: this.maintainersLoading(),
       value: data.totalMaintainersYearly.toString(),
-      subtitle: `Employees stewarding ${projectLabel} across foundations`,
+      subtitle: `Employees stewarding ${data.totalProjectsYearly} ${projectLabel} across foundations`,
       chartOptions: this.createBarChartOptions('Maintainers'),
       chartData:
         data.monthlyData.length > 0

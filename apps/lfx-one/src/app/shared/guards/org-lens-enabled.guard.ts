@@ -4,6 +4,7 @@
 import { inject } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { CanMatchFn, Router } from '@angular/router';
+import { ORG_LENS_ENABLED_FLAG } from '@lfx-one/shared/constants';
 import { catchError, filter, firstValueFrom, of, timeout } from 'rxjs';
 
 import { FeatureFlagService } from '../services/feature-flag.service';
@@ -26,5 +27,5 @@ export const orgLensEnabledGuard: CanMatchFn = async () => {
     }
   }
 
-  return featureFlagService.getBooleanFlag('org-lens-enabled', false)() ? true : router.parseUrl('/');
+  return featureFlagService.getBooleanFlag(ORG_LENS_ENABLED_FLAG, false)() ? true : router.parseUrl('/');
 };

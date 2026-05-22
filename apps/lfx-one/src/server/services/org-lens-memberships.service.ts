@@ -14,14 +14,10 @@ import { SnowflakeService } from './snowflake.service';
 
 interface RawMembershipRow {
   ACCOUNT_ID: string;
-  ACCOUNT_NAME: string;
   FOUNDATION_ID: string;
   FOUNDATION_NAME: string;
-  FOUNDATION_SLUG: string | null;
   FOUNDATION_LOGO_URL: string | null;
   MEMBERSHIP_TIER_DISPLAY_NAME: string;
-  MEMBERSHIP_TIER_CLASS: string;
-  TIER_RANK: number;
   TIER_START_DATE: string | null;
   TIER_END_DATE: string | null;
   FIRST_MEMBERSHIP_STARTED_AT: string | null;
@@ -66,14 +62,10 @@ export class OrgLensMembershipsService {
     const query = `
       SELECT
         ACCOUNT_ID,
-        ACCOUNT_NAME,
         FOUNDATION_ID,
         FOUNDATION_NAME,
-        FOUNDATION_SLUG,
         FOUNDATION_LOGO_URL,
         MEMBERSHIP_TIER_DISPLAY_NAME,
-        MEMBERSHIP_TIER_CLASS,
-        TIER_RANK,
         TIER_START_DATE,
         TIER_END_DATE,
         FIRST_MEMBERSHIP_STARTED_AT,
@@ -213,15 +205,15 @@ export class OrgLensMembershipsService {
       membershipTier: raw.MEMBERSHIP_TIER_DISPLAY_NAME,
       tierStartDate: this.formatDate(raw.TIER_START_DATE),
       tierEndDate: this.formatDate(raw.TIER_END_DATE),
-      memberSince: raw.FIRST_MEMBERSHIP_STARTED_AT ? this.formatDate(raw.FIRST_MEMBERSHIP_STARTED_AT) : null,
+      memberSince: this.formatDate(raw.FIRST_MEMBERSHIP_STARTED_AT),
       boardMembers: raw.BOARD_MEMBER_SEAT_COUNT,
       committeeMembers: raw.COMMITTEE_MEMBER_SEAT_COUNT,
       orgProjects: raw.ORG_PROJECTS_COUNT,
     };
   }
 
-  private formatDate(dateValue: string | null): string {
-    if (!dateValue) return '';
+  private formatDate(dateValue: string | null): string | null {
+    if (!dateValue) return null;
     const d = new Date(dateValue);
     return d.toISOString().split('T')[0];
   }

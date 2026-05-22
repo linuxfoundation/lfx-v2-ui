@@ -21,5 +21,5 @@ export class OrgOverviewComponent {
 
   protected readonly companyName: Signal<string> = computed(() => this.selectedAccount().accountName || 'Your Organization');
 
-  protected readonly tierLabel: Signal<string | null> = computed(() => this.selectedAccount().membershipTier ?? null);
+  protected readonly tierLabel: Signal<string | null> = computed(() => this.selectedAccount().membershipTier || null);
 }
