@@ -80,7 +80,7 @@ export const routes: Routes = [
               icon: 'fa-light fa-grid-2',
               showDevelopmentNotice: true,
             },
-            loadComponent: loadOrgPlaceholderPage,
+            loadComponent: () => import('./modules/dashboards/org/org-overview/org-overview.component').then((m) => m.OrgOverviewComponent),
           },
           {
             path: 'memberships',
