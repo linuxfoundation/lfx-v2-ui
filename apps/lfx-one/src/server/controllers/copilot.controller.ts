@@ -131,7 +131,19 @@ export class CopilotController {
                 resolve();
               }
             };
-            const timer = setTimeout(finish, STREAM_CLOSE_TIMEOUT_MS);
+            const timer = setTimeout(() => {
+              // Timeout fired: the res.write() flush callback never arrived (likely
+              // TCP backpressure). Force-close the socket so httpServer.close() isn't
+              // held open by this stream until the 25s closeAllConnections() cutoff.
+              logger.debug(undefined, 'sse_stream_shutdown_timeout', 'SSE stream close timed out; force-closing', {});
+              try {
+                if (!res.writableEnded) res.end();
+              } catch {
+                // already ended — harmless
+              }
+              res.socket?.destroy();
+              finish();
+            }, STREAM_CLOSE_TIMEOUT_MS);
             try {
               if (!res.writableEnded) {
                 res.write('event: shutdown\ndata: {"reason":"server_shutdown"}\n\n', () => {

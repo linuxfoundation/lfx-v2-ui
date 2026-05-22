@@ -374,19 +374,26 @@ async function gracefulShutdown(signal: string): Promise<void> {
   // Wait 1.5× that interval before closing the HTTP listener so no new requests
   // land on an already-closed server. SSE shutdown hooks run concurrently so
   // clients are notified and can reconnect within this window.
-  // Promise.all (not race) ensures the full 15s always elapses even if hooks
-  // finish early — short-circuiting would defeat the purpose of the wait.
+  //
+  // Race hooks vs the LB timer to detect slow hooks, then wait for both so
+  // the full 15s always elapses before HTTP drain begins. The .catch() on the
+  // hooks promise ensures a throwing hook can't propagate through Promise.all
+  // and bypass the HTTP / NATS / Snowflake drain below.
   const LB_DRAIN_MS = 15_000; // 1.5 × readyz periodSeconds (10s)
+  const lbDrain = new Promise<void>((resolve) => setTimeout(resolve, LB_DRAIN_MS));
   let hooksCompleted = false;
-  await Promise.all([
-    new Promise<void>((resolve) => setTimeout(resolve, LB_DRAIN_MS)),
-    runShutdownHooks().then(() => {
+  const hooks = runShutdownHooks()
+    .then(() => {
       hooksCompleted = true;
-    }),
-  ]);
+    })
+    .catch((err: unknown) => {
+      logger.error(undefined, 'shutdown_hooks_error', startTime, err as Error, {});
+    });
+  await Promise.race([hooks, lbDrain]);
   if (!hooksCompleted) {
     logger.warning(undefined, 'shutdown_hooks_slow', 'Shutdown hooks exceeded LB drain window', { budget_ms: LB_DRAIN_MS });
   }
+  await Promise.all([lbDrain, hooks]);
 
   if (!httpServer) {
     logger.success(undefined, 'graceful_shutdown', startTime, { reason: 'no_http_server' });
