@@ -5,30 +5,10 @@ import { Component, computed, inject, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
+import { DEFAULT_PEOPLE_TAB_ID, PEOPLE_TABS, VALID_PEOPLE_TAB_IDS } from '@lfx-one/shared/constants';
 import { AccountContextService } from '@services/account-context.service';
 
-interface PeopleTabConfig {
-  readonly id: PeopleTabId;
-  readonly label: string;
-  readonly icon: string;
-  /** Empty-state noun used to complete "...to view {noun}." */
-  readonly noun: string;
-}
-
-export type PeopleTabId = 'all' | 'board' | 'committee' | 'contacts' | 'contributors' | 'events' | 'training';
-
-const PEOPLE_TABS: readonly PeopleTabConfig[] = [
-  { id: 'all', label: 'All Employees', icon: 'fa-light fa-users', noun: 'all employees' },
-  { id: 'board', label: 'Board', icon: 'fa-light fa-user-tie', noun: 'board members' },
-  { id: 'committee', label: 'Committee', icon: 'fa-light fa-users-rectangle', noun: 'committee members' },
-  { id: 'contacts', label: 'Key Contacts', icon: 'fa-light fa-address-card', noun: 'key contacts' },
-  { id: 'contributors', label: 'Contributors', icon: 'fa-light fa-code', noun: 'contributors' },
-  { id: 'events', label: 'Event Attendees', icon: 'fa-light fa-calendar', noun: 'event attendees' },
-  { id: 'training', label: 'Trainees', icon: 'fa-light fa-graduation-cap', noun: 'trainees' },
-] as const;
-
-const DEFAULT_TAB: PeopleTabId = 'all';
-const VALID_TAB_IDS: ReadonlySet<PeopleTabId> = new Set(PEOPLE_TABS.map((t) => t.id));
+import type { PeopleTabConfig, PeopleTabId } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-org-people',
@@ -48,7 +28,7 @@ export class OrgPeopleComponent {
 
   protected readonly activeTab: Signal<PeopleTabId> = computed(() => {
     const raw = this.queryParamMap().get('tab');
-    return raw && VALID_TAB_IDS.has(raw as PeopleTabId) ? (raw as PeopleTabId) : DEFAULT_TAB;
+    return raw && VALID_PEOPLE_TAB_IDS.has(raw as PeopleTabId) ? (raw as PeopleTabId) : DEFAULT_PEOPLE_TAB_ID;
   });
 
   protected readonly activeTabConfig: Signal<PeopleTabConfig> = computed(() => PEOPLE_TABS.find((t) => t.id === this.activeTab()) ?? PEOPLE_TABS[0]);
@@ -72,7 +52,7 @@ export class OrgPeopleComponent {
       relativeTo: this.route,
       // Drop the param when it would equal the default so the URL stays
       // `/org/people` rather than `/org/people?tab=all`.
-      queryParams: { tab: tabId === DEFAULT_TAB ? null : tabId },
+      queryParams: { tab: tabId === DEFAULT_PEOPLE_TAB_ID ? null : tabId },
       queryParamsHandling: 'merge',
     });
   }
