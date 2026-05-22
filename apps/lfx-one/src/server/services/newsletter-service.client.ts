@@ -5,6 +5,7 @@ import {
   CreateNewsletterDraftRequest,
   Newsletter,
   NewsletterAnalytics,
+  NewsletterContextType,
   NewsletterDraftListResponse,
   NewsletterListParams,
   NewsletterListResponse,
@@ -36,7 +37,7 @@ export class NewsletterServiceClient {
     return this.microserviceProxy.proxyRequest<Newsletter>(req, 'LFX_V2_SERVICE', `/newsletters/drafts/${id}`, 'GET');
   }
 
-  public async listDrafts(req: Request, contextType: string, contextUid: string): Promise<NewsletterDraftListResponse> {
+  public async listDrafts(req: Request, contextType: NewsletterContextType, contextUid: string): Promise<NewsletterDraftListResponse> {
     return this.microserviceProxy.proxyRequest<NewsletterDraftListResponse>(req, 'LFX_V2_SERVICE', '/newsletters/drafts', 'GET', {
       contextType,
       contextUid,

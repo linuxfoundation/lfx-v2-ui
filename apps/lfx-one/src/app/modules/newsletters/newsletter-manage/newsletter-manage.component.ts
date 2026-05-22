@@ -254,11 +254,7 @@ export class NewsletterManageComponent {
 
   private initRecipientCount(): void {
     this.form.controls.committeeUids.valueChanges
-      .pipe(
-        debounceTime(300),
-        distinctUntilChanged(this.uidsEqual),
-        takeUntilDestroyed(this.destroyRef)
-      )
+      .pipe(debounceTime(300), distinctUntilChanged(this.uidsEqual), takeUntilDestroyed(this.destroyRef))
       .subscribe((uids) => this.fetchRecipientCountFor(uids ?? []));
   }
 

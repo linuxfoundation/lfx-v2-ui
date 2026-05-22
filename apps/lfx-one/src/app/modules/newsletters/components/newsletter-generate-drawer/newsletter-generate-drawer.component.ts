@@ -66,7 +66,8 @@ export class NewsletterGenerateDrawerComponent {
   protected readonly promptIsCustomized: Signal<boolean> = computed(() => (this.systemPromptValue() ?? '').trim() !== AI_NEWSLETTER_SYSTEM_PROMPT.trim());
   protected readonly canGenerate: Signal<boolean> = computed(() => {
     const raw = (this.rawContentValue() ?? '').trim();
-    return raw.length > 0 && raw.length <= NEWSLETTER_RAW_CONTENT_MAX_LENGTH && !this.generating();
+    const prompt = this.systemPromptValue() ?? '';
+    return raw.length > 0 && raw.length <= NEWSLETTER_RAW_CONTENT_MAX_LENGTH && prompt.length <= NEWSLETTER_SYSTEM_PROMPT_MAX_LENGTH && !this.generating();
   });
 
   // Exposed for the template's "Reset to default" button.

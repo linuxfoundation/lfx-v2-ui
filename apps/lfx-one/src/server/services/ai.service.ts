@@ -141,7 +141,7 @@ export class AiService {
                 bodyHtml: {
                   type: 'string',
                   description:
-                    'Newsletter HTML body. Only allowed tags: <p>, <br>, <strong>, <b>, <em>, <i>, <u>, <s>, <ol>, <ul>, <li>, <a>, <blockquote>, <hr>, <h2>, <h3>.',
+                    'Newsletter HTML body. Only allowed tags: <p>, <br>, <strong>, <b>, <em>, <i>, <u>, <s>, <ol>, <ul>, <li>, <a>, <blockquote>, <h2>, <h3>.',
                   maxLength: 100_000,
                 },
               },

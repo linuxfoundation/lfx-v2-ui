@@ -162,7 +162,7 @@ export class NewsletterController {
           path: req.path,
         });
       }
-      const result = await this.newsletterClient.listDrafts(req, contextType, contextUid);
+      const result = await this.newsletterClient.listDrafts(req, contextType as NewsletterContextType, contextUid);
       logger.success(req, 'newsletter_list_drafts', startTime, { count: result.drafts.length });
       res.json(result);
     } catch (error) {

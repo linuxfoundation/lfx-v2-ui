@@ -498,14 +498,15 @@ export function formatRelativeTime(date: Date): string {
   if (!Number.isFinite(timestamp)) {
     return 'unknown';
   }
+  // Derive each unit from diffMs with floor so 59m 31s reads "59 min ago", not "1 hr ago".
   const diffMs = Date.now() - timestamp;
-  const diffSec = Math.round(diffMs / 1000);
+  const diffSec = Math.floor(diffMs / 1000);
   if (diffSec < 5) return 'just now';
   if (diffSec < 60) return `${diffSec}s ago`;
-  const diffMin = Math.round(diffSec / 60);
+  const diffMin = Math.floor(diffMs / 60_000);
   if (diffMin < 60) return `${diffMin} min ago`;
-  const diffHr = Math.round(diffMin / 60);
+  const diffHr = Math.floor(diffMs / 3_600_000);
   if (diffHr < 24) return `${diffHr} hr ago`;
-  const diffDay = Math.round(diffHr / 24);
+  const diffDay = Math.floor(diffMs / 86_400_000);
   return `${diffDay} day${diffDay === 1 ? '' : 's'} ago`;
 }
