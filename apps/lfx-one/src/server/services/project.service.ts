@@ -408,6 +408,12 @@ export class ProjectService {
     if (!updatedSettings.writers) updatedSettings.writers = [];
     if (!updatedSettings.auditors) updatedSettings.auditors = [];
 
+    // Capture the user's existing UserInfo before removal — used by the 'update' path to
+    // avoid a NATS roundtrip when only the role is changing.
+    const existingUserInfo =
+      updatedSettings.writers.find((u) => u.username === backendIdentifier) ||
+      updatedSettings.auditors.find((u) => u.username === backendIdentifier);
+
     // Remove user from both arrays first (for all operations)
     // Compare by username property since writers/auditors are now UserInfo objects
     // Use backendIdentifier (sub) for comparison to ensure proper removal
@@ -436,6 +442,14 @@ export class ProjectService {
         if (manualUserInfo.avatar) {
           userInfo.avatar = manualUserInfo.avatar;
         }
+      } else if (operation === 'update' && existingUserInfo) {
+        // Role-only update: reuse the UserInfo already stored in settings.
+        // Avoids a NATS lookup that can fail when user metadata lacks an email field.
+        logger.debug(req, 'update_user_project_permissions', 'Reusing existing user info for role update', {
+          username: backendIdentifier,
+          info_source: 'existing_settings',
+        });
+        userInfo = existingUserInfo;
       } else {
         // Fetch user info from user service via NATS using the original input
         const fetchedUserInfo = await this.getUserInfo(req, usernameOrEmail);
