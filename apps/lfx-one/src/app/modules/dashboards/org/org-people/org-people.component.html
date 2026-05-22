@@ -17,7 +17,8 @@
         class="flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
         [attr.id]="'org-people-tab-' + tab.id"
         [attr.aria-selected]="activeTab() === tab.id"
-        [attr.aria-controls]="'org-people-panel-' + tab.id"
+        aria-controls="org-people-tabpanel"
+        [attr.tabindex]="activeTab() === tab.id ? 0 : -1"
         [attr.data-testid]="'org-people-tab-' + tab.id"
         [class.border-blue-600]="activeTab() === tab.id"
         [class.text-blue-600]="activeTab() === tab.id"
@@ -33,7 +34,7 @@
 
   <section
     role="tabpanel"
-    [attr.id]="'org-people-panel-' + activeTab()"
+    id="org-people-tabpanel"
     [attr.aria-labelledby]="'org-people-tab-' + activeTab()"
     [attr.data-testid]="'org-people-panel-' + activeTab()">
     @if (!hasCompany()) {

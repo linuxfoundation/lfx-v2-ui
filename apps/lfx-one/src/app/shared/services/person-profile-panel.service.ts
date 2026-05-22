@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Injectable, Signal, signal, WritableSignal } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 
 /**
  * Shared hook for opening the cross-tab person profile side panel from
@@ -16,19 +16,15 @@ import { Injectable, Signal, signal, WritableSignal } from '@angular/core';
   providedIn: 'root',
 })
 export class PersonProfilePanelService {
+  private readonly _activePerson = signal<string | null>(null);
+
   /**
    * Name of the currently selected person, or `null` when the panel is
    * closed. Will be replaced with a richer Person record once the
    * panel internals land. Exposed read-only so callers go through
    * `open()` / `close()`.
    */
-  public readonly activePerson: Signal<string | null>;
-
-  private readonly _activePerson: WritableSignal<string | null> = signal(null);
-
-  public constructor() {
-    this.activePerson = this._activePerson.asReadonly();
-  }
+  public readonly activePerson = this._activePerson.asReadonly();
 
   public open(name: string): void {
     this._activePerson.set(name);
