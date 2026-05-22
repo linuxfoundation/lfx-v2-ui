@@ -21,7 +21,7 @@ export class InviteController {
   /**
    * POST /api/invite/accept
    * Verifies the invite JWT signature (HS256), publishes lfx.invite.accepted via NATS
-   * request-reply, and returns the return_url so the client can navigate to the intended resource.
+   * (fire-and-forget), and returns the return_url so the client can navigate to the intended resource.
    */
   public async acceptInvite(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'accept_invite');

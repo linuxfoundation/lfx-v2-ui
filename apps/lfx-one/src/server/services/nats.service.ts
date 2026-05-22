@@ -115,6 +115,7 @@ export class NatsService {
         },
       },
       async (span) => {
+        const startTime = Date.now();
         logger.debug(undefined, 'nats_publish', 'Publishing NATS message', { subject });
         try {
           connection.publish(subject, data);
@@ -126,7 +127,7 @@ export class NatsService {
             message: error instanceof Error ? error.message : String(error),
           });
           span.recordException(error instanceof Error ? error : new Error(String(error)));
-          logger.error(undefined, 'nats_publish', Date.now(), error, { subject });
+          logger.error(undefined, 'nats_publish', startTime, error, { subject });
           throw error;
         } finally {
           span.end();
