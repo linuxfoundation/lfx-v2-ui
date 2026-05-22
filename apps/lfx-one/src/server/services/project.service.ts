@@ -469,7 +469,11 @@ export class ProjectService {
           existing_email: existingUserInfo.email,
           info_source: 'existing_settings',
         });
-        userInfo = { ...existingUserInfo, username: backendIdentifier };
+        // Preserve existingUserInfo exactly as stored — do NOT overwrite username with
+        // backendIdentifier. For users added manually without a username, backendIdentifier
+        // is their email (NATS was skipped), and stamping it onto the record would
+        // incorrectly turn an intentionally empty username into an email address.
+        userInfo = { ...existingUserInfo };
       } else {
         // Fetch user info from user service via NATS using the original input
         const fetchedUserInfo = await this.getUserInfo(req, usernameOrEmail);
