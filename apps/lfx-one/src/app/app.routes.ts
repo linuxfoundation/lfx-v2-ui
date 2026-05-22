@@ -204,6 +204,12 @@ export const routes: Routes = [
         loadChildren: () => import('./modules/surveys/surveys.routes').then((m) => m.SURVEY_ROUTES),
       },
       {
+        path: 'foundation/newsletters',
+        data: { lens: 'foundation' },
+        canActivate: [executiveDirectorGuard, projectQueryParamGuard],
+        loadChildren: () => import('./modules/newsletters/newsletters.routes').then((m) => m.NEWSLETTER_ROUTES),
+      },
+      {
         path: 'foundation/settings',
         data: { lens: 'foundation' },
         canActivate: [projectQueryParamGuard],
@@ -247,6 +253,12 @@ export const routes: Routes = [
         loadChildren: () => import('./modules/surveys/surveys.routes').then((m) => m.SURVEY_ROUTES),
       },
       {
+        path: 'project/newsletters',
+        data: { lens: 'project' },
+        canActivate: [executiveDirectorGuard, projectQueryParamGuard],
+        loadChildren: () => import('./modules/newsletters/newsletters.routes').then((m) => m.NEWSLETTER_ROUTES),
+      },
+      {
         path: 'project/settings',
         data: { lens: 'project' },
         canActivate: [projectQueryParamGuard],
@@ -276,6 +288,11 @@ export const routes: Routes = [
         path: 'surveys',
         canActivate: [lensRedirectGuard],
         loadChildren: () => import('./modules/surveys/surveys.routes').then((m) => m.SURVEY_ROUTES),
+      },
+      {
+        path: 'newsletters',
+        canActivate: [executiveDirectorGuard, lensRedirectGuard],
+        loadChildren: () => import('./modules/newsletters/newsletters.routes').then((m) => m.NEWSLETTER_ROUTES),
       },
       {
         path: 'documents',
