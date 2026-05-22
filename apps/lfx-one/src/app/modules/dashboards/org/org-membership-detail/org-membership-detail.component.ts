@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal, type Signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AccountContextService } from '@services/account-context.service';
@@ -12,8 +12,13 @@ import type {
   OrgMembershipDetailResponse,
   OrgMembershipKeyContact,
   OrgMembershipKeyContactPerson,
-  OrgMembershipKeyContactType,
+  OrgMembershipDetailPageState,
+  MembershipDetailTab,
+  ModalOpenState,
+  EditKeyContactRemoveEvent,
+  EditKeyContactSubmitEvent,
 } from '@lfx-one/shared/interfaces';
+import { fragmentToTab } from '@lfx-one/shared/constants';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
@@ -21,25 +26,7 @@ import { catchError, combineLatest, filter, of, switchMap, tap } from 'rxjs';
 
 import { BoardCommitteeCardComponent } from './components/board-committee-card.component';
 import { DocumentationTabComponent } from './components/documentation-tab.component';
-import { EditKeyContactModalComponent, type EditKeyContactRemoveEvent, type EditKeyContactSubmitEvent } from './components/edit-key-contact-modal.component';
-
-type PageState = 'loading' | 'error' | 'ready' | 'empty' | 'notFound';
-type MembershipDetailTab = 'key-contacts' | 'board' | 'docs' | 'governance';
-
-/** Whitelist used by the URL-fragment ↔ tab sync (spec 016 round 7 enhancement — reverses spec 015 round 2 Q-no-URL decision). */
-const TAB_FRAGMENTS: readonly MembershipDetailTab[] = ['key-contacts', 'board', 'docs', 'governance'] as const;
-const DEFAULT_TAB: MembershipDetailTab = 'key-contacts';
-
-/** Parse a URL fragment into a tab id, defaulting to `key-contacts` for empty / unknown values. */
-function fragmentToTab(fragment: string | null | undefined): MembershipDetailTab {
-  const candidate = (fragment ?? '').toLowerCase().trim();
-  return (TAB_FRAGMENTS as readonly string[]).includes(candidate) ? (candidate as MembershipDetailTab) : DEFAULT_TAB;
-}
-
-interface ModalOpenState {
-  contact: OrgMembershipKeyContact;
-  editingPersonId: string | null;
-}
+import { EditKeyContactModalComponent } from './components/edit-key-contact-modal.component';
 
 @Component({
   selector: 'lfx-org-membership-detail',
@@ -132,15 +119,9 @@ export class OrgMembershipDetailComponent {
   // Subscribe via toSignal so the observable runs (read in template indirectly via pageState/foundation/keyContacts)
   protected readonly detailData = toSignal<OrgMembershipDetailResponse | null>(this.detail$, { initialValue: null });
 
-  protected readonly pageState = computed<PageState>(() => {
-    if (this.fetchLoading()) return 'loading';
-    if (this.fetchError()) return 'error';
-    const data = this.detailData();
-    if (!data) return 'loading';
-    if (!data.foundation) return 'notFound';
-    if (this.keyContacts().length === 0) return 'empty';
-    return 'ready';
-  });
+  protected readonly pageState: Signal<OrgMembershipDetailPageState> = computed(() => this.initPageState());
+
+  protected readonly memberSinceFormatted = computed(() => this.formatDateShort(this.foundation()?.memberSince ?? null));
 
   public constructor() {
     // React to browser back/forward and externally-changed fragments without
@@ -170,14 +151,6 @@ export class OrgMembershipDetailComponent {
 
   protected retry(): void {
     this.retryTrigger.update((v) => v + 1);
-  }
-
-  protected formatDateShort(dateString: string | null): string {
-    if (!dateString) return '—';
-    const parts = dateString.split('-').map(Number);
-    if (parts.length !== 3 || parts.some(Number.isNaN)) return dateString;
-    const [year, month, day] = parts as [number, number, number];
-    return new Date(year, month - 1, day).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
   }
 
   protected onPencilClick(contact: OrgMembershipKeyContact): void {
@@ -274,20 +247,21 @@ export class OrgMembershipDetailComponent {
     });
   }
 
-  // Helpers used by the template
-  protected isEmptyRow(contact: OrgMembershipKeyContact): boolean {
-    return contact.people.length === 0;
+  private initPageState(): OrgMembershipDetailPageState {
+    if (this.fetchLoading()) return 'loading';
+    if (this.fetchError()) return 'error';
+    const data = this.detailData();
+    if (!data) return 'loading';
+    if (!data.foundation) return 'notFound';
+    if (this.keyContacts().length === 0) return 'empty';
+    return 'ready';
   }
 
-  protected pencilAriaLabel(contact: OrgMembershipKeyContact): string {
-    return contact.people.length === 0 ? `Add ${contact.contactTypeLabel} for this membership` : `Edit ${contact.contactTypeLabel} for this membership`;
-  }
-
-  protected trackContactType(_index: number, contact: OrgMembershipKeyContact): OrgMembershipKeyContactType {
-    return contact.contactType;
-  }
-
-  protected trackPersonId(_index: number, person: OrgMembershipKeyContactPerson): string {
-    return person.personId;
+  private formatDateShort(dateString: string | null): string {
+    if (!dateString) return '—';
+    const parts = dateString.split('-').map(Number);
+    if (parts.length !== 3 || parts.some(Number.isNaN)) return dateString;
+    const [year, month, day] = parts as [number, number, number];
+    return new Date(year, month - 1, day).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
   }
 }

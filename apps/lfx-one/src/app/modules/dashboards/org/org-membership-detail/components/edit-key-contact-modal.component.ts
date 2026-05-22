@@ -2,34 +2,20 @@
 // SPDX-License-Identifier: MIT
 
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectorRef, Component, computed, DestroyRef, effect, inject, input, model, output, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, DestroyRef, inject, input, model, output, signal, type Signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import type { OrgMembershipKeyContact, OrgMembershipKeyContactPerson, OrgMembershipKeyContactType } from '@lfx-one/shared/interfaces';
+import { EMAIL_REGEX, MOCK_SAVE_LATENCY_MS } from '@lfx-one/shared/constants';
+import type {
+  EditKeyContactRemoveEvent,
+  EditKeyContactSubmitEvent,
+  ModalKind,
+  OrgMembershipKeyContact,
+  OrgMembershipKeyContactPerson,
+} from '@lfx-one/shared/interfaces';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TooltipModule } from 'primeng/tooltip';
-
-/** FR-018b — single tunable constant for the simulated save latency window. */
-export const MOCK_SAVE_LATENCY_MS = 400;
-
-/** FR-017a — basic email-format regex used on blur and at submit. */
-const EMAIL_REGEX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-
-export interface EditKeyContactSubmitEvent {
-  contactType: OrgMembershipKeyContactType;
-  contactTypeLabel: string;
-  /** Only populated for the Replace flow (single-contact); null for Add */
-  editingPersonId: string | null;
-  person: OrgMembershipKeyContactPerson;
-}
-
-export interface EditKeyContactRemoveEvent {
-  contactType: OrgMembershipKeyContactType;
-  contactTypeLabel: string;
-  personId: string;
-}
-
-type ModalKind = 'closed' | 'replace-form' | 'chooser' | 'add-form' | 'remove-list' | 'single-add-form';
 
 @Component({
   selector: 'lfx-edit-key-contact-modal',
@@ -79,81 +65,35 @@ export class EditKeyContactModalComponent {
   protected readonly minContacts = computed(() => this.contact()?.minContacts ?? 0);
   protected readonly maxContacts = computed(() => this.contact()?.maxContacts ?? 0);
   protected readonly people = computed(() => this.contact()?.people ?? []);
-  protected readonly currentPerson = computed<OrgMembershipKeyContactPerson | null>(() => {
-    const editingId = this.editingPersonId();
-    if (!editingId) return null;
-    return this.people().find((p) => p.personId === editingId) ?? null;
-  });
+  protected readonly currentPerson: Signal<OrgMembershipKeyContactPerson | null> = computed(() => this.initCurrentPerson());
 
   protected readonly canAdd = computed(() => this.people().length < this.maxContacts());
   protected readonly canRemove = computed(() => this.people().length > 0 && this.people().length > this.minContacts());
 
   protected readonly addCardTooltip = computed(() => (!this.canAdd() ? 'Maximum contacts reached' : ''));
-  protected readonly removeCardTooltip = computed(() => {
-    if (this.people().length === 0) return 'No contacts to remove';
-    if (!this.canRemove()) return 'At least one contact required';
-    return '';
-  });
+  protected readonly removeCardTooltip: Signal<string> = computed(() => this.initRemoveCardTooltip());
 
   protected readonly addCardLabel = computed(() => (this.people().length === 0 ? `Add ${this.contactTypeLabel()}` : 'Add Another Contact'));
 
-  protected readonly infoBannerText = computed(() => {
-    const min = this.minContacts();
-    const max = this.maxContacts();
-    if (min === 1 && max === 1) {
-      return 'Your organization must have one key contact of this type.';
-    }
-    if (min >= 1 && max > 1) {
-      return `Your organization must have at least ${min}, and can have up to ${max} contacts of this type.`;
-    }
-    if (min === 0 && max > 1) {
-      return `Your organization can have up to ${max} contacts of this type.`;
-    }
-    return '';
-  });
-
-  protected readonly primaryButtonLabel = computed(() => {
-    const kind = this.modalKind();
-    const saving = this.isSaving();
-    if (kind === 'remove-list') return saving ? 'Removing…' : 'Remove Contact';
-    return saving ? 'Saving…' : 'Save Changes';
-  });
-
-  protected readonly primaryButtonStyleClass = computed(() => {
-    const kind = this.modalKind();
-    return kind === 'remove-list' ? 'bg-red-600 hover:bg-red-700 text-white border-red-600' : 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600';
-  });
-
-  protected readonly canSubmit = computed(() => {
-    if (this.isSaving()) return false;
-    const kind = this.modalKind();
-    if (kind === 'remove-list') return this.selectedRemoveId() !== null;
-    if (kind === 'replace-form' || kind === 'add-form' || kind === 'single-add-form') {
-      return (
-        this.emailField().trim().length > 0 &&
-        this.firstNameField().trim().length > 0 &&
-        this.lastNameField().trim().length > 0 &&
-        !this.emailFormatError() &&
-        !this.duplicateError() &&
-        EMAIL_REGEX.test(this.emailField().trim())
-      );
-    }
-    return false;
-  });
+  protected readonly infoBannerText: Signal<string> = computed(() => this.initInfoBannerText());
+  protected readonly primaryButtonLabel: Signal<string> = computed(() => this.initPrimaryButtonLabel());
+  protected readonly primaryButtonStyleClass: Signal<string> = computed(() => this.initPrimaryButtonStyleClass());
+  protected readonly canSubmit: Signal<boolean> = computed(() => this.initCanSubmit());
 
   public constructor() {
-    // When visibility flips on, decide which sub-flow to open based on the contact's shape
-    effect(() => {
-      if (this.visible()) {
-        const c = this.contact();
-        if (!c) return;
-        this.resetFormState();
-        const initial = this.decideInitialKind(c);
-        this.modalKind.set(initial);
-      } else {
-        this.modalKind.set('closed');
-      }
-    });
+    toObservable(this.visible)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((isVisible) => {
+        if (isVisible) {
+          const c = this.contact();
+          if (!c) return;
+          this.resetFormState();
+          const initial = this.decideInitialKind(c);
+          this.modalKind.set(initial);
+        } else {
+          this.modalKind.set('closed');
+        }
+      });
 
     this.destroyRef.onDestroy(() => {
       if (this.saveTimerId !== null) {
@@ -177,7 +117,6 @@ export class EditKeyContactModalComponent {
   // === Chooser interactions (FR-016a / FR-016e live toggle) ===
   protected selectAddCard(): void {
     if (!this.canAdd() || this.isSaving()) return;
-    // Live toggle (FR-016e) — discard remove selection if switching from remove-list
     this.selectedRemoveId.set(null);
     this.modalKind.set('add-form');
     setTimeout(() => this.focusInitialElement(), 0);
@@ -185,7 +124,6 @@ export class EditKeyContactModalComponent {
 
   protected selectRemoveCard(): void {
     if (!this.canRemove() || this.isSaving()) return;
-    // Live toggle (FR-016e) — discard form input if switching from add-form
     this.resetFormState();
     this.modalKind.set('remove-list');
     setTimeout(() => this.focusInitialElement(), 0);
@@ -199,7 +137,7 @@ export class EditKeyContactModalComponent {
   // === Field validation (FR-017a — on blur) ===
   protected onEmailBlur(): void {
     this.emailTouched.set(true);
-    this.duplicateError.set(null); // user is editing → clear any previous duplicate error
+    this.duplicateError.set(null);
     const value = this.emailField().trim();
     if (value && !EMAIL_REGEX.test(value)) {
       this.emailFormatError.set('Enter a valid email address');
@@ -221,7 +159,6 @@ export class EditKeyContactModalComponent {
   // === Submit handlers ===
   protected onSaveClick(): void {
     if (!this.canSubmit()) return;
-    // FR-016f — in-row duplicate check (excludes the person being replaced in Replace flow)
     const enteredEmail = this.emailField().trim().toLowerCase();
     const editingId = this.modalKind() === 'replace-form' ? this.editingPersonId() : null;
     const duplicate = this.people().some((p) => p.personId !== editingId && p.email.trim().toLowerCase() === enteredEmail);
@@ -252,7 +189,6 @@ export class EditKeyContactModalComponent {
           person: newPerson,
         });
       } else {
-        // add-form or single-add-form
         this.addSubmit.emit({
           contactType: contact.contactType,
           contactTypeLabel: contact.contactTypeLabel,
@@ -376,7 +312,64 @@ export class EditKeyContactModalComponent {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
       return crypto.randomUUID();
     }
-    // Fallback for environments without crypto.randomUUID (older Node SSR contexts)
     return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
+
+  // === Extracted computed helpers ===
+
+  private initCurrentPerson(): OrgMembershipKeyContactPerson | null {
+    const editingId = this.editingPersonId();
+    if (!editingId) return null;
+    return this.people().find((p) => p.personId === editingId) ?? null;
+  }
+
+  private initRemoveCardTooltip(): string {
+    if (this.people().length === 0) return 'No contacts to remove';
+    if (!this.canRemove()) return 'At least one contact required';
+    return '';
+  }
+
+  private initInfoBannerText(): string {
+    const min = this.minContacts();
+    const max = this.maxContacts();
+    if (min === 1 && max === 1) {
+      return 'Your organization must have one key contact of this type.';
+    }
+    if (min >= 1 && max > 1) {
+      return `Your organization must have at least ${min}, and can have up to ${max} contacts of this type.`;
+    }
+    if (min === 0 && max > 1) {
+      return `Your organization can have up to ${max} contacts of this type.`;
+    }
+    return '';
+  }
+
+  private initPrimaryButtonLabel(): string {
+    const kind = this.modalKind();
+    const saving = this.isSaving();
+    if (kind === 'remove-list') return saving ? 'Removing…' : 'Remove Contact';
+    return saving ? 'Saving…' : 'Save Changes';
+  }
+
+  private initPrimaryButtonStyleClass(): string {
+    const kind = this.modalKind();
+    return kind === 'remove-list' ? 'bg-red-600 hover:bg-red-700 text-white border-red-600' : 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600';
+  }
+
+  private initCanSubmit(): boolean {
+    if (this.isSaving()) return false;
+    const kind = this.modalKind();
+    if (kind === 'remove-list') return this.selectedRemoveId() !== null;
+    if (kind === 'replace-form' || kind === 'add-form' || kind === 'single-add-form') {
+      return (
+        this.emailField().trim().length > 0 &&
+        this.firstNameField().trim().length > 0 &&
+        this.lastNameField().trim().length > 0 &&
+        !this.emailFormatError() &&
+        !this.duplicateError() &&
+        EMAIL_REGEX.test(this.emailField().trim())
+      );
+    }
+    return false;
   }
 }

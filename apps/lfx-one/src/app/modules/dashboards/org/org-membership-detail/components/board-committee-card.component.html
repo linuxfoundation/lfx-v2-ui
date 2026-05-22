@@ -97,7 +97,7 @@
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
-                      @for (seat of filteredBoardSeats(); track trackSeatId($index, seat)) {
+                      @for (seat of filteredBoardSeats(); track seat.seatId) {
                         <tr [attr.data-testid]="'board-committee-board-row-' + seat.seatId">
                           <td class="px-4 py-3 align-top">
                             <div class="flex items-center gap-3">
@@ -203,7 +203,7 @@
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
-                      @for (seat of filteredCommitteeSeats(); track trackSeatId($index, seat)) {
+                      @for (seat of filteredCommitteeSeats(); track seat.seatId) {
                         <tr [attr.data-testid]="'board-committee-committee-row-' + seat.seatId">
                           <td class="px-4 py-3 align-top">
                             <div class="flex items-center gap-3">
@@ -295,12 +295,12 @@
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
-                      @for (vote of votingHistory(); track trackVoteId($index, vote)) {
+                      @for (vote of votingHistoryWithMeta(); track vote.voteId) {
                         <tr [attr.data-testid]="'board-committee-voting-row-' + vote.voteId">
-                          <td class="px-4 py-3 align-top text-sm text-gray-700">{{ formatDate(vote.date) }}</td>
+                          <td class="px-4 py-3 align-top text-sm text-gray-700">{{ vote.formattedDate }}</td>
                           <td class="px-4 py-3 align-top text-sm text-gray-700">{{ vote.resolution }}</td>
                           <td class="px-4 py-3 align-top">
-                            <span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium" [class]="voteChipClass(vote.vote)">
+                            <span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium" [class]="vote.chipClass">
                               {{ vote.vote }}
                             </span>
                           </td>

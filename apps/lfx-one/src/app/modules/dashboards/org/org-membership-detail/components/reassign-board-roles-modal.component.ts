@@ -1,24 +1,16 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, DestroyRef, effect, inject, input, model, output, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, input, model, output, signal, type Signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import type { BoardSeat, CommitteeSeat, ReassignSeatBody } from '@lfx-one/shared/interfaces';
+import { EMAIL_REGEX, MOCK_SAVE_LATENCY_MS } from '@lfx-one/shared/constants';
+import type { BoardSeat, CommitteeSeat, ReassignSubmitEvent } from '@lfx-one/shared/interfaces';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TooltipModule } from 'primeng/tooltip';
-
-import { MOCK_SAVE_LATENCY_MS } from './edit-key-contact-modal.component';
-
-/** Basic email-format regex (matches spec 015 FR-017a). */
-const EMAIL_REGEX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-
-export interface ReassignSubmitEvent {
-  seatId: string;
-  seatKind: 'board' | 'committee';
-  body: ReassignSeatBody;
-}
+import { filter } from 'rxjs';
 
 @Component({
   selector: 'lfx-reassign-board-roles-modal',
@@ -53,52 +45,15 @@ export class ReassignBoardRolesModalComponent {
   protected readonly checkedCount = computed(() => (this.roleChecked() ? 1 : 0));
   protected readonly checkedFoundationCount = computed(() => (this.roleChecked() ? 1 : 0));
 
-  protected readonly subtitle = computed(() => {
-    const n = this.checkedCount();
-    const m = this.checkedFoundationCount();
-    const roleWord = n === 1 ? 'role' : 'roles';
-    const foundationWord = m === 1 ? 'foundation' : 'foundations';
-    return `${n} ${roleWord} across ${m} ${foundationWord}`;
-  });
-
-  protected readonly primaryButtonLabel = computed(() => {
-    if (this.isSaving()) return 'Reassigning…';
-    const n = this.checkedCount();
-    const roleWord = n === 1 ? 'role' : 'roles';
-    return `Save Changes (${n} ${roleWord})`;
-  });
-
+  protected readonly subtitle: Signal<string> = computed(() => this.initSubtitle());
+  protected readonly primaryButtonLabel: Signal<string> = computed(() => this.initPrimaryButtonLabel());
   protected readonly currentMember = computed(() => this.seat()?.person ?? null);
-
-  protected readonly seatLabel = computed(() => {
-    const s = this.seat();
-    if (!s) return '';
-    const fName = this.foundationName();
-    if (this.seatKind() === 'board') {
-      return `${fName} — ${(s as BoardSeat).seatName}`;
-    }
-    return `${fName} — ${(s as CommitteeSeat).committeeName}`;
-  });
-
-  protected readonly tagPillText = computed(() => {
-    const s = this.seat();
-    if (!s) return '';
-    if (this.seatKind() === 'board') return (s as BoardSeat).tagLabel;
-    return (s as CommitteeSeat).role;
-  });
-
+  protected readonly seatLabel: Signal<string> = computed(() => this.initSeatLabel());
+  protected readonly tagPillText: Signal<string> = computed(() => this.initTagPillText());
   protected readonly badgeLabel = computed(() => (this.seatKind() === 'board' ? 'Board' : 'Committee'));
 
   /** Save Changes button is enabled when all conditions hold (FR-008d). */
-  protected readonly saveEnabled = computed(() => {
-    if (this.isSaving()) return false;
-    if (this.checkedCount() === 0) return false;
-    const email = this.emailField().trim();
-    if (!email || !EMAIL_REGEX.test(email)) return false;
-    if (this.firstNameField().trim().length === 0) return false;
-    if (this.lastNameField().trim().length === 0) return false;
-    return true;
-  });
+  protected readonly saveEnabled: Signal<boolean> = computed(() => this.initSaveEnabled());
 
   // === Injected ===
   private readonly destroyRef = inject(DestroyRef);
@@ -107,9 +62,9 @@ export class ReassignBoardRolesModalComponent {
   private saveTimerId: ReturnType<typeof setTimeout> | null = null;
 
   public constructor() {
-    // Reset form state every time the modal becomes visible.
-    effect(() => {
-      if (this.visible()) {
+    toObservable(this.visible)
+      .pipe(filter(Boolean), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
         this.emailField.set('');
         this.firstNameField.set('');
         this.lastNameField.set('');
@@ -118,10 +73,8 @@ export class ReassignBoardRolesModalComponent {
         this.duplicateError.set(null);
         this.roleChecked.set(true);
         this.isSaving.set(false);
-      }
-    });
+      });
 
-    // Cancel pending save timer on destroy (FR-008k).
     this.destroyRef.onDestroy(() => {
       if (this.saveTimerId !== null) {
         clearTimeout(this.saveTimerId);
@@ -202,5 +155,48 @@ export class ReassignBoardRolesModalComponent {
     if (!this.isSaving()) {
       this.modalHide.emit();
     }
+  }
+
+  // === Private helpers for computed signals ===
+  private initSubtitle(): string {
+    const n = this.checkedCount();
+    const m = this.checkedFoundationCount();
+    const roleWord = n === 1 ? 'role' : 'roles';
+    const foundationWord = m === 1 ? 'foundation' : 'foundations';
+    return `${n} ${roleWord} across ${m} ${foundationWord}`;
+  }
+
+  private initPrimaryButtonLabel(): string {
+    if (this.isSaving()) return 'Reassigning…';
+    const n = this.checkedCount();
+    const roleWord = n === 1 ? 'role' : 'roles';
+    return `Save Changes (${n} ${roleWord})`;
+  }
+
+  private initSeatLabel(): string {
+    const s = this.seat();
+    if (!s) return '';
+    const fName = this.foundationName();
+    if (this.seatKind() === 'board') {
+      return `${fName} — ${(s as BoardSeat).seatName}`;
+    }
+    return `${fName} — ${(s as CommitteeSeat).committeeName}`;
+  }
+
+  private initTagPillText(): string {
+    const s = this.seat();
+    if (!s) return '';
+    if (this.seatKind() === 'board') return (s as BoardSeat).tagLabel;
+    return (s as CommitteeSeat).role;
+  }
+
+  private initSaveEnabled(): boolean {
+    if (this.isSaving()) return false;
+    if (this.checkedCount() === 0) return false;
+    const email = this.emailField().trim();
+    if (!email || !EMAIL_REGEX.test(email)) return false;
+    if (this.firstNameField().trim().length === 0) return false;
+    if (this.lastNameField().trim().length === 0) return false;
+    return true;
   }
 }

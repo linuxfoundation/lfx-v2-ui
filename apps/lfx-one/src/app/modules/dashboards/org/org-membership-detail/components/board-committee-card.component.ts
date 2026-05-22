@@ -1,25 +1,31 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, DestroyRef, effect, inject, input, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, computed, DestroyRef, inject, input, Signal, signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import type { BoardSeat, CommitteeSeat, OrgMembershipKeyContactPerson, VotingRecord } from '@lfx-one/shared/interfaces';
+import type {
+  BoardSeat,
+  CommitteeSeat,
+  OrgMembershipKeyContactPerson,
+  VotingRecord,
+  SectionLoadState,
+  ReassignSubmitEvent,
+  VotingRecordRow,
+} from '@lfx-one/shared/interfaces';
 import { MessageService } from 'primeng/api';
 import { InputTextModule } from 'primeng/inputtext';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
-import { catchError, of, Subject } from 'rxjs';
+import { catchError, combineLatest, filter, of, Subject, take } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
 import { CardComponent } from '@components/card/card.component';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { OrgLensBoardCommitteeService } from '@services/org-lens-board-committee.service';
 
-import { ReassignBoardRolesModalComponent, type ReassignSubmitEvent } from './reassign-board-roles-modal.component';
+import { ReassignBoardRolesModalComponent } from './reassign-board-roles-modal.component';
 import { WhyCantEditModalComponent } from './why-cant-edit-modal.component';
-
-type SectionLoadState = 'idle' | 'loading' | 'success' | 'error';
 
 @Component({
   selector: 'lfx-board-committee-card',
@@ -73,6 +79,9 @@ export class BoardCommitteeCardComponent {
   protected readonly filteredBoardSeats = computed(() => this.applyFilter(this.boardSeats()));
   protected readonly filteredCommitteeSeats = computed(() => this.applyFilter(this.committeeSeats()));
 
+  // === Pre-computed voting history with formatted date and chip class ===
+  protected readonly votingHistoryWithMeta: Signal<VotingRecordRow[]> = computed(() => this.initVotingHistoryWithMeta());
+
   // === Modals ===
   protected readonly reassignModalVisible = signal(false);
   protected readonly reassignModalSeat = signal<BoardSeat | CommitteeSeat | null>(null);
@@ -82,21 +91,15 @@ export class BoardCommitteeCardComponent {
   protected readonly whyCantEditReason = signal<string | null>(null);
   protected readonly whyCantEditSeatId = signal<string>('');
 
-  // === Private subjects + tracking ===
+  // === Private subjects ===
   private readonly searchInput$ = new Subject<string>();
-  private hasFetched = false;
 
   public constructor() {
     this.searchInput$.pipe(debounceTime(200), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef)).subscribe((term) => this.searchTerm.set(term));
 
-    effect(() => {
-      const accId = this.accountId();
-      const foundationId = this.foundationId();
-      if (accId && foundationId && !this.hasFetched) {
-        this.hasFetched = true;
-        this.fetchAll();
-      }
-    });
+    combineLatest([toObservable(this.accountId).pipe(filter(Boolean)), toObservable(this.foundationId).pipe(filter(Boolean))])
+      .pipe(take(1), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.fetchAll());
   }
 
   // === Fetch methods ===
@@ -279,8 +282,16 @@ export class BoardCommitteeCardComponent {
     console.info('[board] contact foundation clicked for', this.whyCantEditSeatId());
   }
 
-  // === Template helpers ===
-  protected formatDate(dateString: string): string {
+  // === Private helpers ===
+  private initVotingHistoryWithMeta(): VotingRecordRow[] {
+    return this.votingHistory().map((v) => ({
+      ...v,
+      formattedDate: this.formatDate(v.date),
+      chipClass: this.voteChipClass(v.vote),
+    }));
+  }
+
+  private formatDate(dateString: string): string {
     if (!dateString) return '—';
     // Parse YYYY-MM-DD as a LOCAL date (not UTC). `new Date('2026-04-14')` parses as UTC
     // midnight; `.toLocaleDateString` then shifts it back one day in negative-offset
@@ -295,7 +306,7 @@ export class BoardCommitteeCardComponent {
     });
   }
 
-  protected voteChipClass(vote: 'Yes' | 'No' | 'Abstain' | string): string {
+  private voteChipClass(vote: 'Yes' | 'No' | 'Abstain' | string): string {
     switch (vote) {
       case 'Yes':
         return 'bg-green-100 text-green-800';
@@ -309,15 +320,6 @@ export class BoardCommitteeCardComponent {
     }
   }
 
-  protected trackSeatId(_index: number, seat: BoardSeat | CommitteeSeat): string {
-    return seat.seatId;
-  }
-
-  protected trackVoteId(_index: number, vote: VotingRecord): string {
-    return vote.voteId;
-  }
-
-  // === Private helpers ===
   private applyFilter<T extends { person: OrgMembershipKeyContactPerson }>(rows: T[]): T[] {
     const term = this.searchTerm().trim().toLowerCase();
     if (!term) return rows;

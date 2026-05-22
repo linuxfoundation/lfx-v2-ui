@@ -181,6 +181,75 @@ export interface ReassignSeatBody {
   email: string;
 }
 
+// Org Memberships list page — view-model types -----------------------------------------------
+
+export type OrgMembershipsPageState = 'loading' | 'error' | 'ready' | 'empty';
+export type OrgMembershipTab = 'active' | 'expired' | 'discover';
+
+export interface OrgDropdownOption {
+  label: string;
+  value: string;
+}
+
+export interface ActiveMembershipRow extends OrgActiveMembership {
+  initials: string;
+  tierRange: string;
+  memberSinceFormatted: string;
+}
+
+export interface ExpiredMembershipRow extends OrgExpiredMembership {
+  initials: string;
+  logoClasses: string;
+  expirationDateFormatted: string;
+  tierStartFormatted: string;
+  tierEndFormatted: string;
+  renewUrl: string;
+}
+
+export interface DiscoverOpportunityRow extends OrgDiscoverOpportunity {
+  initials: string;
+  logoClasses: string;
+  joinUrl: string;
+}
+
+// Membership Detail page — component types ---------------------------------------------------
+
+export type OrgMembershipDetailPageState = 'loading' | 'error' | 'ready' | 'empty' | 'notFound';
+export type MembershipDetailTab = 'key-contacts' | 'board' | 'docs' | 'governance';
+
+export interface ModalOpenState {
+  contact: OrgMembershipKeyContact;
+  editingPersonId: string | null;
+}
+
+export type ModalKind = 'closed' | 'replace-form' | 'chooser' | 'add-form' | 'remove-list' | 'single-add-form';
+
+export interface EditKeyContactSubmitEvent {
+  contactType: OrgMembershipKeyContactType;
+  contactTypeLabel: string;
+  editingPersonId: string | null;
+  person: OrgMembershipKeyContactPerson;
+}
+
+export interface EditKeyContactRemoveEvent {
+  contactType: OrgMembershipKeyContactType;
+  contactTypeLabel: string;
+  personId: string;
+}
+
+export interface ReassignSubmitEvent {
+  seatId: string;
+  seatKind: 'board' | 'committee';
+  body: ReassignSeatBody;
+}
+
+export type SectionLoadState = 'idle' | 'loading' | 'success' | 'error';
+
+export interface VotingRecordRow extends VotingRecord {
+  formattedDate: string;
+  chipClass: string;
+}
+
 // Membership Detail page — Documentation tab (spec 017) --------------------------------------
 
 /** One agreement document in the Documentation tab list. */

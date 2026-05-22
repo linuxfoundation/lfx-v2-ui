@@ -29,3 +29,6 @@ export const SALESFORCE_ACCOUNT_ID_PATTERN = /^001[A-Za-z0-9]{12,15}$/;
  * (whitespace, punctuation, control bytes, XSS/SQLi probes).
  */
 export const FOUNDATION_ID_PATTERN = /^[A-Za-z0-9-]{1,64}$/;
+
+/** Basic email-format regex for client-side blur validation (FR-017a). */
+export const EMAIL_REGEX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;

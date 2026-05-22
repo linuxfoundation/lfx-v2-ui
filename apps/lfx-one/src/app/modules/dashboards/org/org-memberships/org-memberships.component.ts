@@ -1,8 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, effect, inject, signal, type Signal } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { Component, computed, DestroyRef, inject, signal, type Signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { catchError, combineLatest, filter, of, switchMap, take, tap } from 'rxjs';
@@ -15,43 +15,17 @@ import { CardComponent } from '@components/card/card.component';
 import { TableComponent } from '@components/table/table.component';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import type {
-  OrgActiveMembership,
   OrgActiveMembershipsResponse,
-  OrgDiscoverOpportunity,
   OrgDiscoverOpportunitiesResponse,
-  OrgExpiredMembership,
   OrgExpiredMembershipsResponse,
+  OrgMembershipsPageState,
+  OrgMembershipTab,
+  OrgDropdownOption,
+  ActiveMembershipRow,
+  ExpiredMembershipRow,
+  DiscoverOpportunityRow,
 } from '@lfx-one/shared/interfaces';
 import { foundationInitials, foundationLogoSquareClasses } from '../components/org-overview-foundations-and-projects/helpers/foundation-logo.helper';
-
-type PageState = 'loading' | 'error' | 'ready' | 'empty';
-type MembershipTab = 'active' | 'expired' | 'discover';
-
-interface DropdownOption {
-  label: string;
-  value: string;
-}
-
-interface ActiveMembershipRow extends OrgActiveMembership {
-  initials: string;
-  tierRange: string;
-  memberSinceFormatted: string;
-}
-
-interface ExpiredMembershipRow extends OrgExpiredMembership {
-  initials: string;
-  logoClasses: string;
-  expirationDateFormatted: string;
-  tierStartFormatted: string;
-  tierEndFormatted: string;
-  renewUrl: string;
-}
-
-interface DiscoverOpportunityRow extends OrgDiscoverOpportunity {
-  initials: string;
-  logoClasses: string;
-  joinUrl: string;
-}
 
 @Component({
   selector: 'lfx-org-memberships',
@@ -62,8 +36,9 @@ interface DiscoverOpportunityRow extends OrgDiscoverOpportunity {
 export class OrgMembershipsComponent {
   private readonly accountContext = inject(AccountContextService);
   private readonly membershipsService = inject(OrgLensMembershipsService);
+  private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly activeTab = signal<MembershipTab>('active');
+  protected readonly activeTab = signal<OrgMembershipTab>('active');
   protected readonly retryTrigger = signal(0);
 
   protected readonly tabs = [
@@ -74,9 +49,9 @@ export class OrgMembershipsComponent {
 
   private readonly allTiers = signal<string[]>([]);
 
-  protected readonly tierOptions: Signal<DropdownOption[]> = computed(() => this.initTierOptions());
+  protected readonly tierOptions: Signal<OrgDropdownOption[]> = computed(() => this.initTierOptions());
 
-  protected readonly renewalOptions: DropdownOption[] = [
+  protected readonly renewalOptions: OrgDropdownOption[] = [
     { label: 'All Renewals', value: '' },
     { label: 'Renewing in 90 Days', value: '90' },
     { label: 'Renewing in 30 Days', value: '30' },
@@ -132,7 +107,7 @@ export class OrgMembershipsComponent {
   protected readonly summary = computed(() => this.activeData()?.summary);
   protected readonly memberships: Signal<ActiveMembershipRow[]> = computed(() => this.initMemberships());
 
-  protected readonly pageState: Signal<PageState> = computed(() => this.initPageState());
+  protected readonly pageState: Signal<OrgMembershipsPageState> = computed(() => this.initPageState());
 
   private readonly expiredLoading = signal(false);
   private readonly expiredError = signal(false);
@@ -140,7 +115,7 @@ export class OrgMembershipsComponent {
 
   protected readonly expiredMemberships: Signal<ExpiredMembershipRow[]> = computed(() => this.initExpiredMemberships());
 
-  protected readonly expiredState: Signal<PageState> = computed(() => this.initExpiredState());
+  protected readonly expiredState: Signal<OrgMembershipsPageState> = computed(() => this.initExpiredState());
 
   private readonly discoverLoading = signal(false);
   private readonly discoverError = signal(false);
@@ -148,7 +123,7 @@ export class OrgMembershipsComponent {
 
   protected readonly discoverOpportunities: Signal<DiscoverOpportunityRow[]> = computed(() => this.initDiscoverOpportunities());
 
-  protected readonly discoverState: Signal<PageState> = computed(() => this.initDiscoverState());
+  protected readonly discoverState: Signal<OrgMembershipsPageState> = computed(() => this.initDiscoverState());
 
   private readonly renewBaseUrl = computed(() => {
     const slug = this.accountContext.selectedAccount()?.accountSlug ?? '';
@@ -163,27 +138,20 @@ export class OrgMembershipsComponent {
   private lastAccountId: string | null = null;
 
   public constructor() {
-    effect(() => {
-      const tab = this.activeTab();
-      const accountId = this.accountContext.selectedAccount()?.accountId;
-      if (!accountId) return;
-
-      if (this.lastAccountId && this.lastAccountId !== accountId) {
-        this.expiredData.set(null);
-        this.discoverData.set(null);
-      }
-      this.lastAccountId = accountId;
-
-      if (tab === 'expired' && !this.expiredData()) {
-        this.fetchExpired(accountId);
-      }
-      if (tab === 'discover' && !this.discoverData()) {
-        this.fetchDiscover(accountId);
-      }
-    });
+    combineLatest([this.selectedAccountId$.pipe(filter((id): id is string => !!id)), toObservable(this.activeTab)])
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(([accountId, tab]) => {
+        if (this.lastAccountId && this.lastAccountId !== accountId) {
+          this.expiredData.set(null);
+          this.discoverData.set(null);
+        }
+        this.lastAccountId = accountId;
+        if (tab === 'expired' && !this.expiredData()) this.fetchExpired(accountId);
+        if (tab === 'discover' && !this.discoverData()) this.fetchDiscover(accountId);
+      });
   }
 
-  protected switchTab(tab: MembershipTab): void {
+  protected switchTab(tab: OrgMembershipTab): void {
     this.activeTab.set(tab);
   }
 
@@ -203,11 +171,11 @@ export class OrgMembershipsComponent {
 
   // --- Private init methods for multi-line computed() (component-organization convention) ---
 
-  private initTierOptions(): DropdownOption[] {
+  private initTierOptions(): OrgDropdownOption[] {
     return [{ label: 'All Membership Levels', value: '' }, ...this.allTiers().map((t) => ({ label: t, value: t }))];
   }
 
-  private initPageState(): PageState {
+  private initPageState(): OrgMembershipsPageState {
     if (this.fetchLoading()) return 'loading';
     if (this.fetchError()) return 'error';
     const data = this.activeData();
@@ -244,7 +212,7 @@ export class OrgMembershipsComponent {
     }));
   }
 
-  private initExpiredState(): PageState {
+  private initExpiredState(): OrgMembershipsPageState {
     if (this.expiredLoading()) return 'loading';
     if (this.expiredError()) return 'error';
     if (!this.expiredData() || this.expiredMemberships().length === 0) return 'empty';
@@ -263,7 +231,7 @@ export class OrgMembershipsComponent {
     }));
   }
 
-  private initDiscoverState(): PageState {
+  private initDiscoverState(): OrgMembershipsPageState {
     if (this.discoverLoading()) return 'loading';
     if (this.discoverError()) return 'error';
     if (!this.discoverData() || this.discoverOpportunities().length === 0) return 'empty';
