@@ -833,10 +833,13 @@ export class AnalyticsService {
   /**
    * Get web activities summary grouped by domain category
    * @param foundationSlug - Foundation slug to filter by (e.g., 'tlf', 'cncf')
+   * @param classification - Optional LF_SUB_DOMAIN_CLASSIFICATION filter (e.g., 'Events', 'Corporate')
    * @returns Observable of web activities summary response
    */
-  public getWebActivitiesSummary(foundationSlug: string): Observable<WebActivitiesSummaryResponse> {
-    return this.http.get<WebActivitiesSummaryResponse>('/api/analytics/web-activities-summary', { params: { foundationSlug } }).pipe(
+  public getWebActivitiesSummary(foundationSlug: string, classification?: string): Observable<WebActivitiesSummaryResponse> {
+    const params: Record<string, string> = { foundationSlug };
+    if (classification) params['classification'] = classification;
+    return this.http.get<WebActivitiesSummaryResponse>('/api/analytics/web-activities-summary', { params }).pipe(
       catchError(() => {
         return of({
           totalSessions: 0,
@@ -852,10 +855,13 @@ export class AnalyticsService {
   /**
    * Get email click-through rate data
    * @param foundationSlug - Foundation slug to filter by
+   * @param classification - Optional LF_SUB_DOMAIN_CLASSIFICATION filter (e.g., 'Events', 'Corporate')
    * @returns Observable of email CTR response
    */
-  public getEmailCtr(foundationSlug: string): Observable<EmailCtrResponse> {
-    return this.http.get<EmailCtrResponse>('/api/analytics/email-ctr', { params: { foundationSlug } }).pipe(
+  public getEmailCtr(foundationSlug: string, classification?: string): Observable<EmailCtrResponse> {
+    const params: Record<string, string> = { foundationSlug };
+    if (classification) params['classification'] = classification;
+    return this.http.get<EmailCtrResponse>('/api/analytics/email-ctr', { params }).pipe(
       catchError(() => {
         return of({
           currentCtr: 0,
