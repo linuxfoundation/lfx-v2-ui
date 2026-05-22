@@ -1385,11 +1385,11 @@ export class ProjectService {
   }
 
   /**
-   * Get foundation maintainers data from Snowflake
-   * Queries FOUNDATION_MAINTAINERS_DAILY table
-   * Returns daily maintainer counts for detailed trend visualization
+   * Get foundation maintainers data from Snowflake.
+   * Queries FOUNDATION_MAINTAINERS_DAILY and returns the latest-day distinct-maintainer
+   * snapshot (currentMaintainers + asOfDate) alongside the full daily trend.
    * @param foundationSlug - Foundation slug to filter by (e.g., 'tlf', 'cncf')
-   * @returns Foundation maintainers response with average and daily trend data
+   * @returns Foundation maintainers response with latest snapshot and daily trend
    */
   public async getFoundationMaintainers(foundationSlug: string): Promise<FoundationMaintainersResponse> {
     const query = `
@@ -1407,14 +1407,22 @@ export class ProjectService {
     // Shane's dbt fix (2026-05-20) made ACTIVE_MAINTAINERS distinct per foundation,
     // so this snapshot now reconciles with FOUNDATION_TOTAL_PROJECTS_DETAIL.MAINTAINERS_CURRENT_COUNT.
     const latest = result.rows.length > 0 ? result.rows[result.rows.length - 1] : null;
-    const currentMaintainers = latest ? latest.ACTIVE_MAINTAINERS : 0;
+    const currentMaintainers = latest?.ACTIVE_MAINTAINERS ?? 0;
+    // The Snowflake Node SDK returns DATE columns as a JS Date pinned to UTC
+    // midnight for the calendar day Snowflake stored, so the UTC date portion
+    // of toISOString() is the correct calendar key. String()-then-slice was
+    // tried first but breaks in non-UTC server TZs (returns the local-formatted
+    // weekday-month prefix, e.g. "Tue May 19", not "2026-05-20").
     const asOfDate = latest ? new Date(latest.METRIC_DATE).toISOString().split('T')[0] : null;
 
-    // Extract daily data and labels
+    // Extract daily data and labels. Format trend labels in UTC to match the
+    // UTC-anchored asOfDate the card subtitle renders — otherwise non-UTC server
+    // deployments would show "May 19" on the chart's rightmost tick while the
+    // card subtitle reads "As of May 20".
     const trendData = result.rows.map((row) => row.ACTIVE_MAINTAINERS);
     const trendLabels = result.rows.map((row) => {
       const date = new Date(row.METRIC_DATE);
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
     });
 
     return {

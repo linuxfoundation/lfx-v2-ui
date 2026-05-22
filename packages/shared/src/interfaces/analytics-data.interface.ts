@@ -860,19 +860,23 @@ export interface FoundationValueConcentrationResponse {
  */
 export interface FoundationMaintainersDailyRow {
   /**
-   * Foundation ID
+   * Foundation ID. Optional — not selected by `getFoundationMaintainers`
+   * after the LFXV2-1625 query trim; kept on the interface for any future
+   * caller that wants to project it.
    */
-  FOUNDATION_ID: string;
+  FOUNDATION_ID?: string;
 
   /**
-   * Foundation name
+   * Foundation name. Optional for the same reason as FOUNDATION_ID.
    */
-  FOUNDATION_NAME: string;
+  FOUNDATION_NAME?: string;
 
   /**
-   * Foundation URL slug
+   * Foundation URL slug. Optional because `getFoundationMaintainers` no
+   * longer selects this column — the slug is supplied as a WHERE-clause
+   * bind param, not read back from the result rows (LFXV2-1625).
    */
-  FOUNDATION_SLUG: string;
+  FOUNDATION_SLUG?: string;
 
   /**
    * Metric date (daily granularity)

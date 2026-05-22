@@ -451,7 +451,7 @@ export class FoundationHealthComponent {
     return {
       ...metric,
       loading: this.maintainersLoading(),
-      value: data.currentMaintainers.toString(),
+      value: data.currentMaintainers.toLocaleString(),
       subtitle: asOfLabel ? `As of ${asOfLabel}` : 'Distinct active maintainers',
       chartData: {
         labels: data.trendLabels,
