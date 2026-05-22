@@ -385,15 +385,10 @@ export class ProjectService {
     role?: 'view' | 'manage',
     manualUserInfo?: { name: string; email: string; username: string; avatar?: string }
   ): Promise<ProjectSettings> {
-    // Step 1: Determine the appropriate identifier for backend operations
-    // For emails, use the sub; for usernames, use the username directly
-    let backendIdentifier = usernameOrEmail.trim();
-    if (usernameOrEmail.includes('@')) {
-      // For emails, get the sub for backend operations
-      backendIdentifier = await this.resolveEmailToSub(req, usernameOrEmail);
-    }
-
-    // Step 2: Fetch current settings with ETag
+    // Step 1: Fetch current settings with ETag first.
+    // Settings must be fetched before resolveEmailToSub so that manually-added users
+    // (not present in the NATS directory) can be matched by email fallback and skip
+    // the NATS call that would otherwise throw NOT_FOUND before we reach array logic.
     const { data: settings, etag } = await this.etagService.fetchWithETag<ProjectSettings>(
       req,
       'LFX_V2_SERVICE',
@@ -401,16 +396,37 @@ export class ProjectService {
       `${operation}_user_project_permissions`
     );
 
-    // Step 3: Update the settings based on operation
+    // Step 2: Update the settings based on operation
     const updatedSettings = { ...settings };
 
     // Initialize arrays if they don't exist
     if (!updatedSettings.writers) updatedSettings.writers = [];
     if (!updatedSettings.auditors) updatedSettings.auditors = [];
 
+    // Step 3: Determine the backend identifier for array operations.
+    // For emails on update/remove: check settings first. If the user is stored without
+    // a username (manually added, not in NATS), skip resolveEmailToSub and use the
+    // email directly — calling NATS for such users would fail with NOT_FOUND.
+    const originalEmail = usernameOrEmail.includes('@') ? usernameOrEmail.trim().toLowerCase() : '';
+    const matchesByEmail = (u: { username?: string; email?: string }): boolean =>
+      !u.username && !!originalEmail && u.email?.toLowerCase() === originalEmail;
+    const existingByEmail = originalEmail
+      ? (updatedSettings.writers.find(matchesByEmail) || updatedSettings.auditors.find(matchesByEmail))
+      : undefined;
+
+    let backendIdentifier = usernameOrEmail.trim();
+    if (originalEmail) {
+      if (existingByEmail && (operation === 'update' || operation === 'remove')) {
+        // User found in settings without a username — they were added manually and do not
+        // exist in the NATS directory. Use email as the identifier and skip the NATS call.
+        backendIdentifier = originalEmail;
+      } else {
+        backendIdentifier = await this.resolveEmailToSub(req, usernameOrEmail);
+      }
+    }
+
     // Some users stored in settings pre-date username normalization and have an empty username.
     // Match by email as a fallback so edits/removals work for those users too.
-    const originalEmail = usernameOrEmail.includes('@') ? usernameOrEmail.trim().toLowerCase() : '';
     const matchesUser = (u: { username?: string; email?: string }): boolean => {
       if (u.username && u.username === backendIdentifier) return true;
       if (!u.username && originalEmail && u.email?.toLowerCase() === originalEmail) return true;
