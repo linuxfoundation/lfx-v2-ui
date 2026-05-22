@@ -31,6 +31,12 @@ export class PermissionsService {
     return this.http.delete<void>(`/api/projects/${project}/permissions/${encodeURIComponent(username)}`);
   }
 
+  // Evict the cached settings for a project so the next getProjectSettings call re-fetches.
+  // Call this after any mutation (add, update, remove) to ensure the table reflects the latest state.
+  public invalidateProjectSettings(uid: string): void {
+    this.projectSettingsCache.delete(uid);
+  }
+
   // Fetch the raw project settings document. Errors are NOT swallowed — callers track their own
   // loading/error state so they can distinguish "fetch failed" from "settings loaded with no staff".
   // The cache entry is evicted on error so a transient failure (network blip, 5xx) doesn't poison
