@@ -68,8 +68,6 @@
                     ctaIcon="fa-light fa-arrow-rotate-left"
                     [withCard]="false"
                     (ctaClick)="fetchBoard()" />
-                  <!-- Note: lfx-empty-state's ctaClick button carries the canonical retry behavior; the testid below is on a sibling no-op button for selector parity -->
-                  <button type="button" class="sr-only" data-testid="board-committee-section-retry-board" (click)="fetchBoard()">Retry</button>
                 </div>
               } @else if (boardSeats().length === 0) {
                 <p class="px-4 py-6 text-sm italic text-gray-400" data-testid="board-committee-empty-board">No board seats for this membership.</p>
@@ -170,7 +168,6 @@
                     ctaIcon="fa-light fa-arrow-rotate-left"
                     [withCard]="false"
                     (ctaClick)="fetchCommittee()" />
-                  <button type="button" class="sr-only" data-testid="board-committee-section-retry-committee" (click)="fetchCommittee()">Retry</button>
                 </div>
               } @else if (committeeSeats().length === 0) {
                 <p class="px-4 py-6 text-sm italic text-gray-400" data-testid="board-committee-empty-committee">No committee seats for this membership.</p>
@@ -276,7 +273,6 @@
                     ctaIcon="fa-light fa-arrow-rotate-left"
                     [withCard]="false"
                     (ctaClick)="fetchVoting()" />
-                  <button type="button" class="sr-only" data-testid="board-committee-section-retry-voting" (click)="fetchVoting()">Retry</button>
                 </div>
               } @else if (votingHistory().length === 0) {
                 <p class="px-4 py-6 text-sm italic text-gray-400" data-testid="board-committee-empty-voting">No voting history yet.</p>

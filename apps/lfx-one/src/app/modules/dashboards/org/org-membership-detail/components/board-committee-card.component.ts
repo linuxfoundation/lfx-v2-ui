@@ -22,6 +22,7 @@ import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
+import { parseLocalDateString } from '@lfx-one/shared/utils';
 import { catchError, combineLatest, filter, of, Subject, take } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
@@ -302,17 +303,15 @@ export class BoardCommitteeCardComponent {
 
   private formatDate(dateString: string): string {
     if (!dateString) return '—';
-    // Parse YYYY-MM-DD as a LOCAL date (not UTC). `new Date('2026-04-14')` parses as UTC
-    // midnight; `.toLocaleDateString` then shifts it back one day in negative-offset
-    // timezones (e.g., UTC-5 → "Apr 13"). Split-and-construct avoids the shift.
-    const parts = dateString.split('-').map(Number);
-    if (parts.length !== 3 || parts.some(Number.isNaN)) return dateString;
-    const [year, month, day] = parts as [number, number, number];
-    return new Date(year, month - 1, day).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+    try {
+      return parseLocalDateString(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch {
+      return dateString;
+    }
   }
 
   private voteChipClass(vote: 'Yes' | 'No' | 'Abstain' | string): string {

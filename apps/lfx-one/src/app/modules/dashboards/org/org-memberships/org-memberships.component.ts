@@ -5,7 +5,8 @@ import { Component, computed, DestroyRef, inject, signal, type Signal } from '@a
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { catchError, combineLatest, filter, of, switchMap, take, tap } from 'rxjs';
+import { parseLocalDateString } from '@lfx-one/shared/utils';
+import { catchError, combineLatest, debounceTime, distinctUntilChanged, filter, of, switchMap, take, tap } from 'rxjs';
 import { TooltipModule } from 'primeng/tooltip';
 import { SelectModule } from 'primeng/select';
 import { InputTextModule } from 'primeng/inputtext';
@@ -69,9 +70,9 @@ export class OrgMembershipsComponent {
   private readonly fetchError = signal(false);
   private readonly fetchLoading = signal(true);
 
-  private readonly searchTerm$ = toObservable(this.searchTerm);
-  private readonly selectedTier$ = toObservable(this.selectedTier);
-  private readonly selectedRenewal$ = toObservable(this.selectedRenewal);
+  private readonly searchTerm$ = toObservable(this.searchTerm).pipe(debounceTime(300), distinctUntilChanged());
+  private readonly selectedTier$ = toObservable(this.selectedTier).pipe(distinctUntilChanged());
+  private readonly selectedRenewal$ = toObservable(this.selectedRenewal).pipe(distinctUntilChanged());
   private readonly retryTrigger$ = toObservable(this.retryTrigger);
 
   private readonly activeResponse$ = combineLatest([
@@ -255,22 +256,22 @@ export class OrgMembershipsComponent {
     return 'ready';
   }
 
-  // --- Private date helpers (split-and-construct to avoid UTC timezone shift) ---
-
   private formatDateShort(dateString: string | null): string {
     if (!dateString) return '—';
-    const parts = dateString.split('-').map(Number);
-    if (parts.length !== 3 || parts.some(Number.isNaN)) return dateString;
-    const [year, month, day] = parts as [number, number, number];
-    return new Date(year, month - 1, day).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+    try {
+      return parseLocalDateString(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+    } catch {
+      return dateString;
+    }
   }
 
   private formatDateFull(dateString: string | null): string {
     if (!dateString) return '—';
-    const parts = dateString.split('-').map(Number);
-    if (parts.length !== 3 || parts.some(Number.isNaN)) return dateString;
-    const [year, month, day] = parts as [number, number, number];
-    return new Date(year, month - 1, day).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    try {
+      return parseLocalDateString(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    } catch {
+      return dateString;
+    }
   }
 
   // --- Private fetch methods ---

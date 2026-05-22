@@ -5,6 +5,7 @@ import { Component, computed, inject, input, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import type { OrgMembershipAgreement, OrgMembershipDocumentsResponse } from '@lfx-one/shared/interfaces';
 import { TooltipModule } from 'primeng/tooltip';
+import { parseLocalDateString } from '@lfx-one/shared/utils';
 import { catchError, combineLatest, filter, of, switchMap, tap } from 'rxjs';
 
 import { CardComponent } from '@components/card/card.component';
@@ -95,21 +96,23 @@ export class DocumentationTabComponent {
 
   private formatSignedDate(dateString: string): string {
     if (!dateString) return '—';
-    const parts = dateString.split('-').map(Number);
-    if (parts.length !== 3 || parts.some(Number.isNaN)) return dateString;
-    const [year, month, day] = parts as [number, number, number];
-    return new Date(year, month - 1, day).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+    try {
+      return parseLocalDateString(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch {
+      return dateString;
+    }
   }
 
   private formatDateShort(dateString: string): string {
     if (!dateString) return '—';
-    const parts = dateString.split('-').map(Number);
-    if (parts.length !== 3 || parts.some(Number.isNaN)) return dateString;
-    const [year, month, day] = parts as [number, number, number];
-    return new Date(year, month - 1, day).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+    try {
+      return parseLocalDateString(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+    } catch {
+      return dateString;
+    }
   }
 }

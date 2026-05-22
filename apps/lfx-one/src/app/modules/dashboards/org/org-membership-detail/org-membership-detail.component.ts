@@ -24,6 +24,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
+import { parseLocalDateString } from '@lfx-one/shared/utils';
 import { catchError, combineLatest, filter, map, of, switchMap, take, tap } from 'rxjs';
 
 import { BoardCommitteeCardComponent } from './components/board-committee-card.component';
@@ -276,9 +277,10 @@ export class OrgMembershipDetailComponent {
 
   private formatDateShort(dateString: string | null): string {
     if (!dateString) return '—';
-    const parts = dateString.split('-').map(Number);
-    if (parts.length !== 3 || parts.some(Number.isNaN)) return dateString;
-    const [year, month, day] = parts as [number, number, number];
-    return new Date(year, month - 1, day).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+    try {
+      return parseLocalDateString(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+    } catch {
+      return dateString;
+    }
   }
 }
