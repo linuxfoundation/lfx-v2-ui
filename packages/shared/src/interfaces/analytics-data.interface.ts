@@ -885,9 +885,11 @@ export interface FoundationMaintainersDailyRow {
   ACTIVE_MAINTAINERS: number;
 
   /**
-   * Average maintainers yearly (calculated aggregate)
+   * Average maintainers yearly (calculated aggregate). Optional because
+   * `getFoundationMaintainers` no longer selects this column after the
+   * card switched to the latest-day snapshot (LFXV2-1625).
    */
-  AVG_MAINTAINERS_YEARLY: number;
+  AVG_MAINTAINERS_YEARLY?: number;
 }
 
 /**
@@ -912,16 +914,23 @@ export interface WeeklyMaintainersRow {
 
 /**
  * API response for foundation maintainers query
- * Contains average maintainers and weekly trend data
+ * Contains the latest distinct-maintainer snapshot and the daily trend.
  */
 export interface FoundationMaintainersResponse {
   /**
-   * Average number of maintainers (from AVG_MAINTAINERS_YEARLY)
+   * Distinct active maintainers as of the latest snapshot date
+   * (last row of FOUNDATION_MAINTAINERS_DAILY for the foundation).
    */
-  avgMaintainers: number;
+  currentMaintainers: number;
 
   /**
-   * Daily or aggregated maintainer count data for trend visualization
+   * Snapshot date for `currentMaintainers` (ISO yyyy-mm-dd, or null when
+   * no rows are returned).
+   */
+  asOfDate: string | null;
+
+  /**
+   * Daily maintainer count data for trend visualization
    */
   trendData: number[];
 
@@ -2252,6 +2261,7 @@ export interface FoundationProjectsDetailRow {
   CONTRIBUTORS_12M_COUNT: number;
   MAINTAINERS_YTD_COUNT: number;
   MAINTAINERS_12M_COUNT: number;
+  MAINTAINERS_CURRENT_COUNT: number;
   STARS_YTD_COUNT: number;
   STARS_12M_COUNT: number;
   LAST_UPDATED_TS: Date | string | null;

@@ -421,7 +421,8 @@ export class AnalyticsService {
     return this.http.get<FoundationMaintainersResponse>('/api/analytics/foundation-maintainers', { params: { foundationSlug } }).pipe(
       catchError(() => {
         return of({
-          avgMaintainers: 0,
+          currentMaintainers: 0,
+          asOfDate: null,
           trendData: [],
           trendLabels: [],
         });

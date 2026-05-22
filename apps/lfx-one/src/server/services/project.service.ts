@@ -1395,8 +1395,7 @@ export class ProjectService {
     const query = `
       SELECT
         METRIC_DATE,
-        ACTIVE_MAINTAINERS,
-        AVG_MAINTAINERS_YEARLY
+        ACTIVE_MAINTAINERS
       FROM ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_MAINTAINERS_DAILY
       WHERE FOUNDATION_SLUG = ?
       ORDER BY METRIC_DATE ASC
@@ -1404,8 +1403,12 @@ export class ProjectService {
 
     const result = await this.snowflakeService.execute<FoundationMaintainersDailyRow>(query, [foundationSlug]);
 
-    // Get average maintainers from first row (same across all rows)
-    const avgMaintainers = result.rows.length > 0 ? Math.round(result.rows[0].AVG_MAINTAINERS_YEARLY) : 0;
+    // The rows are ordered ASC by date, so the last row carries the latest snapshot.
+    // Shane's dbt fix (2026-05-20) made ACTIVE_MAINTAINERS distinct per foundation,
+    // so this snapshot now reconciles with FOUNDATION_TOTAL_PROJECTS_DETAIL.MAINTAINERS_CURRENT_COUNT.
+    const latest = result.rows.length > 0 ? result.rows[result.rows.length - 1] : null;
+    const currentMaintainers = latest ? latest.ACTIVE_MAINTAINERS : 0;
+    const asOfDate = latest ? new Date(latest.METRIC_DATE).toISOString().split('T')[0] : null;
 
     // Extract daily data and labels
     const trendData = result.rows.map((row) => row.ACTIVE_MAINTAINERS);
@@ -1415,7 +1418,8 @@ export class ProjectService {
     });
 
     return {
-      avgMaintainers,
+      currentMaintainers,
+      asOfDate,
       trendData,
       trendLabels,
     };
@@ -1612,7 +1616,7 @@ export class ProjectService {
         LIFECYCLE_STAGE,
         CONTRIBUTORS_90D_COUNT,
         COMMITS_90D_COUNT,
-        MAINTAINERS_YTD_COUNT,
+        MAINTAINERS_CURRENT_COUNT,
         STARS_YTD_COUNT,
         LAST_UPDATED_TS
       FROM ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_TOTAL_PROJECTS_DETAIL
@@ -1639,7 +1643,7 @@ export class ProjectService {
           row.LIFECYCLE_STAGE && VALID_LIFECYCLE_STAGES.has(row.LIFECYCLE_STAGE as LifecycleStage) ? (row.LIFECYCLE_STAGE as LifecycleStage) : null,
         activeContributors: row.CONTRIBUTORS_90D_COUNT ?? 0,
         commitsLast90Days: row.COMMITS_90D_COUNT ?? 0,
-        maintainers: row.MAINTAINERS_YTD_COUNT ?? 0,
+        maintainers: row.MAINTAINERS_CURRENT_COUNT ?? 0,
         stars: row.STARS_YTD_COUNT ?? 0,
         lastUpdated: row.LAST_UPDATED_TS ? new Date(row.LAST_UPDATED_TS).toISOString().split('T')[0] : null,
       }));
