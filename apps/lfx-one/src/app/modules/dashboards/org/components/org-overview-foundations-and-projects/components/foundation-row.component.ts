@@ -68,6 +68,9 @@ export class FoundationRowComponent {
 
   public onRowKeydown(event: KeyboardEvent): void {
     if (event.key !== 'Enter' && event.key !== ' ') return;
+    // Skip when focus is inside an inner button/link so Enter/Space on the chevron toggles expansion without bubbling to row navigation.
+    const target = event.target as HTMLElement | null;
+    if (target && target.closest('button, a')) return;
     const r = this.row();
     if (r.rowKind === 'outside_lf') return;
     event.preventDefault();
