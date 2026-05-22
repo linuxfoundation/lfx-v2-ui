@@ -136,10 +136,11 @@ export class InviteController {
     }
   }
 
-  // Verifies the JWT signature using HS256 and the INVITE_SERVICE_JWT_SECRET env var.
+  // Verifies the JWT signature using HS256. The secret is used as raw UTF-8 bytes,
+  // matching how the invite service signs tokens (Go's []byte(secret) conversion).
   // Throws JoseErrors.JWTExpired for expired tokens and other JoseErrors for invalid/tampered ones.
   private verifyInviteToken(token: string, secret: string): InviteTokenPayload {
-    const key = JWK.asKey(Buffer.from(secret, 'base64'));
+    const key = JWK.asKey(Buffer.from(secret));
     const payload = JWT.verify<InviteTokenPayload>(token, key, { algorithms: ['HS256'] });
     if (typeof payload.exp !== 'number' || !isFinite(payload.exp)) {
       throw new Error('Token is missing required exp claim');
