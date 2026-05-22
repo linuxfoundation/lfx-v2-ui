@@ -103,11 +103,11 @@
 
             <!-- Expanded campaign rows -->
             @if (projectExpanded) {
-              @for (campaign of row.campaigns; track campaign.campaignName) {
+              @for (campaign of row.campaigns; track $index) {
                 <div
                   class="flex items-center gap-3 border-b border-gray-50 bg-gray-50/50 py-2 pl-6"
                   role="row"
-                  [attr.data-testid]="'campaign-row-' + campaign.campaignName">
+                  [attr.data-testid]="'campaign-row-' + projectKey + '-' + $index">
                   <!-- w-40 (parent) minus pl-6 (indent) = 8.5rem -->
                   <span class="w-[8.5rem] truncate text-[11px] text-gray-500" role="cell">{{ campaign.campaignName }}</span>
                   <span class="w-20 truncate text-[11px] text-gray-400" role="cell">{{ campaign.funnelStage }}</span>

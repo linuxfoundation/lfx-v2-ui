@@ -112,6 +112,8 @@ export class PerformanceMarketingTabComponent {
     return toSignal(
       slug$.pipe(
         switchMap((slug) => {
+          this.expandedProjects.set(new Set());
+          this.expandedPlatforms.set(new Set());
           if (!slug) {
             this.loading.set(false);
             return of(null);
