@@ -22,13 +22,13 @@ export class PermissionsService {
   }
 
   // Update user role in project
-  public updateUserRole(project: string, username: string, request: UpdateUserRoleRequest): Observable<void> {
-    return this.http.put<void>(`/api/projects/${project}/permissions/${encodeURIComponent(username)}`, request);
+  public updateUserRole(project: string, identifier: string, request: UpdateUserRoleRequest): Observable<void> {
+    return this.http.put<void>(`/api/projects/${project}/permissions/${encodeURIComponent(identifier)}`, request);
   }
 
   // Remove user from project (removes from both writers and auditors)
-  public removeUserFromProject(project: string, username: string): Observable<void> {
-    return this.http.delete<void>(`/api/projects/${project}/permissions/${encodeURIComponent(username)}`);
+  public removeUserFromProject(project: string, identifier: string): Observable<void> {
+    return this.http.delete<void>(`/api/projects/${project}/permissions/${encodeURIComponent(identifier)}`);
   }
 
   // Evict the cached settings for a project so the next getProjectSettings call re-fetches.
@@ -67,7 +67,9 @@ export class PermissionsService {
             ...settings.auditors.map((userInfo) => ({
               name: userInfo.name,
               email: userInfo.email,
-              username: userInfo.username,
+              // Normalize: callers use username as the URL identifier; fall back to email
+              // so no-username users can still be edited/removed without empty path segments.
+              username: userInfo.username || userInfo.email,
               avatar: userInfo.avatar,
               role: 'view' as const,
             }))
@@ -80,7 +82,7 @@ export class PermissionsService {
             ...settings.writers.map((userInfo) => ({
               name: userInfo.name,
               email: userInfo.email,
-              username: userInfo.username,
+              username: userInfo.username || userInfo.email,
               avatar: userInfo.avatar,
               role: 'manage' as const,
             }))
