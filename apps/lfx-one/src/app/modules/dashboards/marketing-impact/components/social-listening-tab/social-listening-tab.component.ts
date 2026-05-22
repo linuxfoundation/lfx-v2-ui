@@ -49,7 +49,7 @@ export class SocialListeningTabComponent {
 
   // === Protected Methods ===
   protected openMentionUrl(url: string): void {
-    if (url && isPlatformBrowser(this.platformId)) {
+    if (url && isPlatformBrowser(this.platformId) && /^https?:\/\//i.test(url)) {
       window.open(url, '_blank', 'noopener,noreferrer');
     }
   }
