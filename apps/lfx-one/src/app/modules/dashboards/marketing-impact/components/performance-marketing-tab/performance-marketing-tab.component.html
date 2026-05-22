@@ -156,12 +156,15 @@
               <!-- Rows -->
               @for (row of platformRows(); track row.platform) {
                 <div
-                  class="flex cursor-pointer items-center gap-2 border-b border-gray-100 py-2.5 transition-colors hover:bg-gray-50"
+                  class="flex items-center gap-2 border-b border-gray-100 py-2.5 transition-colors"
+                  [class.cursor-pointer]="row.campaigns.length > 0"
+                  [class.hover:bg-gray-50]="row.campaigns.length > 0"
                   role="row"
                   [attr.data-testid]="'platform-row-' + row.platform"
                   [attr.aria-expanded]="row.campaigns.length > 0 ? isPlatformExpanded(row.platform) : null"
                   (click)="row.campaigns.length > 0 && togglePlatformExpand(row.platform)"
                   (keydown.enter)="row.campaigns.length > 0 && togglePlatformExpand(row.platform)"
+                  (keydown.space)="$event.preventDefault(); row.campaigns.length > 0 && togglePlatformExpand(row.platform)"
                   [attr.tabindex]="row.campaigns.length > 0 ? 0 : null">
                   <div class="flex w-32 items-center gap-1.5" role="cell">
                     @if (row.campaigns.length > 0) {
@@ -192,11 +195,11 @@
 
                 <!-- Expanded platform campaign rows -->
                 @if (isPlatformExpanded(row.platform)) {
-                  @for (campaign of row.campaigns; track campaign.campaignName) {
+                  @for (campaign of row.campaigns; track $index) {
                     <div
                       class="flex items-center gap-2 border-b border-gray-50 bg-gray-50/50 py-2 pl-6"
                       role="row"
-                      [attr.data-testid]="'platform-campaign-row-' + campaign.campaignName">
+                      [attr.data-testid]="'platform-campaign-row-' + $index">
                       <span class="w-[calc(8rem-1.5rem)] truncate text-[11px] text-gray-500" role="cell">{{ campaign.campaignName }}</span>
                       <span class="w-20 text-right text-[11px] text-gray-500" role="cell">{{ campaign.spend }}</span>
                       <span class="w-20 text-right text-[11px] text-gray-500" role="cell">{{ campaign.revenue }}</span>
