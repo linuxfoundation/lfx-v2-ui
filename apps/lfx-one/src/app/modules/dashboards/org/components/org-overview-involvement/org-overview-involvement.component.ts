@@ -246,7 +246,7 @@ export class OrgOverviewInvolvementComponent {
       ...metric,
       loading: this.maintainersLoading(),
       value: data.totalMaintainersYearly.toString(),
-      subtitle: `Employees stewarding ${projectLabel} across foundations`,
+      subtitle: `Employees stewarding ${data.totalProjectsYearly} ${projectLabel} across foundations`,
       chartOptions: this.createBarChartOptions('Maintainers'),
       chartData:
         data.monthlyData.length > 0
