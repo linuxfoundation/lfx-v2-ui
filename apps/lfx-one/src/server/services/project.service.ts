@@ -2537,6 +2537,8 @@ export class ProjectService {
         return 'EMERGING';
       };
 
+      const CAMPAIGN_TOP_N = 10;
+
       const formatFunnel = (stages: Set<string>): string => {
         const priority = ['BoFU', 'MoFU', 'ToFU', 'ToFU2', 'Unknown'];
         for (const p of priority) {
@@ -2564,9 +2566,9 @@ export class ProjectService {
             impressions: data.impressions,
             clicks: data.clicks,
             performance: getPaidPerformance(projectRoas),
-            campaigns: data.campaigns
+            campaigns: [...data.campaigns]
               .sort((a, b) => (b.SPEND ?? 0) - (a.SPEND ?? 0))
-              .slice(0, 10)
+              .slice(0, CAMPAIGN_TOP_N)
               .map((c) => ({
                 campaignName: c.CAMPAIGN_NAME,
                 funnelStage: c.FUNNEL_STAGE ?? 'Unknown',
@@ -2586,6 +2588,7 @@ export class ProjectService {
 
       const platformBreakdown = Array.from(platformMap.entries())
         .map(([channel, data]) => {
+          // Ratios recomputed from aggregated totals; averaging per-campaign values would be statistically incorrect.
           const platRoas = data.spend > 0 ? Math.round((data.revenue / data.spend) * 100) / 100 : 0;
           const platCtr = data.impressions > 0 ? Math.round((data.clicks / data.impressions) * 10000) / 100 : 0;
           const platCpc = data.clicks > 0 ? Math.round((data.spend / data.clicks) * 100) / 100 : 0;
@@ -2602,9 +2605,9 @@ export class ProjectService {
             convRate: platConvRate,
             conversions: data.conversions,
             performance: getPaidPerformance(platRoas),
-            campaigns: data.campaigns
+            campaigns: [...data.campaigns]
               .sort((a, b) => (b.SPEND ?? 0) - (a.SPEND ?? 0))
-              .slice(0, 10)
+              .slice(0, CAMPAIGN_TOP_N)
               .map((c) => ({
                 campaignName: c.CAMPAIGN_NAME,
                 funnelStage: 'Unknown',
