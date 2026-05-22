@@ -100,10 +100,7 @@ export class InviteController {
       }
 
       const codec = this.natsService.getCodec();
-      await this.natsService.publish(
-        NatsSubjects.INVITE_ACCEPTED,
-        codec.encode(JSON.stringify({ invite_uid: payload.invite_uid, username }))
-      );
+      await this.natsService.publish(NatsSubjects.INVITE_ACCEPTED, codec.encode(JSON.stringify({ invite_uid: payload.invite_uid, username })));
 
       logger.success(req, 'accept_invite', startTime, {
         invite_uid: payload.invite_uid,
