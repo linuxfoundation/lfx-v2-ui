@@ -453,9 +453,11 @@ export class ProjectService {
         // Avoids a NATS lookup that can fail when user metadata lacks an email field.
         logger.debug(req, 'update_user_project_permissions', 'Reusing existing user info for role update', {
           username: backendIdentifier,
+          existing_username: existingUserInfo.username,
+          existing_email: existingUserInfo.email,
           info_source: 'existing_settings',
         });
-        userInfo = existingUserInfo;
+        userInfo = { ...existingUserInfo, username: backendIdentifier };
       } else {
         // Fetch user info from user service via NATS using the original input
         const fetchedUserInfo = await this.getUserInfo(req, usernameOrEmail);

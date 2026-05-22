@@ -96,7 +96,6 @@ export class UserFormComponent {
             this.dialogRef.close(true);
           },
           error: (error: HttpErrorResponse) => {
-            console.error('Error updating user:', error);
             this.messageService.add({
               severity: 'error',
               summary: 'Error',
@@ -127,8 +126,6 @@ export class UserFormComponent {
             this.dialogRef.close(true);
           },
           error: (error: HttpErrorResponse) => {
-            console.error('Error adding user:', error);
-
             // Check if it's a 404 error for user not found
             if (error.status === 404 && error.error?.code === 'NOT_FOUND') {
               this.handleUserNotFound(formValue);
@@ -232,7 +229,6 @@ export class UserFormComponent {
           this.dialogRef.close(true);
         },
         error: (error: HttpErrorResponse) => {
-          console.error('Error adding user with manual data:', error);
           this.messageService.add({
             severity: 'error',
             summary: 'Error',

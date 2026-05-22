@@ -81,7 +81,11 @@ export class PermissionsService {
           );
         }
 
-        return users.sort((a, b) => (a.username || a.email || '').localeCompare(b.username || b.email || ''));
+        return users.sort((a, b) => {
+          const aKey = (a.username || a.email || '').toLowerCase();
+          const bKey = (b.username || b.email || '').toLowerCase();
+          return aKey.localeCompare(bKey);
+        });
       })
     );
   }
