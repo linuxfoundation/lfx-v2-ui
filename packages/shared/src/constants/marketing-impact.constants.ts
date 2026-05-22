@@ -41,7 +41,7 @@ export const FOCUS_TO_CLASSIFICATION: Record<MarketingImpactFocusProgram, string
   trainings: 'Training',
 };
 
-export const VALID_CLASSIFICATIONS = new Set(['Events', 'Corporate', 'Projects', 'Training']);
+export const VALID_CLASSIFICATIONS: ReadonlySet<string> = new Set(['Events', 'Corporate', 'Projects', 'Training']);
 
 /** Funnel stage filter options for the Performance Marketing tab. */
 export const FUNNEL_STAGE_OPTIONS: FilterPillOption[] = [
