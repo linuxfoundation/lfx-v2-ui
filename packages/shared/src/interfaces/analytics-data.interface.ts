@@ -854,19 +854,19 @@ export interface FoundationValueConcentrationResponse {
   allOtherPercentage: number;
 }
 
-/** Row from ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_MAINTAINERS_DAILY. */
+/** Full schema of ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_MAINTAINERS_DAILY. */
 export interface FoundationMaintainersDailyRow {
-  /** Optional — not projected by getFoundationMaintainers after LFXV2-1625. */
-  FOUNDATION_ID?: string;
-  /** Optional — not projected by getFoundationMaintainers after LFXV2-1625. */
-  FOUNDATION_NAME?: string;
-  /** Optional — supplied as WHERE bind param, not read back from rows. */
-  FOUNDATION_SLUG?: string;
-  METRIC_DATE: string;
+  FOUNDATION_ID: string;
+  FOUNDATION_NAME: string;
+  FOUNDATION_SLUG: string;
+  /** Snowflake Node SDK returns DATE columns as JS Date; some paths parse strings. */
+  METRIC_DATE: Date | string;
   ACTIVE_MAINTAINERS: number;
-  /** Optional — card switched to latest-day snapshot (LFXV2-1625). */
-  AVG_MAINTAINERS_YEARLY?: number;
+  AVG_MAINTAINERS_YEARLY: number;
 }
+
+/** Projection used by getFoundationMaintainers (METRIC_DATE + ACTIVE_MAINTAINERS only) — LFXV2-1625. */
+export type FoundationMaintainersDailySnapshotRow = Pick<FoundationMaintainersDailyRow, 'METRIC_DATE' | 'ACTIVE_MAINTAINERS'>;
 
 /**
  * Weekly aggregated maintainers result from Snowflake query

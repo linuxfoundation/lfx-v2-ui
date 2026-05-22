@@ -35,7 +35,7 @@ import {
   FoundationHealthEventsMonthlyRow,
   FoundationHealthScoreDistributionResponse,
   FoundationHealthScoreDistributionRow,
-  FoundationMaintainersDailyRow,
+  FoundationMaintainersDailySnapshotRow,
   FoundationMaintainersDistributionResponse,
   FoundationMaintainersDistributionRow,
   FoundationMaintainersMonthlyResponse,
@@ -1395,7 +1395,7 @@ export class ProjectService {
       ORDER BY METRIC_DATE ASC
     `;
 
-    const result = await this.snowflakeService.execute<FoundationMaintainersDailyRow>(query, [foundationSlug]);
+    const result = await this.snowflakeService.execute<FoundationMaintainersDailySnapshotRow>(query, [foundationSlug]);
 
     // Filter null-METRIC_DATE rows up-front so trendData/trendLabels stay index-aligned and the snapshot picks the latest *labeled* day.
     const trendRows = result.rows.filter((row) => row.METRIC_DATE);
