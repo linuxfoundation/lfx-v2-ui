@@ -34,6 +34,14 @@ export class DocumentationTabComponent {
 
   protected readonly agreements = signal<OrgMembershipAgreement[]>([]);
 
+  /** View-model: agreements with the signed date pre-formatted so the template stays pure. */
+  protected readonly displayAgreements = computed(() =>
+    this.agreements().map((agreement) => ({
+      ...agreement,
+      formattedSignedDate: this.formatSignedDate(agreement.signedDate),
+    }))
+  );
+
   private readonly accountId$ = toObservable(this.accountId);
   private readonly foundationId$ = toObservable(this.foundationId);
   private readonly retryTrigger$ = toObservable(this.retryTrigger);
@@ -85,7 +93,7 @@ export class DocumentationTabComponent {
     this.retryTrigger.update((v) => v + 1);
   }
 
-  protected formatSignedDate(dateString: string): string {
+  private formatSignedDate(dateString: string): string {
     if (!dateString) return '—';
     const parts = dateString.split('-').map(Number);
     if (parts.length !== 3 || parts.some(Number.isNaN)) return dateString;

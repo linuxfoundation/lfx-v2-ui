@@ -62,9 +62,12 @@ export class BoardCommitteeCardComponent {
   protected readonly committeeState = signal<SectionLoadState>('idle');
   protected readonly votingState = signal<SectionLoadState>('idle');
 
-  /** True when ANY of the three sections has not yet resolved (shows the tab-wide skeleton). */
+  /** True when ANY of the three sections has not yet resolved (idle/loading still pending). */
   protected readonly initialLoading = computed(
-    () => this.boardState() === 'loading' || this.committeeState() === 'loading' || this.votingState() === 'loading'
+    () =>
+      (this.boardState() !== 'success' && this.boardState() !== 'error') ||
+      (this.committeeState() !== 'success' && this.committeeState() !== 'error') ||
+      (this.votingState() !== 'success' && this.votingState() !== 'error')
   );
 
   // === Accordion state ===

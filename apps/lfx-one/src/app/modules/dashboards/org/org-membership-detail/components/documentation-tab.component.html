@@ -42,13 +42,13 @@
             </button>
           </div>
 
-          @if (agreements().length === 0) {
+          @if (displayAgreements().length === 0) {
             <div data-testid="membership-detail-docs-agreements-empty">
               <lfx-empty-state icon="fa-light fa-file-lines" title="No membership agreements found." subtitle=""> </lfx-empty-state>
             </div>
           } @else {
             <div class="flex flex-col gap-2" data-testid="membership-detail-docs-agreements-list">
-              @for (agreement of agreements(); track agreement.id) {
+              @for (agreement of displayAgreements(); track agreement.id) {
                 <div
                   class="flex items-center gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4"
                   [attr.data-testid]="'membership-detail-docs-agreement-' + agreement.id">
@@ -67,7 +67,7 @@
                       }
                     </div>
                     <span class="text-xs text-gray-500" [attr.data-testid]="'membership-detail-docs-agreement-meta-' + agreement.id">
-                      Signed {{ formatSignedDate(agreement.signedDate) }} · {{ agreement.format }} · {{ agreement.fileSizeKb }} KB
+                      Signed {{ agreement.formattedSignedDate }} · {{ agreement.format }} · {{ agreement.fileSizeKb }} KB
                     </span>
                   </div>
                   <button
