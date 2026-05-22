@@ -408,17 +408,23 @@ export class ProjectService {
     if (!updatedSettings.writers) updatedSettings.writers = [];
     if (!updatedSettings.auditors) updatedSettings.auditors = [];
 
+    // Some users stored in settings pre-date username normalization and have an empty username.
+    // Match by email as a fallback so edits/removals work for those users too.
+    const originalEmail = usernameOrEmail.includes('@') ? usernameOrEmail.trim().toLowerCase() : '';
+    const matchesUser = (u: { username?: string; email?: string }): boolean => {
+      if (u.username && u.username === backendIdentifier) return true;
+      if (!u.username && originalEmail && u.email?.toLowerCase() === originalEmail) return true;
+      return false;
+    };
+
     // Capture the user's existing UserInfo before removal — used by the 'update' path to
     // avoid a NATS roundtrip when only the role is changing.
     const existingUserInfo =
-      updatedSettings.writers.find((u) => u.username === backendIdentifier) ||
-      updatedSettings.auditors.find((u) => u.username === backendIdentifier);
+      updatedSettings.writers.find(matchesUser) || updatedSettings.auditors.find(matchesUser);
 
     // Remove user from both arrays first (for all operations)
-    // Compare by username property since writers/auditors are now UserInfo objects
-    // Use backendIdentifier (sub) for comparison to ensure proper removal
-    updatedSettings.writers = updatedSettings.writers.filter((u) => u.username !== backendIdentifier);
-    updatedSettings.auditors = updatedSettings.auditors.filter((u) => u.username !== backendIdentifier);
+    updatedSettings.writers = updatedSettings.writers.filter((u) => !matchesUser(u));
+    updatedSettings.auditors = updatedSettings.auditors.filter((u) => !matchesUser(u));
 
     // For 'add' or 'update', we need to add the user back with full UserInfo
     if (operation === 'add' || operation === 'update') {

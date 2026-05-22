@@ -81,7 +81,7 @@ export class PermissionsService {
           );
         }
 
-        return users.sort((a, b) => a.username.localeCompare(b.username));
+        return users.sort((a, b) => (a.username || a.email || '').localeCompare(b.username || b.email || ''));
       })
     );
   }
