@@ -1403,26 +1403,28 @@ export class ProjectService {
 
     const result = await this.snowflakeService.execute<FoundationMaintainersDailyRow>(query, [foundationSlug]);
 
-    // The rows are ordered ASC by date, so the last row carries the latest snapshot.
-    // Shane's dbt fix (2026-05-20) made ACTIVE_MAINTAINERS distinct per foundation,
-    // so this snapshot now reconciles with FOUNDATION_TOTAL_PROJECTS_DETAIL.MAINTAINERS_CURRENT_COUNT.
-    const latest = result.rows.length > 0 ? result.rows[result.rows.length - 1] : null;
+    // Filter rows with a missing METRIC_DATE up-front so trendData and
+    // trendLabels stay index-aligned, and so the snapshot picks the latest
+    // *labeled* day — the chart and the card always agree on which day
+    // "current" refers to.
+    const trendRows = result.rows.filter((row) => row.METRIC_DATE);
+
+    // The rows are ordered ASC by date, so the last labeled row carries the
+    // latest snapshot. Shane's dbt fix (2026-05-20) made ACTIVE_MAINTAINERS
+    // distinct per foundation, so this snapshot now reconciles with
+    // FOUNDATION_TOTAL_PROJECTS_DETAIL.MAINTAINERS_CURRENT_COUNT.
+    const latest = trendRows.length > 0 ? trendRows[trendRows.length - 1] : null;
     const currentMaintainers = latest?.ACTIVE_MAINTAINERS ?? 0;
     // The Snowflake Node SDK returns DATE columns as a JS Date pinned to UTC
     // midnight for the calendar day Snowflake stored, so the UTC date portion
     // of toISOString() is the correct calendar key. String()-then-slice was
     // tried first but breaks in non-UTC server TZs (returns the local-formatted
     // weekday-month prefix, e.g. "Tue May 19", not "2026-05-20").
-    const asOfDate = latest?.METRIC_DATE ? new Date(latest.METRIC_DATE).toISOString().split('T')[0] : null;
+    const asOfDate = latest ? new Date(latest.METRIC_DATE).toISOString().split('T')[0] : null;
 
-    // Extract daily data and labels. Format trend labels in UTC to match the
-    // UTC-anchored asOfDate the card subtitle renders — otherwise non-UTC server
-    // deployments would show "May 19" on the chart's rightmost tick while the
-    // card subtitle reads "As of May 20".
-    // Filter rows with a missing METRIC_DATE up-front so trendData and
-    // trendLabels stay index-aligned (skip-and-coerce on opposite sides would
-    // plot an unlabeled point for a data-quality glitch row).
-    const trendRows = result.rows.filter((row) => row.METRIC_DATE);
+    // Format trend labels in UTC to match the UTC-anchored asOfDate the card
+    // subtitle renders — otherwise non-UTC server deployments would show
+    // "May 19" on the chart's rightmost tick while the card reads "As of May 20".
     const trendData = trendRows.map((row) => row.ACTIVE_MAINTAINERS ?? 0);
     const trendLabels = trendRows.map((row) => {
       const date = new Date(row.METRIC_DATE);
