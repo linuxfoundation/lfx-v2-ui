@@ -250,6 +250,10 @@
       }
     </div>
   </div>
+
+  @if (weeklyBriefEnabled() && canEdit()) {
+    <lfx-weekly-brief-card [committee]="committee()" [canEdit]="canEdit()" data-testid="committee-overview-weekly-brief-card" />
+  }
 </div>
 
 <!-- Vote Results Drawer -->
