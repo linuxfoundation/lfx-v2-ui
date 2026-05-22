@@ -9,7 +9,11 @@
     </p>
   </header>
 
-  <div class="flex items-center gap-1 border-b border-gray-200 overflow-x-auto" data-testid="org-people-tab-bar" role="tablist">
+  <div
+    class="flex items-center gap-1 border-b border-gray-200 overflow-x-auto"
+    data-testid="org-people-tab-bar"
+    role="tablist"
+    aria-label="People page sections">
     @for (tab of tabs; track tab.id) {
       <button
         type="button"
