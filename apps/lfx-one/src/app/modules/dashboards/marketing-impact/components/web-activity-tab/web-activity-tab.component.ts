@@ -24,6 +24,7 @@ export class WebActivityTabComponent {
   // === Inputs ===
   public readonly foundationSlug = input<string | undefined>();
   public readonly foundationName = input<string>('');
+  // TODO(LFXV2-1951): wire focusProgram into web activity query
   public readonly focusProgram = input<MarketingImpactFocusProgram>('all');
 
   // === WritableSignals ===

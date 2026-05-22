@@ -24,6 +24,7 @@ export class EmailTabComponent {
   // === Inputs ===
   public readonly foundationSlug = input<string | undefined>();
   public readonly foundationName = input<string>('');
+  // TODO(LFXV2-1950): wire focusProgram into email data query
   public readonly focusProgram = input<MarketingImpactFocusProgram>('all');
 
   // === WritableSignals ===

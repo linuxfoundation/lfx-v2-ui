@@ -31,6 +31,7 @@ export class SocialListeningTabComponent {
   // === Inputs ===
   public readonly foundationSlug = input<string | undefined>();
   public readonly foundationName = input<string>('');
+  // TODO(LFXV2-1644): wire focusProgram into social listening query
   public readonly focusProgram = input<MarketingImpactFocusProgram>('all');
 
   // === WritableSignals ===
