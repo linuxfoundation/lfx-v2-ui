@@ -175,11 +175,9 @@ export class UserFormComponent {
         this.showManualFields.set(true);
         this.submitting.set(false);
 
-        // Add validators to name and username fields
+        // Add validator to name field only — username is optional per upstream UserInfo schema
         this.form().get('name')?.setValidators([Validators.required]);
-        this.form().get('username')?.setValidators([Validators.required]);
         this.form().get('name')?.updateValueAndValidity();
-        this.form().get('username')?.updateValueAndValidity();
 
         // Close the confirmation dialog
         this.confirmationService.close();
