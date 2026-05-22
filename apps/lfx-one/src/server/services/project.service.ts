@@ -383,7 +383,7 @@ export class ProjectService {
     operation: 'add' | 'update' | 'remove',
     usernameOrEmail: string,
     role?: 'view' | 'manage',
-    manualUserInfo?: { name: string; email: string; username: string; avatar?: string }
+    manualUserInfo?: { name: string; email: string; username?: string; avatar?: string }
   ): Promise<ProjectSettings> {
     // Step 1: Fetch current settings with ETag first.
     // Settings must be fetched before resolveEmailToSub so that manually-added users
@@ -413,9 +413,10 @@ export class ProjectService {
 
     let backendIdentifier = usernameOrEmail.trim();
     if (originalEmail) {
-      if (existingByEmail && (operation === 'update' || operation === 'remove')) {
-        // User found in settings without a username — they were added manually and do not
-        // exist in the NATS directory. Use email as the identifier and skip the NATS call.
+      if ((existingByEmail && (operation === 'update' || operation === 'remove')) || manualUserInfo) {
+        // Skip resolveEmailToSub in two cases:
+        // 1. update/remove on a no-username user found by email in settings (not in NATS)
+        // 2. manual-add — the user was not found in the directory; NATS would return NOT_FOUND
         backendIdentifier = originalEmail;
       } else {
         backendIdentifier = await this.resolveEmailToSub(req, usernameOrEmail);
@@ -445,18 +446,19 @@ export class ProjectService {
       }
 
       // Use manual user info if provided, otherwise fetch from NATS
-      let userInfo: { name: string; email: string; username: string; avatar?: string };
+      let userInfo: { name: string; email: string; username?: string; avatar?: string };
       if (manualUserInfo) {
         logger.debug(req, `${operation}_user_project_permissions`, 'Using manual user info', {
-          username: backendIdentifier,
+          username: manualUserInfo.username || '(none)',
           info_source: 'manual',
         });
         userInfo = {
           name: manualUserInfo.name,
           email: manualUserInfo.email,
-          username: backendIdentifier, // Use the sub for backend consistency
+          // Preserve whatever username the operator supplied — may be empty for users
+          // who have no username in any external directory.
+          username: manualUserInfo.username || undefined,
         };
-        // Only include avatar if it's provided and not empty
         if (manualUserInfo.avatar) {
           userInfo.avatar = manualUserInfo.avatar;
         }
