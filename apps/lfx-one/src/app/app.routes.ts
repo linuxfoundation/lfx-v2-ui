@@ -78,8 +78,9 @@ export const routes: Routes = [
               title: 'Org Overview',
               description: 'A summary of your organization across the Linux Foundation.',
               icon: 'fa-light fa-grid-2',
+              showDevelopmentNotice: true,
             },
-            loadComponent: loadOrgPlaceholderPage,
+            loadComponent: () => import('./modules/dashboards/org/org-overview/org-overview.component').then((m) => m.OrgOverviewComponent),
           },
           {
             path: 'memberships',
