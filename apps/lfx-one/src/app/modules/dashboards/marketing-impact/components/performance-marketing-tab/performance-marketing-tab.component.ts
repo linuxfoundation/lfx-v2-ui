@@ -314,7 +314,6 @@ export class PerformanceMarketingTabComponent {
     return PerformanceMarketingTabComponent.performanceClassMap[perf] ?? 'bg-gray-50 text-gray-700';
   }
 
-<<<<<<< HEAD
   private mapCampaignRows(campaigns: PaidCampaignPerformance[] | undefined): PaidCampaignRow[] {
     if (!campaigns?.length) return [];
     return campaigns.map(
@@ -324,7 +323,11 @@ export class PerformanceMarketingTabComponent {
         spend: formatCurrency(c.spend),
         revenue: formatCurrency(c.revenue),
         roas: `${(c.roas ?? 0).toFixed(2)}x`,
-=======
+        impressions: formatNumber(c.impressions),
+      })
+    );
+  }
+
   private mapPlatformCampaignRows(campaigns: PaidCampaignPerformance[] | undefined): PlatformCampaignRow[] {
     if (!campaigns?.length) return [];
     return campaigns.map(
@@ -334,7 +337,6 @@ export class PerformanceMarketingTabComponent {
         revenue: formatCurrency(c.revenue),
         roas: `${(c.roas ?? 0).toFixed(2)}x`,
         clicks: formatNumber(c.clicks),
->>>>>>> 63c56631 (feat(dashboards): add expandable platform rows with campaign details)
         impressions: formatNumber(c.impressions),
       })
     );
