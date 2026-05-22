@@ -127,12 +127,12 @@ export class OrgMembershipsComponent {
   protected readonly discoverState: Signal<OrgMembershipsPageState> = computed(() => this.initDiscoverState());
 
   private readonly renewBaseUrl = computed(() => {
-    const slug = this.accountContext.selectedAccount()?.accountSlug ?? '';
+    const slug = encodeURIComponent(this.accountContext.selectedAccount()?.accountSlug ?? '');
     return `https://myorg.lfx.dev/${slug}/project/project-group-membership`;
   });
 
   private readonly joinBaseUrl = computed(() => {
-    const slug = this.accountContext.selectedAccount()?.accountSlug ?? '';
+    const slug = encodeURIComponent(this.accountContext.selectedAccount()?.accountSlug ?? '');
     return `https://myorg.lfx.dev/${slug}/project`;
   });
 
@@ -226,7 +226,7 @@ export class OrgMembershipsComponent {
       expirationDateFormatted: this.formatDateFull(m.expirationDate),
       tierStartFormatted: this.formatDateFull(m.tierStartDate),
       tierEndFormatted: this.formatDateFull(m.tierEndDate),
-      renewUrl: `${baseUrl}/${m.foundationId}`,
+      renewUrl: `${baseUrl}/${encodeURIComponent(m.foundationId)}`,
     }));
   }
 
@@ -245,7 +245,7 @@ export class OrgMembershipsComponent {
       ...o,
       initials: foundationInitials(o.foundationName),
       logoClasses: foundationLogoSquareClasses(o.foundationId),
-      joinUrl: `${baseUrl}/${o.foundationId}/membership`,
+      joinUrl: `${baseUrl}/${encodeURIComponent(o.foundationId)}/membership`,
     }));
   }
 
