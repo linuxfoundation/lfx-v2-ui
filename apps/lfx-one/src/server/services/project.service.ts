@@ -1419,12 +1419,12 @@ export class ProjectService {
     // UTC-anchored asOfDate the card subtitle renders — otherwise non-UTC server
     // deployments would show "May 19" on the chart's rightmost tick while the
     // card subtitle reads "As of May 20".
-    // Coerce per-row nulls the same way the snapshot does, so a data-gap day
-    // never leaks `null` into the chart series or "Invalid Date" into the
-    // x-axis labels.
-    const trendData = result.rows.map((row) => row.ACTIVE_MAINTAINERS ?? 0);
-    const trendLabels = result.rows.map((row) => {
-      if (!row.METRIC_DATE) return '';
+    // Filter rows with a missing METRIC_DATE up-front so trendData and
+    // trendLabels stay index-aligned (skip-and-coerce on opposite sides would
+    // plot an unlabeled point for a data-quality glitch row).
+    const trendRows = result.rows.filter((row) => row.METRIC_DATE);
+    const trendData = trendRows.map((row) => row.ACTIVE_MAINTAINERS ?? 0);
+    const trendLabels = trendRows.map((row) => {
       const date = new Date(row.METRIC_DATE);
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
     });
