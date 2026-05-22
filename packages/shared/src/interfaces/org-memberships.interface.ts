@@ -14,8 +14,8 @@ export interface OrgActiveMembership {
   projectCount: number;
   memberCount: number;
   membershipTier: string;
-  tierStartDate: string;
-  tierEndDate: string;
+  tierStartDate: string | null;
+  tierEndDate: string | null;
   memberSince: string | null;
   boardMembers: number;
   committeeMembers: number;
@@ -33,9 +33,9 @@ export interface OrgExpiredMembership {
   foundationName: string;
   foundationLogo: string | null;
   membershipTier: string;
-  tierStartDate: string;
-  tierEndDate: string;
-  expirationDate: string;
+  tierStartDate: string | null;
+  tierEndDate: string | null;
+  expirationDate: string | null;
   actionType: 'renew' | 'contact';
 }
 

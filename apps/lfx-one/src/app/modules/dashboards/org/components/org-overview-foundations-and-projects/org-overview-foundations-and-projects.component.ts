@@ -39,9 +39,9 @@ export class OrgOverviewFoundationsAndProjectsComponent {
   private readonly accountId$ = toObservable(this.accountContextService.selectedAccount).pipe(map((account) => account.accountId));
   private readonly retryTrigger$ = toObservable(this.retryTrigger);
 
-  /** Combined stream: re-fetches on selected-account change OR retry tick. */
+  /** Combined stream: re-fetches on selected-account change OR retry tick. `retryTrigger$` is signal-backed and emits its current value on subscribe, so no `startWith(0)` needed. */
   private readonly state = toSignal(
-    combineLatest([this.accountId$, this.retryTrigger$.pipe(startWith(0))]).pipe(
+    combineLatest([this.accountId$, this.retryTrigger$]).pipe(
       switchMap(([accountId]) => {
         if (!accountId) {
           return of<OrgLensFoundationsSectionState>({ status: 'empty', data: ORG_LENS_FOUNDATIONS_EMPTY_RESPONSE });

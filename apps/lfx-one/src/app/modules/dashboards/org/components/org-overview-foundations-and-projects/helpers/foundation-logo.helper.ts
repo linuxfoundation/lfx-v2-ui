@@ -1,36 +1,20 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-/**
- * Foundation-logo letter-square fallback palette.
- *
- * Deterministic `djb2(foundation_id) % 5` map into the chromatic LFX
- * families [blue, emerald, amber, red, violet]. Excludes `gray` so the
- * letter square never blends into the Outside-LF umbrella row's gray
- * pill. Same `foundation_id` always maps to the same colour across
- * renders / sort changes / org switches — stable identity cue, not a
- * row-position cue.
- *
- * Each family renders as `bg-{family}-600 text-white` for high-contrast
- * initials. Class strings are full literals so Tailwind JIT picks them
- * up from source.
- */
-
-const SQUARE_PALETTE = ['bg-blue-600 text-white', 'bg-emerald-600 text-white', 'bg-amber-600 text-white', 'bg-red-600 text-white', 'bg-violet-600 text-white'];
+import { FOUNDATION_LOGO_SQUARE_PALETTE } from '@lfx-one/shared/constants';
 
 /** Classic djb2 string hash (Daniel J. Bernstein). Returns unsigned 32-bit. */
 function djb2(input: string): number {
   let hash = 5381;
   for (let i = 0; i < input.length; i += 1) {
-    // hash * 33 ^ char
     hash = ((hash << 5) + hash) ^ input.charCodeAt(i);
   }
   return hash >>> 0;
 }
 
 export function foundationLogoSquareClasses(foundationId: string): string {
-  const index = djb2(foundationId) % SQUARE_PALETTE.length;
-  return SQUARE_PALETTE[index];
+  const index = djb2(foundationId) % FOUNDATION_LOGO_SQUARE_PALETTE.length;
+  return FOUNDATION_LOGO_SQUARE_PALETTE[index];
 }
 
 /**
