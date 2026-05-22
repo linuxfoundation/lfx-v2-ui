@@ -2837,7 +2837,7 @@ export class AnalyticsController {
       throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', { operation });
     }
     if (!SALESFORCE_ACCOUNT_ID_PATTERN.test(accountId)) {
-      throw ServiceValidationError.forField('accountId', `Invalid Salesforce accountId format: ${accountId}`, { operation });
+      throw ServiceValidationError.forField('accountId', 'Invalid Salesforce accountId format', { operation });
     }
     return accountId;
   }
@@ -2873,7 +2873,7 @@ export class AnalyticsController {
 
     for (const id of ids) {
       if (!SALESFORCE_ACCOUNT_ID_PATTERN.test(id)) {
-        throw ServiceValidationError.forField('accountIds', `Invalid Salesforce accountId format: ${id}`, { operation });
+        throw ServiceValidationError.forField('accountIds', 'Invalid Salesforce accountId format', { operation });
       }
     }
 
