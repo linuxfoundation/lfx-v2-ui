@@ -1,21 +1,35 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { NewsletterRecipientCountPayload, NewsletterSendPayload, NewsletterTestSendPayload } from '@lfx-one/shared/interfaces';
+import {
+  CreateNewsletterDraftRequest,
+  GenerateNewsletterRequest,
+  NewsletterContextType,
+  NewsletterListParams,
+  NewsletterRecipientCountPayload,
+  NewsletterSendPayload,
+  NewsletterStatus,
+  NewsletterTestSendPayload,
+  UpdateNewsletterDraftRequest,
+} from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
 import { ServiceValidationError } from '../errors';
+import { AiService } from '../services/ai.service';
 import { logger } from '../services/logger.service';
-import { NewsletterSendService } from '../services/newsletter-send.service';
-import { getEffectiveEmail, getEffectiveName, getEffectiveUsername } from '../utils/auth-helper';
+import { NewsletterServiceClient } from '../services/newsletter-service.client';
 
 const VALID_CONTEXT_TYPES = new Set(['foundation', 'project']);
 const SUBJECT_MAX_LENGTH = 200;
 const BODY_MAX_LENGTH = 100_000;
 const COMMITTEE_LIMIT = 50;
+const RAW_CONTENT_MAX_LENGTH = 20_000;
+const SYSTEM_PROMPT_MAX_LENGTH = 5_000;
+const CONTEXT_NAME_MAX_LENGTH = 200;
 
 export class NewsletterController {
-  private newsletterSendService: NewsletterSendService = new NewsletterSendService();
+  private newsletterClient: NewsletterServiceClient = new NewsletterServiceClient();
+  private aiService: AiService = new AiService();
 
   /**
    * POST /api/newsletters/recipient-count
@@ -28,30 +42,35 @@ export class NewsletterController {
 
     try {
       const payload = req.body as NewsletterRecipientCountPayload;
-      const fieldErrors: Record<string, string> = {};
+      this.validateCommitteeUids(payload?.committeeUids, req.path, 'newsletter_recipient_count');
 
-      if (!Array.isArray(payload?.committeeUids)) {
-        fieldErrors['committeeUids'] = 'committeeUids must be an array of strings';
-      } else if (payload.committeeUids.length === 0) {
-        fieldErrors['committeeUids'] = 'committeeUids must contain at least one UID';
-      } else if (payload.committeeUids.length > COMMITTEE_LIMIT) {
-        fieldErrors['committeeUids'] = `committeeUids must contain at most ${COMMITTEE_LIMIT} UIDs`;
-      } else if (!payload.committeeUids.every((uid) => typeof uid === 'string' && uid.length > 0)) {
-        fieldErrors['committeeUids'] = 'committeeUids must contain non-empty strings';
-      }
+      const result = await this.newsletterClient.getRecipientCount(req, payload);
 
-      if (Object.keys(fieldErrors).length > 0) {
-        throw ServiceValidationError.fromFieldErrors(fieldErrors, 'Validation failed', {
-          operation: 'newsletter_recipient_count',
-          service: 'newsletter_controller',
-          path: req.path,
-        });
-      }
+      logger.success(req, 'newsletter_recipient_count', startTime, { count: result.count });
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 
-      const count = await this.newsletterSendService.getRecipientCount(req, payload.committeeUids);
+  /**
+   * POST /api/newsletters/recipients
+   * Body: { committeeUids: string[] }
+   * Returns the deduplicated recipient list (email + firstName) across the committees.
+   */
+  public async getRecipients(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'newsletter_recipients', {
+      committee_count: Array.isArray(req.body?.committeeUids) ? req.body.committeeUids.length : 0,
+    });
 
-      logger.success(req, 'newsletter_recipient_count', startTime, { count });
-      res.json({ count });
+    try {
+      const payload = req.body as NewsletterRecipientCountPayload;
+      this.validateCommitteeUids(payload?.committeeUids, req.path, 'newsletter_recipients');
+
+      const result = await this.newsletterClient.getRecipients(req, payload);
+
+      logger.success(req, 'newsletter_recipients', startTime, { count: result.recipients.length });
+      res.json(result);
     } catch (error) {
       next(error);
     }
@@ -79,11 +98,10 @@ export class NewsletterController {
         });
       }
 
-      const edName = resolveEdName(req);
-      await this.newsletterSendService.sendTest(req, payload, edName);
+      const result = await this.newsletterClient.testSend(req, payload);
 
       logger.success(req, 'newsletter_test_send', startTime, { to: payload.toEmail });
-      res.json({ ok: true });
+      res.json(result);
     } catch (error) {
       next(error);
     }
@@ -103,31 +121,301 @@ export class NewsletterController {
     try {
       const payload = req.body as NewsletterSendPayload;
       this.validateCommonPayload(payload, req.path, 'newsletter_send');
+      this.validateCommitteeUids(payload.committeeUids, req.path, 'newsletter_send');
 
-      const fieldErrors: Record<string, string> = {};
-      if (!Array.isArray(payload.committeeUids) || payload.committeeUids.length === 0) {
-        fieldErrors['committeeUids'] = 'committeeUids must contain at least one UID';
-      } else if (payload.committeeUids.length > COMMITTEE_LIMIT) {
-        fieldErrors['committeeUids'] = `committeeUids must contain at most ${COMMITTEE_LIMIT} UIDs`;
-      } else if (!payload.committeeUids.every((uid) => typeof uid === 'string' && uid.length > 0)) {
-        fieldErrors['committeeUids'] = 'committeeUids must contain non-empty strings';
-      }
-
-      if (Object.keys(fieldErrors).length > 0) {
-        throw ServiceValidationError.fromFieldErrors(fieldErrors, 'Validation failed', {
-          operation: 'newsletter_send',
-          service: 'newsletter_controller',
-          path: req.path,
-        });
-      }
-
-      const edName = resolveEdName(req);
-      const result = await this.newsletterSendService.send(req, payload, edName);
+      const result = await this.newsletterClient.send(req, payload);
 
       logger.success(req, 'newsletter_send', startTime, {
         total_recipients: result.totalRecipients,
         sent: result.sent,
         failed: result.failed,
+      });
+
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/newsletters/drafts?contextType=...&contextUid=...
+   */
+  public async listDrafts(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'newsletter_list_drafts', {
+      context_type: req.query['contextType'],
+      context_uid: req.query['contextUid'],
+    });
+
+    try {
+      const contextType = String(req.query['contextType'] || '');
+      const contextUid = String(req.query['contextUid'] || '');
+      if (!VALID_CONTEXT_TYPES.has(contextType)) {
+        throw ServiceValidationError.forField('contextType', "contextType must be 'foundation' or 'project'", {
+          operation: 'newsletter_list_drafts',
+          service: 'newsletter_controller',
+          path: req.path,
+        });
+      }
+      if (!contextUid) {
+        throw ServiceValidationError.forField('contextUid', 'contextUid is required', {
+          operation: 'newsletter_list_drafts',
+          service: 'newsletter_controller',
+          path: req.path,
+        });
+      }
+      const result = await this.newsletterClient.listDrafts(req, contextType, contextUid);
+      logger.success(req, 'newsletter_list_drafts', startTime, { count: result.drafts.length });
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/newsletters/drafts
+   * Body: CreateNewsletterDraftRequest
+   */
+  public async createDraft(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'newsletter_create_draft', {
+      context_type: req.body?.contextType,
+      context_uid: req.body?.contextUid,
+    });
+
+    try {
+      const payload = req.body as CreateNewsletterDraftRequest;
+      this.validateCommonPayload(payload, req.path, 'newsletter_create_draft');
+      this.validateCommitteeUids(payload.committeeUids, req.path, 'newsletter_create_draft');
+
+      const draft = await this.newsletterClient.createDraft(req, payload);
+      logger.success(req, 'newsletter_create_draft', startTime, { draft_id: draft.id, version: draft.version });
+      res.status(201).json(draft);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/newsletters/drafts/:id
+   */
+  public async getDraft(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'newsletter_get_draft', { draft_id: req.params['id'] });
+
+    try {
+      const id = String(req.params['id'] || '');
+      if (!id) {
+        throw ServiceValidationError.forField('id', 'id is required', {
+          operation: 'newsletter_get_draft',
+          service: 'newsletter_controller',
+          path: req.path,
+        });
+      }
+      const draft = await this.newsletterClient.getDraft(req, id);
+      logger.success(req, 'newsletter_get_draft', startTime, { draft_id: draft.id, version: draft.version });
+      res.json(draft);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * PUT /api/newsletters/drafts/:id
+   * Body: UpdateNewsletterDraftRequest
+   * Requires If-Match header for optimistic locking.
+   */
+  public async updateDraft(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'newsletter_update_draft', { draft_id: req.params['id'] });
+
+    try {
+      const id = String(req.params['id'] || '');
+      const version = parseIfMatch(req);
+      const payload = req.body as UpdateNewsletterDraftRequest;
+      this.validateCommonPayloadShallow(payload, req.path, 'newsletter_update_draft');
+      this.validateCommitteeUids(payload.committeeUids, req.path, 'newsletter_update_draft');
+
+      const draft = await this.newsletterClient.updateDraft(req, id, version, payload);
+      logger.success(req, 'newsletter_update_draft', startTime, { draft_id: draft.id, version: draft.version });
+      res.json(draft);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * DELETE /api/newsletters/drafts/:id
+   */
+  public async deleteDraft(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'newsletter_delete_draft', { draft_id: req.params['id'] });
+
+    try {
+      const id = String(req.params['id'] || '');
+      await this.newsletterClient.deleteDraft(req, id);
+      logger.success(req, 'newsletter_delete_draft', startTime, { draft_id: id });
+      res.status(204).end();
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/newsletters/drafts/:id/send
+   * Requires If-Match header for optimistic locking.
+   */
+  public async sendDraft(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'newsletter_send_draft', { draft_id: req.params['id'] });
+
+    try {
+      const id = String(req.params['id'] || '');
+      const version = parseIfMatch(req);
+      const result = await this.newsletterClient.sendDraft(req, id, version);
+      logger.success(req, 'newsletter_send_draft', startTime, {
+        draft_id: id,
+        total_recipients: result.totalRecipients,
+        sent: result.sent,
+        failed: result.failed,
+      });
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/newsletters?contextType=...&contextUid=...&status=...&pageToken=...
+   * Returns drafts and/or sent newsletters for the given context.
+   */
+  public async listNewsletters(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'newsletter_list', {
+      context_type: req.query['contextType'],
+      context_uid: req.query['contextUid'],
+      status: req.query['status'],
+    });
+
+    try {
+      const contextType = String(req.query['contextType'] || '');
+      const contextUid = String(req.query['contextUid'] || '');
+      const statusParam = req.query['status'] ? String(req.query['status']) : undefined;
+      const pageToken = req.query['pageToken'] ? String(req.query['pageToken']) : undefined;
+
+      const fieldErrors: Record<string, string> = {};
+      if (!VALID_CONTEXT_TYPES.has(contextType)) {
+        fieldErrors['contextType'] = "contextType must be 'foundation' or 'project'";
+      }
+      if (!contextUid) {
+        fieldErrors['contextUid'] = 'contextUid is required';
+      }
+      if (statusParam && statusParam !== 'draft' && statusParam !== 'sent') {
+        fieldErrors['status'] = "status must be 'draft' or 'sent'";
+      }
+      if (Object.keys(fieldErrors).length > 0) {
+        throw ServiceValidationError.fromFieldErrors(fieldErrors, 'Validation failed', {
+          operation: 'newsletter_list',
+          service: 'newsletter_controller',
+          path: req.path,
+        });
+      }
+
+      const params: NewsletterListParams = {
+        contextType: contextType as NewsletterContextType,
+        contextUid,
+        status: statusParam as NewsletterStatus | undefined,
+        pageToken,
+      };
+      const result = await this.newsletterClient.listNewsletters(req, params);
+
+      logger.success(req, 'newsletter_list', startTime, {
+        count: result.newsletters.length,
+        has_more: !!result.nextPageToken,
+      });
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/newsletters/:id/analytics
+   * Returns engagement analytics for a sent newsletter.
+   */
+  public async getAnalytics(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'newsletter_analytics', { newsletter_id: req.params['id'] });
+
+    try {
+      const id = String(req.params['id'] || '');
+      if (!id) {
+        throw ServiceValidationError.forField('id', 'id is required', {
+          operation: 'newsletter_analytics',
+          service: 'newsletter_controller',
+          path: req.path,
+        });
+      }
+      const result = await this.newsletterClient.getAnalytics(req, id);
+      logger.success(req, 'newsletter_analytics', startTime, {
+        newsletter_id: id,
+        unique_opens: result.uniqueOpens,
+        total_opens: result.totalOpens,
+      });
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/newsletters/generate
+   * Body: { rawContent, contextType, contextName, systemPromptOverride? }
+   */
+  public async generate(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'newsletter_generate', {
+      context_type: req.body?.contextType,
+      has_prompt_override: !!req.body?.systemPromptOverride,
+    });
+
+    try {
+      const payload = req.body as GenerateNewsletterRequest;
+      const fieldErrors: Record<string, string> = {};
+
+      if (!payload?.rawContent || typeof payload.rawContent !== 'string' || payload.rawContent.trim().length === 0) {
+        fieldErrors['rawContent'] = 'rawContent is required';
+      } else if (payload.rawContent.length > RAW_CONTENT_MAX_LENGTH) {
+        fieldErrors['rawContent'] = `rawContent must be ${RAW_CONTENT_MAX_LENGTH} characters or fewer`;
+      }
+
+      if (!payload?.contextType || !VALID_CONTEXT_TYPES.has(payload.contextType)) {
+        fieldErrors['contextType'] = "contextType must be 'foundation' or 'project'";
+      }
+
+      if (!payload?.contextName || typeof payload.contextName !== 'string' || payload.contextName.trim().length === 0) {
+        fieldErrors['contextName'] = 'contextName is required';
+      } else if (payload.contextName.length > CONTEXT_NAME_MAX_LENGTH) {
+        fieldErrors['contextName'] = `contextName must be ${CONTEXT_NAME_MAX_LENGTH} characters or fewer`;
+      }
+
+      if (payload?.systemPromptOverride !== undefined) {
+        if (typeof payload.systemPromptOverride !== 'string') {
+          fieldErrors['systemPromptOverride'] = 'systemPromptOverride must be a string';
+        } else if (payload.systemPromptOverride.length > SYSTEM_PROMPT_MAX_LENGTH) {
+          fieldErrors['systemPromptOverride'] = `systemPromptOverride must be ${SYSTEM_PROMPT_MAX_LENGTH} characters or fewer`;
+        }
+      }
+
+      if (Object.keys(fieldErrors).length > 0) {
+        throw ServiceValidationError.fromFieldErrors(fieldErrors, 'Validation failed', {
+          operation: 'newsletter_generate',
+          service: 'newsletter_controller',
+          path: req.path,
+        });
+      }
+
+      const result = await this.aiService.generateNewsletter(req, {
+        rawContent: payload.rawContent,
+        contextType: payload.contextType,
+        contextName: payload.contextName,
+        systemPromptOverride: payload.systemPromptOverride,
+      });
+
+      logger.success(req, 'newsletter_generate', startTime, {
+        subject_length: result.subject.length,
+        body_html_length: result.bodyHtml.length,
       });
 
       res.json(result);
@@ -175,8 +463,87 @@ export class NewsletterController {
       });
     }
   }
+
+  /**
+   * Validate update-draft payloads which omit contextType / contextUid (those
+   * are immutable once a draft is created).
+   */
+  private validateCommonPayloadShallow(payload: { subject?: string; bodyHtml?: string; edReplyEmail?: string }, path: string, operation: string): void {
+    const fieldErrors: Record<string, string> = {};
+
+    if (!payload?.subject || typeof payload.subject !== 'string' || payload.subject.trim().length === 0) {
+      fieldErrors['subject'] = 'Subject is required';
+    } else if (payload.subject.length > SUBJECT_MAX_LENGTH) {
+      fieldErrors['subject'] = `Subject must be ${SUBJECT_MAX_LENGTH} characters or fewer`;
+    }
+
+    if (!payload?.bodyHtml || typeof payload.bodyHtml !== 'string' || payload.bodyHtml.trim().length === 0) {
+      fieldErrors['bodyHtml'] = 'Body is required';
+    } else if (payload.bodyHtml.length > BODY_MAX_LENGTH) {
+      fieldErrors['bodyHtml'] = `Body must be ${BODY_MAX_LENGTH} characters or fewer`;
+    }
+
+    if (!payload?.edReplyEmail || typeof payload.edReplyEmail !== 'string' || !payload.edReplyEmail.includes('@')) {
+      fieldErrors['edReplyEmail'] = 'A valid edReplyEmail is required';
+    }
+
+    if (Object.keys(fieldErrors).length > 0) {
+      throw ServiceValidationError.fromFieldErrors(fieldErrors, 'Validation failed', {
+        operation,
+        service: 'newsletter_controller',
+        path,
+      });
+    }
+  }
+
+  /**
+   * Shared committeeUids validation used by /recipient-count, /recipients,
+   * /send, /drafts (create), and /drafts/:id (update).
+   */
+  private validateCommitteeUids(uids: unknown, path: string, operation: string): void {
+    const fieldErrors: Record<string, string> = {};
+
+    if (!Array.isArray(uids)) {
+      fieldErrors['committeeUids'] = 'committeeUids must be an array of strings';
+    } else if (uids.length === 0) {
+      fieldErrors['committeeUids'] = 'committeeUids must contain at least one UID';
+    } else if (uids.length > COMMITTEE_LIMIT) {
+      fieldErrors['committeeUids'] = `committeeUids must contain at most ${COMMITTEE_LIMIT} UIDs`;
+    } else if (!uids.every((uid) => typeof uid === 'string' && uid.length > 0)) {
+      fieldErrors['committeeUids'] = 'committeeUids must contain non-empty strings';
+    }
+
+    if (Object.keys(fieldErrors).length > 0) {
+      throw ServiceValidationError.fromFieldErrors(fieldErrors, 'Validation failed', {
+        operation,
+        service: 'newsletter_controller',
+        path,
+      });
+    }
+  }
 }
 
-function resolveEdName(req: Request): string {
-  return getEffectiveName(req) || getEffectiveUsername(req) || getEffectiveEmail(req) || 'Executive Director';
+/**
+ * Parse the If-Match header into a version integer. Used by update/send draft
+ * routes for optimistic concurrency control.
+ */
+function parseIfMatch(req: Request): number {
+  const raw = (req.header('If-Match') || '').trim();
+  if (!raw) {
+    throw ServiceValidationError.forField('If-Match', 'If-Match header is required', {
+      operation: 'newsletter_if_match',
+      service: 'newsletter_controller',
+      path: req.path,
+    });
+  }
+  const cleaned = raw.replace(/^W\//i, '').replace(/^"|"$/g, '');
+  const version = Number(cleaned);
+  if (!Number.isFinite(version) || !Number.isInteger(version) || version < 1) {
+    throw ServiceValidationError.forField('If-Match', 'If-Match must be a positive integer version', {
+      operation: 'newsletter_if_match',
+      service: 'newsletter_controller',
+      path: req.path,
+    });
+  }
+  return version;
 }

@@ -2,18 +2,36 @@
 // SPDX-License-Identifier: MIT
 
 import { Routes } from '@angular/router';
-import { executiveDirectorGuard } from '@shared/guards/executive-director.guard';
+import { authGuard } from '@shared/guards/auth.guard';
 
 export const NEWSLETTER_ROUTES: Routes = [
   {
     path: '',
     pathMatch: 'full',
-    redirectTo: 'compose',
+    redirectTo: 'list',
   },
   {
-    path: 'compose',
-    canActivate: [executiveDirectorGuard],
-    loadComponent: () => import('./newsletter-compose/newsletter-compose.component').then((m) => m.NewsletterComposeComponent),
+    path: 'list',
+    canActivate: [authGuard],
+    loadComponent: () => import('./newsletter-list/newsletter-list.component').then((m) => m.NewsletterListComponent),
+    data: { preload: false },
+  },
+  {
+    path: 'create',
+    canActivate: [authGuard],
+    loadComponent: () => import('./newsletter-manage/newsletter-manage.component').then((m) => m.NewsletterManageComponent),
+    data: { preload: false },
+  },
+  {
+    path: ':id/edit',
+    canActivate: [authGuard],
+    loadComponent: () => import('./newsletter-manage/newsletter-manage.component').then((m) => m.NewsletterManageComponent),
+    data: { preload: false },
+  },
+  {
+    path: ':id/analytics',
+    canActivate: [authGuard],
+    loadComponent: () => import('./newsletter-analytics/newsletter-analytics.component').then((m) => m.NewsletterAnalyticsComponent),
     data: { preload: false },
   },
 ];
