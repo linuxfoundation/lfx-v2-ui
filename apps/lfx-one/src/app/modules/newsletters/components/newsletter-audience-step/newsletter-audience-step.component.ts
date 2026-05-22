@@ -1,22 +1,16 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, DestroyRef, effect, inject, input, Signal, signal, viewChild } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, computed, DestroyRef, inject, input, Signal, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MultiSelectComponent } from '@components/multi-select/multi-select.component';
-import { Committee, NewsletterRecipient } from '@lfx-one/shared/interfaces';
+import { Committee, NewsletterCommitteeOption, NewsletterRecipient } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { NewsletterService } from '@services/newsletter.service';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { catchError, finalize, of, startWith, take } from 'rxjs';
-
-interface CommitteeOption {
-  label: string;
-  value: string;
-  category: string;
-}
+import { catchError, distinctUntilChanged, EMPTY, finalize, map, of, startWith, switchMap, take } from 'rxjs';
 
 @Component({
   selector: 'lfx-newsletter-audience-step',
@@ -36,15 +30,17 @@ export class NewsletterAudienceStepComponent {
   public readonly recipientCountLoading = input<boolean>(false);
 
   // === Signals ===
-  protected readonly committees = signal<Committee[]>([]);
   protected readonly loadingCommittees = signal<boolean>(false);
   protected readonly recipients = signal<NewsletterRecipient[]>([]);
   protected readonly recipientsLoading = signal<boolean>(false);
   protected readonly recipientsError = signal<string | null>(null);
   protected readonly recipientsPopover = viewChild<Popover>('recipientsPopover');
-  protected readonly committeeUidsValue = signal<string[]>([]);
 
-  protected readonly committeeOptions = computed<CommitteeOption[]>(() =>
+  // === Reactive data ===
+  protected readonly committees: Signal<Committee[]> = this.initCommittees();
+  protected readonly committeeUidsValue: Signal<string[]> = this.initCommitteeUidsValue();
+
+  protected readonly committeeOptions = computed<NewsletterCommitteeOption[]>(() =>
     this.committees().map((c) => ({
       label: c.name || 'Unnamed group',
       value: c.uid,
@@ -53,37 +49,6 @@ export class NewsletterAudienceStepComponent {
   );
   protected readonly selectedCount: Signal<number> = computed(() => this.committeeUidsValue().length);
   protected readonly hasCommittees = computed(() => this.committeeOptions().length > 0);
-
-  public constructor() {
-    // Load committees when contextUid changes.
-    effect(() => {
-      const uid = this.contextUid();
-      if (!uid) {
-        this.committees.set([]);
-        return;
-      }
-      this.loadingCommittees.set(true);
-      this.committeeService
-        .getCommitteesByProject(uid)
-        .pipe(
-          take(1),
-          catchError(() => of([] as Committee[])),
-          finalize(() => this.loadingCommittees.set(false))
-        )
-        .subscribe((committees) => this.committees.set(committees));
-    });
-
-    // Mirror the form's committeeUids value into a signal for template reactivity.
-    effect((onCleanup) => {
-      const control = this.form().get('committeeUids');
-      if (!control) return;
-      this.committeeUidsValue.set((control.value as string[]) ?? []);
-      const sub = control.valueChanges
-        .pipe(startWith(control.value), takeUntilDestroyed(this.destroyRef))
-        .subscribe((v) => this.committeeUidsValue.set((v as string[]) ?? []));
-      onCleanup(() => sub.unsubscribe());
-    });
-  }
 
   protected onShowRecipients(event: Event): void {
     const popover = this.recipientsPopover();
@@ -112,5 +77,38 @@ export class NewsletterAudienceStepComponent {
           this.recipientsError.set('Could not load recipients. Please try again.');
         },
       });
+  }
+
+  private initCommittees(): Signal<Committee[]> {
+    return toSignal(
+      toObservable(this.contextUid).pipe(
+        distinctUntilChanged(),
+        switchMap((uid) => {
+          if (!uid) return of([] as Committee[]);
+          this.loadingCommittees.set(true);
+          return this.committeeService.getCommitteesByProject(uid).pipe(
+            catchError(() => of([] as Committee[])),
+            finalize(() => this.loadingCommittees.set(false))
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      ),
+      { initialValue: [] as Committee[] }
+    );
+  }
+
+  private initCommitteeUidsValue(): Signal<string[]> {
+    return toSignal(
+      toObservable(this.form).pipe(
+        switchMap((fg) => {
+          const control = fg.get('committeeUids');
+          if (!control) return EMPTY;
+          return control.valueChanges.pipe(startWith(control.value));
+        }),
+        map((v): string[] => (Array.isArray(v) ? (v as string[]) : [])),
+        takeUntilDestroyed(this.destroyRef)
+      ),
+      { initialValue: [] as string[] }
+    );
   }
 }

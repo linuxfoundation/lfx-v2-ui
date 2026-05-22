@@ -4,9 +4,13 @@
 import { Router } from 'express';
 
 import { NewsletterController } from '../controllers/newsletter.controller';
+import { requireExecutiveDirector } from '../middleware/require-executive-director.middleware';
 
 const router = Router();
 const newsletterController = new NewsletterController();
+
+// All newsletter endpoints are Executive Director-only.
+router.use(requireExecutiveDirector);
 
 // List newsletters (drafts + sent) and per-newsletter analytics
 router.get('/', (req, res, next) => newsletterController.listNewsletters(req, res, next));

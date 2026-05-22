@@ -1,15 +1,16 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, DestroyRef, effect, inject, input, model, output, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, computed, DestroyRef, inject, input, model, output, Signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { EditorComponent } from '@components/editor/editor.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { GenerateNewsletterResponse, NewsletterContextType } from '@lfx-one/shared/interfaces';
+import { stripHtml } from '@lfx-one/shared/utils';
 import { ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { startWith } from 'rxjs';
+import { EMPTY, startWith, switchMap } from 'rxjs';
 
 import { NewsletterGenerateDrawerComponent } from '../newsletter-generate-drawer/newsletter-generate-drawer.component';
 
@@ -36,32 +37,10 @@ export class NewsletterContentStepComponent {
   // === Model signals ===
   public readonly generateDrawerVisible = model<boolean>(false);
 
-  // === Internal signals mirroring form values ===
-  protected readonly subjectValue = signal<string>('');
-  protected readonly bodyValue = signal<string>('');
-  protected readonly bodyFilled = computed(() => stripHtml(this.bodyValue()).trim().length > 0);
-
-  public constructor() {
-    effect((onCleanup) => {
-      const formGroup = this.form();
-      const subjectCtrl = formGroup.get('subject');
-      const bodyCtrl = formGroup.get('bodyHtml');
-      if (!subjectCtrl || !bodyCtrl) return;
-
-      this.subjectValue.set(subjectCtrl.value ?? '');
-      this.bodyValue.set(bodyCtrl.value ?? '');
-
-      const subSubject = subjectCtrl.valueChanges
-        .pipe(startWith(subjectCtrl.value), takeUntilDestroyed(this.destroyRef))
-        .subscribe((v) => this.subjectValue.set(v ?? ''));
-      const subBody = bodyCtrl.valueChanges.pipe(startWith(bodyCtrl.value), takeUntilDestroyed(this.destroyRef)).subscribe((v) => this.bodyValue.set(v ?? ''));
-
-      onCleanup(() => {
-        subSubject.unsubscribe();
-        subBody.unsubscribe();
-      });
-    });
-  }
+  // === Reactive form mirrors ===
+  protected readonly subjectValue: Signal<string> = this.initControlValue('subject');
+  protected readonly bodyValue: Signal<string> = this.initControlValue('bodyHtml');
+  protected readonly bodyFilled = computed(() => stripHtml(this.bodyValue()).length > 0);
 
   protected openGenerateDrawer(): void {
     if (!this.hasContext()) return;
@@ -86,8 +65,18 @@ export class NewsletterContentStepComponent {
     }
     this.generated.emit(result);
   }
-}
 
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
+  private initControlValue(controlName: string): Signal<string> {
+    return toSignal(
+      toObservable(this.form).pipe(
+        switchMap((fg) => {
+          const ctrl = fg.get(controlName);
+          if (!ctrl) return EMPTY;
+          return ctrl.valueChanges.pipe(startWith(ctrl.value));
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      ),
+      { initialValue: '' }
+    ) as Signal<string>;
+  }
 }

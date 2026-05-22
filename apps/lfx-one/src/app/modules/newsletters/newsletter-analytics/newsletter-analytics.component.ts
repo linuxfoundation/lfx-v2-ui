@@ -9,11 +9,26 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
+import { lfxColors } from '@lfx-one/shared/constants';
 import { NewsletterAnalytics } from '@lfx-one/shared/interfaces';
 import { NewsletterService } from '@services/newsletter.service';
 import { MessageService } from 'primeng/api';
 import { SkeletonModule } from 'primeng/skeleton';
 import { catchError, finalize, of, switchMap, take } from 'rxjs';
+
+interface NewsletterChartDataset {
+  label: string;
+  data: number[];
+  borderColor: string;
+  backgroundColor: string;
+  tension: number;
+  fill: boolean;
+}
+
+interface NewsletterChartData {
+  labels: string[];
+  datasets: NewsletterChartDataset[];
+}
 
 @Component({
   selector: 'lfx-newsletter-analytics',
@@ -33,55 +48,13 @@ export class NewsletterAnalyticsComponent {
   protected readonly analytics = signal<NewsletterAnalytics | null>(null);
   protected readonly loading = signal<boolean>(true);
   protected readonly loadError = signal<string | null>(null);
-
-  protected readonly openRatePercent = computed(() => {
-    const a = this.analytics();
-    if (!a) return null;
-    return Math.round((a.openRate ?? 0) * 100);
-  });
-  protected readonly hasOpens = computed(() => (this.analytics()?.totalOpens ?? 0) > 0);
   protected readonly canRenderChart = signal<boolean>(false);
 
-  protected readonly chartData: Signal<any> = computed(() => {
-    const a = this.analytics();
-    if (!a || !this.canRenderChart()) return null;
-    const dates = a.dailyOpens.map((d) => d.date);
-    const totalOpens = a.dailyOpens.map((d) => d.opens);
-    const uniqueOpens = a.dailyOpens.map((d) => d.uniqueOpens);
-    return {
-      labels: dates,
-      datasets: [
-        {
-          label: 'Total opens',
-          data: totalOpens,
-          borderColor: '#2563eb',
-          backgroundColor: 'rgba(37, 99, 235, 0.1)',
-          tension: 0.3,
-          fill: true,
-        },
-        {
-          label: 'Unique opens',
-          data: uniqueOpens,
-          borderColor: '#10b981',
-          backgroundColor: 'rgba(16, 185, 129, 0.1)',
-          tension: 0.3,
-          fill: true,
-        },
-      ],
-    };
-  });
-
-  protected readonly chartOptions = computed<Record<string, unknown>>(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { position: 'top' as const },
-      tooltip: { mode: 'index' as const, intersect: false },
-    },
-    scales: {
-      y: { beginAtZero: true, ticks: { precision: 0 } },
-    },
-  }));
+  // === Computed (complex bodies extracted to private init* methods) ===
+  protected readonly openRatePercent: Signal<number | null> = this.initOpenRatePercent();
+  protected readonly hasOpens = computed(() => (this.analytics()?.totalOpens ?? 0) > 0);
+  protected readonly chartData: Signal<NewsletterChartData | null> = this.initChartData();
+  protected readonly chartOptions: Signal<Record<string, unknown>> = this.initChartOptions();
 
   public constructor() {
     // Lazy chart rendering on the browser only — Chart.js touches `window` on init.
@@ -126,5 +99,65 @@ export class NewsletterAnalyticsComponent {
   // newsletter module root) and navigate to the explicit `list` child.
   protected goBack(): void {
     this.router.navigate(['list'], { relativeTo: this.route.parent });
+  }
+
+  private initOpenRatePercent(): Signal<number | null> {
+    return computed(() => {
+      const a = this.analytics();
+      if (!a) return null;
+      return Math.round((a.openRate ?? 0) * 100);
+    });
+  }
+
+  private initChartData(): Signal<NewsletterChartData | null> {
+    return computed(() => {
+      const a = this.analytics();
+      if (!a || !this.canRenderChart()) return null;
+      return {
+        labels: a.dailyOpens.map((d) => d.date),
+        datasets: [
+          {
+            label: 'Total opens',
+            data: a.dailyOpens.map((d) => d.opens),
+            borderColor: lfxColors.blue[600],
+            backgroundColor: this.alpha(lfxColors.blue[500], 0.1),
+            tension: 0.3,
+            fill: true,
+          },
+          {
+            label: 'Unique opens',
+            data: a.dailyOpens.map((d) => d.uniqueOpens),
+            borderColor: lfxColors.emerald[500],
+            backgroundColor: this.alpha(lfxColors.emerald[500], 0.1),
+            tension: 0.3,
+            fill: true,
+          },
+        ],
+      };
+    });
+  }
+
+  private initChartOptions(): Signal<Record<string, unknown>> {
+    return computed(() => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top' as const },
+        tooltip: { mode: 'index' as const, intersect: false },
+      },
+      scales: {
+        y: { beginAtZero: true, ticks: { precision: 0 } },
+      },
+    }));
+  }
+
+  // Chart.js expects an rgba string for area fills; lfxColors entries are #RRGGBB.
+  // Convert the hex to its rgb components and apply the alpha inline.
+  private alpha(hex: string, opacity: number): string {
+    const value = hex.replace('#', '');
+    const r = parseInt(value.substring(0, 2), 16);
+    const g = parseInt(value.substring(2, 4), 16);
+    const b = parseInt(value.substring(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
   }
 }

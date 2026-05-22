@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { NEWSLETTER_RAW_CONTENT_MAX_LENGTH, NEWSLETTER_SYSTEM_PROMPT_MAX_LENGTH } from '@lfx-one/shared/constants';
 import {
   CreateNewsletterDraftRequest,
   GenerateNewsletterRequest,
@@ -23,8 +24,6 @@ const VALID_CONTEXT_TYPES = new Set(['foundation', 'project']);
 const SUBJECT_MAX_LENGTH = 200;
 const BODY_MAX_LENGTH = 100_000;
 const COMMITTEE_LIMIT = 50;
-const RAW_CONTENT_MAX_LENGTH = 20_000;
-const SYSTEM_PROMPT_MAX_LENGTH = 5_000;
 const CONTEXT_NAME_MAX_LENGTH = 200;
 
 export class NewsletterController {
@@ -376,8 +375,8 @@ export class NewsletterController {
 
       if (!payload?.rawContent || typeof payload.rawContent !== 'string' || payload.rawContent.trim().length === 0) {
         fieldErrors['rawContent'] = 'rawContent is required';
-      } else if (payload.rawContent.length > RAW_CONTENT_MAX_LENGTH) {
-        fieldErrors['rawContent'] = `rawContent must be ${RAW_CONTENT_MAX_LENGTH} characters or fewer`;
+      } else if (payload.rawContent.length > NEWSLETTER_RAW_CONTENT_MAX_LENGTH) {
+        fieldErrors['rawContent'] = `rawContent must be ${NEWSLETTER_RAW_CONTENT_MAX_LENGTH} characters or fewer`;
       }
 
       if (!payload?.contextType || !VALID_CONTEXT_TYPES.has(payload.contextType)) {
@@ -393,8 +392,8 @@ export class NewsletterController {
       if (payload?.systemPromptOverride !== undefined) {
         if (typeof payload.systemPromptOverride !== 'string') {
           fieldErrors['systemPromptOverride'] = 'systemPromptOverride must be a string';
-        } else if (payload.systemPromptOverride.length > SYSTEM_PROMPT_MAX_LENGTH) {
-          fieldErrors['systemPromptOverride'] = `systemPromptOverride must be ${SYSTEM_PROMPT_MAX_LENGTH} characters or fewer`;
+        } else if (payload.systemPromptOverride.length > NEWSLETTER_SYSTEM_PROMPT_MAX_LENGTH) {
+          fieldErrors['systemPromptOverride'] = `systemPromptOverride must be ${NEWSLETTER_SYSTEM_PROMPT_MAX_LENGTH} characters or fewer`;
         }
       }
 

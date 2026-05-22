@@ -3,7 +3,8 @@
 
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, effect, inject, signal, Signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal, Signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardTabsBarComponent } from '@components/card-tabs-bar/card-tabs-bar.component';
@@ -11,15 +12,27 @@ import { CardComponent } from '@components/card/card.component';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { FilterPillOption, NewsletterContextType, NewsletterListItem, NewsletterStatus, ProjectContext } from '@lfx-one/shared/interfaces';
+import {
+  FilterPillOption,
+  NewsletterContextType,
+  NewsletterListItem,
+  NewsletterStatus,
+  NewsletterStatusTabId,
+  ProjectContext,
+} from '@lfx-one/shared/interfaces';
 import { NewsletterService } from '@services/newsletter.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
-import { finalize, take } from 'rxjs';
+import { combineLatest, distinctUntilChanged, finalize, take } from 'rxjs';
 
-type StatusTabId = 'draft' | 'sent';
+interface NewsletterRow extends NewsletterListItem {
+  openRateLabel: string;
+  openRateTooltip: string;
+  recipientsLabel: string;
+  groupsLabel: string;
+}
 
 @Component({
   selector: 'lfx-newsletter-list',
@@ -46,6 +59,7 @@ export class NewsletterListComponent {
   private readonly confirmationService = inject(ConfirmationService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
 
   // === Tab options ===
   protected readonly statusTabOptions: FilterPillOption[] = [
@@ -54,7 +68,7 @@ export class NewsletterListComponent {
   ];
 
   // === Writable Signals ===
-  protected readonly statusTab = signal<StatusTabId>('draft');
+  protected readonly statusTab = signal<NewsletterStatusTabId>('draft');
   protected readonly newsletters = signal<NewsletterListItem[]>([]);
   protected readonly loading = signal<boolean>(false);
   protected readonly loadingMore = signal<boolean>(false);
@@ -70,18 +84,25 @@ export class NewsletterListComponent {
   protected readonly canLoadMore: Signal<boolean> = computed(() => !!this.nextPageToken() && !this.loading() && !this.loadingMore());
   protected readonly hasNewsletters: Signal<boolean> = computed(() => this.newsletters().length > 0);
 
+  // Pre-compute per-row labels so the template doesn't call functions-with-args.
+  protected readonly rows: Signal<NewsletterRow[]> = computed(() =>
+    this.newsletters().map((n) => {
+      const total = n.totalRecipients ?? 0;
+      const opens = n.uniqueOpens ?? 0;
+      const groupCount = n.committeeUids?.length ?? 0;
+      const openRateLabel = n.openRate === undefined || n.openRate === null ? '—' : `${Math.round(n.openRate * 100)}%`;
+      return {
+        ...n,
+        openRateLabel,
+        openRateTooltip: `${opens} of ${total} recipients opened`,
+        recipientsLabel: n.totalRecipients !== undefined && n.totalRecipients !== null ? String(n.totalRecipients) : '—',
+        groupsLabel: `${groupCount} ${groupCount === 1 ? 'group' : 'groups'}`,
+      };
+    })
+  );
+
   public constructor() {
-    // Reload whenever the context or active status tab changes.
-    effect(() => {
-      const uid = this.contextUid();
-      const status = this.statusTab();
-      if (uid) {
-        this.loadInitial(status as NewsletterStatus);
-      } else {
-        this.newsletters.set([]);
-        this.nextPageToken.set(undefined);
-      }
-    });
+    this.initLoadOnContextOrTab();
   }
 
   protected onStatusTabChange(tab: string): void {
@@ -123,17 +144,6 @@ export class NewsletterListComponent {
       });
   }
 
-  protected getOpenRateTooltip(item: NewsletterListItem): string {
-    const total = item.totalRecipients ?? 0;
-    const opens = item.uniqueOpens ?? 0;
-    return `${opens} of ${total} recipients opened`;
-  }
-
-  protected formatOpenRate(item: NewsletterListItem): string {
-    if (item.openRate === undefined || item.openRate === null) return '—';
-    return `${Math.round(item.openRate * 100)}%`;
-  }
-
   protected onDeleteDraft(item: NewsletterListItem, event: Event): void {
     event.stopPropagation();
     this.confirmationService.confirm({
@@ -168,6 +178,22 @@ export class NewsletterListComponent {
             detail: err?.error?.message || err?.message || 'Could not delete the draft. Please try again.',
           });
         },
+      });
+  }
+
+  private initLoadOnContextOrTab(): void {
+    combineLatest([toObservable(this.contextUid), toObservable(this.statusTab)])
+      .pipe(
+        distinctUntilChanged(([prevUid, prevTab], [uid, tab]) => prevUid === uid && prevTab === tab),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(([uid, status]) => {
+        if (uid) {
+          this.loadInitial(status as NewsletterStatus);
+        } else {
+          this.newsletters.set([]);
+          this.nextPageToken.set(undefined);
+        }
       });
   }
 

@@ -206,8 +206,9 @@ export class AiService {
         bodyHtml: parsed.bodyHtml.trim(),
       };
     } catch (parseError) {
+      // Log metadata only — never the AI-generated body itself (PII / draft content).
       logger.warning(req, 'generate_newsletter', 'Failed to parse JSON response, falling back to raw content', {
-        content: content.substring(0, 100),
+        contentLength: content.length,
         err: parseError,
       });
 

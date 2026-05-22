@@ -3,6 +3,14 @@
 
 export type NewsletterContextType = 'foundation' | 'project';
 
+export type NewsletterStatusTabId = 'draft' | 'sent';
+
+export interface NewsletterCommitteeOption {
+  label: string;
+  value: string;
+  category: string;
+}
+
 export interface NewsletterRecipientCountPayload {
   committeeUids: string[];
 }

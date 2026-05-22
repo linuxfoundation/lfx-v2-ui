@@ -28,7 +28,6 @@ module.exports = defineConfig([
       'playwright.config.ts',
       'e2e/**/*',
       'src/server/pdf-templates/**/*',
-      'src/server/email-templates/**/*',
     ],
   },
   {

@@ -194,7 +194,7 @@ export const routes: Routes = [
       {
         path: 'foundation/newsletters',
         data: { lens: 'foundation' },
-        canActivate: [projectQueryParamGuard],
+        canActivate: [executiveDirectorGuard, projectQueryParamGuard],
         loadChildren: () => import('./modules/newsletters/newsletters.routes').then((m) => m.NEWSLETTER_ROUTES),
       },
       {
@@ -243,7 +243,7 @@ export const routes: Routes = [
       {
         path: 'project/newsletters',
         data: { lens: 'project' },
-        canActivate: [projectQueryParamGuard],
+        canActivate: [executiveDirectorGuard, projectQueryParamGuard],
         loadChildren: () => import('./modules/newsletters/newsletters.routes').then((m) => m.NEWSLETTER_ROUTES),
       },
       {
@@ -279,7 +279,7 @@ export const routes: Routes = [
       },
       {
         path: 'newsletters',
-        canActivate: [lensRedirectGuard],
+        canActivate: [executiveDirectorGuard, lensRedirectGuard],
         loadChildren: () => import('./modules/newsletters/newsletters.routes').then((m) => m.NEWSLETTER_ROUTES),
       },
       {

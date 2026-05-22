@@ -71,7 +71,7 @@ HTML CONSTRAINTS — CRITICAL
 ================================================================
 You MUST only use these HTML tags in bodyHtml. Any other tags (<div>, <span>, <table>, <img>, <style>, <script>, inline styles, class attributes) will be SILENTLY STRIPPED by the email sanitizer — your content will be lost.
 
-Allowed tags: <p>, <br>, <strong>, <b>, <em>, <i>, <u>, <s>, <ol>, <ul>, <li>, <a>, <blockquote>, <hr>, <h2>, <h3>.
+Allowed tags: <p>, <br>, <strong>, <b>, <em>, <i>, <u>, <s>, <ol>, <ul>, <li>, <a>, <blockquote>, <h2>, <h3>.
 On <a>, only href / target / rel are preserved. No other attributes are allowed on any tag.
 
 ================================================================

@@ -487,3 +487,21 @@ export function formatDuration(seconds: number): string {
   if (m === 0) return `${h}h`;
   return `${h}h ${m}m`;
 }
+
+/**
+ * Short relative-time label suitable for inline status text ("just now",
+ * "12s ago", "5 min ago", "2 hr ago", "3 days ago"). Coarser than a full
+ * `formatDistanceToNow` — meant for autosave indicators and similar UI.
+ */
+export function formatRelativeTime(date: Date): string {
+  const diffMs = Date.now() - date.getTime();
+  const diffSec = Math.round(diffMs / 1000);
+  if (diffSec < 5) return 'just now';
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.round(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} min ago`;
+  const diffHr = Math.round(diffMin / 60);
+  if (diffHr < 24) return `${diffHr} hr ago`;
+  const diffDay = Math.round(diffHr / 24);
+  return `${diffDay} day${diffDay === 1 ? '' : 's'} ago`;
+}

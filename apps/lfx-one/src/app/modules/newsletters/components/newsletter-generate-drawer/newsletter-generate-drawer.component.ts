@@ -8,16 +8,17 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
-import { AI_NEWSLETTER_SYSTEM_PROMPT } from '@lfx-one/shared/constants';
+import {
+  AI_NEWSLETTER_SYSTEM_PROMPT,
+  NEWSLETTER_PROMPT_STORAGE_KEY,
+  NEWSLETTER_RAW_CONTENT_MAX_LENGTH,
+  NEWSLETTER_SYSTEM_PROMPT_MAX_LENGTH,
+} from '@lfx-one/shared/constants';
 import { GenerateNewsletterResponse, NewsletterContextType } from '@lfx-one/shared/interfaces';
 import { NewsletterService } from '@services/newsletter.service';
 import { MessageService } from 'primeng/api';
 import { DrawerModule } from 'primeng/drawer';
 import { debounceTime, finalize, take } from 'rxjs';
-
-const PROMPT_STORAGE_KEY = 'lfx-newsletter-ai-prompt';
-const RAW_CONTENT_MAX_LENGTH = 20_000;
-const SYSTEM_PROMPT_MAX_LENGTH = 5_000;
 
 @Component({
   selector: 'lfx-newsletter-generate-drawer',
@@ -44,11 +45,11 @@ export class NewsletterGenerateDrawerComponent {
   public readonly form = new FormGroup({
     rawContent: new FormControl<string>('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.maxLength(RAW_CONTENT_MAX_LENGTH)],
+      validators: [Validators.required, Validators.maxLength(NEWSLETTER_RAW_CONTENT_MAX_LENGTH)],
     }),
     systemPrompt: new FormControl<string>(AI_NEWSLETTER_SYSTEM_PROMPT, {
       nonNullable: true,
-      validators: [Validators.maxLength(SYSTEM_PROMPT_MAX_LENGTH)],
+      validators: [Validators.maxLength(NEWSLETTER_SYSTEM_PROMPT_MAX_LENGTH)],
     }),
   });
 
@@ -65,7 +66,7 @@ export class NewsletterGenerateDrawerComponent {
   protected readonly promptIsCustomized: Signal<boolean> = computed(() => (this.systemPromptValue() ?? '').trim() !== AI_NEWSLETTER_SYSTEM_PROMPT.trim());
   protected readonly canGenerate: Signal<boolean> = computed(() => {
     const raw = (this.rawContentValue() ?? '').trim();
-    return raw.length > 0 && raw.length <= RAW_CONTENT_MAX_LENGTH && !this.generating();
+    return raw.length > 0 && raw.length <= NEWSLETTER_RAW_CONTENT_MAX_LENGTH && !this.generating();
   });
 
   // Exposed for the template's "Reset to default" button.
@@ -95,7 +96,7 @@ export class NewsletterGenerateDrawerComponent {
     this.form.controls.systemPrompt.setValue(AI_NEWSLETTER_SYSTEM_PROMPT);
     if (isPlatformBrowser(this.platformId)) {
       try {
-        localStorage.removeItem(PROMPT_STORAGE_KEY);
+        localStorage.removeItem(NEWSLETTER_PROMPT_STORAGE_KEY);
       } catch {
         // Silently ignore storage errors (private browsing, quota).
       }
@@ -135,7 +136,7 @@ export class NewsletterGenerateDrawerComponent {
 
   private restoreCustomPrompt(): void {
     try {
-      const stored = localStorage.getItem(PROMPT_STORAGE_KEY);
+      const stored = localStorage.getItem(NEWSLETTER_PROMPT_STORAGE_KEY);
       if (stored && typeof stored === 'string') {
         this.form.controls.systemPrompt.setValue(stored, { emitEvent: false });
       }
@@ -147,10 +148,10 @@ export class NewsletterGenerateDrawerComponent {
   private persistCustomPrompt(value: string): void {
     try {
       if (!value || value.trim() === AI_NEWSLETTER_SYSTEM_PROMPT.trim()) {
-        localStorage.removeItem(PROMPT_STORAGE_KEY);
+        localStorage.removeItem(NEWSLETTER_PROMPT_STORAGE_KEY);
         return;
       }
-      localStorage.setItem(PROMPT_STORAGE_KEY, value);
+      localStorage.setItem(NEWSLETTER_PROMPT_STORAGE_KEY, value);
     } catch {
       // Silently ignore storage errors.
     }

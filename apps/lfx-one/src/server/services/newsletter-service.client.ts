@@ -118,7 +118,8 @@ export class NewsletterServiceClient {
    * service can stamp emails without needing access to the LFX user store.
    */
   private edNameHeader(req: Request): Record<string, string> {
-    const name = (req as any).oidc?.user?.name || (req as any).oidc?.user?.nickname || (req as any).oidc?.user?.email || '';
+    const user = req.oidc?.user;
+    const name = (user?.['name'] as string) || (user?.['nickname'] as string) || (user?.['email'] as string) || '';
     if (!name) {
       return {};
     }

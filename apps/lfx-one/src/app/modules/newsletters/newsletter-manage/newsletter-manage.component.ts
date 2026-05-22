@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, DestroyRef, effect, inject, signal, Signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal, Signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
+import { NEWSLETTER_STEP_TITLES, NEWSLETTER_TOTAL_STEPS } from '@lfx-one/shared/constants';
 import {
   CreateNewsletterDraftRequest,
   GenerateNewsletterResponse,
@@ -16,6 +17,7 @@ import {
   ProjectContext,
   UpdateNewsletterDraftRequest,
 } from '@lfx-one/shared/interfaces';
+import { formatRelativeTime, stripHtml } from '@lfx-one/shared/utils';
 import { NewsletterService } from '@services/newsletter.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ProjectService } from '@services/project.service';
@@ -30,13 +32,6 @@ import { NewsletterAudienceStepComponent } from '../components/newsletter-audien
 import { NewsletterContentStepComponent } from '../components/newsletter-content-step/newsletter-content-step.component';
 import { NewsletterPreviewDrawerComponent } from '../components/newsletter-preview-drawer/newsletter-preview-drawer.component';
 import { NewsletterSendStepComponent } from '../components/newsletter-send-step/newsletter-send-step.component';
-
-const TOTAL_STEPS = 3;
-const STEP_TITLES: Record<number, string> = {
-  1: 'Audience',
-  2: 'Content',
-  3: 'Send',
-};
 
 @Component({
   selector: 'lfx-newsletter-manage',
@@ -88,7 +83,7 @@ export class NewsletterManageComponent {
 
   // === Step state ===
   private readonly internalStep = signal<number>(1);
-  public readonly totalSteps = TOTAL_STEPS;
+  public readonly totalSteps = NEWSLETTER_TOTAL_STEPS;
   public readonly currentStep: Signal<number> = this.initCurrentStep();
 
   // === Project context ===
@@ -123,7 +118,7 @@ export class NewsletterManageComponent {
 
   // === Validation gates ===
   public readonly subjectFilled = computed(() => (this.subjectValue() ?? '').trim().length > 0);
-  public readonly bodyFilled = computed(() => stripHtml(this.bodyValue() ?? '').trim().length > 0);
+  public readonly bodyFilled = computed(() => stripHtml(this.bodyValue() ?? '').length > 0);
   public readonly audienceFilled = computed(() => (this.committeeUidsValue() ?? []).length > 0);
   public readonly canSend = computed(() => this.audienceFilled() && this.subjectFilled() && this.bodyFilled() && this.hasContext() && !this.submitting());
   public readonly canSendTest = computed(
@@ -133,11 +128,11 @@ export class NewsletterManageComponent {
   public readonly canGoPrevious = computed(() => this.currentStep() > 1);
   public readonly canGoNext = computed(() => this.currentStep() < this.totalSteps && this.canProceed());
   public readonly isLastStep = computed(() => this.currentStep() === this.totalSteps);
-  public readonly currentStepTitle = computed(() => STEP_TITLES[this.currentStep()] ?? '');
+  public readonly currentStepTitle = computed(() => NEWSLETTER_STEP_TITLES[this.currentStep()] ?? '');
   protected readonly savedLabel = computed(() => {
     const at = this.savedAt();
     if (!at) return null;
-    return `Saved ${formatRelative(at)}`;
+    return `Saved ${formatRelativeTime(at)}`;
   });
 
   public constructor() {
@@ -223,7 +218,7 @@ export class NewsletterManageComponent {
   protected onSend(): void {
     if (!this.canSend()) return;
     const count = this.recipientCount();
-    const recipientLabel = count !== null && count > 0 ? `~${count} ${count === 1 ? 'recipient' : 'recipients'}` : 'the selected groups';
+    const recipientLabel = count !== null && count > 0 ? `${count} ${count === 1 ? 'recipient' : 'recipients'}` : 'the selected groups';
     this.confirmationService.confirm({
       header: 'Send newsletter?',
       message: `This will send your newsletter to ${recipientLabel}. Once sent, it can't be undone.`,
@@ -267,7 +262,7 @@ export class NewsletterManageComponent {
     this.form.controls.committeeUids.valueChanges
       .pipe(
         debounceTime(300),
-        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+        distinctUntilChanged(this.uidsEqual),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((uids) => this.fetchRecipientCountFor(uids ?? []));
@@ -363,25 +358,23 @@ export class NewsletterManageComponent {
   }
 
   private initContextLogo(): void {
-    effect(() => {
-      const ctx = this.activeContext();
-      if (ctx?.logoUrl) {
-        this.fetchedLogoUrl.set(undefined);
-        return;
-      }
-      if (!ctx?.slug) {
-        this.fetchedLogoUrl.set(undefined);
-        return;
-      }
-      this.projectService
-        .getProject(ctx.slug, false)
-        .pipe(
-          take(1),
-          map((project) => project?.logo_url || undefined),
-          catchError(() => of(undefined))
-        )
-        .subscribe((url) => this.fetchedLogoUrl.set(url));
-    });
+    // React to activeContext changes via toObservable + switchMap so each
+    // context swap cancels the in-flight project fetch (instead of racing).
+    toObservable(this.activeContext)
+      .pipe(
+        switchMap((ctx) => {
+          if (ctx?.logoUrl || !ctx?.slug) {
+            this.fetchedLogoUrl.set(undefined);
+            return of(undefined);
+          }
+          return this.projectService.getProject(ctx.slug, false).pipe(
+            map((project) => project?.logo_url || undefined),
+            catchError(() => of(undefined))
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((url) => this.fetchedLogoUrl.set(url));
   }
 
   private initLoadDraft(): void {
@@ -425,17 +418,41 @@ export class NewsletterManageComponent {
   }
 
   private initAutosave(): void {
-    this.form.valueChanges
+    // Combine form changes with edEmail so a late-arriving user profile triggers
+    // an autosave even if the user hasn't typed since. Without this the first
+    // save can be skipped (user already filled the form before /user resolved)
+    // and the draft never persists until the next keystroke.
+    combineLatest([this.form.valueChanges, toObservable(this.edEmail)])
       .pipe(
         debounceTime(1000),
-        // Skip when nothing meaningful to save yet.
-        filter(() => this.hasContext() && this.hasAnythingToSave()),
-        // Avoid duplicate writes for identical states.
-        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+        filter(([, email]) => this.hasContext() && this.hasAnythingToSave() && email.length > 0),
+        distinctUntilChanged((a, b) => this.draftSnapshotEqual(a, b)),
         switchMap(() => this.saveDraft()),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe();
+  }
+
+  // Cheaper than JSON.stringify on a multi-KB bodyHtml: short-circuits on
+  // length/identity first, only compares characters when nothing else differs.
+  private draftSnapshotEqual(a: [unknown, string], b: [unknown, string]): boolean {
+    const [av, ae] = a;
+    const [bv, be] = b;
+    if (ae !== be) return false;
+    const ax = av as { subject?: string; bodyHtml?: string; committeeUids?: string[] };
+    const bx = bv as { subject?: string; bodyHtml?: string; committeeUids?: string[] };
+    return ax.subject === bx.subject && ax.bodyHtml === bx.bodyHtml && this.uidsEqual(ax.committeeUids ?? [], bx.committeeUids ?? []);
+  }
+
+  private uidsEqual(a: string[] | null | undefined, b: string[] | null | undefined): boolean {
+    const av = a ?? [];
+    const bv = b ?? [];
+    if (av === bv) return true;
+    if (av.length !== bv.length) return false;
+    for (let i = 0; i < av.length; i++) {
+      if (av[i] !== bv[i]) return false;
+    }
+    return true;
   }
 
   // The Go service requires committees + subject + body to all be present for
@@ -466,18 +483,7 @@ export class NewsletterManageComponent {
           this.savedAt.set(new Date());
           return draft;
         }),
-        catchError((err: HttpErrorResponse) => {
-          this.savingDraft.set(false);
-          if (err.status === 409) {
-            this.messageService.add({
-              severity: 'warn',
-              summary: 'Draft out of sync',
-              detail: 'Another session updated this draft. Reload to continue.',
-              life: 10_000,
-            });
-          }
-          return of(null);
-        })
+        catchError((err: HttpErrorResponse) => this.handleAutosaveError(err))
       );
     }
 
@@ -512,24 +518,31 @@ export class NewsletterManageComponent {
         });
         return draft;
       }),
-      catchError(() => of(null))
+      catchError((err: HttpErrorResponse) => this.handleAutosaveError(err))
     );
   }
-}
 
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
-}
-
-function formatRelative(date: Date): string {
-  const diffMs = Date.now() - date.getTime();
-  const diffSec = Math.round(diffMs / 1000);
-  if (diffSec < 5) return 'just now';
-  if (diffSec < 60) return `${diffSec}s ago`;
-  const diffMin = Math.round(diffSec / 60);
-  if (diffMin < 60) return `${diffMin} min ago`;
-  const diffHr = Math.round(diffMin / 60);
-  if (diffHr < 24) return `${diffHr} hr ago`;
-  const diffDay = Math.round(diffHr / 24);
-  return `${diffDay} day${diffDay === 1 ? '' : 's'} ago`;
+  // Surface autosave failures: a silent stream meant the user could navigate
+  // away believing their draft was saved. 409 still shows the existing
+  // conflict-specific toast; other failures show a generic autosave-failed
+  // toast so the user knows to retry or copy their content out.
+  private handleAutosaveError(err: HttpErrorResponse) {
+    this.savingDraft.set(false);
+    if (err.status === 409) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Draft out of sync',
+        detail: 'Another session updated this draft. Reload to continue.',
+        life: 10_000,
+      });
+    } else {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Autosave failed',
+        detail: err?.error?.message || err?.message || 'Could not save draft. Your changes are unsaved.',
+        life: 8000,
+      });
+    }
+    return of(null);
+  }
 }

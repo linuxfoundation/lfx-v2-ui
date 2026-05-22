@@ -1,8 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, input, Signal } from '@angular/core';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { Component, computed, input, Signal } from '@angular/core';
 
 @Component({
   selector: 'lfx-newsletter-preview',
@@ -19,12 +18,5 @@ export class NewsletterPreviewComponent {
   public readonly edReplyEmail = input<string>('');
 
   // Computed
-  public readonly trustedBody: Signal<SafeHtml> = this.initTrustedBody();
   public readonly hasContent: Signal<boolean> = computed(() => Boolean(this.subject().trim() || this.bodyHtml().trim()));
-
-  private readonly sanitizer = inject(DomSanitizer);
-
-  private initTrustedBody(): Signal<SafeHtml> {
-    return computed(() => this.sanitizer.bypassSecurityTrustHtml(this.bodyHtml() || ''));
-  }
 }

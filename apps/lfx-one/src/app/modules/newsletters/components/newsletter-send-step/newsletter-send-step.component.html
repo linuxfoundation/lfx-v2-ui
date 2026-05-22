@@ -12,7 +12,7 @@
       <div class="text-xs uppercase tracking-wide text-gray-500">Audience size</div>
       <div class="text-lg font-medium text-gray-900 mt-1">
         @if (recipientCount() !== null) {
-          ~{{ recipientCount() }} {{ recipientCount() === 1 ? 'recipient' : 'recipients' }}
+          {{ recipientCount() }} {{ recipientCount() === 1 ? 'recipient' : 'recipients' }}
         } @else {
           —
         }

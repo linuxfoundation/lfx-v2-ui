@@ -75,6 +75,7 @@
     // Content is injected via [innerHTML] so it lives outside this component's
     // view encapsulation. ::ng-deep is required for these rules to reach those
     // elements. Also restores list-style which Tailwind preflight strips.
+    /* stylelint-disable-next-line selector-pseudo-element-no-unknown */
     ::ng-deep {
       p {
         margin: 0 0 0.875rem;
