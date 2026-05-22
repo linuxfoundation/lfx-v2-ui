@@ -4,6 +4,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, input, Signal, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { Committee, WeeklyBrief, WeeklyBriefCurrentResponse, WeeklyBriefThrottle } from '@lfx-one/shared/interfaces';
@@ -14,28 +15,31 @@ import { BehaviorSubject, catchError, combineLatest, filter, finalize, of, switc
 
 @Component({
   selector: 'lfx-weekly-brief-card',
-  imports: [CardComponent, ButtonComponent, SkeletonModule],
+  imports: [CardComponent, ButtonComponent, SkeletonModule, ReactiveFormsModule],
   templateUrl: './weekly-brief-card.component.html',
   styleUrl: './weekly-brief-card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class WeeklyBriefCardComponent {
-  // Inputs
-  public readonly committee = input.required<Committee>();
-  public readonly canEdit = input<boolean>(false);
-
   // Injections
   private readonly weeklyBriefService = inject(WeeklyBriefService);
   private readonly messageService = inject(MessageService);
+
+  // Inputs
+  public readonly committee = input.required<Committee>();
+  public readonly canEdit = input<boolean>(false);
 
   // UI state signals
   public readonly fetchLoading = signal(true);
   public readonly generating = signal(false);
   public readonly saving = signal(false);
   public readonly editMode = signal(false);
-  public readonly editText = signal('');
 
-  // Refresh trigger — local idiom: BehaviorSubject + combineLatest with input observable
+  // Reactive form control for the editor textarea
+  public readonly editControl = new FormControl('', { nonNullable: true });
+
+  // Refresh trigger — declared above briefResponse so the toSignal call sees it.
+  // Logically part of the private helpers band (section 11).
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
 
   private readonly briefResponse: Signal<WeeklyBriefCurrentResponse | null> = this.initBriefResponse();
@@ -68,6 +72,7 @@ export class WeeklyBriefCardComponent {
 
   // Public actions
   public onGenerate(): void {
+    if (this.generating()) return;
     const committeeUid = this.committee()?.uid;
     if (!committeeUid) return;
     this.generating.set(true);
@@ -91,7 +96,7 @@ export class WeeklyBriefCardComponent {
 
   public onEdit(): void {
     this.editMode.set(true);
-    this.editText.set(this.brief()?.brief_text ?? '');
+    this.editControl.setValue(this.brief()?.brief_text ?? '');
   }
 
   public onSave(): void {
@@ -99,7 +104,7 @@ export class WeeklyBriefCardComponent {
     const current = this.brief();
     if (!committeeUid || !current) return;
     this.saving.set(true);
-    this.weeklyBriefService.saveWeeklyBrief(committeeUid, { brief_text: this.editText(), revision: current.revision }).subscribe({
+    this.weeklyBriefService.saveWeeklyBrief(committeeUid, { brief_text: this.editControl.value, revision: current.revision }).subscribe({
       next: () => {
         this.saving.set(false);
         this.editMode.set(false);
@@ -124,6 +129,7 @@ export class WeeklyBriefCardComponent {
         detail: 'Brief copied — paste into your mailing list or Slack',
       });
     } catch {
+      console.warn('[weekly-brief-card] clipboard write failed');
       this.messageService.add({
         severity: 'error',
         summary: 'Copy failed',
@@ -134,11 +140,6 @@ export class WeeklyBriefCardComponent {
 
   public onCancelEdit(): void {
     this.editMode.set(false);
-  }
-
-  public onEditTextChange(event: Event): void {
-    const value = (event.target as HTMLTextAreaElement).value;
-    this.editText.set(value);
   }
 
   // Private initializers
