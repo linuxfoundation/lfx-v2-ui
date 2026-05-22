@@ -419,8 +419,7 @@ export class ProjectService {
 
     // Capture the user's existing UserInfo before removal — used by the 'update' path to
     // avoid a NATS roundtrip when only the role is changing.
-    const existingUserInfo =
-      updatedSettings.writers.find(matchesUser) || updatedSettings.auditors.find(matchesUser);
+    const existingUserInfo = updatedSettings.writers.find(matchesUser) || updatedSettings.auditors.find(matchesUser);
 
     // Remove user from both arrays first (for all operations)
     updatedSettings.writers = updatedSettings.writers.filter((u) => !matchesUser(u));
