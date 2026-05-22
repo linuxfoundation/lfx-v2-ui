@@ -2003,6 +2003,7 @@ export class ProjectService {
       `;
 
       // Query 4: Per-campaign performance from email_campaign_performance (last 6 months)
+      // Note: EMAIL_CAMPAIGN_PERFORMANCE does not have LF_SUB_DOMAIN_CLASSIFICATION — no classification filter here
       const campaignPerfQuery = `
         SELECT
           MARKETING_EMAIL_NAME,
@@ -2014,7 +2015,6 @@ export class ProjectService {
           ROUND(SUM(CLICKS) * 100.0 / NULLIF(SUM(SENDS), 0), 1) AS CTR
         FROM ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CAMPAIGN_PERFORMANCE
         WHERE FOUNDATION_SLUG = ?
-          ${classificationFilter}
           AND PUBLISHED_MONTH_DATE >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         GROUP BY MARKETING_EMAIL_NAME, EMAIL_TYPE
         ORDER BY TOTAL_SENDS DESC
@@ -2042,7 +2042,7 @@ export class ProjectService {
             TOTAL_CLICKS: number;
             OPEN_RATE: number;
             CTR: number;
-          }>(campaignPerfQuery, [foundationSlug, ...classificationParams])
+          }>(campaignPerfQuery, [foundationSlug])
           .catch((error) => {
             logger.warning(undefined, 'get_email_ctr', 'Optional campaign breakdown query failed, degrading gracefully', {
               foundation_slug: foundationSlug,
