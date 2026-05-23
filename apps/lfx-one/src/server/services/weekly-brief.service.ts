@@ -86,9 +86,43 @@ function buildMockBrief(committeeId: string, overrides: Partial<WeeklyBrief> = {
  * Switches between mock data (default) and live committee-service proxy based on
  * `WEEKLY_BRIEF_BACKEND`. Mock mode lets the UI iterate without standing up the
  * upstream brief endpoints; flipping to 'live' proxies straight through.
+ *
+ * When `COMMITTEE_SERVICE_URL` is set on the live path, calls the committee-
+ * service directly at that base URL instead of going through the
+ * `LFX_V2_SERVICE` gateway — useful for testing against a locally-running
+ * committee-service without retargeting `LFX_V2_SERVICE` globally.
  */
 export class WeeklyBriefService {
   private microserviceProxy: MicroserviceProxyService = new MicroserviceProxyService();
+
+  /**
+   * Routes a committee-service call. By default goes through `LFX_V2_SERVICE`
+   * via `MicroserviceProxyService`. When `COMMITTEE_SERVICE_URL` is set, calls
+   * that base URL directly with the incoming Authorization header forwarded —
+   * lets us point at a local committee-service without retargeting
+   * `LFX_V2_SERVICE` globally.
+   */
+  private async proxyToCommitteeService<T>(req: Request, path: string, method: 'GET' | 'POST' | 'PUT', body?: unknown): Promise<T> {
+    const overrideUrl = process.env['COMMITTEE_SERVICE_URL'];
+    if (overrideUrl) {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (req.headers.authorization) {
+        headers.Authorization = req.headers.authorization;
+      }
+      const response = await fetch(`${overrideUrl}${path}`, {
+        method,
+        headers,
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      });
+      if (!response.ok) {
+        const error = new Error(`committee-service ${method} ${path} failed with ${response.status}`) as Error & { statusCode: number };
+        error.statusCode = response.status;
+        throw error;
+      }
+      return (await response.json()) as T;
+    }
+    return this.microserviceProxy.proxyRequest<T>(req, 'LFX_V2_SERVICE', path, method, undefined, body);
+  }
 
   /**
    * GET /committees/:committeeId/weekly-briefs/current
@@ -112,12 +146,7 @@ export class WeeklyBriefService {
     }
 
     try {
-      return await this.microserviceProxy.proxyRequest<WeeklyBriefCurrentResponse>(
-        req,
-        'LFX_V2_SERVICE',
-        `/committees/${committeeId}/weekly-briefs/current`,
-        'GET'
-      );
+      return await this.proxyToCommitteeService<WeeklyBriefCurrentResponse>(req, `/committees/${committeeId}/weekly-briefs/current`, 'GET');
     } catch (error) {
       // Narrow the 404 to the proxy error type — checking a loose `.status`
       // property could mask other errors that happen to have that field.
@@ -153,14 +182,7 @@ export class WeeklyBriefService {
       };
     }
 
-    return this.microserviceProxy.proxyRequest<GenerateWeeklyBriefResponse>(
-      req,
-      'LFX_V2_SERVICE',
-      `/committees/${committeeId}/weekly-briefs/generate`,
-      'POST',
-      undefined,
-      body
-    );
+    return this.proxyToCommitteeService<GenerateWeeklyBriefResponse>(req, `/committees/${committeeId}/weekly-briefs/generate`, 'POST', body);
   }
 
   /**
@@ -178,7 +200,7 @@ export class WeeklyBriefService {
       });
     }
 
-    return this.microserviceProxy.proxyRequest<WeeklyBrief>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/weekly-briefs/current`, 'PUT', undefined, body);
+    return this.proxyToCommitteeService<WeeklyBrief>(req, `/committees/${committeeId}/weekly-briefs/current`, 'PUT', body);
   }
 
   private isLive(): boolean {
