@@ -64,12 +64,16 @@ export class WeeklyBriefCardComponent {
   public readonly weekLabel: Signal<string> = computed(() => {
     const b = this.brief();
     if (!b) return '';
+    // window_start / window_end are UTC ISO boundaries (Sun 00:00Z → Sat
+    // 23:59Z). Format with timeZone: 'UTC' so users in negative offsets
+    // don't see the start shift to the prior day.
     const start = new Date(b.window_start);
     const end = new Date(b.window_end);
-    return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${end.toLocaleDateString('en-US', {
+    return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })} – ${end.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
+      timeZone: 'UTC',
     })}`;
   });
 
@@ -91,7 +95,21 @@ export class WeeklyBriefCardComponent {
         },
         error: (err: HttpErrorResponse) => {
           this.generating.set(false);
-          const detail = err?.status === 429 ? 'Weekly generation limit reached. Try again next week.' : 'Failed to generate brief. Please try again.';
+          let detail: string;
+          switch (err?.status) {
+            case 429:
+              detail = 'Weekly generation limit reached. Try again next week.';
+              break;
+            case 409:
+              // Upstream's edited-brief guard: someone else edited the brief
+              // for this window. Prompt reload — the user can decide whether
+              // to force-regenerate from the refreshed copy.
+              detail = "Someone else edited this brief. Reload to see the latest version before regenerating.";
+              this.refresh$.next();
+              break;
+            default:
+              detail = 'Failed to generate brief. Please try again.';
+          }
           this.messageService.add({ severity: 'error', summary: 'Generate failed', detail });
         },
       });

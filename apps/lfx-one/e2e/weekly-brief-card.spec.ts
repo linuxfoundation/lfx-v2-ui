@@ -160,9 +160,15 @@ async function mockCommitteeShell(page: Page): Promise<void> {
  * Mock GET /api/committees/:uid/weekly-briefs/current with a custom response.
  * Returns a handle to swap the response mid-test (e.g. after save/generate).
  */
-function mockCurrentBrief(page: Page, initial: WeeklyBriefCurrentResponse): { setResponse: (next: WeeklyBriefCurrentResponse) => void } {
+async function mockCurrentBrief(
+  page: Page,
+  initial: WeeklyBriefCurrentResponse
+): Promise<{ setResponse: (next: WeeklyBriefCurrentResponse) => void }> {
   let current = initial;
-  void page.route(`**/api/committees/${TEST_COMMITTEE_UID}/weekly-briefs/current`, async (route) => {
+  // Await the route registration so it's installed before any page.goto()
+  // — `void page.route(...)` races with navigation and can leak through to
+  // the network on fast runs.
+  await page.route(`**/api/committees/${TEST_COMMITTEE_UID}/weekly-briefs/current`, async (route) => {
     if (route.request().method() !== 'GET') {
       await route.continue();
       return;
@@ -219,7 +225,7 @@ test.describe('WG Weekly Brief card — feature-flag gating', () => {
 test.describe('WG Weekly Brief card — empty state (flag ON)', () => {
   test('renders empty state with Generate enabled and the "No brief yet" copy', async ({ page }) => {
     await mockCommitteeShell(page);
-    mockCurrentBrief(page, { brief: null, throttle: DEFAULT_THROTTLE });
+    await mockCurrentBrief(page, { brief: null, throttle: DEFAULT_THROTTLE });
 
     await page.goto(COMMITTEE_URL, { waitUntil: 'domcontentloaded' });
 
@@ -239,7 +245,7 @@ test.describe('WG Weekly Brief card — empty state (flag ON)', () => {
 test.describe('WG Weekly Brief card — generated state (flag ON)', () => {
   test('renders brief text, week label, throttle badge, and primary actions', async ({ page }) => {
     await mockCommitteeShell(page);
-    mockCurrentBrief(page, { brief: GENERATED_BRIEF, throttle: USED_THROTTLE_AFTER_GENERATE });
+    await mockCurrentBrief(page, { brief: GENERATED_BRIEF, throttle: USED_THROTTLE_AFTER_GENERATE });
 
     await page.goto(COMMITTEE_URL, { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('committee-overview-weekly-brief-card')).toBeVisible({ timeout: DATA_LOAD_TIMEOUT });
@@ -268,7 +274,7 @@ test.describe('WG Weekly Brief card — generated state (flag ON)', () => {
 test.describe('WG Weekly Brief card — Edit → Save round-trip', () => {
   test('PUT request carries the modified brief text, and UI re-renders with the "Edited" badge', async ({ page }) => {
     await mockCommitteeShell(page);
-    const briefMock = mockCurrentBrief(page, { brief: GENERATED_BRIEF, throttle: USED_THROTTLE_AFTER_GENERATE });
+    const briefMock = await mockCurrentBrief(page, { brief: GENERATED_BRIEF, throttle: USED_THROTTLE_AFTER_GENERATE });
 
     // Intercept PUT (save). Capture body, return the edited brief.
     let capturedPutBody: { brief_text?: string; revision?: number } | null = null;
@@ -323,7 +329,7 @@ test.describe('WG Weekly Brief card — Edit → Save round-trip', () => {
 test.describe('WG Weekly Brief card — Generate from empty', () => {
   test('clicking Generate fires POST and the UI re-renders to the generated state', async ({ page }) => {
     await mockCommitteeShell(page);
-    const briefMock = mockCurrentBrief(page, { brief: null, throttle: DEFAULT_THROTTLE });
+    const briefMock = await mockCurrentBrief(page, { brief: null, throttle: DEFAULT_THROTTLE });
 
     // Intercept POST (generate). On success, swap the GET response to the generated brief.
     let capturedPostBody: { revision?: number } | null = null;
