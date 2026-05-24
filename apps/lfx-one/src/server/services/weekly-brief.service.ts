@@ -88,10 +88,6 @@ function buildMockBrief(committeeId: string, overrides: Partial<WeeklyBrief> = {
 export class WeeklyBriefService {
   private microserviceProxy: MicroserviceProxyService = new MicroserviceProxyService();
 
-  private isLive(): boolean {
-    return process.env['WEEKLY_BRIEF_BACKEND'] === 'live';
-  }
-
   /**
    * GET /committees/:committeeId/weekly-briefs/current
    *
@@ -179,5 +175,9 @@ export class WeeklyBriefService {
     }
 
     return this.microserviceProxy.proxyRequest<WeeklyBrief>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/weekly-briefs/current`, 'PUT', undefined, body);
+  }
+
+  private isLive(): boolean {
+    return process.env['WEEKLY_BRIEF_BACKEND'] === 'live';
   }
 }
