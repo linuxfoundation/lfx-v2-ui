@@ -115,6 +115,7 @@ export class NatsService {
         logger.debug(undefined, 'nats_publish', 'Publishing NATS message', { subject });
         try {
           connection.publish(subject, data);
+          await connection.flush();
           span.setStatus({ code: SpanStatusCode.OK });
           span.setAttribute(ATTR_MESSAGING_MESSAGE_BODY_SIZE, data.length);
         } catch (error) {
