@@ -13,6 +13,7 @@ import { Request } from 'express';
 
 import { MicroserviceError } from '../errors';
 
+import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
 
 /**
@@ -102,12 +103,26 @@ export class WeeklyBriefService {
    * lets us point at a local committee-service without retargeting
    * `LFX_V2_SERVICE` globally.
    */
-  private async proxyToCommitteeService<T>(req: Request, path: string, method: 'GET' | 'POST' | 'PUT', body?: unknown): Promise<T> {
+  private async proxyToCommitteeService<T>(
+    req: Request,
+    path: string,
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
+    body?: unknown
+  ): Promise<T> {
     const overrideUrl = process.env['COMMITTEE_SERVICE_URL'];
+    logger.debug(
+      req,
+      'proxy_to_committee_service',
+      overrideUrl ? 'Using COMMITTEE_SERVICE_URL override' : 'Using LFX_V2_SERVICE gateway',
+      { path, method }
+    );
+    // Direct fetch (not via MicroserviceProxyService) is deliberate for the local-
+    // dev override path: keeps the COMMITTEE_SERVICE_URL switch scoped to weekly
+    // brief without retargeting the shared LFX_V2_SERVICE URL globally.
     if (overrideUrl) {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (req.headers.authorization) {
-        headers.Authorization = req.headers.authorization;
+      if (req.bearerToken) {
+        headers['Authorization'] = `Bearer ${req.bearerToken}`;
       }
       const response = await fetch(`${overrideUrl}${path}`, {
         method,
@@ -115,9 +130,12 @@ export class WeeklyBriefService {
         body: body !== undefined ? JSON.stringify(body) : undefined,
       });
       if (!response.ok) {
-        const error = new Error(`committee-service ${method} ${path} failed with ${response.status}`) as Error & { statusCode: number };
-        error.statusCode = response.status;
-        throw error;
+        const operation = `${method.toLowerCase()}_${path.replace(/\//g, '_')}`;
+        const errorBody = await response.json().catch(() => undefined);
+        throw MicroserviceError.fromMicroserviceResponse(response.status, response.statusText, errorBody, 'COMMITTEE_SERVICE_URL', path, operation);
+      }
+      if (response.status === 204 || response.headers.get('content-length') === '0') {
+        return undefined as T;
       }
       return (await response.json()) as T;
     }
