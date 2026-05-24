@@ -70,7 +70,7 @@ export class InviteComponent implements OnInit {
         .replace(/_/g, '/')
         .padEnd(Math.ceil(parts[1].length / 4) * 4, '=');
       const payload = JSON.parse(atob(padded)) as InviteTokenPayload;
-      if (typeof payload.exp !== 'number' || !isFinite(payload.exp)) return 'invalid';
+      if (typeof payload.exp !== 'number' || !Number.isFinite(payload.exp)) return 'invalid';
       return Date.now() / 1000 >= payload.exp ? 'expired' : null;
     } catch {
       return 'invalid';
