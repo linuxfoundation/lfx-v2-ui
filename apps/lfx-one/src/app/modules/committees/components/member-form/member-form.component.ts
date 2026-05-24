@@ -10,7 +10,15 @@ import { InputTextComponent } from '@components/input-text/input-text.component'
 import { OrganizationSearchComponent } from '@components/organization-search/organization-search.component';
 import { SelectComponent } from '@components/select/select.component';
 import { APPOINTED_BY_OPTIONS, COMMITTEE_PERMISSION_OPTIONS, LINKEDIN_PROFILE_PATTERN, MEMBER_ROLES, VOTING_STATUSES } from '@lfx-one/shared/constants';
-import { Committee, CommitteeMember, CommitteePermissionLevel, CommitteeUser, CreateCommitteeMemberRequest, MemberFormValue, OrganizationResolveResult } from '@lfx-one/shared/interfaces';
+import {
+  Committee,
+  CommitteeMember,
+  CommitteePermissionLevel,
+  CommitteeUser,
+  CreateCommitteeMemberRequest,
+  MemberFormValue,
+  OrganizationResolveResult,
+} from '@lfx-one/shared/interfaces';
 import { formatDateToISOString, parseISODateString } from '@lfx-one/shared/utils';
 import { CommitteeService } from '@services/committee.service';
 import { MessageService } from 'primeng/api';
@@ -67,11 +75,13 @@ export class MemberFormComponent {
 
     // Reset organization_id when org name is cleared so a previously-resolved
     // CDP id isn't sent after the user removes the organization.
-    this.form().get('organization')!.valueChanges.subscribe((name) => {
-      if (!name) {
-        this.form().patchValue({ organization_id: null }, { emitEvent: false });
-      }
-    });
+    this.form()
+      .get('organization')!
+      .valueChanges.subscribe((name) => {
+        if (!name) {
+          this.form().patchValue({ organization_id: null }, { emitEvent: false });
+        }
+      });
   }
 
   public clearRoleDates(): void {
