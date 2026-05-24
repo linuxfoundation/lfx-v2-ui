@@ -20,8 +20,11 @@ export class WeeklyBriefService {
 
   public getWeeklyBrief(committeeId: string): Observable<WeeklyBriefCurrentResponse> {
     return this.http.get<WeeklyBriefCurrentResponse>(`/api/committees/${committeeId}/weekly-briefs/current`).pipe(
-      catchError(() =>
-        of({
+      catchError((error: unknown) => {
+        // Log before falling back so failures are visible in DataDog RUM and dev console,
+        // rather than silently degrading to the empty state.
+        console.error('weekly-brief: getWeeklyBrief failed, returning empty state', { committeeId, error });
+        return of({
           brief: null,
           throttle: {
             generates_used: 0,
@@ -30,8 +33,8 @@ export class WeeklyBriefService {
             regenerations_limit: 3,
             window_resets_at: '',
           },
-        } as WeeklyBriefCurrentResponse)
-      )
+        } as WeeklyBriefCurrentResponse);
+      })
     );
   }
 
