@@ -108,6 +108,16 @@ export class AddMemberDialogComponent {
   public readonly votingStatusOptions = VOTING_STATUSES;
   public readonly permissionOptions = [...COMMITTEE_PERMISSION_OPTIONS];
 
+  public constructor() {
+    // Reset org_id when the org name is cleared so a previously-resolved CDP id
+    // isn't sent after the user removes the organization from the form.
+    this.configForm.get('org_name')!.valueChanges.subscribe((name) => {
+      if (!name) {
+        this.configForm.patchValue({ org_id: null }, { emitEvent: false });
+      }
+    });
+  }
+
   public selectUser(user: UserSearchResult & { alreadyMember: boolean }): void {
     if (user.alreadyMember) return;
     this.selectedUser.set(user);

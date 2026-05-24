@@ -64,6 +64,14 @@ export class MemberFormComponent {
 
     // Initialize form with data when component is created
     this.initializeForm();
+
+    // Reset organization_id when org name is cleared so a previously-resolved
+    // CDP id isn't sent after the user removes the organization.
+    this.form().get('organization')!.valueChanges.subscribe((name) => {
+      if (!name) {
+        this.form().patchValue({ organization_id: null }, { emitEvent: false });
+      }
+    });
   }
 
   public clearRoleDates(): void {
