@@ -4,9 +4,42 @@
 import { GenerateWeeklyBriefRequest, SaveWeeklyBriefRequest } from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
+import { ServiceValidationError } from '../errors';
 import { validateUidParameter } from '../helpers/validation.helper';
 import { logger } from '../services/logger.service';
 import { WeeklyBriefService } from '../services/weekly-brief.service';
+
+/**
+ * Narrow `req.body` to a SaveWeeklyBriefRequest, returning a ServiceValidationError
+ * with a per-field reason when anything is missing or has the wrong type.
+ * Without this, e.g. a string `revision` of "1" would cause `revision + 1`
+ * to concatenate to "11" downstream.
+ */
+function validateSaveBriefBody(
+  body: unknown
+): { ok: true; value: SaveWeeklyBriefRequest } | { ok: false; fieldErrors: Record<string, string> } {
+  const fieldErrors: Record<string, string> = {};
+  if (!body || typeof body !== 'object') {
+    return { ok: false, fieldErrors: { body: 'Request body must be a JSON object' } };
+  }
+  const b = body as Record<string, unknown>;
+  if (typeof b['brief_text'] !== 'string') {
+    fieldErrors['brief_text'] = 'brief_text is required and must be a string';
+  }
+  if (typeof b['revision'] !== 'number' || !Number.isFinite(b['revision'] as number)) {
+    fieldErrors['revision'] = 'revision is required and must be a finite number';
+  }
+  if (Object.keys(fieldErrors).length > 0) {
+    return { ok: false, fieldErrors };
+  }
+  return {
+    ok: true,
+    value: {
+      brief_text: b['brief_text'] as string,
+      revision: b['revision'] as number,
+    },
+  };
+}
 
 /**
  * Controller for the WG Weekly Brief endpoints.
@@ -97,11 +130,8 @@ export class WeeklyBriefController {
    */
   public async saveBrief(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { committeeId } = req.params;
-    const body: SaveWeeklyBriefRequest = req.body;
     const startTime = logger.startOperation(req, 'save_weekly_brief', {
       committee_id: committeeId,
-      revision: body?.revision,
-      brief_text_length: body?.brief_text?.length,
     });
 
     try {
@@ -113,6 +143,18 @@ export class WeeklyBriefController {
       ) {
         return;
       }
+
+      const validation = validateSaveBriefBody(req.body);
+      if (!validation.ok) {
+        return next(
+          ServiceValidationError.fromFieldErrors(validation.fieldErrors, 'Invalid save-weekly-brief request body', {
+            operation: 'save_weekly_brief',
+            service: 'weekly_brief_controller',
+            path: req.path,
+          })
+        );
+      }
+      const body = validation.value;
 
       const result = await this.weeklyBriefService.saveBrief(req, committeeId, body);
 
