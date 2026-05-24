@@ -5,7 +5,7 @@ export type WeeklyBriefState = 'empty' | 'generating' | 'generated' | 'edited' |
 
 export interface WeeklyBriefSourceRef {
   claim_id: string;
-  source_type: string;        // 'meeting' | 'vote' | 'member' | 'mailing_list'
+  source_type: string; // 'meeting' | 'vote' | 'member' | 'mailing_list'
   source_uid: string;
   source_label?: string;
   source_url?: string;
@@ -14,8 +14,8 @@ export interface WeeklyBriefSourceRef {
 export interface WeeklyBrief {
   uid: string;
   committee_uid: string;
-  window_start: string;       // ISO8601 UTC Sunday 00:00:00
-  window_end: string;         // ISO8601 UTC Saturday 23:59:59
+  window_start: string; // ISO8601 UTC Sunday 00:00:00
+  window_end: string; // ISO8601 UTC Saturday 23:59:59
   state: WeeklyBriefState;
   brief_text: string;
   source_refs: WeeklyBriefSourceRef[];
