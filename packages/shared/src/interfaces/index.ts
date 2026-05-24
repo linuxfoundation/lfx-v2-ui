@@ -168,3 +168,6 @@ export * from './org-memberships.interface';
 
 // Newsletter interfaces
 export * from './newsletter.interface';
+
+// Weekly Brief interfaces
+export * from './weekly-brief.interface';
