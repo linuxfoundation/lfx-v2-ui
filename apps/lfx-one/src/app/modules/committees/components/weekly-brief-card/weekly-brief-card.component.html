@@ -45,18 +45,11 @@
         }
 
         @if (editMode()) {
-          <textarea
-            class="h-48 w-full rounded border border-gray-300 p-2 text-sm"
-            [formControl]="editControl"
-            data-testid="weekly-brief-card-edit-textarea"></textarea>
+          <lfx-textarea [form]="editForm" control="briefText" [rows]="8" styleClass="w-full h-48 text-sm" dataTestId="weekly-brief-card-edit-textarea" />
+
           <div class="flex gap-2">
             <lfx-button label="Save" (onClick)="onSave()" [loading]="saving()" data-testid="weekly-brief-card-save-button" />
-            <lfx-button
-              label="Cancel"
-              severity="secondary"
-              [text]="true"
-              (onClick)="onCancelEdit()"
-              data-testid="weekly-brief-card-cancel-button" />
+            <lfx-button label="Cancel" severity="secondary" [text]="true" (onClick)="onCancelEdit()" data-testid="weekly-brief-card-cancel-button" />
           </div>
         } @else {
           <pre class="max-h-64 overflow-y-auto whitespace-pre-wrap rounded bg-gray-50 p-3 text-sm text-gray-700">{{ b.brief_text }}</pre>
@@ -75,19 +68,13 @@
               (onClick)="onGenerate()"
               data-testid="weekly-brief-card-regenerate-button" />
             <lfx-button label="Edit" severity="secondary" (onClick)="onEdit()" data-testid="weekly-brief-card-edit-button" />
-            <lfx-button
-              label="Copy & Share"
-              severity="info"
-              icon="fa-light fa-copy"
-              (onClick)="onCopyAndShare()"
-              data-testid="weekly-brief-card-copy-button" />
+            <lfx-button label="Copy & Share" severity="info" icon="fa-light fa-copy" (onClick)="onCopyAndShare()" data-testid="weekly-brief-card-copy-button" />
           </div>
         }
 
         @if (throttle(); as t) {
           <span class="text-xs text-gray-500">
-            {{ t.generates_used }}/{{ t.generates_limit }} generates ·
-            {{ t.regenerations_used }}/{{ t.regenerations_limit }} regenerations used this week
+            {{ t.generates_used }}/{{ t.generates_limit }} generates · {{ t.regenerations_used }}/{{ t.regenerations_limit }} regenerations used this week
           </span>
         }
       </div>

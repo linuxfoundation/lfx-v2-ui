@@ -4,18 +4,19 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, input, Signal, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
+import { TextareaComponent } from '@components/textarea/textarea.component';
 import { Committee, WeeklyBrief, WeeklyBriefCurrentResponse, WeeklyBriefThrottle } from '@lfx-one/shared/interfaces';
 import { WeeklyBriefService } from '@services/weekly-brief.service';
 import { MessageService } from 'primeng/api';
 import { SkeletonModule } from 'primeng/skeleton';
-import { BehaviorSubject, catchError, combineLatest, filter, finalize, of, switchMap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, filter, finalize, of, switchMap, take } from 'rxjs';
 
 @Component({
   selector: 'lfx-weekly-brief-card',
-  imports: [CardComponent, ButtonComponent, SkeletonModule, ReactiveFormsModule],
+  imports: [CardComponent, ButtonComponent, SkeletonModule, ReactiveFormsModule, TextareaComponent],
   templateUrl: './weekly-brief-card.component.html',
   styleUrl: './weekly-brief-card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,8 +36,10 @@ export class WeeklyBriefCardComponent {
   public readonly saving = signal(false);
   public readonly editMode = signal(false);
 
-  // Reactive form control for the editor textarea
-  public readonly editControl = new FormControl('', { nonNullable: true });
+  // Reactive form for the editor textarea — `lfx-textarea` requires a FormGroup + control name.
+  public readonly editForm = new FormGroup({
+    briefText: new FormControl('', { nonNullable: true }),
+  });
 
   // Refresh trigger — declared above briefResponse so the toSignal call sees it.
   // Logically part of the private helpers band (section 11).
@@ -78,45 +81,52 @@ export class WeeklyBriefCardComponent {
     this.generating.set(true);
     const currentBrief = this.brief();
     const body = currentBrief ? { revision: currentBrief.revision } : {};
-    this.weeklyBriefService.generateWeeklyBrief(committeeUid, body).subscribe({
-      next: () => {
-        this.generating.set(false);
-        this.refresh$.next();
-      },
-      error: (err: HttpErrorResponse) => {
-        this.generating.set(false);
-        const detail =
-          err?.status === 429
-            ? 'Weekly generation limit reached. Try again next week.'
-            : 'Failed to generate brief. Please try again.';
-        this.messageService.add({ severity: 'error', summary: 'Generate failed', detail });
-      },
-    });
+    this.weeklyBriefService
+      .generateWeeklyBrief(committeeUid, body)
+      .pipe(take(1))
+      .subscribe({
+        next: () => {
+          this.generating.set(false);
+          this.refresh$.next();
+        },
+        error: (err: HttpErrorResponse) => {
+          this.generating.set(false);
+          const detail = err?.status === 429 ? 'Weekly generation limit reached. Try again next week.' : 'Failed to generate brief. Please try again.';
+          this.messageService.add({ severity: 'error', summary: 'Generate failed', detail });
+        },
+      });
   }
 
   public onEdit(): void {
     this.editMode.set(true);
-    this.editControl.setValue(this.brief()?.brief_text ?? '');
+    this.editForm.controls.briefText.setValue(this.brief()?.brief_text ?? '');
   }
 
   public onSave(): void {
     const committeeUid = this.committee()?.uid;
     const current = this.brief();
     if (!committeeUid || !current) return;
+    const text = this.editForm.controls.briefText.value.trim();
+    if (!text) {
+      this.messageService.add({ severity: 'warn', summary: 'Empty brief', detail: 'Brief text cannot be empty.' });
+      return;
+    }
     this.saving.set(true);
-    this.weeklyBriefService.saveWeeklyBrief(committeeUid, { brief_text: this.editControl.value, revision: current.revision }).subscribe({
-      next: () => {
-        this.saving.set(false);
-        this.editMode.set(false);
-        this.refresh$.next();
-      },
-      error: (err: HttpErrorResponse) => {
-        this.saving.set(false);
-        const detail =
-          err?.status === 409 ? 'Someone else updated this brief. Reload to see the latest version.' : 'Failed to save brief. Please try again.';
-        this.messageService.add({ severity: 'error', summary: 'Save failed', detail });
-      },
-    });
+    this.weeklyBriefService
+      .saveWeeklyBrief(committeeUid, { brief_text: text, revision: current.revision })
+      .pipe(take(1))
+      .subscribe({
+        next: () => {
+          this.saving.set(false);
+          this.editMode.set(false);
+          this.refresh$.next();
+        },
+        error: (err: HttpErrorResponse) => {
+          this.saving.set(false);
+          const detail = err?.status === 409 ? 'Someone else updated this brief. Reload to see the latest version.' : 'Failed to save brief. Please try again.';
+          this.messageService.add({ severity: 'error', summary: 'Save failed', detail });
+        },
+      });
   }
 
   public async onCopyAndShare(): Promise<void> {
