@@ -10,7 +10,7 @@ import { InputTextComponent } from '@components/input-text/input-text.component'
 import { OrganizationSearchComponent } from '@components/organization-search/organization-search.component';
 import { SelectComponent } from '@components/select/select.component';
 import { APPOINTED_BY_OPTIONS, COMMITTEE_PERMISSION_OPTIONS, LINKEDIN_PROFILE_PATTERN, MEMBER_ROLES, VOTING_STATUSES } from '@lfx-one/shared/constants';
-import { Committee, CommitteeMember, CommitteePermissionLevel, CommitteeUser, CreateCommitteeMemberRequest, MemberFormValue } from '@lfx-one/shared/interfaces';
+import { Committee, CommitteeMember, CommitteePermissionLevel, CommitteeUser, CreateCommitteeMemberRequest, MemberFormValue, OrganizationResolveResult } from '@lfx-one/shared/interfaces';
 import { formatDateToISOString, parseISODateString } from '@lfx-one/shared/utils';
 import { CommitteeService } from '@services/committee.service';
 import { MessageService } from 'primeng/api';
@@ -262,9 +262,14 @@ export class MemberFormComponent {
     return 'member';
   }
 
+  public onOrgResolved(result: OrganizationResolveResult): void {
+    this.form().patchValue({ organization_id: result.id || null });
+  }
+
   private buildOrganizationPayload(formValue: MemberFormValue): CreateCommitteeMemberRequest['organization'] {
-    if (formValue.organization || formValue.organization_url) {
+    if (formValue.organization || formValue.organization_url || formValue.organization_id) {
       return {
+        id: formValue.organization_id || null,
         name: formValue.organization || null,
         website: formValue.organization_url || null,
       };
@@ -282,6 +287,7 @@ export class MemberFormComponent {
         linkedin_profile: new FormControl('', [Validators.pattern(LINKEDIN_PROFILE_PATTERN)]),
         organization: new FormControl(''),
         organization_url: new FormControl(''),
+        organization_id: new FormControl<string | null>(null),
         role: new FormControl('', this.committee?.enable_voting ? [Validators.required] : []),
         voting_status: new FormControl('', this.committee?.enable_voting ? [Validators.required] : []),
         appointed_by: new FormControl(''),

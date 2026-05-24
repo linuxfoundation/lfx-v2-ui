@@ -20,6 +20,7 @@ import {
   CommitteeUser,
   CreateCommitteeMemberRequest,
   DialogMode,
+  OrganizationResolveResult,
   UserSearchResult,
 } from '@lfx-one/shared/interfaces';
 import { UserAvatarColorPipe } from '@pipes/user-avatar-color.pipe';
@@ -68,6 +69,7 @@ export class AddMemberDialogComponent {
     voting_status: new FormControl<string | null>(null, this.committee?.enable_voting ? [Validators.required] : []),
     org_name: new FormControl<string>('', this.committee?.business_email_required || this.committee?.enable_voting ? [Validators.required] : []),
     org_domain: new FormControl<string>(''),
+    org_id: new FormControl<string | null>(null),
     subscribe_mailing_list: new FormControl<boolean>(true),
     permission: new FormControl<CommitteePermissionLevel>('member'),
   });
@@ -118,8 +120,12 @@ export class AddMemberDialogComponent {
 
   public clearSelection(): void {
     this.selectedUser.set(null);
-    this.configForm.patchValue({ org_name: '', org_domain: '' });
+    this.configForm.patchValue({ org_name: '', org_domain: '', org_id: null });
     this.mode.set('search');
+  }
+
+  public onOrgResolved(result: OrganizationResolveResult): void {
+    this.configForm.patchValue({ org_id: result.id || null });
   }
 
   public showManualForm(): void {
@@ -148,7 +154,7 @@ export class AddMemberDialogComponent {
       first_name: user.first_name ?? null,
       last_name: user.last_name ?? null,
       job_title: user.job_title ?? null,
-      organization: formValue.org_name || formValue.org_domain ? { name: formValue.org_name || null, website: formValue.org_domain || null } : null,
+      organization: formValue.org_name || formValue.org_domain || formValue.org_id ? { id: formValue.org_id || null, name: formValue.org_name || null, website: formValue.org_domain || null } : null,
       role: formValue.role ? { name: formValue.role as CommitteeMemberRole, start_date: null, end_date: null } : null,
       voting: formValue.voting_status ? { status: formValue.voting_status as CommitteeMemberVotingStatus, start_date: null, end_date: null } : null,
     };
