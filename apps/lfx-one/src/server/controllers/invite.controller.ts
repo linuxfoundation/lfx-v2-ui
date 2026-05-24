@@ -112,7 +112,7 @@ export class InviteController {
   private verifyInviteToken(token: string, secret: string): InviteTokenPayload {
     const key = JWK.asKey(Buffer.from(secret));
     const payload = JWT.verify<InviteTokenPayload>(token, key, { algorithms: ['HS256'] });
-    if (typeof payload.exp !== 'number' || !isFinite(payload.exp)) {
+    if (typeof payload.exp !== 'number' || !Number.isFinite(payload.exp)) {
       throw new Error('Token is missing required exp claim');
     }
     return payload;
