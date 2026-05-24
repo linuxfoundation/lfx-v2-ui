@@ -114,12 +114,15 @@ export class AddMemberDialogComponent {
     // Reset org_id whenever org name diverges from the last CDP-resolved name.
     // Using the resolved name (not just empty check) prevents sending a stale
     // org id when the user edits to a different non-empty value after resolution.
-    this.configForm.get('org_name')!.valueChanges.pipe(takeUntilDestroyed()).subscribe((name) => {
-      const normalizedName = (name ?? '').trim();
-      if (!normalizedName || normalizedName !== this.resolvedOrgName) {
-        this.configForm.patchValue({ org_id: null }, { emitEvent: false });
-      }
-    });
+    this.configForm
+      .get('org_name')!
+      .valueChanges.pipe(takeUntilDestroyed())
+      .subscribe((name) => {
+        const normalizedName = (name ?? '').trim();
+        if (!normalizedName || normalizedName !== this.resolvedOrgName) {
+          this.configForm.patchValue({ org_id: null }, { emitEvent: false });
+        }
+      });
   }
 
   public selectUser(user: UserSearchResult & { alreadyMember: boolean }): void {
