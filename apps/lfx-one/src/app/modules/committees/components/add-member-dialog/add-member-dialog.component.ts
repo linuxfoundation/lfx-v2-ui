@@ -154,7 +154,10 @@ export class AddMemberDialogComponent {
       first_name: user.first_name ?? null,
       last_name: user.last_name ?? null,
       job_title: user.job_title ?? null,
-      organization: formValue.org_name || formValue.org_domain || formValue.org_id ? { id: formValue.org_id || null, name: formValue.org_name || null, website: formValue.org_domain || null } : null,
+      organization:
+        formValue.org_name || formValue.org_domain || formValue.org_id
+          ? { id: formValue.org_id || null, name: formValue.org_name || null, website: formValue.org_domain || null }
+          : null,
       role: formValue.role ? { name: formValue.role as CommitteeMemberRole, start_date: null, end_date: null } : null,
       voting: formValue.voting_status ? { status: formValue.voting_status as CommitteeMemberVotingStatus, start_date: null, end_date: null } : null,
     };

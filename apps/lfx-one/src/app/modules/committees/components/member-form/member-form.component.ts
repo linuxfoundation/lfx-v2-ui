@@ -83,6 +83,10 @@ export class MemberFormComponent {
     this.dialogRef.close();
   }
 
+  public onOrgResolved(result: OrganizationResolveResult): void {
+    this.form().patchValue({ organization_id: result.id || null });
+  }
+
   public onSubmit(): void {
     if (this.form().valid) {
       this.submitting.set(true);
@@ -260,10 +264,6 @@ export class MemberFormComponent {
     if (committee.writers?.some(matches)) return 'manage';
     if (committee.auditors?.some(matches)) return 'review';
     return 'member';
-  }
-
-  public onOrgResolved(result: OrganizationResolveResult): void {
-    this.form().patchValue({ organization_id: result.id || null });
   }
 
   private buildOrganizationPayload(formValue: MemberFormValue): CreateCommitteeMemberRequest['organization'] {
