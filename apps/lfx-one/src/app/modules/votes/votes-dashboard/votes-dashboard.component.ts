@@ -15,6 +15,7 @@ import { PersonaService } from '@services/persona.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { VoteService } from '@services/vote.service';
 import { BehaviorSubject, catchError, combineLatest, finalize, map, of, switchMap, tap } from 'rxjs';
+import { SkeletonModule } from 'primeng/skeleton';
 
 import { VoteCastDrawerComponent } from '../components/vote-cast-drawer/vote-cast-drawer.component';
 import { VoteResultsDrawerComponent } from '../components/vote-results-drawer/vote-results-drawer.component';
@@ -22,7 +23,16 @@ import { VotesTableComponent } from '../components/votes-table/votes-table.compo
 
 @Component({
   selector: 'lfx-votes-dashboard',
-  imports: [LowerCasePipe, ButtonComponent, VotesTableComponent, VoteResultsDrawerComponent, VoteCastDrawerComponent, RouterLink, EmptyStateComponent],
+  imports: [
+    LowerCasePipe,
+    ButtonComponent,
+    VotesTableComponent,
+    VoteResultsDrawerComponent,
+    VoteCastDrawerComponent,
+    RouterLink,
+    EmptyStateComponent,
+    SkeletonModule,
+  ],
   templateUrl: './votes-dashboard.component.html',
   styleUrl: './votes-dashboard.component.scss',
 })
@@ -59,6 +69,7 @@ export class VotesDashboardComponent {
 
   // === Lens ===
   protected readonly isMeLens: Signal<boolean> = computed(() => this.lensService.activeLens() === 'me');
+  protected readonly personaLoaded = this.personaService.personaLoaded;
   public showFoundationFilter: Signal<boolean> = computed(() => this.isMeLens() && this.personaService.hasBoardRole() && this.foundationOptions().length > 1);
   public showProjectFilter: Signal<boolean> = computed(() => this.isMeLens() && this.personaService.hasProjectRole() && this.projectOptions().length > 1);
 
