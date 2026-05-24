@@ -307,7 +307,7 @@ export class MemberFormComponent {
         email: new FormControl('', [Validators.required, Validators.email]),
         job_title: new FormControl(''),
         linkedin_profile: new FormControl('', [Validators.pattern(LINKEDIN_PROFILE_PATTERN)]),
-        organization: new FormControl(''),
+        organization: new FormControl('', this.committee?.business_email_required || this.committee?.enable_voting ? [Validators.required] : []),
         organization_url: new FormControl(''),
         organization_id: new FormControl<string | null>(null),
         role: new FormControl('', this.committee?.enable_voting ? [Validators.required] : []),
