@@ -3,6 +3,7 @@
 
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { CalendarComponent } from '@components/calendar/calendar.component';
@@ -79,7 +80,8 @@ export class MemberFormComponent {
     // name, preventing a stale id when the user edits to a different non-empty value.
     this.form()
       .get('organization')!
-      .valueChanges.subscribe((name) => {
+      .valueChanges.pipe(takeUntilDestroyed())
+      .subscribe((name) => {
         const normalizedName = (name ?? '').trim();
         if (!normalizedName || normalizedName !== this.resolvedOrganizationName) {
           this.form().patchValue({ organization_id: null }, { emitEvent: false });

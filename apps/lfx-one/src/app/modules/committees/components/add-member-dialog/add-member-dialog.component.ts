@@ -4,7 +4,7 @@
 import { NgClass } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, Signal, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { CheckboxComponent } from '@components/checkbox/checkbox.component';
@@ -114,7 +114,7 @@ export class AddMemberDialogComponent {
     // Reset org_id whenever org name diverges from the last CDP-resolved name.
     // Using the resolved name (not just empty check) prevents sending a stale
     // org id when the user edits to a different non-empty value after resolution.
-    this.configForm.get('org_name')!.valueChanges.subscribe((name) => {
+    this.configForm.get('org_name')!.valueChanges.pipe(takeUntilDestroyed()).subscribe((name) => {
       const normalizedName = (name ?? '').trim();
       if (!normalizedName || normalizedName !== this.resolvedOrgName) {
         this.configForm.patchValue({ org_id: null }, { emitEvent: false });
