@@ -11,6 +11,8 @@ import {
 } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
+import { MicroserviceError } from '../errors';
+
 import { MicroserviceProxyService } from './microservice-proxy.service';
 
 /**
@@ -116,8 +118,10 @@ export class WeeklyBriefService {
         `/committees/${committeeId}/weekly-briefs/current`,
         'GET'
       );
-    } catch (error: any) {
-      if (error?.statusCode === 404 || error?.status === 404) {
+    } catch (error) {
+      // Narrow the 404 to the proxy error type — checking a loose `.status`
+      // property could mask other errors that happen to have that field.
+      if (error instanceof MicroserviceError && error.statusCode === 404) {
         return { brief: null, throttle: defaultThrottle() };
       }
       throw error;
