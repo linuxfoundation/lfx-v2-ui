@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { WEEKLY_BRIEF_DEFAULT_THROTTLE } from '@lfx-one/shared/constants';
+import { DEFAULT_QUERY_PARAMS, WEEKLY_BRIEF_DEFAULT_THROTTLE } from '@lfx-one/shared/constants';
 import {
   GenerateWeeklyBriefRequest,
   GenerateWeeklyBriefResponse,
@@ -193,28 +193,77 @@ export class WeeklyBriefService {
       if (req.bearerToken) {
         headers['Authorization'] = `Bearer ${req.bearerToken}`;
       }
-      const response = await fetch(`${overrideUrl}${path}`, {
+      // Use `new URL` so a trailing slash on COMMITTEE_SERVICE_URL doesn't
+      // produce `//path` and so the absence of one doesn't drop the path.
+      const target = new URL(path, overrideUrl.endsWith('/') ? overrideUrl : overrideUrl + '/');
+      // Match MicroserviceProxyService.proxyRequest which always appends
+      // DEFAULT_QUERY_PARAMS (`v=1`) — keeping behaviour consistent across
+      // the gateway and override paths so the override is a drop-in for
+      // local dev.
+      for (const [k, v] of Object.entries(DEFAULT_QUERY_PARAMS)) {
+        if (!target.searchParams.has(k)) {
+          target.searchParams.set(k, v);
+        }
+      }
+      // 15s timeout + abort signal so a hanging committee-service doesn't
+      // wedge the BFF request indefinitely.
+      const response = await fetch(target.toString(), {
         method,
         headers,
         body: body !== undefined ? JSON.stringify(body) : undefined,
+        signal: AbortSignal.timeout(15_000),
       });
+      const operation = `${method.toLowerCase()}_${path.replace(/\//g, '_')}`;
       if (!response.ok) {
-        const operation = `${method.toLowerCase()}_${path.replace(/\//g, '_')}`;
-        const errorBody = await response.json().catch(() => undefined);
+        const errorText = await response.text().catch(() => '');
+        let errorBody: unknown;
+        try {
+          errorBody = errorText ? JSON.parse(errorText) : undefined;
+        } catch {
+          errorBody = errorText ? { message: errorText } : undefined;
+        }
         throw MicroserviceError.fromMicroserviceResponse(response.status, response.statusText, errorBody, 'COMMITTEE_SERVICE_URL', path, operation);
       }
+      // 204 / empty body on a path that expects a JSON envelope is an
+      // upstream contract violation — wrap as 502 (bad gateway) rather than
+      // leaking the raw 204 status through MicroserviceError, since the
+      // weekly-brief endpoints always return a payload on success.
       if (response.status === 204 || response.headers.get('content-length') === '0') {
-        const operation = `${method.toLowerCase()}_${path.replace(/\//g, '_')}`;
         throw MicroserviceError.fromMicroserviceResponse(
-          response.status,
-          response.statusText || 'No Content',
-          { message: 'committee-service returned empty body where a JSON payload was expected' },
+          502,
+          'Bad Gateway',
+          { message: `committee-service returned ${response.status} where a JSON payload was expected` },
           'COMMITTEE_SERVICE_URL',
           path,
           operation
         );
       }
-      return (await response.json()) as T;
+      // Defensively text-read + parse: an empty/non-JSON 200 body would make
+      // response.json() throw a SyntaxError that bypasses MicroserviceError
+      // wrapping and surfaces as an unhelpful 500 to the UI.
+      const text = await response.text();
+      if (!text) {
+        throw MicroserviceError.fromMicroserviceResponse(
+          502,
+          'Bad Gateway',
+          { message: 'committee-service returned an empty 2xx body' },
+          'COMMITTEE_SERVICE_URL',
+          path,
+          operation
+        );
+      }
+      try {
+        return JSON.parse(text) as T;
+      } catch (err) {
+        throw MicroserviceError.fromMicroserviceResponse(
+          502,
+          'Bad Gateway',
+          { message: 'committee-service returned a non-JSON 2xx body', detail: err instanceof Error ? err.message : String(err) },
+          'COMMITTEE_SERVICE_URL',
+          path,
+          operation
+        );
+      }
     }
     return this.microserviceProxy.proxyRequest<T>(req, 'LFX_V2_SERVICE', path, method, undefined, body);
   }
