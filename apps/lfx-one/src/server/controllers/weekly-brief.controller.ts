@@ -52,7 +52,7 @@ export class WeeklyBriefController {
   private weeklyBriefService: WeeklyBriefService = new WeeklyBriefService();
 
   /**
-   * GET /committees/:committeeId/weekly-briefs/current
+   * GET /api/committees/:committeeId/weekly-briefs/current
    */
   public async getCurrentBrief(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { committeeId } = req.params;
@@ -86,7 +86,7 @@ export class WeeklyBriefController {
   }
 
   /**
-   * POST /committees/:committeeId/weekly-briefs/generate
+   * POST /api/committees/:committeeId/weekly-briefs/generate
    */
   public async generateBrief(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { committeeId } = req.params;
@@ -126,7 +126,7 @@ export class WeeklyBriefController {
   }
 
   /**
-   * PUT /committees/:committeeId/weekly-briefs/current
+   * PUT /api/committees/:committeeId/weekly-briefs/current
    */
   public async saveBrief(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { committeeId } = req.params;
