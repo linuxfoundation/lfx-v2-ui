@@ -3,9 +3,11 @@
 
 export type WeeklyBriefState = 'empty' | 'generating' | 'generated' | 'edited' | 'approved' | 'error';
 
+export type WeeklyBriefSourceType = 'meeting' | 'vote' | 'member' | 'mailing_list';
+
 export interface WeeklyBriefSourceRef {
   claim_id: string;
-  source_type: string; // 'meeting' | 'vote' | 'member' | 'mailing_list'
+  source_type: WeeklyBriefSourceType;
   source_uid: string;
   source_label?: string;
   source_url?: string;
