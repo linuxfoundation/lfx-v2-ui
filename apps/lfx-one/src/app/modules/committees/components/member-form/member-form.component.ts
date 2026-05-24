@@ -59,6 +59,8 @@ export class MemberFormComponent {
   public appointedByOptions = APPOINTED_BY_OPTIONS;
   public permissionOptions = [...COMMITTEE_PERMISSION_OPTIONS];
 
+  private resolvedOrganizationName: string | null = null;
+
   public constructor() {
     // Initialize config-based properties
     this.isEditing = this.config.data?.isEditing || false;
@@ -73,12 +75,13 @@ export class MemberFormComponent {
     // Initialize form with data when component is created
     this.initializeForm();
 
-    // Reset organization_id when org name is cleared so a previously-resolved
-    // CDP id isn't sent after the user removes the organization.
+    // Reset organization_id whenever org name diverges from the last CDP-resolved
+    // name, preventing a stale id when the user edits to a different non-empty value.
     this.form()
       .get('organization')!
       .valueChanges.subscribe((name) => {
-        if (!name) {
+        const normalizedName = (name ?? '').trim();
+        if (!normalizedName || normalizedName !== this.resolvedOrganizationName) {
           this.form().patchValue({ organization_id: null }, { emitEvent: false });
         }
       });
@@ -102,6 +105,7 @@ export class MemberFormComponent {
   }
 
   public onOrgResolved(result: OrganizationResolveResult): void {
+    this.resolvedOrganizationName = result.name;
     this.form().patchValue({ organization_id: result.id || null });
   }
 

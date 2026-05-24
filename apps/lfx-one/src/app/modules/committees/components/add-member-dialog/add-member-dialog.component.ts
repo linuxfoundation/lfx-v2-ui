@@ -108,11 +108,15 @@ export class AddMemberDialogComponent {
   public readonly votingStatusOptions = VOTING_STATUSES;
   public readonly permissionOptions = [...COMMITTEE_PERMISSION_OPTIONS];
 
+  private resolvedOrgName: string | null = null;
+
   public constructor() {
-    // Reset org_id when the org name is cleared so a previously-resolved CDP id
-    // isn't sent after the user removes the organization from the form.
+    // Reset org_id whenever org name diverges from the last CDP-resolved name.
+    // Using the resolved name (not just empty check) prevents sending a stale
+    // org id when the user edits to a different non-empty value after resolution.
     this.configForm.get('org_name')!.valueChanges.subscribe((name) => {
-      if (!name) {
+      const normalizedName = (name ?? '').trim();
+      if (!normalizedName || normalizedName !== this.resolvedOrgName) {
         this.configForm.patchValue({ org_id: null }, { emitEvent: false });
       }
     });
@@ -130,11 +134,13 @@ export class AddMemberDialogComponent {
 
   public clearSelection(): void {
     this.selectedUser.set(null);
+    this.resolvedOrgName = null;
     this.configForm.patchValue({ org_name: '', org_domain: '', org_id: null });
     this.mode.set('search');
   }
 
   public onOrgResolved(result: OrganizationResolveResult): void {
+    this.resolvedOrgName = result.name;
     this.configForm.patchValue({ org_id: result.id || null });
   }
 
