@@ -3,27 +3,13 @@
 
 import { Injectable, signal } from '@angular/core';
 
-/**
- * Shared hook for opening the cross-tab person profile side panel from
- * any Org Lens People-page tab.
- *
- * The panel UI itself is intentionally not implemented yet — this
- * service exists so sibling stories that introduce person rows
- * (LFXV2-1869 children) have a single, stable API to wire `(click)`
- * handlers into, instead of each tab picking its own hook.
- */
+/** Cross-tab hook for the person profile side panel (panel UI is a follow-up story). */
 @Injectable({
   providedIn: 'root',
 })
 export class PersonProfilePanelService {
   private readonly _activePerson = signal<string | null>(null);
 
-  /**
-   * Name of the currently selected person, or `null` when the panel is
-   * closed. Will be replaced with a richer Person record once the
-   * panel internals land. Exposed read-only so callers go through
-   * `open()` / `close()`.
-   */
   public readonly activePerson = this._activePerson.asReadonly();
 
   public open(name: string): void {

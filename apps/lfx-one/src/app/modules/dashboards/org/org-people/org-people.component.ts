@@ -48,12 +48,29 @@ export class OrgPeopleComponent {
     if (tabId === this.activeTab()) {
       return;
     }
-    this.router.navigate([], {
+    // Tab switches are not navigation events worth a browser-history entry.
+    void this.router.navigate([], {
       relativeTo: this.route,
-      // Drop the param when it would equal the default so the URL stays
-      // `/org/people` rather than `/org/people?tab=all`.
       queryParams: { tab: tabId === DEFAULT_PEOPLE_TAB_ID ? null : tabId },
       queryParamsHandling: 'merge',
+      replaceUrl: true,
     });
+  }
+
+  protected onTabKeydown(event: KeyboardEvent): void {
+    const ids = this.tabs.map((t) => t.id);
+    const idx = ids.indexOf(this.activeTab());
+    let next: number | null = null;
+    if (event.key === 'ArrowRight') next = (idx + 1) % ids.length;
+    else if (event.key === 'ArrowLeft') next = (idx - 1 + ids.length) % ids.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = ids.length - 1;
+    if (next !== null) {
+      event.preventDefault();
+      this.switchTab(ids[next]);
+      if (typeof document !== 'undefined') {
+        (document.getElementById(`org-people-tab-${ids[next]}`) as HTMLElement | null)?.focus();
+      }
+    }
   }
 }

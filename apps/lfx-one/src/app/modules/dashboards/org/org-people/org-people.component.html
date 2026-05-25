@@ -13,13 +13,14 @@
     class="flex items-center gap-1 border-b border-gray-200 overflow-x-auto"
     data-testid="org-people-tab-bar"
     role="tablist"
-    aria-label="People page sections">
+    aria-label="People page sections"
+    (keydown)="onTabKeydown($event)">
     @for (tab of tabs; track tab.id) {
       <button
         type="button"
         role="tab"
         class="flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
-        [attr.id]="'org-people-tab-' + tab.id"
+        [id]="'org-people-tab-' + tab.id"
         [attr.aria-selected]="activeTab() === tab.id"
         aria-controls="org-people-tabpanel"
         [attr.tabindex]="activeTab() === tab.id ? 0 : -1"
