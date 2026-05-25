@@ -116,4 +116,3 @@ export const MOCK_DONATION_HISTORY: DonationHistoryItem[] = [
     amount: 50,
   },
 ];
-
