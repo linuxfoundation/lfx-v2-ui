@@ -18,12 +18,20 @@ export class CrowdfundingService {
   private readonly http = inject(HttpClient);
 
   public getMyInitiatives(): Observable<InitiativesResponse> {
-    return this.http.get<InitiativesResponse>('/api/crowdfunding/initiatives').pipe(catchError(() => of(EMPTY_RESPONSE)));
+    return this.http.get<InitiativesResponse>('/api/crowdfunding/initiatives').pipe(
+      catchError((err) => {
+        console.error('[CrowdfundingService] getMyInitiatives failed', err);
+        return of(EMPTY_RESPONSE);
+      })
+    );
   }
 
   public getMyInitiativesStats(): Observable<CrowdfundingInitiativesStats> {
-    return this.http
-      .get<CrowdfundingInitiativesStats>('/api/crowdfunding/initiatives/stats')
-      .pipe(catchError(() => of(EMPTY_STATS)));
+    return this.http.get<CrowdfundingInitiativesStats>('/api/crowdfunding/initiatives/stats').pipe(
+      catchError((err) => {
+        console.error('[CrowdfundingService] getMyInitiativesStats failed', err);
+        return of(EMPTY_STATS);
+      })
+    );
   }
 }

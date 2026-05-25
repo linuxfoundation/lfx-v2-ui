@@ -11,8 +11,6 @@ import { map } from 'rxjs';
 import { InitiativesStatsBarComponent } from './components/initiatives-stats-bar/initiatives-stats-bar.component';
 import { InitiativesListComponent } from './components/initiatives-list/initiatives-list.component';
 
-const EMPTY_STATS: CrowdfundingInitiativesStats = { activeCount: 0, totalRaised: 0, monthlyGain: 0, totalSponsors: 0 };
-
 @Component({
   selector: 'lfx-my-initiatives',
   imports: [InitiativesStatsBarComponent, InitiativesListComponent],
@@ -29,7 +27,7 @@ export class MyInitiativesComponent {
 
   // ─── Computed Signals ──────────────────────────────────────────────────────
   protected readonly initiatives: Signal<InitiativeBase[]> = this.initInitiatives();
-  protected readonly stats: Signal<CrowdfundingInitiativesStats> = this.initStats();
+  protected readonly stats: Signal<CrowdfundingInitiativesStats | undefined> = this.initStats();
 
   // ─── Protected Methods ─────────────────────────────────────────────────────
   protected onInitiativeClick(slug: string): void {
@@ -38,13 +36,10 @@ export class MyInitiativesComponent {
 
   // ─── Private Initializers ──────────────────────────────────────────────────
   private initInitiatives(): Signal<InitiativeBase[]> {
-    return toSignal(
-      this.crowdfundingService.getMyInitiatives().pipe(map((res: InitiativesResponse) => res.data)),
-      { initialValue: [] },
-    );
+    return toSignal(this.crowdfundingService.getMyInitiatives().pipe(map((res: InitiativesResponse) => res.data)), { initialValue: [] });
   }
 
-  private initStats(): Signal<CrowdfundingInitiativesStats> {
-    return toSignal(this.crowdfundingService.getMyInitiativesStats(), { initialValue: EMPTY_STATS });
+  private initStats(): Signal<CrowdfundingInitiativesStats | undefined> {
+    return toSignal(this.crowdfundingService.getMyInitiativesStats());
   }
 }

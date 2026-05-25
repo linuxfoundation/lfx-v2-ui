@@ -3,13 +3,7 @@
 
 import { environment } from '@environments/environment';
 import { FundType } from '@lfx-one/shared/enums';
-import {
-  CrowdfundingInitiativeDetail,
-  DonationHistoryItem,
-  DonationStats,
-  PaymentMethod,
-  RecurringDonation,
-} from '@lfx-one/shared/interfaces';
+import { CrowdfundingInitiativeDetail, DonationHistoryItem, DonationStats, PaymentMethod, RecurringDonation } from '@lfx-one/shared/interfaces';
 
 export const MOCK_INITIATIVE_DETAIL: CrowdfundingInitiativeDetail = {
   id: 'otel',

@@ -117,7 +117,6 @@ export interface PaginationInfo {
   hasPrev: boolean;
 }
 
-
 /**
  * Paginated response wrapper for offset-based pagination
  * @description Generic response structure for API endpoints that use total/pageSize/offset pagination
