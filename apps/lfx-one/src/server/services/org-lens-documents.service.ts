@@ -93,7 +93,16 @@ export class OrgLensDocumentsService {
     };
   }
 
-  /** Normalize a Snowflake DATE value to "YYYY-MM-DD". Matches `OrgLensMembershipsService.formatDate`. */
+  /**
+   * Normalize a Snowflake DATE value to `"YYYY-MM-DD"`.
+   *
+   * Intentionally diverges from `OrgLensMembershipsService.formatDate`: that one
+   * returns `string | null` (and emits `null` for missing input). This one
+   * returns `string` (`''` for missing input) because the downstream
+   * `OrgMembershipAgreement.signedDate` wire field is typed `string` (non-nullable),
+   * and the empty-string sentinel is what the UI's `formatSignedDate` shows as
+   * an em-dash (`—`).
+   */
   private formatDate(value: string | null): string {
     if (!value) return '';
     return new Date(value).toISOString().split('T')[0];

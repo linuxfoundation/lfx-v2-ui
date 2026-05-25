@@ -33,6 +33,11 @@ import { expect, test } from '@playwright/test';
 
 const DETAIL_URL_AGL = '/org/memberships/agl-001';
 const DOCS_URL_AGL = '/org/memberships/agl-001#docs';
+// SC-014 needs a foundation with zero agreements to exercise the disabled
+// download-all branch. Until a guaranteed-empty foundation is seeded in dev,
+// this aliases AGL — the test will `skip()` when the list is non-empty.
+// TODO(LFXV2-1866): retarget this to a known-empty foundation slug once one is seeded.
+const DOCS_URL_EMPTY_FOUNDATION = DOCS_URL_AGL;
 const DATA_LOAD_TIMEOUT = 30_000;
 
 test.setTimeout(90_000);
@@ -250,13 +255,16 @@ test.describe('Documentation Tab — CSV download (SC-013, SC-014, FR-032)', () 
   });
 
   test('SC-014: download-all icon is disabled for foundations with zero agreements', async ({ page }) => {
-    // Navigate to a foundation known to have zero Corporate memberships seeded.
-    // If your dev fixture covers an empty foundation, point the URL here; otherwise
-    // this test will skip gracefully when the agreements list is non-empty.
-    await page.goto(DOCS_URL_AGL, { waitUntil: 'domcontentloaded' });
+    await page.goto(DOCS_URL_EMPTY_FOUNDATION, { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('membership-detail-docs-content')).toBeVisible({ timeout: DATA_LOAD_TIMEOUT });
 
+    // Wait for the ready state to actually render — empty-state lives inside the
+    // `@case ('ready')` switch, so checking visibility immediately after the
+    // content container appears can race with the `loading` skeleton.
+    const agreementsList = page.getByTestId('membership-detail-docs-agreements-list');
     const emptyState = page.getByTestId('membership-detail-docs-agreements-empty');
+    await expect(agreementsList.or(emptyState)).toBeVisible({ timeout: DATA_LOAD_TIMEOUT });
+
     const isEmpty = await emptyState.isVisible().catch(() => false);
     if (!isEmpty) {
       test.skip();
