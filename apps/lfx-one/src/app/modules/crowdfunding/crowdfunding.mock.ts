@@ -4,51 +4,12 @@
 import { environment } from '@environments/environment';
 import { FundType } from '@lfx-one/shared/enums';
 import {
-  CrowdfundingInitiative,
   CrowdfundingInitiativeDetail,
   DonationHistoryItem,
   DonationStats,
   PaymentMethod,
   RecurringDonation,
 } from '@lfx-one/shared/interfaces';
-
-export const MOCK_INITIATIVES: CrowdfundingInitiative[] = [
-  {
-    id: 'otel',
-    name: 'OpenTelemetry Community Fund',
-    description: 'Growing the observability standard for cloud-native software',
-    icon: '📡',
-    fundType: FundType.GENERAL_FUND,
-    status: 'active',
-    raised: 68000,
-    goal: 175000,
-    sponsorsCount: 94,
-    publicUrl: environment.urls.crowdfunding,
-  },
-  {
-    id: 'zephyr',
-    name: 'Zephyr RTOS Security Hardening',
-    description: 'Securing the real-time OS powering billions of IoT devices',
-    icon: '⚡',
-    fundType: FundType.SECURITY_AUDIT,
-    status: 'active',
-    raised: 52000,
-    goal: 200000,
-    sponsorsCount: 41,
-    publicUrl: environment.urls.crowdfunding,
-  },
-  {
-    id: 'lkm',
-    name: 'Linux Kernel Mentorship Fund',
-    description: 'Supporting contributors entering the Linux kernel ecosystem',
-    icon: '🌱',
-    fundType: FundType.MENTORSHIP,
-    status: 'pending',
-    raised: 0,
-    goal: null,
-    sponsorsCount: 0,
-  },
-];
 
 export const MOCK_INITIATIVE_DETAIL: CrowdfundingInitiativeDetail = {
   id: 'otel',

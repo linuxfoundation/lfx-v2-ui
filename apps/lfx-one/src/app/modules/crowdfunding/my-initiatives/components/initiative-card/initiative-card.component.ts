@@ -9,7 +9,8 @@ import {
   CROWDFUNDING_FUND_TYPE_ICONS,
   CROWDFUNDING_FUND_TYPE_LABELS,
 } from '@lfx-one/shared/constants';
-import { CrowdfundingInitiative } from '@lfx-one/shared/interfaces';
+import { FundType } from '@lfx-one/shared/enums';
+import { InitiativeBase } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-initiative-card',
@@ -18,22 +19,22 @@ import { CrowdfundingInitiative } from '@lfx-one/shared/interfaces';
   styleUrl: './initiative-card.component.scss',
 })
 export class InitiativeCardComponent {
-  public readonly initiative = input.required<CrowdfundingInitiative>();
+  public readonly initiative = input.required<InitiativeBase>();
   public readonly cardClick = output<string>();
 
-  protected readonly fundTypeLabel = computed(() => CROWDFUNDING_FUND_TYPE_LABELS[this.initiative().fundType]);
-  protected readonly fundTypeIcon = computed(() => CROWDFUNDING_FUND_TYPE_ICONS[this.initiative().fundType]);
-  protected readonly fundTypeColorClass = computed(() => CROWDFUNDING_FUND_TYPE_COLOR_CLASSES[this.initiative().fundType]);
-  protected readonly avatarStyleClass = computed(() => CROWDFUNDING_FUND_TYPE_AVATAR_CLASSES[this.initiative().fundType]);
+  protected readonly fundTypeLabel = computed(() => CROWDFUNDING_FUND_TYPE_LABELS[this.initiative().initiativeType as FundType]);
+  protected readonly fundTypeIcon = computed(() => CROWDFUNDING_FUND_TYPE_ICONS[this.initiative().initiativeType as FundType]);
+  protected readonly fundTypeColorClass = computed(() => CROWDFUNDING_FUND_TYPE_COLOR_CLASSES[this.initiative().initiativeType as FundType]);
+  protected readonly avatarStyleClass = computed(() => CROWDFUNDING_FUND_TYPE_AVATAR_CLASSES[this.initiative().initiativeType as FundType]);
 
   protected readonly progressPercent = this.initProgressPercent();
 
   protected readonly isClickable = computed(() => this.initiative().status !== 'pending');
 
-  protected readonly formattedRaised = computed(() => this.formatCurrency(this.initiative().raised));
+  protected readonly formattedRaised = computed(() => this.formatCurrency((this.initiative().fundingStatus?.amountRaisedCents ?? 0) / 100));
   protected readonly formattedGoal = computed(() => {
-    const g = this.initiative().goal;
-    return g != null ? this.formatCurrency(g) : null;
+    const goalCents = this.initiative().fundingStatus?.goalsTotalCents;
+    return goalCents != null && goalCents > 0 ? this.formatCurrency(goalCents / 100) : null;
   });
 
   protected onCardClick(): void {
@@ -48,8 +49,10 @@ export class InitiativeCardComponent {
 
   private initProgressPercent(): Signal<number> {
     return computed(() => {
-      const { raised, goal } = this.initiative();
-      if (!goal || goal === 0) return 0;
+      const fs = this.initiative().fundingStatus;
+      const raised = fs?.amountRaisedCents ?? 0;
+      const goal = fs?.goalsTotalCents ?? 0;
+      if (goal === 0) return 0;
       return Math.min(100, Math.round((raised / goal) * 100));
     });
   }

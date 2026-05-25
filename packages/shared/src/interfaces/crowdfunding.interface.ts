@@ -2,7 +2,50 @@
 // SPDX-License-Identifier: MIT
 
 import { FundType } from '../enums/crowdfunding.enum';
+import { OffsetPaginatedResponse } from './api.interface';
 import { DonutRing } from './donut-chart.interface';
+
+// ---------------------------------------------------------------------------
+// Crowdfunding API response types
+// Mirrors the upstream crowdfunding service API contracts exactly.
+// ---------------------------------------------------------------------------
+
+export interface InitiativeStats {
+  supporters: number;
+}
+
+export interface FundingStatus {
+  goalsTotalCents: number;
+  annualSubscriptionAmountInCents?: number;
+  annualSubscriptionRemainingAmountInCents?: number;
+  amountRaisedCents?: number;
+  totalSubscriptionCount?: number;
+}
+
+/** Core initiative fields as returned by the crowdfunding API. */
+export interface InitiativeBase {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  status: string;
+  initiativeType: string;
+  color: string;
+  createdOn: string;
+  updatedOn: string;
+  industry?: string;
+  logoUrl?: string;
+  country?: string;
+  city?: string;
+  websiteURL?: string;
+  applicationURL?: string;
+  eventStartDate?: string;
+  eventEndDate?: string;
+  initiativeStats?: InitiativeStats;
+  fundingStatus?: FundingStatus;
+}
+
+export type InitiativesResponse = OffsetPaginatedResponse<InitiativeBase>;
 
 export type CrowdfundingInitiativeStatus = 'active' | 'pending' | 'closed';
 

@@ -3,7 +3,7 @@
 
 import { Component, computed, input, output, signal, Signal } from '@angular/core';
 import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
-import { CrowdfundingInitiative, CrowdfundingInitiativeStatus, FilterPillOption } from '@lfx-one/shared/interfaces';
+import { InitiativeBase, FilterPillOption } from '@lfx-one/shared/interfaces';
 import { InitiativeCardComponent } from '../initiative-card/initiative-card.component';
 import { CardComponent } from '@components/card/card.component';
 
@@ -14,17 +14,17 @@ import { CardComponent } from '@components/card/card.component';
   styleUrl: './initiatives-list.component.scss',
 })
 export class InitiativesListComponent {
-  public readonly initiatives = input.required<CrowdfundingInitiative[]>();
+  public readonly initiatives = input.required<InitiativeBase[]>();
   public readonly initiativeClick = output<string>();
 
-  protected readonly activeFilter = signal<CrowdfundingInitiativeStatus>('active');
+  protected readonly activeFilter = signal<string>('active');
 
   protected readonly statusCounts = this.initStatusCounts();
   protected readonly filterOptions = this.initFilterOptions();
   protected readonly filteredInitiatives = computed(() => this.initiatives().filter((i) => i.status === this.activeFilter()));
 
   protected setFilter(status: string): void {
-    this.activeFilter.set(status as CrowdfundingInitiativeStatus);
+    this.activeFilter.set(status);
   }
 
   protected onCardClick(id: string): void {
