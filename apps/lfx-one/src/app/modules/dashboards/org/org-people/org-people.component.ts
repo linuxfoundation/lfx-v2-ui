@@ -1,7 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, Signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { Component, computed, inject, PLATFORM_ID, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
@@ -19,6 +20,7 @@ export class OrgPeopleComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly accountContext = inject(AccountContextService);
+  private readonly platformId = inject(PLATFORM_ID);
 
   protected readonly tabs = PEOPLE_TABS;
 
@@ -62,7 +64,7 @@ export class OrgPeopleComponent {
     if (next !== null) {
       event.preventDefault();
       this.switchTab(ids[next]);
-      if (typeof document !== 'undefined') {
+      if (isPlatformBrowser(this.platformId)) {
         (document.getElementById(`org-people-tab-${ids[next]}`) as HTMLElement | null)?.focus();
       }
     }
