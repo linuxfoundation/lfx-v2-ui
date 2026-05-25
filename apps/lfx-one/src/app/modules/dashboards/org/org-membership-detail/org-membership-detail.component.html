@@ -198,12 +198,14 @@
         @case ('docs') {
           <div role="tabpanel" id="membership-detail-tab-panel-docs" [attr.aria-labelledby]="'membership-detail-tab-trigger-docs'">
             @if (foundation(); as f) {
+              <!-- Spec 019 FR-017: removed [membershipTier] and [memberSince] — the Certificate
+                   card now reads pre-formatted title/subtitle from the SSR `certificateTemplate`
+                   (per-org TLF data), so those per-foundation inputs are no longer needed.
+                   [orgName] stays because the spec-018 Agreements CSV export reads it. -->
               <lfx-documentation-tab
                 [accountId]="accountContext.selectedAccount().accountId"
                 [foundationId]="f.foundationId"
                 [foundationName]="f.foundationName"
-                [membershipTier]="f.membershipTier"
-                [memberSince]="f.memberSince"
                 [orgName]="accountContext.selectedAccount().accountName" />
             }
           </div>

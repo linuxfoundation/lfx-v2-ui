@@ -4,7 +4,7 @@
 import { isPlatformBrowser } from '@angular/common';
 import { Component, computed, inject, input, PLATFORM_ID, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import type { OrgMembershipAgreement, OrgMembershipDocumentsResponse } from '@lfx-one/shared/interfaces';
+import type { OrgMembershipAgreement, OrgMembershipCertificateTemplate, OrgMembershipDocumentsResponse } from '@lfx-one/shared/interfaces';
 import { TooltipModule } from 'primeng/tooltip';
 import { parseLocalDateString } from '@lfx-one/shared/utils';
 import { catchError, combineLatest, filter, of, switchMap, tap } from 'rxjs';
@@ -26,9 +26,17 @@ type PageState = 'loading' | 'error' | 'ready';
 export class DocumentationTabComponent {
   public readonly accountId = input.required<string>();
   public readonly foundationId = input.required<string>();
-  public readonly membershipTier = input.required<string>();
+
+  /**
+   * Spec 018 CSV export keeps this input alive. Spec 019 FR-017 removed
+   * `membershipTier` and `memberSince` (the bug was that they made the
+   * Certificate card foundation-scoped instead of TLF-scoped); `orgName`
+   * stays because `onDownloadAll()` reads it for the CSV "Organization"
+   * column (FR-032a col 1). The Certificate card itself now reads
+   * `issuedTo` from `certificateTemplate()` instead — totally unrelated
+   * to this input.
+   */
   public readonly orgName = input.required<string>();
-  public readonly memberSince = input<string | null>(null);
 
   /**
    * Spec 018 FR-024-ext (round 2): required for the CSV export "Foundation" column
@@ -98,13 +106,16 @@ export class DocumentationTabComponent {
     return 'ready';
   });
 
-  protected readonly certificateTitle = computed(() => `Linux Foundation ${this.membershipTier()} Certificate`);
-
-  protected readonly certificateSubtitle = computed(() => {
-    const since = this.memberSince();
-    const sinceFormatted = since ? this.formatDateShort(since) : '—';
-    return `Member since ${sinceFormatted} · Issued to ${this.orgName()}`;
-  });
+  /**
+   * Spec 019 FR-015 / FR-016: the Certificate card now reads its display
+   * strings directly from the SSR-served `certificateTemplate` block (per-org
+   * TLF data from `platinum_lfx_one_org_lens_tlf_certificate`). Returns `null`
+   * when the org has no active TLF Corporate Membership OR when the cert query
+   * degraded silently (FR-010a) — the template's `@if (certificateTemplate())`
+   * guard then hides the card entirely. No client-side derivation; the BFF is
+   * the single source of truth.
+   */
+  protected readonly certificateTemplate = computed<OrgMembershipCertificateTemplate | null>(() => this.docsData()?.certificateTemplate ?? null);
 
   protected retry(): void {
     this.retryTrigger.update((v) => v + 1);
@@ -162,15 +173,6 @@ export class DocumentationTabComponent {
         month: 'short',
         day: 'numeric',
       });
-    } catch {
-      return dateString;
-    }
-  }
-
-  private formatDateShort(dateString: string): string {
-    if (!dateString) return '—';
-    try {
-      return parseLocalDateString(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
     } catch {
       return dateString;
     }

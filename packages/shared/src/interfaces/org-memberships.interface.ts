@@ -309,15 +309,53 @@ export interface OrgMembershipAgreement {
   tier: string;
 }
 
-/** Server-side certificate template (display fields derived client-side from parent inputs). */
+/**
+ * Certificate of Membership card payload — per-`accountId`, NOT per-foundation.
+ * The same payload is returned for every foundation under a given org because
+ * the certificate represents the org's Linux Foundation parent membership, not
+ * its sub-foundation tier (e.g., an org holding both AGL Platinum and TLF Gold
+ * sees "Linux Foundation Gold Membership Certificate" on every foundation page).
+ *
+ * Spec 019-lfx-one-tlf-certificate-data (FR-011):
+ * - Extended from spec 018's `{ downloadUrl }` to the 7-field shape below.
+ * - Pre-formatted `title` and `subtitle` come directly from the dbt model
+ *   (`ANALYTICS.PLATINUM_LFX_ONE.ORG_LENS_TLF_CERTIFICATE.{certificate_title,
+ *   certificate_subtitle}`) so the UI is a pure data passthrough — no
+ *   client-side derivation from per-foundation inputs.
+ * - `downloadUrl` is the membership-agreement PDF URL (reused from spec 018's
+ *   `bronze_fivetran_salesforce_b2b_opportunities.membership_doc_download_url`).
+ *   v1 simplification: one URL serves both the Agreements card current-row
+ *   View link and the Certificate card Download button.
+ */
 export interface OrgMembershipCertificateTemplate {
+  /** Pre-formatted card title. E.g. "Linux Foundation Gold Membership Certificate". */
+  title: string;
+  /** Pre-formatted card subtitle. E.g. "Member since Jul 2011 · Issued to TOYOTA MOTOR CORPORATION". */
+  subtitle: string;
+  /** Verbatim membership tier including " Membership" suffix. E.g. "Gold Membership". */
+  membershipTier: string;
+  /** Verbatim Salesforce account name. */
+  issuedTo: string;
+  /** Pre-formatted "Mon YYYY" date string. E.g. "Jul 2011". */
+  memberSinceFormatted: string;
+  /** ISO YYYY-MM-DD date string for downstream re-formatting if needed. */
+  memberSinceDate: string;
+  /** Membership-agreement PDF URL. NULL when the upstream Opportunity has no URL recorded. */
   downloadUrl: string | null;
 }
 
-/** Response envelope for `GET /api/orgs/:accountId/lens/memberships/:foundationId/documents`. */
+/**
+ * Response envelope for `GET /api/orgs/:accountId/lens/memberships/:foundationId/documents`.
+ *
+ * Spec 019 FR-012: `certificateTemplate` widened to `... | null`. `null` means
+ * either (a) the org has no active TLF Corporate Membership (legitimate non-TLF
+ * member) OR (b) the cert query degraded silently per FR-010a (Promise.allSettled
+ * rejected only the cert query while agreements succeeded). In both cases the UI
+ * hides the Certificate card via `@if (certificateTemplate(); as cert)`.
+ */
 export interface OrgMembershipDocumentsResponse {
   accountId: string;
   foundationId: string;
   agreements: OrgMembershipAgreement[];
-  certificateTemplate: OrgMembershipCertificateTemplate;
+  certificateTemplate: OrgMembershipCertificateTemplate | null;
 }
