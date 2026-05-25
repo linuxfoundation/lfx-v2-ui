@@ -77,6 +77,27 @@ stateDiagram-v2
   Complete --> [*]
 ```
 
+### Canonical Status Mapping
+
+Persisted API states should stay stable and machine-readable. UI labels can be
+friendlier, but filters, tags, and transitions should map back to this canonical
+set.
+
+| Persisted state | UI label | Meaning |
+| --- | --- | --- |
+| `unassigned` | `Unassigned` | Package is in the queue and has no owner. |
+| `open_for_adoption` | `Open` / `Available` | Package is available for a contributor to adopt. |
+| `assigned` | `Assigned` | Admin assigned an owner, but work has not started. |
+| `in_progress` | `In progress` | Owner is actively working through the checklist. |
+| `submitted` | `In review` | Owner submitted the checklist for ED/admin review. |
+| `changes_requested` | `Changes requested` | Reviewer sent the work back with required updates. |
+| `blocked` | `Blocked` | Work cannot proceed until the blocker is resolved. |
+| `complete` | `Complete` / `Completed` | Reviewer approved the submission. |
+
+The table filters should use persisted states in query params and request
+payloads. Display-only labels such as `Available`, `Adopted`, or `Completed`
+should be derived in the UI from the persisted state plus owner context.
+
 ## Admin Flow
 
 1. ED/admin opens `Foundation -> Security`.
