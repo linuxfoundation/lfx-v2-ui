@@ -145,7 +145,12 @@ export class CrowdfundingController {
 
       const username = stripAuthPrefix(rawUsername);
       const { size, from } = req.query;
-      const donations = await this.crowdfundingService.getMyDonations(req, username, size ? Number(size) : undefined, from ? Number(from) : undefined);
+      const parseNonNegativeInt = (val: unknown): number | undefined => {
+        if (val == null || val === '') return undefined;
+        const n = Number(val);
+        return Number.isFinite(n) && n >= 0 ? Math.floor(n) : undefined;
+      };
+      const donations = await this.crowdfundingService.getMyDonations(req, username, parseNonNegativeInt(size), parseNonNegativeInt(from));
 
       logger.success(req, 'get_my_donations', startTime, {
         result_count: donations.data.length,
