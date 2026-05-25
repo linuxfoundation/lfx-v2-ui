@@ -26,7 +26,6 @@
  * - Dev server running on localhost:4200
  * - User authenticated with org-lens-enabled flag
  * - Organization context has at least one membership
- * - Dev Snowflake table `ANALYTICS_DEV.LF_LUIS_PLATINUM_LFX_ONE.ORG_LENS_MEMBERSHIP_AGREEMENTS`
  *   is seeded (see spec 018 quickstart §7 — the seed includes AGL/Toyota data).
  */
 

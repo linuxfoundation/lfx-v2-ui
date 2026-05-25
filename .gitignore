@@ -62,7 +62,3 @@ snowflake.log
 
 # Playwright MCP
 .playwright-mcp
-
-.cursor/
-.specify/
-Makefile
