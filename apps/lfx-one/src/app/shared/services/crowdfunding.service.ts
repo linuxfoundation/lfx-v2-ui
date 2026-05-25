@@ -5,6 +5,7 @@
 
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
+
 import { EMPTY_CROWDFUNDING_STATS, EMPTY_INITIATIVES_RESPONSE, EMPTY_TRANSACTION_LIST } from '@lfx-one/shared/constants';
 import { CrowdfundingInitiativesStats, CrowdfundingTransactionList, InitiativeDetail, InitiativesResponse } from '@lfx-one/shared/interfaces';
 import { catchError, Observable, of } from 'rxjs';
@@ -33,10 +34,6 @@ export class CrowdfundingService {
     );
   }
 
-  public getInitiativeBySlug(slug: string): Observable<InitiativeDetail | null> {
-    return this.http.get<InitiativeDetail>(`/api/crowdfunding/initiatives/${slug}`).pipe(catchError(() => of(null)));
-  }
-
   public getInitiativeTransactions(
     slug: string,
     params?: { type?: 'donations' | 'expenses'; size?: number; from?: number }
@@ -49,5 +46,9 @@ export class CrowdfundingService {
     return this.http
       .get<CrowdfundingTransactionList>(`/api/crowdfunding/initiatives/${slug}/transactions`, { params: httpParams })
       .pipe(catchError(() => of(EMPTY_TRANSACTION_LIST)));
+  }
+
+  public getInitiativeBySlug(slug: string): Observable<InitiativeDetail | null> {
+    return this.http.get<InitiativeDetail>(`/api/crowdfunding/initiatives/${slug}`).pipe(catchError(() => of(null)));
   }
 }

@@ -84,28 +84,25 @@ export class InitiativeFinancialsComponent {
     return toSignal(
       toObservable(this.initiative).pipe(
         switchMap((initiative) =>
-          concat(
-            of(0),
-            this.nextDonationsPage$.pipe(scan((offset) => offset + PAGE_SIZE, 0)),
-          ).pipe(
+          concat(of(0), this.nextDonationsPage$.pipe(scan((offset) => offset + PAGE_SIZE, 0))).pipe(
             switchMap((from) =>
               this.crowdfundingService.getInitiativeTransactions(initiative.slug, {
                 type: 'donations',
                 size: PAGE_SIZE,
                 from,
-              }),
+              })
             ),
             scan(
               (acc, result: CrowdfundingTransactionList, index) => ({
                 items: index === 0 ? result.data : [...acc.items, ...result.data],
                 totalCount: result.totalCount,
               }),
-              EMPTY_TRANSACTION_STATE,
-            ),
-          ),
-        ),
+              EMPTY_TRANSACTION_STATE
+            )
+          )
+        )
       ),
-      { initialValue: EMPTY_TRANSACTION_STATE },
+      { initialValue: EMPTY_TRANSACTION_STATE }
     );
   }
 
@@ -115,7 +112,7 @@ export class InitiativeFinancialsComponent {
         ...t,
         formattedAmount: this.formatCurrency(t.amountCents / 100),
         avatarClass: this.donorAvatarClass(t.donorName ?? ''),
-      })),
+      }))
     );
   }
 
@@ -123,28 +120,25 @@ export class InitiativeFinancialsComponent {
     return toSignal(
       toObservable(this.initiative).pipe(
         switchMap((initiative) =>
-          concat(
-            of(0),
-            this.nextExpensesPage$.pipe(scan((offset) => offset + PAGE_SIZE, 0)),
-          ).pipe(
+          concat(of(0), this.nextExpensesPage$.pipe(scan((offset) => offset + PAGE_SIZE, 0))).pipe(
             switchMap((from) =>
               this.crowdfundingService.getInitiativeTransactions(initiative.slug, {
                 type: 'expenses',
                 size: PAGE_SIZE,
                 from,
-              }),
+              })
             ),
             scan(
               (acc, result: CrowdfundingTransactionList, index) => ({
                 items: index === 0 ? result.data : [...acc.items, ...result.data],
                 totalCount: result.totalCount,
               }),
-              EMPTY_TRANSACTION_STATE,
-            ),
-          ),
-        ),
+              EMPTY_TRANSACTION_STATE
+            )
+          )
+        )
       ),
-      { initialValue: EMPTY_TRANSACTION_STATE },
+      { initialValue: EMPTY_TRANSACTION_STATE }
     );
   }
 
@@ -153,7 +147,7 @@ export class InitiativeFinancialsComponent {
       this.expensesState().items.map((t) => ({
         ...t,
         formattedAmount: this.formatCurrency(t.amountCents / 100),
-      })),
+      }))
     );
   }
 

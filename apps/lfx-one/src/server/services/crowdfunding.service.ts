@@ -65,7 +65,7 @@ export class CrowdfundingService {
     slug: string,
     type?: string,
     size?: number,
-    from?: number,
+    from?: number
   ): Promise<CrowdfundingTransactionList | null> {
     logger.debug(req, 'get_initiative_transactions', 'Fetching transactions for initiative', { username, slug, type, size, from });
 

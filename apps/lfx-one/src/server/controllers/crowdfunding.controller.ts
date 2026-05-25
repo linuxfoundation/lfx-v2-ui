@@ -122,7 +122,7 @@ export class CrowdfundingController {
         slug,
         type ? String(type) : undefined,
         size ? Number(size) : undefined,
-        from ? Number(from) : undefined,
+        from ? Number(from) : undefined
       );
 
       if (!transactions) {
