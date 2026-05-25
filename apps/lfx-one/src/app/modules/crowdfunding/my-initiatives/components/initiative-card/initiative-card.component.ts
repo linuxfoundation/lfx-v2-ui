@@ -6,7 +6,6 @@ import { AvatarComponent } from '@components/avatar/avatar.component';
 import {
   CROWDFUNDING_FUND_TYPE_AVATAR_CLASSES,
   CROWDFUNDING_FUND_TYPE_COLOR_CLASSES,
-  CROWDFUNDING_FUND_TYPE_ICONS,
   CROWDFUNDING_FUND_TYPE_LABELS,
 } from '@lfx-one/shared/constants';
 import { FundType } from '@lfx-one/shared/enums';
@@ -23,7 +22,6 @@ export class InitiativeCardComponent {
   public readonly cardClick = output<string>();
 
   protected readonly fundTypeLabel = computed(() => CROWDFUNDING_FUND_TYPE_LABELS[this.initiative().initiativeType as FundType]);
-  protected readonly fundTypeIcon = computed(() => CROWDFUNDING_FUND_TYPE_ICONS[this.initiative().initiativeType as FundType]);
   protected readonly fundTypeColorClass = computed(() => CROWDFUNDING_FUND_TYPE_COLOR_CLASSES[this.initiative().initiativeType as FundType]);
   protected readonly avatarStyleClass = computed(() => CROWDFUNDING_FUND_TYPE_AVATAR_CLASSES[this.initiative().initiativeType as FundType]);
 

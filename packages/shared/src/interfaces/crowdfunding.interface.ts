@@ -7,7 +7,8 @@ import { DonutRing } from './donut-chart.interface';
 
 // ---------------------------------------------------------------------------
 // Crowdfunding API response types
-// Mirrors the upstream crowdfunding service API contracts exactly.
+// Normalized/proxied DTOs returned by the LFX One backend — the server maps
+// the upstream crowdfunding service's snake_case fields into this camelCase shape.
 // ---------------------------------------------------------------------------
 
 export interface InitiativeStats {

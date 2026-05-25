@@ -10,7 +10,6 @@ import { CrowdfundingController } from '../controllers/crowdfunding.controller';
 const router = Router();
 const crowdfundingController = new CrowdfundingController();
 
-// /stats must be registered before /:id-style routes to avoid shadowing
 router.get('/initiatives/stats', (req, res, next) => crowdfundingController.getInitiativesStats(req, res, next));
 router.get('/initiatives', (req, res, next) => crowdfundingController.getMyInitiatives(req, res, next));
 

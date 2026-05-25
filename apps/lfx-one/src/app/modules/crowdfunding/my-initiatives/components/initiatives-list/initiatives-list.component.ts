@@ -27,8 +27,8 @@ export class InitiativesListComponent {
     this.activeFilter.set(status);
   }
 
-  protected onCardClick(id: string): void {
-    this.initiativeClick.emit(id);
+  protected onCardClick(slug: string): void {
+    this.initiativeClick.emit(slug);
   }
 
   private initStatusCounts(): Signal<{ active: number; pending: number; closed: number }> {
