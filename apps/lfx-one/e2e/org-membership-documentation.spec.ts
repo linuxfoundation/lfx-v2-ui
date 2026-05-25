@@ -139,8 +139,22 @@ test.describe('Documentation Tab — testid resolution (SC-008, FR-028)', () => 
     await expect(firstMeta).toContainText('PDF');
   });
 
+  // Spec 019 FR-014 / FR-016: the Certificate card is now wrapped in
+  // `@if (certificateTemplate(); as cert)` so it disappears entirely for orgs
+  // without an active TLF Corporate Membership AND for degraded cert queries.
+  // The three tests below assert the card's structure and SSR-served
+  // `cert.title` / `cert.subtitle` (which the dbt model
+  // `platinum_lfx_one_org_lens_tlf_certificate` formats as
+  // `'Linux Foundation {tier} Certificate'` and
+  // `'Member since {Mon YYYY} · Issued to {account_name}'` — see
+  // `tests/assert_tlf_certificate_title_derivation.sql`). They skip gracefully
+  // when the seeded org for this run is non-TLF and the card is absent.
   test('renders the Certificate of Membership card with all testids (SC-003)', async ({ page }) => {
-    await expect(page.getByTestId('membership-detail-docs-certificate-card')).toBeVisible();
+    const card = page.getByTestId('membership-detail-docs-certificate-card');
+    if (!(await card.isVisible().catch(() => false))) {
+      test.skip();
+      return;
+    }
     await expect(page.getByTestId('membership-detail-docs-certificate-title')).toBeVisible();
     await expect(page.getByTestId('membership-detail-docs-certificate-title')).toContainText('Certificate of Membership');
     await expect(page.getByTestId('membership-detail-docs-certificate-name')).toBeVisible();
@@ -149,12 +163,22 @@ test.describe('Documentation Tab — testid resolution (SC-008, FR-028)', () => 
   });
 
   test('certificate title is derived from membership tier (SC-003, FR-013)', async ({ page }) => {
+    const card = page.getByTestId('membership-detail-docs-certificate-card');
+    if (!(await card.isVisible().catch(() => false))) {
+      test.skip();
+      return;
+    }
     const certName = page.getByTestId('membership-detail-docs-certificate-name');
     await expect(certName).toContainText('Linux Foundation');
     await expect(certName).toContainText('Certificate');
   });
 
   test('certificate subtitle shows member-since and org name (FR-009)', async ({ page }) => {
+    const card = page.getByTestId('membership-detail-docs-certificate-card');
+    if (!(await card.isVisible().catch(() => false))) {
+      test.skip();
+      return;
+    }
     const subtitle = page.getByTestId('membership-detail-docs-certificate-subtitle');
     await expect(subtitle).toContainText('Member since');
     await expect(subtitle).toContainText('Issued to');
@@ -279,17 +303,29 @@ test.describe('Documentation Tab — CSV download (SC-013, SC-014, FR-032)', () 
   });
 });
 
-test.describe('Documentation Tab — Certificate placeholder (still "Coming soon" in spec 018)', () => {
+// Spec 019 FR-018 superseded the spec-018 "Coming soon" placeholder. The
+// Certificate Download is now a live <a download> link when cert.downloadUrl
+// is non-null and a disabled <button> otherwise; the card itself is conditional.
+test.describe('Documentation Tab — Certificate Download live behavior (Spec 019 FR-018)', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(DOCS_URL_AGL, { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('membership-detail-docs-content')).toBeVisible({ timeout: DATA_LOAD_TIMEOUT });
   });
 
-  test('Certificate Download button shows "Coming soon" tooltip on hover', async ({ page }) => {
+  test('Certificate Download tooltip is the live one — never "Coming soon"', async ({ page }) => {
+    const card = page.getByTestId('membership-detail-docs-certificate-card');
+    if (!(await card.isVisible().catch(() => false))) {
+      test.skip();
+      return;
+    }
+
     const downloadBtn = page.getByTestId('membership-detail-docs-certificate-download');
     await downloadBtn.hover();
     await expect(page.locator('.p-tooltip')).toBeVisible({ timeout: 2_000 });
-    await expect(page.locator('.p-tooltip')).toContainText('Coming soon');
+    const tooltipText = (await page.locator('.p-tooltip').textContent()) ?? '';
+    expect(tooltipText).not.toContain('Coming soon');
+    // One of the two live tooltips depending on cert.downloadUrl presence.
+    expect(tooltipText === 'Download membership document' || tooltipText === 'Document not available').toBe(true);
   });
 });
 
