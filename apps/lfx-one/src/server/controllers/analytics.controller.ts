@@ -4,6 +4,8 @@
 import { SALESFORCE_ACCOUNT_ID_PATTERN } from '@lfx-one/shared/constants';
 import { NextFunction, Request, Response } from 'express';
 
+import { VALID_CLASSIFICATIONS } from '@lfx-one/shared/constants';
+
 import { AuthenticationError, ServiceValidationError } from '../errors';
 import { assertHealthMetricsRange, getStringQueryParam, parseEntityType } from '../helpers/validation.helper';
 import { logger } from '../services/logger.service';
@@ -875,7 +877,8 @@ export class AnalyticsController {
 
       logger.success(req, 'get_foundation_maintainers', startTime, {
         foundation_slug: foundationSlug,
-        avg_maintainers: response.avgMaintainers,
+        current_maintainers: response.currentMaintainers,
+        as_of_date: response.asOfDate,
         trend_data_points: response.trendData.length,
       });
 
@@ -1930,13 +1933,27 @@ export class AnalyticsController {
         });
       }
 
+      if (foundationSlug.length > NAME_MAX_LENGTH) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug exceeds maximum length', {
+          operation: 'get_web_activities_summary',
+        });
+      }
+
       if (!SLUG_PATTERN.test(foundationSlug)) {
         throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_web_activities_summary',
         });
       }
 
-      const response = await this.projectService.getWebActivitiesSummary(foundationSlug);
+      const classification = getStringQueryParam(req, 'classification');
+
+      if (classification && !VALID_CLASSIFICATIONS.has(classification)) {
+        throw ServiceValidationError.forField('classification', `Invalid classification value. Allowed: ${[...VALID_CLASSIFICATIONS].join(', ')}`, {
+          operation: 'get_web_activities_summary',
+        });
+      }
+
+      const response = await this.projectService.getWebActivitiesSummary(foundationSlug, classification);
 
       logger.success(req, 'get_web_activities_summary', startTime, {
         foundation_slug: foundationSlug,
@@ -1979,10 +1996,19 @@ export class AnalyticsController {
         });
       }
 
-      const response = await this.projectService.getEmailCtr(foundationSlug);
+      const classification = getStringQueryParam(req, 'classification');
+
+      if (classification && !VALID_CLASSIFICATIONS.has(classification)) {
+        throw ServiceValidationError.forField('classification', `Invalid classification value. Allowed: ${[...VALID_CLASSIFICATIONS].join(', ')}`, {
+          operation: 'get_email_ctr',
+        });
+      }
+
+      const response = await this.projectService.getEmailCtr(foundationSlug, classification);
 
       logger.success(req, 'get_email_ctr', startTime, {
         foundation_slug: foundationSlug,
+        ...(classification && { classification }),
         current_ctr: response.currentCtr,
         monthly_data_points: response.monthlyData.length,
       });

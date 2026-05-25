@@ -12,9 +12,13 @@ import { catchError, finalize, of, switchMap } from 'rxjs';
 import type {
   FilterPillOption,
   FunnelStage,
+  MarketingImpactFocusProgram,
+  PaidCampaignPerformance,
+  PaidCampaignRow,
   PaidProjectPerformance,
   PaidProjectRow,
   PerformanceSummaryKpi,
+  PlatformCampaignRow,
   PlatformPerformanceRow,
   SocialReachResponse,
 } from '@lfx-one/shared/interfaces';
@@ -50,6 +54,7 @@ export class PerformanceMarketingTabComponent {
   // === Inputs ===
   public readonly foundationSlug = input<string | undefined>();
   public readonly foundationName = input<string>('');
+  public readonly focusProgram = input<MarketingImpactFocusProgram>('all');
 
   // === Constants ===
   protected readonly funnelOptions: FilterPillOption[] = FUNNEL_STAGE_OPTIONS;
@@ -57,6 +62,8 @@ export class PerformanceMarketingTabComponent {
   // === WritableSignals ===
   protected readonly loading = signal(false);
   protected readonly selectedFunnel = signal<FunnelStage>('all');
+  protected readonly expandedProjects = signal<Set<string>>(new Set());
+  protected readonly expandedPlatforms = signal<Set<string>>(new Set());
 
   // === Computed Signals ===
   protected readonly socialReachData: Signal<SocialReachResponse | null> = this.initSocialReachData();
@@ -74,6 +81,30 @@ export class PerformanceMarketingTabComponent {
     }
   }
 
+  protected toggleProjectExpand(projectKey: string): void {
+    this.expandedProjects.update((current) => {
+      const next = new Set(current);
+      if (next.has(projectKey)) {
+        next.delete(projectKey);
+      } else {
+        next.add(projectKey);
+      }
+      return next;
+    });
+  }
+
+  protected togglePlatformExpand(platform: string): void {
+    this.expandedPlatforms.update((current) => {
+      const next = new Set(current);
+      if (next.has(platform)) {
+        next.delete(platform);
+      } else {
+        next.add(platform);
+      }
+      return next;
+    });
+  }
+
   // === Private Initializers ===
   private initSocialReachData(): Signal<SocialReachResponse | null> {
     const slug$ = toObservable(this.foundationSlug);
@@ -81,6 +112,8 @@ export class PerformanceMarketingTabComponent {
     return toSignal(
       slug$.pipe(
         switchMap((slug) => {
+          this.expandedProjects.set(new Set());
+          this.expandedPlatforms.set(new Set());
           if (!slug) {
             this.loading.set(false);
             return of(null);
@@ -180,18 +213,20 @@ export class PerformanceMarketingTabComponent {
           if (funnel === 'bofu') return stage === 'bofu';
           return false;
         })
-        .map(
-          (p): PaidProjectRow => ({
+        .map((p): PaidProjectRow => {
+          const perf = this.normalizePerformance(p.performance);
+          return {
             name: p.projectName,
             funnelStage: p.funnelStage,
             spend: formatCurrency(p.spend),
             revenue: formatCurrency(p.revenue),
             roas: `${(p.roas ?? 0).toFixed(2)}x`,
             impressions: formatNumber(p.impressions),
-            performance: this.normalizePerformance(p.performance),
-            performanceClass: this.getPerformanceClass(this.normalizePerformance(p.performance)),
-          })
-        )
+            performance: perf,
+            performanceClass: this.getPerformanceClass(perf),
+            campaigns: this.mapCampaignRows(p.campaigns),
+          };
+        })
         .sort((a, b) => {
           return (
             (PerformanceMarketingTabComponent.performanceOrderMap[a.performance] ?? 4) -
@@ -221,6 +256,7 @@ export class PerformanceMarketingTabComponent {
           conversions: formatNumber(p.conversions),
           performance: perf,
           performanceClass: this.getPerformanceClass(perf),
+          campaigns: this.mapPlatformCampaignRows(p.campaigns),
         };
       });
     });
@@ -262,6 +298,7 @@ export class PerformanceMarketingTabComponent {
         conversions: formatNumber(totals.conversions),
         performance: totalPerf,
         performanceClass: this.getPerformanceClass(totalPerf),
+        campaigns: [],
       };
     });
   }
@@ -277,6 +314,34 @@ export class PerformanceMarketingTabComponent {
 
   private getPerformanceClass(perf: PaidProjectPerformance): string {
     return PerformanceMarketingTabComponent.performanceClassMap[perf] ?? 'bg-gray-50 text-gray-700';
+  }
+
+  private mapCampaignRows(campaigns: PaidCampaignPerformance[] | undefined): PaidCampaignRow[] {
+    if (!campaigns?.length) return [];
+    return campaigns.map(
+      (c): PaidCampaignRow => ({
+        campaignName: c.campaignName,
+        funnelStage: c.funnelStage,
+        spend: formatCurrency(c.spend),
+        revenue: formatCurrency(c.revenue),
+        roas: `${(c.roas ?? 0).toFixed(2)}x`,
+        impressions: formatNumber(c.impressions),
+      })
+    );
+  }
+
+  private mapPlatformCampaignRows(campaigns: PaidCampaignPerformance[] | undefined): PlatformCampaignRow[] {
+    if (!campaigns?.length) return [];
+    return campaigns.map(
+      (c): PlatformCampaignRow => ({
+        campaignName: c.campaignName,
+        spend: formatCurrency(c.spend),
+        revenue: formatCurrency(c.revenue),
+        roas: `${(c.roas ?? 0).toFixed(2)}x`,
+        clicks: formatNumber(c.clicks),
+        impressions: formatNumber(c.impressions),
+      })
+    );
   }
 
   private getRoasPerformance(roas: number): PaidProjectPerformance {

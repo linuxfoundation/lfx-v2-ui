@@ -19,6 +19,7 @@ import { authMiddleware } from './middleware/auth.middleware';
 import { apiErrorHandler } from './middleware/error-handler.middleware';
 import { apiRateLimiter, authRateLimiter, publicApiRateLimiter } from './middleware/rate-limit.middleware';
 import analyticsRouter from './routes/analytics.route';
+import inviteRouter from './routes/invite.route';
 import badgesRouter from './routes/badges.route';
 import changelogRouter from './routes/changelog.route';
 import committeesRouter from './routes/committees.route';
@@ -29,6 +30,7 @@ import impersonationRouter from './routes/impersonation.route';
 import mailingListsRouter from './routes/mailing-lists.route';
 import meetingsRouter from './routes/meetings.route';
 import navigationRouter from './routes/navigation.route';
+import newslettersRouter from './routes/newsletters.route';
 import organizationsRouter from './routes/organizations.route';
 import orgsRouter from './routes/orgs.route';
 import pastMeetingsRouter from './routes/past-meetings.route';
@@ -217,6 +219,8 @@ app.use('/api/rewards', rewardsRouter);
 app.use('/api/enrollments', enrollmentRouter);
 app.use('/api/transactions', transactionRouter);
 app.use('/api/changelog', changelogRouter);
+app.use('/api/newsletters', newslettersRouter);
+app.use('/api/invite', inviteRouter);
 
 app.use('/api/*', apiErrorHandler);
 

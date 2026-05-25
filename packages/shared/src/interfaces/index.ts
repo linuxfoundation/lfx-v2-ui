@@ -168,3 +168,9 @@ export * from './org-memberships.interface';
 
 // Org People interfaces
 export * from './org-people.interface';
+
+// Newsletter interfaces
+export * from './newsletter.interface';
+
+// Invite interfaces
+export * from './invite.interface';

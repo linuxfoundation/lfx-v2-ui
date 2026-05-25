@@ -85,7 +85,18 @@ export const routes: Routes = [
           {
             path: 'memberships',
             data: { lens: 'org', title: 'Memberships', description: 'Active memberships and tier history.', icon: 'fa-light fa-display' },
-            loadComponent: loadOrgPlaceholderPage,
+            loadComponent: () => import('./modules/dashboards/org/org-memberships/org-memberships.component').then((m) => m.OrgMembershipsComponent),
+          },
+          {
+            path: 'memberships/:foundationId',
+            data: {
+              lens: 'org',
+              title: 'Membership Detail',
+              description: 'Key contacts, board, governance, and documentation for a membership.',
+              icon: 'fa-light fa-id-card',
+            },
+            loadComponent: () =>
+              import('./modules/dashboards/org/org-membership-detail/org-membership-detail.component').then((m) => m.OrgMembershipDetailComponent),
           },
           {
             path: 'projects',
@@ -193,6 +204,12 @@ export const routes: Routes = [
         loadChildren: () => import('./modules/surveys/surveys.routes').then((m) => m.SURVEY_ROUTES),
       },
       {
+        path: 'foundation/newsletters',
+        data: { lens: 'foundation' },
+        canActivate: [executiveDirectorGuard, projectQueryParamGuard],
+        loadChildren: () => import('./modules/newsletters/newsletters.routes').then((m) => m.NEWSLETTER_ROUTES),
+      },
+      {
         path: 'foundation/settings',
         data: { lens: 'foundation' },
         canActivate: [projectQueryParamGuard],
@@ -236,6 +253,12 @@ export const routes: Routes = [
         loadChildren: () => import('./modules/surveys/surveys.routes').then((m) => m.SURVEY_ROUTES),
       },
       {
+        path: 'project/newsletters',
+        data: { lens: 'project' },
+        canActivate: [executiveDirectorGuard, projectQueryParamGuard],
+        loadChildren: () => import('./modules/newsletters/newsletters.routes').then((m) => m.NEWSLETTER_ROUTES),
+      },
+      {
         path: 'project/settings',
         data: { lens: 'project' },
         canActivate: [projectQueryParamGuard],
@@ -265,6 +288,11 @@ export const routes: Routes = [
         path: 'surveys',
         canActivate: [lensRedirectGuard],
         loadChildren: () => import('./modules/surveys/surveys.routes').then((m) => m.SURVEY_ROUTES),
+      },
+      {
+        path: 'newsletters',
+        canActivate: [executiveDirectorGuard, lensRedirectGuard],
+        loadChildren: () => import('./modules/newsletters/newsletters.routes').then((m) => m.NEWSLETTER_ROUTES),
       },
       {
         path: 'documents',
@@ -316,5 +344,16 @@ export const routes: Routes = [
   {
     path: 'meetings/:id',
     loadComponent: () => import('./modules/meetings/meeting-join/meeting-join.component').then((m) => m.MeetingJoinComponent),
+  },
+  // Invite acceptance — authGuard preserves ?token= through the Auth0 login redirect.
+  {
+    path: 'invite',
+    canActivate: [authGuard],
+    loadComponent: () => import('./modules/invite/invite.component').then((m) => m.InviteComponent),
+  },
+  // Error page is outside the auth guard so expired/invalid links are visible without login.
+  {
+    path: 'invite/error',
+    loadComponent: () => import('./modules/invite/invite-error/invite-error.component').then((m) => m.InviteErrorComponent),
   },
 ];
