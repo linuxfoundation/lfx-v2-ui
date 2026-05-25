@@ -6,7 +6,6 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { environment } from '@environments/environment';
 import { MyDonation, DonationStats, PaymentMethod, RecurringDonation, RecurringDonationsResponse } from '@lfx-one/shared/interfaces';
 import { CrowdfundingService } from '@app/shared/services/crowdfunding.service';
-import { MOCK_PAYMENT_METHODS } from '../crowdfunding.mock';
 import { DonationsStatsBarComponent } from './components/donations-stats-bar/donations-stats-bar.component';
 import { DonationHistoryTableComponent } from './components/donation-history-table/donation-history-table.component';
 import { PaymentMethodsComponent } from './components/payment-methods/payment-methods.component';
@@ -34,7 +33,6 @@ export class MyDonationsComponent {
   protected readonly crowdfundingUrl = environment.urls.crowdfunding;
 
   // ─── Simple WritableSignals ───────────────────────────────────────────────
-  protected readonly paymentMethods = signal<PaymentMethod[]>(MOCK_PAYMENT_METHODS);
   protected readonly cancelledCount = signal(4);
 
   // ─── Pagination Driver ────────────────────────────────────────────────────
@@ -43,6 +41,8 @@ export class MyDonationsComponent {
   // ─── Complex Signals ──────────────────────────────────────────────────────
   protected readonly stats: Signal<DonationStats> = this.initStats();
   protected readonly recurringDonations: Signal<RecurringDonation[]> = this.initRecurringDonations();
+  private readonly paymentMethod: Signal<PaymentMethod | null> = this.initPaymentMethod();
+  protected readonly paymentMethods = computed(() => (this.paymentMethod() ? [this.paymentMethod()!] : []));
   private readonly donationHistoryState: Signal<{ items: MyDonation[]; hasMore: boolean }> = this.initDonationHistory();
   protected readonly donationHistory = computed(() => this.donationHistoryState().items);
   protected readonly donationHistoryHasMore = computed(() => this.donationHistoryState().hasMore);
@@ -82,6 +82,10 @@ export class MyDonationsComponent {
   }
 
   // ─── Private Initializers ─────────────────────────────────────────────────
+  private initPaymentMethod(): Signal<PaymentMethod | null> {
+    return toSignal(this.crowdfundingService.getMyPaymentMethod(), { initialValue: null });
+  }
+
   private initStats(): Signal<DonationStats> {
     return toSignal(this.crowdfundingService.getMyDonationStats(), { initialValue: EMPTY_DONATION_STATS });
   }

@@ -248,11 +248,13 @@ export interface DonationHistoryItem {
   amount: number;
 }
 
+/** Matches CardDetails from the upstream crowdfunding payment API. */
 export interface PaymentMethod {
-  id: string;
+  paymentMethodId: string;
   brand: string;
-  last4: string;
-  expiry: string;
+  lastFour: string;
+  expiryMonth: number;
+  expiryYear: number;
 }
 
 export interface InitiativeMenuItem {

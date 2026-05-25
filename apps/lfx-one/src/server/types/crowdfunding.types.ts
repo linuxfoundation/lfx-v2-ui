@@ -73,6 +73,15 @@ export interface BackendTransaction {
   donor_username?: string;
 }
 
+/** Raw snake_case response from GET /v1/me/payment-account on the upstream crowdfunding service. */
+export interface PaymentMethodWire {
+  payment_method_id: string;
+  last_four: string;
+  brand: string;
+  expiry_month: number;
+  expiry_year: number;
+}
+
 export interface BackendTransactionList {
   data: BackendTransaction[];
   total_count: number;

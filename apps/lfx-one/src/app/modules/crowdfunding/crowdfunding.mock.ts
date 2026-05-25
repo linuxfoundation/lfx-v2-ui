@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { FundType } from '@lfx-one/shared/enums';
-import { DonationHistoryItem, PaymentMethod } from '@lfx-one/shared/interfaces';
+import { DonationHistoryItem } from '@lfx-one/shared/interfaces';
 
 export const MOCK_DONATION_HISTORY: DonationHistoryItem[] = [
   {
@@ -117,4 +117,3 @@ export const MOCK_DONATION_HISTORY: DonationHistoryItem[] = [
   },
 ];
 
-export const MOCK_PAYMENT_METHODS: PaymentMethod[] = [{ id: 'pm1', brand: 'VISA', last4: '4567', expiry: '04/26' }];

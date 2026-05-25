@@ -40,6 +40,38 @@ export class CrowdfundingController {
   }
 
   /**
+   * GET /api/crowdfunding/payment-method
+   * Get the authenticated user's saved payment method
+   */
+  public async getMyPaymentMethod(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_my_payment_method');
+
+    try {
+      const rawUsername = await getUsernameFromAuth(req);
+
+      if (!rawUsername) {
+        throw new AuthenticationError('User authentication required', {
+          operation: 'get_my_payment_method',
+        });
+      }
+
+      const username = stripAuthPrefix(rawUsername);
+      const paymentMethod = await this.crowdfundingService.getMyPaymentMethod(req, username);
+
+      if (!paymentMethod) {
+        res.status(404).json({ message: 'No payment method found' });
+        return;
+      }
+
+      logger.success(req, 'get_my_payment_method', startTime);
+
+      res.json(paymentMethod);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * GET /api/crowdfunding/donation-stats
    * Get aggregated donation stats for the authenticated user
    */

@@ -21,6 +21,7 @@ import {
   InitiativeDetail,
   InitiativesResponse,
   MyDonationsResponse,
+  PaymentMethod,
   RecurringDonationsResponse,
 } from '@lfx-one/shared/interfaces';
 import { catchError, Observable, of } from 'rxjs';
@@ -56,6 +57,10 @@ export class CrowdfundingService {
         return of(null);
       })
     );
+  }
+
+  public getMyPaymentMethod(): Observable<PaymentMethod | null> {
+    return this.http.get<PaymentMethod>('/api/crowdfunding/payment-method').pipe(catchError(() => of(null)));
   }
 
   public getMyDonationStats(): Observable<DonationStats> {

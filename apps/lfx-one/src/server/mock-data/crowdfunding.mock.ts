@@ -3,7 +3,7 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { DonationHistoryItem, DonationStats, RecurringDonation } from '@lfx-one/shared/interfaces';
+import { DonationHistoryItem, DonationStats, PaymentMethod, RecurringDonation } from '@lfx-one/shared/interfaces';
 import { FundType } from '@lfx-one/shared/enums';
 
 import { BackendInitiative, BackendTransaction } from '../types/crowdfunding.types';
@@ -169,6 +169,14 @@ export const MOCK_INITIATIVES: BackendInitiative[] = [
     sponsors: [],
   },
 ];
+
+export const MOCK_PAYMENT_METHOD: PaymentMethod = {
+  paymentMethodId: 'pm_mock_1',
+  brand: 'Visa',
+  lastFour: '4567',
+  expiryMonth: 4,
+  expiryYear: 2026,
+};
 
 export const MOCK_DONATION_STATS: DonationStats = {
   totalDonated: 1450,

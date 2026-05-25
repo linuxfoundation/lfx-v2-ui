@@ -11,12 +11,20 @@ import {
   InitiativeDetail,
   InitiativesResponse,
   MyDonationsResponse,
+  PaymentMethod,
   RecurringDonationsResponse,
 } from '@lfx-one/shared/interfaces';
 import { DEFAULT_CROWDFUNDING_PAGE_SIZE } from '@lfx-one/shared/constants';
 import { Request } from 'express';
 
-import { MOCK_DONATION_HISTORY, MOCK_DONATION_STATS, MOCK_INITIATIVES, MOCK_RECURRING_DONATIONS, MOCK_TRANSACTIONS } from '../mock-data/crowdfunding.mock';
+import {
+  MOCK_DONATION_HISTORY,
+  MOCK_DONATION_STATS,
+  MOCK_INITIATIVES,
+  MOCK_PAYMENT_METHOD,
+  MOCK_RECURRING_DONATIONS,
+  MOCK_TRANSACTIONS,
+} from '../mock-data/crowdfunding.mock';
 import { mapDonationHistoryToMyDonation, mapToInitiativeBase, mapToInitiativeDetail, mapToTransaction } from '../utils/crowdfunding-mapper';
 import { logger } from './logger.service';
 
@@ -67,6 +75,17 @@ export class CrowdfundingService {
     }
 
     return mapToInitiativeDetail(initiative);
+  }
+
+  public async getMyPaymentMethod(req: Request, username: string): Promise<PaymentMethod | null> {
+    logger.debug(req, 'get_my_payment_method', 'Fetching payment method for user', { username });
+
+    logger.debug(req, 'get_my_payment_method', 'Returning payment method', {
+      paymentMethodId: MOCK_PAYMENT_METHOD.paymentMethodId,
+      brand: MOCK_PAYMENT_METHOD.brand,
+    });
+
+    return MOCK_PAYMENT_METHOD;
   }
 
   public async getMyDonationStats(req: Request, username: string): Promise<DonationStats> {
