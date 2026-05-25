@@ -3,7 +3,7 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { DonationHistoryItem, RecurringDonation } from '@lfx-one/shared/interfaces';
+import { DonationHistoryItem, DonationStats, RecurringDonation } from '@lfx-one/shared/interfaces';
 import { FundType } from '@lfx-one/shared/enums';
 
 import { BackendInitiative, BackendTransaction } from '../types/crowdfunding.types';
@@ -169,6 +169,13 @@ export const MOCK_INITIATIVES: BackendInitiative[] = [
     sponsors: [],
   },
 ];
+
+export const MOCK_DONATION_STATS: DonationStats = {
+  totalDonated: 1450,
+  initiativesSupported: 6,
+  activeRecurringAmount: 50,
+  activeRecurringCount: 1,
+};
 
 export const MOCK_RECURRING_DONATIONS: RecurringDonation[] = [
   {

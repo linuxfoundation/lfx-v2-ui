@@ -2,14 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { FundType } from '@lfx-one/shared/enums';
-import { DonationHistoryItem, DonationStats, PaymentMethod } from '@lfx-one/shared/interfaces';
-
-export const MOCK_DONATION_STATS: DonationStats = {
-  totalDonated: 1450,
-  initiativesSupported: 6,
-  activeRecurringAmount: 50,
-  activeRecurringCount: 1,
-};
+import { DonationHistoryItem, PaymentMethod } from '@lfx-one/shared/interfaces';
 
 export const MOCK_DONATION_HISTORY: DonationHistoryItem[] = [
   {

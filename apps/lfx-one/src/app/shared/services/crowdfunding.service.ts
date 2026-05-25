@@ -12,10 +12,12 @@ import {
   EMPTY_MY_DONATIONS,
   EMPTY_RECURRING_DONATIONS,
   EMPTY_TRANSACTION_LIST,
+  EMPTY_DONATION_STATS,
 } from '@lfx-one/shared/constants';
 import {
   CrowdfundingInitiativesStats,
   CrowdfundingTransactionList,
+  DonationStats,
   InitiativeDetail,
   InitiativesResponse,
   MyDonationsResponse,
@@ -54,6 +56,10 @@ export class CrowdfundingService {
         return of(null);
       })
     );
+  }
+
+  public getMyDonationStats(): Observable<DonationStats> {
+    return this.http.get<DonationStats>('/api/crowdfunding/donation-stats').pipe(catchError(() => of(EMPTY_DONATION_STATS)));
   }
 
   public getMyRecurringDonations(): Observable<RecurringDonationsResponse> {

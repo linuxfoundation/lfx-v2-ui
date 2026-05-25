@@ -7,6 +7,7 @@ import {
   CrowdfundingInitiativesStats,
   CrowdfundingTransactionList,
   CrowdfundingTransaction,
+  DonationStats,
   InitiativeDetail,
   InitiativesResponse,
   MyDonationsResponse,
@@ -15,7 +16,7 @@ import {
 import { DEFAULT_CROWDFUNDING_PAGE_SIZE } from '@lfx-one/shared/constants';
 import { Request } from 'express';
 
-import { MOCK_DONATION_HISTORY, MOCK_INITIATIVES, MOCK_RECURRING_DONATIONS, MOCK_TRANSACTIONS } from '../mock-data/crowdfunding.mock';
+import { MOCK_DONATION_HISTORY, MOCK_DONATION_STATS, MOCK_INITIATIVES, MOCK_RECURRING_DONATIONS, MOCK_TRANSACTIONS } from '../mock-data/crowdfunding.mock';
 import { mapDonationHistoryToMyDonation, mapToInitiativeBase, mapToInitiativeDetail, mapToTransaction } from '../utils/crowdfunding-mapper';
 import { logger } from './logger.service';
 
@@ -66,6 +67,17 @@ export class CrowdfundingService {
     }
 
     return mapToInitiativeDetail(initiative);
+  }
+
+  public async getMyDonationStats(req: Request, username: string): Promise<DonationStats> {
+    logger.debug(req, 'get_my_donation_stats', 'Fetching donation stats for user', { username });
+
+    logger.debug(req, 'get_my_donation_stats', 'Returning donation stats', {
+      totalDonated: MOCK_DONATION_STATS.totalDonated,
+      activeRecurringCount: MOCK_DONATION_STATS.activeRecurringCount,
+    });
+
+    return MOCK_DONATION_STATS;
   }
 
   public async getMyRecurringDonations(req: Request, username: string): Promise<RecurringDonationsResponse> {

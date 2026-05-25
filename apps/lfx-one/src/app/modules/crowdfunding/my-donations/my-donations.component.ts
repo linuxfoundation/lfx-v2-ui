@@ -6,7 +6,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { environment } from '@environments/environment';
 import { MyDonation, DonationStats, PaymentMethod, RecurringDonation, RecurringDonationsResponse } from '@lfx-one/shared/interfaces';
 import { CrowdfundingService } from '@app/shared/services/crowdfunding.service';
-import { MOCK_DONATION_STATS, MOCK_PAYMENT_METHODS } from '../crowdfunding.mock';
+import { MOCK_PAYMENT_METHODS } from '../crowdfunding.mock';
 import { DonationsStatsBarComponent } from './components/donations-stats-bar/donations-stats-bar.component';
 import { DonationHistoryTableComponent } from './components/donation-history-table/donation-history-table.component';
 import { PaymentMethodsComponent } from './components/payment-methods/payment-methods.component';
@@ -16,6 +16,7 @@ import { concatMap, map, scan, startWith } from 'rxjs/operators';
 
 const DONATION_PAGE_SIZE = 10;
 
+const EMPTY_DONATION_STATS: DonationStats = { totalDonated: 0, initiativesSupported: 0, activeRecurringAmount: 0, activeRecurringCount: 0 };
 const EMPTY_RECURRING: RecurringDonation[] = [];
 const EMPTY_HISTORY_STATE = { items: [] as MyDonation[], hasMore: false };
 
@@ -33,7 +34,6 @@ export class MyDonationsComponent {
   protected readonly crowdfundingUrl = environment.urls.crowdfunding;
 
   // ─── Simple WritableSignals ───────────────────────────────────────────────
-  protected readonly stats = signal<DonationStats>(MOCK_DONATION_STATS);
   protected readonly paymentMethods = signal<PaymentMethod[]>(MOCK_PAYMENT_METHODS);
   protected readonly cancelledCount = signal(4);
 
@@ -41,6 +41,7 @@ export class MyDonationsComponent {
   private readonly loadMore$ = new Subject<void>();
 
   // ─── Complex Signals ──────────────────────────────────────────────────────
+  protected readonly stats: Signal<DonationStats> = this.initStats();
   protected readonly recurringDonations: Signal<RecurringDonation[]> = this.initRecurringDonations();
   private readonly donationHistoryState: Signal<{ items: MyDonation[]; hasMore: boolean }> = this.initDonationHistory();
   protected readonly donationHistory = computed(() => this.donationHistoryState().items);
@@ -81,6 +82,10 @@ export class MyDonationsComponent {
   }
 
   // ─── Private Initializers ─────────────────────────────────────────────────
+  private initStats(): Signal<DonationStats> {
+    return toSignal(this.crowdfundingService.getMyDonationStats(), { initialValue: EMPTY_DONATION_STATS });
+  }
+
   private initRecurringDonations(): Signal<RecurringDonation[]> {
     return toSignal(
       this.crowdfundingService.getMyRecurringDonations().pipe(map((res: RecurringDonationsResponse) => res.data)),
