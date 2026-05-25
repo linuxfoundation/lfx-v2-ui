@@ -1,17 +1,23 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, Signal, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { environment } from '@environments/environment';
-import { MyDonation, DonationStats, PaymentMethod, RecurringDonation } from '@lfx-one/shared/interfaces';
+import { MyDonation, DonationStats, PaymentMethod, RecurringDonation, RecurringDonationsResponse } from '@lfx-one/shared/interfaces';
 import { CrowdfundingService } from '@app/shared/services/crowdfunding.service';
-import { MOCK_DONATION_STATS, MOCK_PAYMENT_METHODS, MOCK_RECURRING_DONATIONS } from '../crowdfunding.mock';
+import { MOCK_DONATION_STATS, MOCK_PAYMENT_METHODS } from '../crowdfunding.mock';
 import { DonationsStatsBarComponent } from './components/donations-stats-bar/donations-stats-bar.component';
 import { DonationHistoryTableComponent } from './components/donation-history-table/donation-history-table.component';
 import { PaymentMethodsComponent } from './components/payment-methods/payment-methods.component';
 import { RecurringDonationsListComponent } from './components/recurring-donations-list/recurring-donations-list.component';
+import { Subject } from 'rxjs';
+import { concatMap, map, scan, startWith } from 'rxjs/operators';
 
 const DONATION_PAGE_SIZE = 10;
+
+const EMPTY_RECURRING: RecurringDonation[] = [];
+const EMPTY_HISTORY_STATE = { items: [] as MyDonation[], hasMore: false };
 
 @Component({
   selector: 'lfx-my-donations',
@@ -20,34 +26,29 @@ const DONATION_PAGE_SIZE = 10;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MyDonationsComponent {
+  // ─── Private Injections ───────────────────────────────────────────────────
   private readonly crowdfundingService = inject(CrowdfundingService);
 
+  // ─── Public Fields ────────────────────────────────────────────────────────
   protected readonly crowdfundingUrl = environment.urls.crowdfunding;
+
+  // ─── Simple WritableSignals ───────────────────────────────────────────────
   protected readonly stats = signal<DonationStats>(MOCK_DONATION_STATS);
-  protected readonly recurringDonations = signal<RecurringDonation[]>(MOCK_RECURRING_DONATIONS);
   protected readonly paymentMethods = signal<PaymentMethod[]>(MOCK_PAYMENT_METHODS);
   protected readonly cancelledCount = signal(4);
 
-  protected readonly donationHistory = signal<MyDonation[]>([]);
-  protected readonly donationHistoryHasMore = signal(false);
-  private donationHistoryOffset = 0;
+  // ─── Pagination Driver ────────────────────────────────────────────────────
+  private readonly loadMore$ = new Subject<void>();
 
-  constructor() {
-    this.fetchDonationPage();
-  }
+  // ─── Complex Signals ──────────────────────────────────────────────────────
+  protected readonly recurringDonations: Signal<RecurringDonation[]> = this.initRecurringDonations();
+  private readonly donationHistoryState: Signal<{ items: MyDonation[]; hasMore: boolean }> = this.initDonationHistory();
+  protected readonly donationHistory = computed(() => this.donationHistoryState().items);
+  protected readonly donationHistoryHasMore = computed(() => this.donationHistoryState().hasMore);
 
+  // ─── Protected Methods ────────────────────────────────────────────────────
   protected onLoadMoreDonations(): void {
-    this.fetchDonationPage();
-  }
-
-  private fetchDonationPage(): void {
-    this.crowdfundingService
-      .getMyDonations({ size: DONATION_PAGE_SIZE, from: this.donationHistoryOffset })
-      .subscribe((res) => {
-        this.donationHistory.update((existing) => [...existing, ...res.data]);
-        this.donationHistoryOffset += res.data.length;
-        this.donationHistoryHasMore.set(this.donationHistoryOffset < res.total);
-      });
+    this.loadMore$.next();
   }
 
   protected onViewCancelled(): void {
@@ -77,5 +78,33 @@ export class MyDonationsComponent {
   protected onRemoveCard(card: PaymentMethod): void {
     // TODO: call remove card API
     void card;
+  }
+
+  // ─── Private Initializers ─────────────────────────────────────────────────
+  private initRecurringDonations(): Signal<RecurringDonation[]> {
+    return toSignal(
+      this.crowdfundingService.getMyRecurringDonations().pipe(map((res: RecurringDonationsResponse) => res.data)),
+      { initialValue: EMPTY_RECURRING },
+    );
+  }
+
+  private initDonationHistory(): Signal<{ items: MyDonation[]; hasMore: boolean }> {
+    return toSignal(
+      this.loadMore$.pipe(
+        startWith(undefined as void),
+        scan((page) => page + 1, -1),
+        concatMap((page) =>
+          this.crowdfundingService.getMyDonations({ size: DONATION_PAGE_SIZE, from: page * DONATION_PAGE_SIZE }),
+        ),
+        scan(
+          (acc, res) => ({
+            items: [...acc.items, ...res.data],
+            hasMore: acc.items.length + res.data.length < res.total,
+          }),
+          EMPTY_HISTORY_STATE,
+        ),
+      ),
+      { initialValue: EMPTY_HISTORY_STATE },
+    );
   }
 }

@@ -235,6 +235,8 @@ export interface RecurringDonation {
   pausedSince?: string;
 }
 
+export type RecurringDonationsResponse = OffsetPaginatedResponse<RecurringDonation>;
+
 export interface DonationHistoryItem {
   id: string;
   initiativeName: string;

@@ -3,7 +3,7 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { DonationHistoryItem } from '@lfx-one/shared/interfaces';
+import { DonationHistoryItem, RecurringDonation } from '@lfx-one/shared/interfaces';
 import { FundType } from '@lfx-one/shared/enums';
 
 import { BackendInitiative, BackendTransaction } from '../types/crowdfunding.types';
@@ -167,6 +167,29 @@ export const MOCK_INITIATIVES: BackendInitiative[] = [
     },
     goals: [],
     sponsors: [],
+  },
+];
+
+export const MOCK_RECURRING_DONATIONS: RecurringDonation[] = [
+  {
+    id: 'curl',
+    name: 'curl Maintenance Fund',
+    icon: '🌀',
+    status: 'active',
+    amount: 50,
+    billingDescription: 'Billed monthly on the 1st',
+    startDate: 'Jan 2025',
+    nextChargeDate: 'Jun 1, 2026',
+  },
+  {
+    id: 'rust-for-linux',
+    name: 'Rust for Linux',
+    icon: '🦀',
+    status: 'paused',
+    amount: 25,
+    billingDescription: 'Billed monthly on the 5th',
+    startDate: 'Dec 2025',
+    pausedSince: 'Feb 5, 2026',
   },
 ];
 

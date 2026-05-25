@@ -40,6 +40,35 @@ export class CrowdfundingController {
   }
 
   /**
+   * GET /api/crowdfunding/recurring-donations
+   * Get the authenticated user's recurring donations
+   */
+  public async getMyRecurringDonations(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_my_recurring_donations');
+
+    try {
+      const rawUsername = await getUsernameFromAuth(req);
+
+      if (!rawUsername) {
+        throw new AuthenticationError('User authentication required', {
+          operation: 'get_my_recurring_donations',
+        });
+      }
+
+      const username = stripAuthPrefix(rawUsername);
+      const recurringDonations = await this.crowdfundingService.getMyRecurringDonations(req, username);
+
+      logger.success(req, 'get_my_recurring_donations', startTime, {
+        result_count: recurringDonations.data.length,
+      });
+
+      res.json(recurringDonations);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * GET /api/crowdfunding/my-donations
    * Get the authenticated user's donation history
    */

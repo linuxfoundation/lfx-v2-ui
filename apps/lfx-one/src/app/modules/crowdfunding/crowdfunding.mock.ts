@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { FundType } from '@lfx-one/shared/enums';
-import { DonationHistoryItem, DonationStats, PaymentMethod, RecurringDonation } from '@lfx-one/shared/interfaces';
+import { DonationHistoryItem, DonationStats, PaymentMethod } from '@lfx-one/shared/interfaces';
 
 export const MOCK_DONATION_STATS: DonationStats = {
   totalDonated: 1450,
@@ -10,29 +10,6 @@ export const MOCK_DONATION_STATS: DonationStats = {
   activeRecurringAmount: 50,
   activeRecurringCount: 1,
 };
-
-export const MOCK_RECURRING_DONATIONS: RecurringDonation[] = [
-  {
-    id: 'curl',
-    name: 'curl Maintenance Fund',
-    icon: '🌀',
-    status: 'active',
-    amount: 50,
-    billingDescription: 'Billed monthly on the 1st',
-    startDate: 'Jan 2025',
-    nextChargeDate: 'Jun 1, 2026',
-  },
-  {
-    id: 'rust-for-linux',
-    name: 'Rust for Linux',
-    icon: '🦀',
-    status: 'paused',
-    amount: 25,
-    billingDescription: 'Billed monthly on the 5th',
-    startDate: 'Dec 2025',
-    pausedSince: 'Feb 5, 2026',
-  },
-];
 
 export const MOCK_DONATION_HISTORY: DonationHistoryItem[] = [
   {

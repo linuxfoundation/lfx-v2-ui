@@ -6,13 +6,20 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 
-import { EMPTY_CROWDFUNDING_STATS, EMPTY_INITIATIVES_RESPONSE, EMPTY_MY_DONATIONS, EMPTY_TRANSACTION_LIST } from '@lfx-one/shared/constants';
+import {
+  EMPTY_CROWDFUNDING_STATS,
+  EMPTY_INITIATIVES_RESPONSE,
+  EMPTY_MY_DONATIONS,
+  EMPTY_RECURRING_DONATIONS,
+  EMPTY_TRANSACTION_LIST,
+} from '@lfx-one/shared/constants';
 import {
   CrowdfundingInitiativesStats,
   CrowdfundingTransactionList,
   InitiativeDetail,
   InitiativesResponse,
   MyDonationsResponse,
+  RecurringDonationsResponse,
 } from '@lfx-one/shared/interfaces';
 import { catchError, Observable, of } from 'rxjs';
 
@@ -47,6 +54,10 @@ export class CrowdfundingService {
         return of(null);
       })
     );
+  }
+
+  public getMyRecurringDonations(): Observable<RecurringDonationsResponse> {
+    return this.http.get<RecurringDonationsResponse>('/api/crowdfunding/recurring-donations').pipe(catchError(() => of(EMPTY_RECURRING_DONATIONS)));
   }
 
   public getMyDonations(params?: { size?: number; from?: number }): Observable<MyDonationsResponse> {
