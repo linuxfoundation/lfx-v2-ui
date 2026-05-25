@@ -12,6 +12,8 @@ import { CardComponent } from '@components/card/card.component';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { OrgLensMembershipsService } from '@services/org-lens-memberships.service';
 
+import { buildAgreementsCsv } from './documentation-tab.utils';
+
 type PageState = 'loading' | 'error' | 'ready';
 
 @Component({
@@ -26,6 +28,18 @@ export class DocumentationTabComponent {
   public readonly membershipTier = input.required<string>();
   public readonly orgName = input.required<string>();
   public readonly memberSince = input<string | null>(null);
+
+  /**
+   * Spec 018 FR-024-ext (round 2): required for the CSV export "Foundation" column
+   * (FR-032a col 2). Parent passes `f.foundationName` from its `foundation()` signal.
+   */
+  public readonly foundationName = input.required<string>();
+  /**
+   * Spec 018 FR-024-ext (round 2) / FR-034a: optional slug for the CSV filename
+   * (`membership-agreements-{slug}-{YYYYMMDD}.csv`). When null, `onDownloadAll`
+   * falls back to a sanitized `foundationId` per FR-034a.
+   */
+  public readonly foundationSlug = input<string | null>(null);
 
   private readonly service = inject(OrgLensMembershipsService);
 
@@ -92,6 +106,46 @@ export class DocumentationTabComponent {
 
   protected retry(): void {
     this.retryTrigger.update((v) => v + 1);
+  }
+
+  /**
+   * Spec 018 FR-032 / FR-034 / FR-034a: client-side CSV download of all loaded
+   * agreements for this (account, foundation). Pure client-side — no extra
+   * network request. Early-returns when the list is empty (FR-033).
+   *
+   * Filename pattern: `membership-agreements-{foundationSlug || sanitizedFoundationId}-{YYYYMMDD}.csv`
+   * (kebab-case, lowercase, sortable date prefix).
+   */
+  protected onDownloadAll(): void {
+    const rows = this.displayAgreements();
+    if (!rows.length) return;
+
+    const csv = buildAgreementsCsv(rows, this.orgName(), this.foundationName());
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+
+    const yyyymmdd = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const slug = this.foundationSlug() ?? this.sanitizedFoundationIdForFilename();
+    const filename = `membership-agreements-${slug}-${yyyymmdd}.csv`;
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Spec 018 FR-034a defensive fallback: when `foundationSlug` input is null,
+   * derive a filesystem-safe segment from `foundationId` by lowercasing and
+   * replacing any character that is not `[a-z0-9-]` with `-`.
+   */
+  private sanitizedFoundationIdForFilename(): string {
+    return this.foundationId()
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-');
   }
 
   private formatSignedDate(dateString: string): string {

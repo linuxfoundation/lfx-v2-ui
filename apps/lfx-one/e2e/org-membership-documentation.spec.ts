@@ -4,24 +4,30 @@
 /**
  * Org Membership Detail — Documentation Tab E2E Tests
  *
- * Covers spec 017-documentation-tab success criteria:
+ * Covers spec 017-documentation-tab success criteria, updated by spec 018:
  * - SC-001: Tab renders within 2 seconds (dev-mode budget applies)
- * - SC-002: 11 agreement rows in descending order with "Current" badge on 2026
+ * - SC-002: agreement rows in descending order; "Current" badge on Active rows only
  * - SC-003: Certificate title derived from membership tier
  * - SC-004: memberSince null fallback (em-dash)
  * - SC-006: Visual parity — card styling, badge, gradient certificate row
- * - SC-008: All FR-028 data-testid attributes resolve
+ * - SC-008: All FR-028 data-testid attributes resolve (regex re-target per FR-022)
  * - SC-009: Loading skeleton, error state, inline empty state
  * - SC-010: Tab caching — no redundant fetch on re-visit
+ *
+ * Spec 018 changes (round 1 + round 2):
+ * - Per-row testid format changed from `ma-{YEAR}` to `ma-{YEAR}-{6charHash}` (FR-006b);
+ *   selectors here use cohort-year prefix matching `[data-testid^="...-ma-2026-"]`.
+ * - `fileSizeKb` is now null for Snowflake-backed responses; the `· {size} KB`
+ *   metadata segment is dropped from the line (FR-014); we no longer assert on `124 KB`.
+ * - The spec-017 "Coming soon" tooltip describe block is removed — Phase 6 (View link)
+ *   and Phase 7 (CSV download) add live-action coverage.
  *
  * Prerequisites:
  * - Dev server running on localhost:4200
  * - User authenticated with org-lens-enabled flag
  * - Organization context has at least one membership
- *
- * Mock semantics (v1): every foundationId returns the same 11-agreement fixture
- * from org-membership-documents.mock.json. Certificate display fields are
- * client-assembled from the parent's foundation header data.
+ * - Dev Snowflake table `ANALYTICS_DEV.LF_LUIS_PLATINUM_LFX_ONE.ORG_LENS_MEMBERSHIP_AGREEMENTS`
+ *   is seeded (see spec 018 quickstart §7 — the seed includes AGL/Toyota data).
  */
 
 import { expect, test } from '@playwright/test';
@@ -51,46 +57,56 @@ test.describe('Documentation Tab — testid resolution (SC-008, FR-028)', () => 
     await expect(page.getByTestId('membership-detail-docs-agreements-list')).toBeVisible();
   });
 
-  test('renders all 11 agreement rows with per-row testids (SC-002)', async ({ page }) => {
-    const agreementIds = ['ma-2026', 'ma-2025', 'ma-2024', 'ma-2023', 'ma-2022', 'ma-2021', 'ma-2020', 'ma-2019', 'ma-2018', 'ma-2017', 'ma-2016'];
-
-    for (const id of agreementIds) {
-      await expect(page.getByTestId(`membership-detail-docs-agreement-${id}`)).toBeVisible();
-      await expect(page.getByTestId(`membership-detail-docs-agreement-name-${id}`)).toBeVisible();
-      await expect(page.getByTestId(`membership-detail-docs-agreement-meta-${id}`)).toBeVisible();
-      await expect(page.getByTestId(`membership-detail-docs-agreement-view-${id}`)).toBeVisible();
-    }
-
+  test('renders agreement rows with per-row testids (SC-002, FR-022)', async ({ page }) => {
+    // Spec 018 FR-006b: testid suffix is `ma-{YEAR}-{6charHash}` not `ma-{YEAR}`.
+    // Use cohort-year prefix matching so selectors are stable across environments.
     const listContainer = page.getByTestId('membership-detail-docs-agreements-list');
     const rows = listContainer.locator('[data-testid^="membership-detail-docs-agreement-ma-"]');
-    await expect(rows).toHaveCount(11);
+
+    // Row count depends on the seeded dev data — assert a minimum baseline rather than an exact 11.
+    const rowCount = await rows.count();
+    expect(rowCount).toBeGreaterThan(0);
+
+    // Every row has the four expected sub-testids (regex match on the cohort-year prefix).
+    for (let i = 0; i < rowCount; i++) {
+      const row = rows.nth(i);
+      await expect(row).toBeVisible();
+      // Each sub-testid (`-name-`, `-meta-`, `-view-`) appears at least once on this row.
+      await expect(row.locator('[data-testid^="membership-detail-docs-agreement-name-ma-"]')).toBeVisible();
+      await expect(row.locator('[data-testid^="membership-detail-docs-agreement-meta-ma-"]')).toBeVisible();
+      await expect(row.locator('[data-testid^="membership-detail-docs-agreement-view-ma-"]')).toBeVisible();
+    }
   });
 
-  test('"Current" badge appears only on the 2026 agreement (SC-002, FR-003)', async ({ page }) => {
-    await expect(page.getByTestId('membership-detail-docs-agreement-current-badge-ma-2026')).toBeVisible();
-    await expect(page.getByTestId('membership-detail-docs-agreement-current-badge-ma-2026')).toContainText('Current');
-
-    for (const id of ['ma-2025', 'ma-2024', 'ma-2023', 'ma-2022', 'ma-2021', 'ma-2020', 'ma-2019', 'ma-2018', 'ma-2017', 'ma-2016']) {
-      await expect(page.locator(`[data-testid="membership-detail-docs-agreement-current-badge-${id}"]`)).not.toBeVisible();
+  test('"Current" badge appears only on Active rows (SC-002, SC-003, FR-006a)', async ({ page }) => {
+    // Spec 018 FR-006a: at most one Current per (account, foundation). Active-only;
+    // Purchased/At Risk/Completed/Expired never qualify. Could be zero or one row.
+    const badges = page.locator('[data-testid^="membership-detail-docs-agreement-current-badge-ma-"]');
+    const badgeCount = await badges.count();
+    expect(badgeCount).toBeLessThanOrEqual(1);
+    if (badgeCount === 1) {
+      await expect(badges.first()).toContainText('Current');
     }
   });
 
   test('agreement rows are sorted newest-first (SC-002, FR-004)', async ({ page }) => {
     const listContainer = page.getByTestId('membership-detail-docs-agreements-list');
-    const nameElements = listContainer.locator('[data-testid^="membership-detail-docs-agreement-name-"]');
+    const nameElements = listContainer.locator('[data-testid^="membership-detail-docs-agreement-name-ma-"]');
     const names = await nameElements.allTextContents();
 
-    expect(names[0]).toContain('2026');
-    expect(names[1]).toContain('2025');
-    expect(names[names.length - 1]).toContain('2016');
+    if (names.length >= 2) {
+      const firstYear = Number.parseInt(names[0].match(/(\d{4})/)?.[1] ?? '0', 10);
+      const secondYear = Number.parseInt(names[1].match(/(\d{4})/)?.[1] ?? '0', 10);
+      expect(firstYear).toBeGreaterThanOrEqual(secondYear);
+    }
   });
 
-  test('agreement metadata shows formatted dates (FR-002 clarification)', async ({ page }) => {
-    const meta2026 = page.getByTestId('membership-detail-docs-agreement-meta-ma-2026');
-    await expect(meta2026).toContainText('Jan');
-    await expect(meta2026).toContainText('2026');
-    await expect(meta2026).toContainText('PDF');
-    await expect(meta2026).toContainText('124 KB');
+  test('agreement metadata shows formatted dates and PDF format (FR-014)', async ({ page }) => {
+    // Spec 018 FR-014: file-size segment dropped when fileSizeKb === null
+    // (Snowflake-backed responses always carry null). Assert format token only.
+    const firstMeta = page.locator('[data-testid^="membership-detail-docs-agreement-meta-ma-"]').first();
+    await expect(firstMeta).toContainText('Signed');
+    await expect(firstMeta).toContainText('PDF');
   });
 
   test('renders the Certificate of Membership card with all testids (SC-003)', async ({ page }) => {
@@ -115,24 +131,128 @@ test.describe('Documentation Tab — testid resolution (SC-008, FR-028)', () => 
   });
 });
 
-test.describe('Documentation Tab — placeholder actions (FR-006, FR-011)', () => {
+// Spec 017's "placeholder actions (FR-006, FR-011)" describe block was DELETED
+// by spec 018 FR-022:
+//   - View link is no longer "Coming soon" — it's a live <a href> or disabled
+//     branch (FR-028 / FR-028a / FR-028b). Coverage lives in the "View link
+//     live behavior" describe block below.
+//   - Download-all button is no longer "Coming soon" — it triggers a client-side
+//     CSV download (FR-032 / FR-034 / FR-034a). Coverage in the "CSV download"
+//     describe block below.
+//   - Certificate Download button stays "Coming soon" (out of scope for spec 018);
+//     if explicit coverage is desired, add a single test below.
+test.describe('Documentation Tab — View link live behavior (SC-011, SC-012, FR-028)', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(DOCS_URL_AGL, { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('membership-detail-docs-content')).toBeVisible({ timeout: DATA_LOAD_TIMEOUT });
+    await expect(page.getByTestId('membership-detail-docs-agreements-list')).toBeVisible({ timeout: DATA_LOAD_TIMEOUT });
   });
 
-  test('View links show "Coming soon" tooltip on hover', async ({ page }) => {
-    const viewLink = page.getByTestId('membership-detail-docs-agreement-view-ma-2026');
-    await viewLink.hover();
+  test('SC-011: rows with a downloadUrl render View as an <a href target=_blank> with noopener noreferrer', async ({ page }) => {
+    // Find any View link rendered as an anchor (active branch — agreement.downloadUrl is non-null).
+    const activeViewLinks = page.locator('a[data-testid^="membership-detail-docs-agreement-view-ma-"]');
+    const count = await activeViewLinks.count();
+
+    if (count === 0) {
+      // Skip: dev data doesn't have any rows with download URLs at this foundation.
+      test.skip();
+      return;
+    }
+
+    const first = activeViewLinks.first();
+    await expect(first).toBeVisible();
+    await expect(first).toHaveAttribute('target', '_blank');
+    await expect(first).toHaveAttribute('rel', /noopener.*noreferrer|noreferrer.*noopener/);
+    // href is bound from agreement.downloadUrl; we don't pin the value — just assert it's non-empty.
+    const href = await first.getAttribute('href');
+    expect(href).toBeTruthy();
+  });
+
+  test('SC-012: rows with null downloadUrl render View as a disabled <span role=link aria-disabled=true>', async ({ page }) => {
+    // Find any View element rendered as a span (disabled branch — agreement.downloadUrl is null).
+    const disabledViewSpans = page.locator('span[data-testid^="membership-detail-docs-agreement-view-ma-"]');
+    const count = await disabledViewSpans.count();
+
+    if (count === 0) {
+      // Skip: dev data has 100% coverage of download URLs at this foundation (e.g., Toyota).
+      test.skip();
+      return;
+    }
+
+    const first = disabledViewSpans.first();
+    await expect(first).toBeVisible();
+    await expect(first).toHaveAttribute('aria-disabled', 'true');
+    await expect(first).toHaveAttribute('role', 'link');
+    // No href on the disabled branch.
+    const href = await first.getAttribute('href');
+    expect(href).toBeNull();
+
+    // Hover triggers the "Document not available" tooltip.
+    await first.hover();
     await expect(page.locator('.p-tooltip')).toBeVisible({ timeout: 2_000 });
-    await expect(page.locator('.p-tooltip')).toContainText('Coming soon');
+    await expect(page.locator('.p-tooltip')).toContainText('Document not available');
+  });
+});
+
+test.describe('Documentation Tab — CSV download (SC-013, SC-014, FR-032)', () => {
+  test('SC-013: download-all icon downloads a 9-column CSV with the correct filename pattern', async ({ page }) => {
+    await page.goto(DOCS_URL_AGL, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('membership-detail-docs-content')).toBeVisible({ timeout: DATA_LOAD_TIMEOUT });
+    await expect(page.getByTestId('membership-detail-docs-agreements-list')).toBeVisible({ timeout: DATA_LOAD_TIMEOUT });
+
+    const downloadAll = page.getByTestId('membership-detail-docs-download-all');
+    await expect(downloadAll).toBeVisible();
+
+    const [download] = await Promise.all([page.waitForEvent('download'), downloadAll.click()]);
+
+    // FR-034a: `membership-agreements-{foundationSlug || sanitizedFoundationId}-{YYYYMMDD}.csv`
+    expect(download.suggestedFilename()).toMatch(/^membership-agreements-[a-z0-9-]+-\d{8}\.csv$/);
+
+    const path = await download.path();
+    expect(path).toBeTruthy();
+    const { readFile } = await import('node:fs/promises');
+    const body = await readFile(path!, 'utf-8');
+    const lines = body.split('\r\n').filter((l) => l.length > 0);
+
+    // Header is exactly the 9 FR-032a columns in this exact order.
+    expect(lines[0]).toBe('Organization,Foundation,Agreement Name,Signed Date,Format,Status,Tier,Current,Download URL');
+
+    // Each data row has exactly 9 comma-separated columns (allowing for RFC 4180 quoted fields).
+    expect(lines.length).toBeGreaterThanOrEqual(2); // header + at least one data row
+    for (const line of lines.slice(1)) {
+      // Strip quoted fields before counting commas — a quick RFC 4180 sanity check.
+      const stripped = line.replace(/"[^"]*"/g, 'X');
+      const commaCount = (stripped.match(/,/g) ?? []).length;
+      expect(commaCount).toBe(8); // 9 columns = 8 separators
+    }
   });
 
-  test('Download-all button shows "Coming soon" tooltip on hover', async ({ page }) => {
+  test('SC-014: download-all icon is disabled for foundations with zero agreements', async ({ page }) => {
+    // Navigate to a foundation known to have zero Corporate memberships seeded.
+    // If your dev fixture covers an empty foundation, point the URL here; otherwise
+    // this test will skip gracefully when the agreements list is non-empty.
+    await page.goto(DOCS_URL_AGL, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('membership-detail-docs-content')).toBeVisible({ timeout: DATA_LOAD_TIMEOUT });
+
+    const emptyState = page.getByTestId('membership-detail-docs-agreements-empty');
+    const isEmpty = await emptyState.isVisible().catch(() => false);
+    if (!isEmpty) {
+      test.skip();
+      return;
+    }
+
     const downloadAll = page.getByTestId('membership-detail-docs-download-all');
+    await expect(downloadAll).toBeDisabled();
     await downloadAll.hover();
     await expect(page.locator('.p-tooltip')).toBeVisible({ timeout: 2_000 });
-    await expect(page.locator('.p-tooltip')).toContainText('Coming soon');
+    await expect(page.locator('.p-tooltip')).toContainText('No agreements to download');
+  });
+});
+
+test.describe('Documentation Tab — Certificate placeholder (still "Coming soon" in spec 018)', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto(DOCS_URL_AGL, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('membership-detail-docs-content')).toBeVisible({ timeout: DATA_LOAD_TIMEOUT });
   });
 
   test('Certificate Download button shows "Coming soon" tooltip on hover', async ({ page }) => {

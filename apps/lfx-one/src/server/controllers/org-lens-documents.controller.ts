@@ -28,7 +28,7 @@ export class OrgLensDocumentsController {
       this.assertAccountId(accountId, 'get_membership_documents');
       this.assertFoundationId(foundationId, 'get_membership_documents');
 
-      const response = this.service.getMembershipDocuments(accountId, foundationId);
+      const response = await this.service.getMembershipDocuments(accountId, foundationId);
 
       logger.success(req, 'get_membership_documents', startTime, {
         account_id: accountId,

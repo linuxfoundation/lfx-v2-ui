@@ -279,16 +279,34 @@ export interface WhyCantEditDialogData {
 
 export type WhyCantEditDialogResult = { contactFoundation: boolean } | null;
 
-// Membership Detail page — Documentation tab (spec 017) --------------------------------------
+// Membership Detail page — Documentation tab (spec 017 baseline + spec 018 Snowflake extension)
 
-/** One agreement document in the Documentation tab list. */
+/**
+ * One agreement document in the Documentation tab list.
+ *
+ * Spec 018 changes (round 1 + round 2):
+ * - `fileSizeKb` widened from `number` → `number | null` (FR-014/FR-018). Snowflake/Salesforce
+ *   do not store file size; the BFF returns null for Snowflake-backed responses. UI drops the
+ *   `· {size} KB` metadata segment via `@if (agreement.fileSizeKb != null)` when null.
+ * - `downloadUrl: string | null` added (round 2 FR-031). Sourced from
+ *   `Opportunity.Membership_Doc_Download_URL__c` via bronze → silver → platinum chain. NULL
+ *   for older agreements (pre-UAT-2023 process change) — UI renders the View link as
+ *   disabled with `"Document not available"` tooltip (FR-028a).
+ * - `statusRaw: string` added (round 2 FR-032b). One of 'Active' / 'At Risk' / 'Purchased' /
+ *   'Completed' / 'Expired'. Used by the CSV export (FR-032a column 6); not rendered on screen.
+ * - `tier: string` added (round 2 FR-032b). The full membership tier display label
+ *   (e.g., "Platinum Membership"). Used by the CSV export (FR-032a column 7); not rendered.
+ */
 export interface OrgMembershipAgreement {
   id: string;
   name: string;
   signedDate: string;
   format: string;
-  fileSizeKb: number;
+  fileSizeKb: number | null;
   isCurrent: boolean;
+  downloadUrl: string | null;
+  statusRaw: string;
+  tier: string;
 }
 
 /** Server-side certificate template (display fields derived client-side from parent inputs). */
