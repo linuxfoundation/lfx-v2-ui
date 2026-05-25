@@ -85,7 +85,7 @@
                 <div class="shrink-0 sm:w-40">
                   <lfx-tag [value]="typeLabels[item.type]" [severity]="item.severity" [icon]="item.icon" styleClass="whitespace-nowrap" />
                 </div>
-                <!-- Description — flexes to fill; RSVP/Agenda titles link to the meeting page in a new tab. -->
+                <!-- Description — flexes to fill; RSVP titles with a `buttonLink` link to the meeting page in a new tab, all other titles render as plain text. -->
                 @if (item.isRsvpInlineLink) {
                   <a
                     [href]="item.buttonLink"
