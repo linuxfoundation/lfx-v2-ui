@@ -3,7 +3,13 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { CrowdfundingInitiativesStats, CrowdfundingTransactionList, CrowdfundingTransaction, InitiativeDetail, InitiativesResponse } from '@lfx-one/shared/interfaces';
+import {
+  CrowdfundingInitiativesStats,
+  CrowdfundingTransactionList,
+  CrowdfundingTransaction,
+  InitiativeDetail,
+  InitiativesResponse,
+} from '@lfx-one/shared/interfaces';
 import { DEFAULT_CROWDFUNDING_PAGE_SIZE } from '@lfx-one/shared/constants';
 import { Request } from 'express';
 
