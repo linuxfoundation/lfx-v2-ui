@@ -8,7 +8,7 @@ import { PendingActionsDrawerComponent } from '@app/modules/dashboards/component
 import { RsvpButtonGroupComponent } from '@app/modules/meetings/components/rsvp-button-group/rsvp-button-group.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { PENDING_ACTION_BUTTON_ICON, PENDING_ACTION_LABEL } from '@lfx-one/shared/constants';
+import { PENDING_ACTION_BUTTON_ICON, PENDING_ACTION_FADE_OUT_MS, PENDING_ACTION_LABEL, PENDING_ACTION_SKELETON_HOLD_MS } from '@lfx-one/shared/constants';
 import { MeetingService } from '@services/meeting.service';
 import { HiddenActionsService } from '@shared/services/hidden-actions.service';
 import { MessageService } from 'primeng/api';
@@ -18,11 +18,6 @@ import { timer } from 'rxjs';
 
 import type { DecoratedPendingAction, Meeting, MeetingRsvp, PendingActionItem, RsvpResponse } from '@lfx-one/shared/interfaces';
 
-// Fade + collapse animation duration (must match CSS transition in pending-actions.component.scss).
-const FADE_OUT_MS = 300;
-// How long the skeleton placeholder sits in the completed row's slot before the next action takes over.
-const SKELETON_HOLD_MS = 500;
-
 @Component({
   selector: 'lfx-pending-actions',
   imports: [ButtonComponent, TagComponent, RsvpButtonGroupComponent, PendingActionsDrawerComponent, SkeletonModule, ToastModule, RouterLink],
@@ -30,13 +25,14 @@ const SKELETON_HOLD_MS = 500;
   styleUrl: './pending-actions.component.scss',
 })
 export class PendingActionsComponent {
-  protected readonly buttonIcons = PENDING_ACTION_BUTTON_ICON;
-  protected readonly typeLabels = PENDING_ACTION_LABEL;
   private readonly hiddenActionsService = inject(HiddenActionsService);
   private readonly meetingService = inject(MeetingService);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
+
+  protected readonly buttonIcons = PENDING_ACTION_BUTTON_ICON;
+  protected readonly typeLabels = PENDING_ACTION_LABEL;
 
   public readonly pendingActions = input.required<PendingActionItem[]>();
   public readonly displayLimit = input<number>(2);
@@ -157,7 +153,7 @@ export class PendingActionsComponent {
     this.hiddenActionsService.hideAction(item);
 
     this.completingRowKeys.update((keys) => new Set(keys).add(rowKey));
-    timer(FADE_OUT_MS)
+    timer(PENDING_ACTION_FADE_OUT_MS)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         // Drop the completed row — it's already hidden via cookie; removing it from completingRowKeys lets the natural filter take over.
@@ -176,7 +172,7 @@ export class PendingActionsComponent {
         if (arrivalKey === rowKey) return;
 
         this.swappingRowKeys.update((keys) => new Set(keys).add(arrivalKey));
-        timer(SKELETON_HOLD_MS)
+        timer(PENDING_ACTION_SKELETON_HOLD_MS)
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe(() => {
             this.swappingRowKeys.update((keys) => this.removeFromSet(keys, arrivalKey));

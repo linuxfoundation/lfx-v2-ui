@@ -8,7 +8,7 @@ import { RsvpButtonGroupComponent } from '@app/modules/meetings/components/rsvp-
 import { ButtonComponent } from '@components/button/button.component';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { PENDING_ACTION_BUTTON_ICON, PENDING_ACTION_LABEL } from '@lfx-one/shared/constants';
+import { PENDING_ACTION_BUTTON_ICON, PENDING_ACTION_FADE_OUT_MS, PENDING_ACTION_LABEL } from '@lfx-one/shared/constants';
 import { MeetingService } from '@services/meeting.service';
 import { HiddenActionsService } from '@shared/services/hidden-actions.service';
 import { MessageService } from 'primeng/api';
@@ -18,9 +18,6 @@ import { combineLatest, filter, timer } from 'rxjs';
 
 import type { DrawerActionRow, Meeting, MeetingRsvp, PendingActionItem, RsvpResponse } from '@lfx-one/shared/interfaces';
 
-// Fade + collapse animation duration (must match CSS transition in pending-actions-drawer.component.scss).
-const FADE_OUT_MS = 300;
-
 @Component({
   selector: 'lfx-pending-actions-drawer',
   imports: [DrawerModule, SkeletonModule, ButtonComponent, TagComponent, EmptyStateComponent, RsvpButtonGroupComponent],
@@ -28,13 +25,14 @@ const FADE_OUT_MS = 300;
   styleUrl: './pending-actions-drawer.component.scss',
 })
 export class PendingActionsDrawerComponent {
-  protected readonly buttonIcons = PENDING_ACTION_BUTTON_ICON;
-  protected readonly typeLabels = PENDING_ACTION_LABEL;
   private readonly hiddenActionsService = inject(HiddenActionsService);
   private readonly meetingService = inject(MeetingService);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
+
+  protected readonly buttonIcons = PENDING_ACTION_BUTTON_ICON;
+  protected readonly typeLabels = PENDING_ACTION_LABEL;
 
   public readonly pendingActions = input.required<PendingActionItem[]>();
   public readonly visible = model<boolean>(false);
@@ -140,7 +138,7 @@ export class PendingActionsDrawerComponent {
     this.hiddenActionsService.hideAction(item);
 
     this.completingRowKeys.update((keys) => new Set(keys).add(rowKey));
-    timer(FADE_OUT_MS)
+    timer(PENDING_ACTION_FADE_OUT_MS)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.completingRowKeys.update((keys) => this.removeFromSet(keys, rowKey));

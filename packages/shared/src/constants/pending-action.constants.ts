@@ -39,3 +39,15 @@ export const PENDING_ACTION_LABEL: Record<PendingActionType, string> = {
   Agenda: 'Agenda',
   Submitted: 'Submitted',
 };
+
+/**
+ * Pending-action fade-out + collapse animation duration in milliseconds. MUST match the CSS
+ * transition in pending-actions.component.scss and pending-actions-drawer.component.scss.
+ */
+export const PENDING_ACTION_FADE_OUT_MS = 300;
+
+/**
+ * How long the skeleton placeholder sits in the completed row's slot before the next pending
+ * action takes over, in milliseconds.
+ */
+export const PENDING_ACTION_SKELETON_HOLD_MS = 500;
