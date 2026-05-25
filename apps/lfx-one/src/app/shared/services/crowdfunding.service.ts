@@ -59,4 +59,18 @@ export class CrowdfundingService {
       })
     );
   }
+
+  public getInitiativeTransactions(
+    slug: string,
+    params?: { type?: 'donation' | 'reimbursement'; size?: number; from?: number },
+  ): Observable<CrowdfundingTransactionList> {
+    let httpParams = new HttpParams();
+    if (params?.type) httpParams = httpParams.set('type', params.type);
+    if (params?.size != null) httpParams = httpParams.set('size', String(params.size));
+    if (params?.from != null) httpParams = httpParams.set('from', String(params.from));
+
+    return this.http
+      .get<CrowdfundingTransactionList>(`/api/crowdfunding/initiatives/${slug}/transactions`, { params: httpParams })
+      .pipe(catchError(() => of(EMPTY_TRANSACTION_LIST)));
+  }
 }
