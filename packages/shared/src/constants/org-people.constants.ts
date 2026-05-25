@@ -3,12 +3,7 @@
 
 import type { PeopleTabConfig, PeopleTabId } from '../interfaces/org-people.interface';
 
-/**
- * Tab definitions for the Org Lens People page in their visible order.
- *
- * The first entry (`all`) is the implicit default — see
- * {@link DEFAULT_PEOPLE_TAB_ID}.
- */
+/** Org People page tabs in visible order (`all` is the default). */
 export const PEOPLE_TABS: readonly PeopleTabConfig[] = [
   { id: 'all', label: 'All Employees', icon: 'fa-light fa-users', noun: 'all employees' },
   { id: 'board', label: 'Board', icon: 'fa-light fa-user-tie', noun: 'board members' },
@@ -19,14 +14,8 @@ export const PEOPLE_TABS: readonly PeopleTabConfig[] = [
   { id: 'training', label: 'Trainees', icon: 'fa-light fa-graduation-cap', noun: 'trainees' },
 ] as const;
 
-/**
- * Default tab id for the Org Lens People page. The URL drops `?tab=` when
- * the active tab matches this value so deep-link URLs stay clean.
- */
+/** Default tab — URL drops `?tab=` when active to keep deep links clean. */
 export const DEFAULT_PEOPLE_TAB_ID: PeopleTabId = 'all';
 
-/**
- * Set of valid {@link PeopleTabId} values, derived from {@link PEOPLE_TABS}.
- * Used to validate `?tab=<id>` query-param input.
- */
+/** Derived from PEOPLE_TABS; used to validate `?tab=` query-param input. */
 export const VALID_PEOPLE_TAB_IDS: ReadonlySet<PeopleTabId> = new Set(PEOPLE_TABS.map((t) => t.id));

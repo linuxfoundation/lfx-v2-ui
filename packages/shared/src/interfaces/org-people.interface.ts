@@ -1,14 +1,10 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-/**
- * Tab identifiers for the Org Lens People page tab strip.
- */
+/** Tab identifier for the Org People page tab strip. */
 export type PeopleTabId = 'all' | 'board' | 'committee' | 'contacts' | 'contributors' | 'events' | 'training';
 
-/**
- * Tab definition for the Org Lens People page.
- */
+/** Tab definition for the Org People page. */
 export interface PeopleTabConfig {
   readonly id: PeopleTabId;
   readonly label: string;

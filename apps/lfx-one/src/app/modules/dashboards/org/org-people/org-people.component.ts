@@ -26,10 +26,7 @@ export class OrgPeopleComponent {
     initialValue: this.route.snapshot.queryParamMap,
   });
 
-  protected readonly activeTab: Signal<PeopleTabId> = computed(() => {
-    const raw = this.queryParamMap().get('tab');
-    return raw && VALID_PEOPLE_TAB_IDS.has(raw as PeopleTabId) ? (raw as PeopleTabId) : DEFAULT_PEOPLE_TAB_ID;
-  });
+  protected readonly activeTab: Signal<PeopleTabId> = computed(() => this.initActiveTab());
 
   protected readonly activeTabConfig: Signal<PeopleTabConfig> = computed(() => PEOPLE_TABS.find((t) => t.id === this.activeTab()) ?? PEOPLE_TABS[0]);
 
@@ -37,10 +34,7 @@ export class OrgPeopleComponent {
 
   protected readonly hasCompany = computed(() => this.accountContext.selectedAccount().accountId !== '');
 
-  protected readonly heading = computed(() => {
-    const name = this.companyName();
-    return name ? `People — ${name}` : 'People';
-  });
+  protected readonly heading: Signal<string> = computed(() => this.initHeading());
 
   protected readonly noCompanyEmptyTitle = computed(() => `Select a company via Impersonate to view ${this.activeTabConfig().noun}.`);
 
@@ -72,5 +66,15 @@ export class OrgPeopleComponent {
         (document.getElementById(`org-people-tab-${ids[next]}`) as HTMLElement | null)?.focus();
       }
     }
+  }
+
+  private initActiveTab(): PeopleTabId {
+    const raw = this.queryParamMap().get('tab');
+    return raw && VALID_PEOPLE_TAB_IDS.has(raw as PeopleTabId) ? (raw as PeopleTabId) : DEFAULT_PEOPLE_TAB_ID;
+  }
+
+  private initHeading(): string {
+    const name = this.companyName();
+    return name ? `People — ${name}` : 'People';
   }
 }
