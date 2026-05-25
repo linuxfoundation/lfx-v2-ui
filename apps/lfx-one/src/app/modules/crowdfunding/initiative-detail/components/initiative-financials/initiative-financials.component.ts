@@ -4,7 +4,7 @@
 import { Component, computed, input, Signal } from '@angular/core';
 import { AvatarComponent } from '@components/avatar/avatar.component';
 import { CROWDFUNDING_DONOR_AVATAR_PALETTE } from '@lfx-one/shared/constants';
-import { CrowdfundingInitiativeDetail, DonationTransaction } from '@lfx-one/shared/interfaces';
+import { DonationRecord, ExpenseRecord, InitiativeDetail } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-initiative-financials',
@@ -13,33 +13,29 @@ import { CrowdfundingInitiativeDetail, DonationTransaction } from '@lfx-one/shar
   styleUrl: './initiative-financials.component.scss',
 })
 export class InitiativeFinancialsComponent {
-  public readonly initiative = input.required<CrowdfundingInitiativeDetail>();
+  public readonly initiative = input.required<InitiativeDetail>();
 
-  protected readonly totalReceived = computed(() => this.initiative().donationsIn.reduce((sum, d) => sum + d.amount, 0));
-  protected readonly totalExpenses = computed(() => this.initiative().donationsOut.reduce((sum, d) => sum + d.amount, 0));
-  protected readonly balance = computed(() => this.totalReceived() - this.totalExpenses());
+  protected readonly formattedTotalReceived = computed(() => this.formatCurrency((this.initiative().financialSummary?.totalReceivedCents ?? 0) / 100));
+  protected readonly formattedTotalExpenses = computed(() => this.formatCurrency((this.initiative().financialSummary?.totalExpensesCents ?? 0) / 100));
+  protected readonly formattedBalance = computed(() => this.formatCurrency((this.initiative().financialSummary?.balanceCents ?? 0) / 100));
+  protected readonly donationRecordsWithMeta = this.initDonationRecordsWithMeta();
+  protected readonly expenseRecordsWithMeta = this.initExpenseRecordsWithMeta();
 
-  protected readonly formattedTotalReceived = computed(() => this.formatCurrency(this.totalReceived()));
-  protected readonly formattedTotalExpenses = computed(() => this.formatCurrency(this.totalExpenses()));
-  protected readonly formattedBalance = computed(() => this.formatCurrency(this.balance()));
-  protected readonly donationsInWithMeta = this.initDonationsInWithMeta();
-  protected readonly donationsOutWithMeta = this.initDonationsOutWithMeta();
-
-  private initDonationsInWithMeta(): Signal<(DonationTransaction & { formattedAmount: string; avatarClass: string })[]> {
+  private initDonationRecordsWithMeta(): Signal<(DonationRecord & { formattedAmount: string; avatarClass: string })[]> {
     return computed(() =>
-      this.initiative().donationsIn.map((d) => ({
+      (this.initiative().donationRecords ?? []).map((d) => ({
         ...d,
-        formattedAmount: this.formatCurrency(d.amount),
-        avatarClass: this.donorAvatarClass(d.who),
+        formattedAmount: this.formatCurrency(d.amountCents / 100),
+        avatarClass: this.donorAvatarClass(d.supporterName),
       }))
     );
   }
 
-  private initDonationsOutWithMeta(): Signal<(DonationTransaction & { formattedAmount: string })[]> {
+  private initExpenseRecordsWithMeta(): Signal<(ExpenseRecord & { formattedAmount: string })[]> {
     return computed(() =>
-      this.initiative().donationsOut.map((d) => ({
+      (this.initiative().expenseRecords ?? []).map((d) => ({
         ...d,
-        formattedAmount: this.formatCurrency(d.amount),
+        formattedAmount: this.formatCurrency(d.amountCents / 100),
       }))
     );
   }

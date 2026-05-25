@@ -5,7 +5,7 @@ import { Component, computed, input, output, Signal } from '@angular/core';
 import { AvatarComponent } from '@components/avatar/avatar.component';
 import { CardComponent } from '@components/card/card.component';
 import { CROWDFUNDING_DONOR_AVATAR_PALETTE } from '@lfx-one/shared/constants';
-import { CrowdfundingInitiativeDetail, DonationTransaction } from '@lfx-one/shared/interfaces';
+import { InitiativeDetail, RecentDonation } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-initiative-overview-sidebar',
@@ -14,19 +14,19 @@ import { CrowdfundingInitiativeDetail, DonationTransaction } from '@lfx-one/shar
   styleUrl: './initiative-overview-sidebar.component.scss',
 })
 export class InitiativeOverviewSidebarComponent {
-  public readonly initiative = input.required<CrowdfundingInitiativeDetail>();
+  public readonly initiative = input.required<InitiativeDetail>();
   public readonly viewAllFinancials = output<void>();
 
   protected readonly recentDonationsWithMeta = this.initRecentDonationsWithMeta();
 
-  private initRecentDonationsWithMeta(): Signal<(DonationTransaction & { formattedAmount: string; avatarClass: string })[]> {
+  private initRecentDonationsWithMeta(): Signal<(RecentDonation & { formattedAmount: string; avatarClass: string })[]> {
     return computed(() =>
-      this.initiative()
-        .donationsIn.slice(0, 5)
+      (this.initiative().recentDonations ?? [])
+        .slice(0, 5)
         .map((d) => ({
           ...d,
-          formattedAmount: this.formatCurrency(d.amount),
-          avatarClass: this.donorAvatarClass(d.who),
+          formattedAmount: this.formatCurrency(d.amountCents / 100),
+          avatarClass: this.donorAvatarClass(d.donorName),
         }))
     );
   }

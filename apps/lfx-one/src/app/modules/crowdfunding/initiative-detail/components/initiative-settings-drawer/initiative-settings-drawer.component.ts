@@ -8,7 +8,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { ButtonComponent } from '@components/button/button.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
-import { CrowdfundingInitiativeDetail, TabOption } from '@lfx-one/shared/interfaces';
+import { InitiativeDetail, TabOption } from '@lfx-one/shared/interfaces';
 import { filter } from 'rxjs';
 import { InputTextModule } from 'primeng/inputtext';
 import { DrawerModule } from 'primeng/drawer';
@@ -20,7 +20,7 @@ import { DrawerModule } from 'primeng/drawer';
   styleUrl: './initiative-settings-drawer.component.scss',
 })
 export class InitiativeSettingsDrawerComponent {
-  public readonly initiative = input.required<CrowdfundingInitiativeDetail>();
+  public readonly initiative = input.required<InitiativeDetail>();
   public readonly visible = model(false);
 
   protected readonly activeSettingsTab = signal<string>('details');
@@ -55,10 +55,10 @@ export class InitiativeSettingsDrawerComponent {
         this.form.patchValue({
           name: init.name,
           description: init.description,
-          websiteUrl: init.publicUrl ?? '',
-          goal: init.goal,
+          websiteUrl: init.websiteURL ?? '',
+          goal: init.fundingStatus?.goalsTotalCents != null ? init.fundingStatus.goalsTotalCents / 100 : null,
         });
-        this.tags.set([...init.tags]);
+        this.tags.set([]);
         this.beneficiaryGroups.set([]);
         this.activeSettingsTab.set('details');
       });

@@ -62,4 +62,37 @@ export class CrowdfundingController {
       next(error);
     }
   }
+
+  /**
+   * GET /api/crowdfunding/initiatives/:slug
+   * Get a single initiative by slug for the authenticated user
+   */
+  public async getInitiativeBySlug(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_initiative_by_slug');
+
+    try {
+      const rawUsername = await getUsernameFromAuth(req);
+
+      if (!rawUsername) {
+        throw new AuthenticationError('User authentication required', {
+          operation: 'get_initiative_by_slug',
+        });
+      }
+
+      const username = stripAuthPrefix(rawUsername);
+      const { slug } = req.params;
+      const initiative = await this.crowdfundingService.getInitiativeBySlug(req, username, slug);
+
+      if (!initiative) {
+        res.status(404).json({ message: `Initiative '${slug}' not found` });
+        return;
+      }
+
+      logger.success(req, 'get_initiative_by_slug', startTime, { slug });
+
+      res.json(initiative);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

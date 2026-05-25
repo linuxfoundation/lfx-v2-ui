@@ -3,11 +3,11 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { CrowdfundingInitiativesStats, InitiativesResponse } from '@lfx-one/shared/interfaces';
+import { CrowdfundingInitiativesStats, InitiativeDetail, InitiativesResponse } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
 import { MOCK_INITIATIVES } from '../mock-data/crowdfunding.mock';
-import { mapToInitiativeBase } from '../utils/crowdfunding-mapper';
+import { mapToInitiativeBase, mapToInitiativeDetail } from '../utils/crowdfunding-mapper';
 import { logger } from './logger.service';
 
 export class CrowdfundingService {
@@ -44,5 +44,18 @@ export class CrowdfundingService {
     });
 
     return stats;
+  }
+
+  public async getInitiativeBySlug(req: Request, username: string, slug: string): Promise<InitiativeDetail | null> {
+    logger.debug(req, 'get_initiative_by_slug', 'Fetching initiative by slug', { username, slug });
+
+    const initiative = MOCK_INITIATIVES.find((i) => i.slug === slug);
+
+    if (!initiative) {
+      logger.warning(req, 'get_initiative_by_slug', 'Initiative not found', { slug });
+      return null;
+    }
+
+    return mapToInitiativeDetail(initiative);
   }
 }

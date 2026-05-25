@@ -3,10 +3,10 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { CrowdfundingInitiativeStatus, InitiativeBase } from '@lfx-one/shared/interfaces';
+import { FinancialSummary, FundingGoal, InitiativeBase, InitiativeDetail, SponsorEntry, CrowdfundingInitiativeStatus } from '@lfx-one/shared/interfaces';
 import { FundType } from '@lfx-one/shared/enums';
 
-import { BackendInitiative } from '../types/crowdfunding.types';
+import { BackendGoal, BackendInitiative, BackendSponsor } from '../types/crowdfunding.types';
 
 export function mapToInitiativeBase(b: BackendInitiative): InitiativeBase {
   return {
@@ -34,5 +34,51 @@ export function mapToInitiativeBase(b: BackendInitiative): InitiativeBase {
         }
       : undefined,
     initiativeStats: b.financials ? { supporters: b.financials.supporters } : undefined,
+  };
+}
+
+export function mapToInitiativeDetail(b: BackendInitiative): InitiativeDetail {
+  return {
+    ...mapToInitiativeBase(b),
+    currentBalanceCents: b.financials?.available_balance_cents,
+    sponsors: (b.sponsors ?? []).map(mapSponsor),
+    fundingGoals: (b.goals ?? []).map(mapFundingGoal),
+    financialSummary: b.financials ? mapFinancialSummary(b) : undefined,
+    // Not yet available from the backend
+    githubURL: undefined,
+    impactStats: undefined,
+    projectHealthStats: undefined,
+    projectHealthRating: undefined,
+    // TODO: map from a dedicated donations endpoint once available
+    recentDonations: [],
+    donationRecords: [],
+    expenseRecords: [],
+  };
+}
+
+function mapSponsor(s: BackendSponsor): SponsorEntry {
+  return {
+    id: s.id,
+    name: s.name,
+    avatarUrl: s.avatar_url,
+    totalCents: s.total_cents,
+  };
+}
+
+function mapFundingGoal(g: BackendGoal): FundingGoal {
+  return {
+    id: g.id,
+    name: g.name,
+    donatedCents: g.donated_cents ?? 0,
+    spentCents: g.spent_cents ?? 0,
+    goalCents: g.goal_amount_cents,
+  };
+}
+
+function mapFinancialSummary(b: BackendInitiative): FinancialSummary {
+  return {
+    totalReceivedCents: b.financials!.total_raised_cents,
+    totalExpensesCents: b.financials!.total_disbursed_cents ?? 0,
+    balanceCents: b.financials!.available_balance_cents ?? 0,
   };
 }

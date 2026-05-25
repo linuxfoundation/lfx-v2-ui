@@ -6,7 +6,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { EMPTY_CROWDFUNDING_STATS, EMPTY_INITIATIVES_RESPONSE } from '@lfx-one/shared/constants';
-import { CrowdfundingInitiativesStats, InitiativesResponse } from '@lfx-one/shared/interfaces';
+import { CrowdfundingInitiativesStats, InitiativeDetail, InitiativesResponse } from '@lfx-one/shared/interfaces';
 import { catchError, Observable, of } from 'rxjs';
 
 @Injectable({
@@ -31,5 +31,9 @@ export class CrowdfundingService {
         return of(EMPTY_CROWDFUNDING_STATS);
       })
     );
+  }
+
+  public getInitiativeBySlug(slug: string): Observable<InitiativeDetail | null> {
+    return this.http.get<InitiativeDetail>(`/api/crowdfunding/initiatives/${slug}`).pipe(catchError(() => of(null)));
   }
 }
