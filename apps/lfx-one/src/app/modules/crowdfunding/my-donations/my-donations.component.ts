@@ -91,10 +91,9 @@ export class MyDonationsComponent {
   }
 
   private initRecurringDonations(): Signal<RecurringDonation[]> {
-    return toSignal(
-      this.crowdfundingService.getMyRecurringDonations().pipe(map((res: RecurringDonationsResponse) => res.data)),
-      { initialValue: EMPTY_RECURRING },
-    );
+    return toSignal(this.crowdfundingService.getMyRecurringDonations().pipe(map((res: RecurringDonationsResponse) => res.data)), {
+      initialValue: EMPTY_RECURRING,
+    });
   }
 
   private initDonationHistory(): Signal<{ items: MyDonation[]; hasMore: boolean }> {
@@ -102,18 +101,16 @@ export class MyDonationsComponent {
       this.loadMore$.pipe(
         startWith(undefined as void),
         scan((page) => page + 1, -1),
-        concatMap((page) =>
-          this.crowdfundingService.getMyDonations({ size: DONATION_PAGE_SIZE, from: page * DONATION_PAGE_SIZE }),
-        ),
+        concatMap((page) => this.crowdfundingService.getMyDonations({ size: DONATION_PAGE_SIZE, from: page * DONATION_PAGE_SIZE })),
         scan(
           (acc, res) => ({
             items: [...acc.items, ...res.data],
             hasMore: acc.items.length + res.data.length < res.total,
           }),
-          EMPTY_HISTORY_STATE,
-        ),
+          EMPTY_HISTORY_STATE
+        )
       ),
-      { initialValue: EMPTY_HISTORY_STATE },
+      { initialValue: EMPTY_HISTORY_STATE }
     );
   }
 }

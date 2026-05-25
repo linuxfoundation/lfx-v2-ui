@@ -18,9 +18,7 @@ export class DonationHistoryTableComponent {
 
   public readonly loadMore = output<void>();
 
-  protected readonly displayItems = computed(() =>
-    this.items().map((item) => ({ ...item, formattedAmount: this.formatAmount(item.amountCents) })),
-  );
+  protected readonly displayItems = computed(() => this.items().map((item) => ({ ...item, formattedAmount: this.formatAmount(item.amountCents) })));
 
   protected onLoadMore(): void {
     this.loadMore.emit();
