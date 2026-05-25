@@ -63,12 +63,12 @@ export interface BackendCrowdfundingResponse {
 
 export interface BackendTransaction {
   id: string;
-  type: string;
+  type: 'donations' | 'expenses';
   amount_cents: number;
   date: string;
   category?: string;
   donor_name?: string;
-  donor_type?: string;
+  donor_type?: 'organization' | 'individual';
   donor_logo_url?: string;
   donor_username?: string;
 }

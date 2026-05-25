@@ -3,12 +3,12 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { Component, computed, inject, input, Signal } from '@angular/core';
+import { Component, computed, inject, input, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { AvatarComponent } from '@components/avatar/avatar.component';
 import { CROWDFUNDING_DONOR_AVATAR_PALETTE } from '@lfx-one/shared/constants';
 import { CrowdfundingTransaction, CrowdfundingTransactionList, InitiativeDetail } from '@lfx-one/shared/interfaces';
-import { concat, of, scan, Subject, switchMap } from 'rxjs';
+import { concat, concatMap, of, scan, Subject, switchMap, tap } from 'rxjs';
 import { CrowdfundingService } from '@app/shared/services/crowdfunding.service';
 
 const PAGE_SIZE = 10;
@@ -40,6 +40,9 @@ export class InitiativeFinancialsComponent {
   private readonly nextDonationsPage$ = new Subject<void>();
   private readonly nextExpensesPage$ = new Subject<void>();
 
+  protected readonly donationsLoading = signal(false);
+  protected readonly expensesLoading = signal(false);
+
   // -------------------------------------------------------------------------
   // Derived state (financial summary)
   // -------------------------------------------------------------------------
@@ -69,10 +72,12 @@ export class InitiativeFinancialsComponent {
   // -------------------------------------------------------------------------
 
   protected loadMoreDonations(): void {
+    this.donationsLoading.set(true);
     this.nextDonationsPage$.next();
   }
 
   protected loadMoreExpenses(): void {
+    this.expensesLoading.set(true);
     this.nextExpensesPage$.next();
   }
 
@@ -85,7 +90,7 @@ export class InitiativeFinancialsComponent {
       toObservable(this.initiative).pipe(
         switchMap((initiative) =>
           concat(of(0), this.nextDonationsPage$.pipe(scan((offset) => offset + PAGE_SIZE, 0))).pipe(
-            switchMap((from) =>
+            concatMap((from) =>
               this.crowdfundingService.getInitiativeTransactions(initiative.slug, {
                 type: 'donations',
                 size: PAGE_SIZE,
@@ -98,7 +103,8 @@ export class InitiativeFinancialsComponent {
                 totalCount: result.totalCount,
               }),
               EMPTY_TRANSACTION_STATE
-            )
+            ),
+            tap(() => this.donationsLoading.set(false))
           )
         )
       ),
@@ -121,7 +127,7 @@ export class InitiativeFinancialsComponent {
       toObservable(this.initiative).pipe(
         switchMap((initiative) =>
           concat(of(0), this.nextExpensesPage$.pipe(scan((offset) => offset + PAGE_SIZE, 0))).pipe(
-            switchMap((from) =>
+            concatMap((from) =>
               this.crowdfundingService.getInitiativeTransactions(initiative.slug, {
                 type: 'expenses',
                 size: PAGE_SIZE,
@@ -134,7 +140,8 @@ export class InitiativeFinancialsComponent {
                 totalCount: result.totalCount,
               }),
               EMPTY_TRANSACTION_STATE
-            )
+            ),
+            tap(() => this.expensesLoading.set(false))
           )
         )
       ),

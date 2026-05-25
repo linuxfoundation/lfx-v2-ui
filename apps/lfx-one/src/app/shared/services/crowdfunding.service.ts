@@ -26,7 +26,7 @@ export class CrowdfundingService {
   }
 
   public getMyInitiativesStats(): Observable<CrowdfundingInitiativesStats> {
-    return this.http.get<CrowdfundingInitiativesStats>('/api/crowdfunding/initiatives/stats').pipe(
+    return this.http.get<CrowdfundingInitiativesStats>('/api/crowdfunding/initiatives-stats').pipe(
       catchError((err) => {
         console.error('[CrowdfundingService] getMyInitiativesStats failed', err);
         return of(EMPTY_CROWDFUNDING_STATS);

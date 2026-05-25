@@ -116,13 +116,19 @@ export class CrowdfundingController {
       const { slug } = req.params;
       const { type, size, from } = req.query;
 
+      const parseNonNegativeInt = (val: unknown): number | undefined => {
+        if (val == null || val === '') return undefined;
+        const n = Number(val);
+        return Number.isFinite(n) && n >= 0 ? Math.floor(n) : undefined;
+      };
+
       const transactions = await this.crowdfundingService.getInitiativeTransactions(
         req,
         username,
         slug,
         type ? String(type) : undefined,
-        size ? Number(size) : undefined,
-        from ? Number(from) : undefined
+        parseNonNegativeInt(size),
+        parseNonNegativeInt(from)
       );
 
       if (!transactions) {

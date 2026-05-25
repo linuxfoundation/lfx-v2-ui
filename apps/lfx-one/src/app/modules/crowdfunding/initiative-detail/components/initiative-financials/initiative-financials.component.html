@@ -84,10 +84,15 @@
         <div class="border-t border-gray-100 px-4 py-3 flex justify-center">
           <button
             type="button"
-            class="text-sm font-medium text-blue-600 hover:text-blue-700 focus:outline-none"
+            class="text-sm font-medium text-blue-600 hover:text-blue-700 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="load-more-donations-btn"
+            [disabled]="donationsLoading()"
             (click)="loadMoreDonations()">
-            Load more
+            @if (donationsLoading()) {
+              Loading...
+            } @else {
+              Load more
+            }
           </button>
         </div>
       }
@@ -136,10 +141,15 @@
         <div class="border-t border-gray-100 px-4 py-3 flex justify-center">
           <button
             type="button"
-            class="text-sm font-medium text-blue-600 hover:text-blue-700 focus:outline-none"
+            class="text-sm font-medium text-blue-600 hover:text-blue-700 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="load-more-expenses-btn"
+            [disabled]="expensesLoading()"
             (click)="loadMoreExpenses()">
-            Load more
+            @if (expensesLoading()) {
+              Loading...
+            } @else {
+              Load more
+            }
           </button>
         </div>
       }
