@@ -6,8 +6,8 @@
 import { NextFunction, Request, Response } from 'express';
 
 import { AuthenticationError } from '../errors';
-import { logger } from '../services/logger.service';
 import { CrowdfundingService } from '../services/crowdfunding.service';
+import { logger } from '../services/logger.service';
 import { getUsernameFromAuth, stripAuthPrefix } from '../utils/auth-helper';
 
 export class CrowdfundingController {
@@ -37,6 +37,33 @@ export class CrowdfundingController {
       });
 
       res.json(initiatives);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/crowdfunding/initiatives/stats
+   * Get aggregated initiatives stats for the authenticated user
+   */
+  public async getInitiativesStats(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_initiatives_stats');
+
+    try {
+      const rawUsername = await getUsernameFromAuth(req);
+
+      if (!rawUsername) {
+        throw new AuthenticationError('User authentication required', {
+          operation: 'get_initiatives_stats',
+        });
+      }
+
+      const username = stripAuthPrefix(rawUsername);
+      const stats = await this.crowdfundingService.getInitiativesStats(req, username);
+
+      logger.success(req, 'get_initiatives_stats', startTime);
+
+      res.json(stats);
     } catch (error) {
       next(error);
     }

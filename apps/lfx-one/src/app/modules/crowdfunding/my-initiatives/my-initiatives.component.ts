@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ChangeDetectionStrategy, Component, computed, inject, Signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { environment } from '@environments/environment';
@@ -10,6 +10,8 @@ import { CrowdfundingService } from '@services/crowdfunding.service';
 import { map } from 'rxjs';
 import { InitiativesStatsBarComponent } from './components/initiatives-stats-bar/initiatives-stats-bar.component';
 import { InitiativesListComponent } from './components/initiatives-list/initiatives-list.component';
+
+const EMPTY_STATS: CrowdfundingInitiativesStats = { activeCount: 0, totalRaised: 0, monthlyGain: 0, totalSponsors: 0 };
 
 @Component({
   selector: 'lfx-my-initiatives',
@@ -43,14 +45,6 @@ export class MyInitiativesComponent {
   }
 
   private initStats(): Signal<CrowdfundingInitiativesStats> {
-    return computed(() => {
-      const all = this.initiatives();
-      return {
-        activeCount: all.filter((i) => i.status === 'active').length,
-        totalRaised: all.reduce((sum, i) => sum + (i.fundingStatus?.amountRaisedCents ?? 0) / 100, 0),
-        monthlyGain: 8400,
-        totalSponsors: all.reduce((sum, i) => sum + (i.initiativeStats?.supporters ?? 0), 0),
-      };
-    });
+    return toSignal(this.crowdfundingService.getMyInitiativesStats(), { initialValue: EMPTY_STATS });
   }
 }
