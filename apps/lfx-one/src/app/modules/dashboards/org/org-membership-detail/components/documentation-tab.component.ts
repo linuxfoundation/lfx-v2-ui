@@ -1,7 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { Component, computed, inject, input, PLATFORM_ID, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import type { OrgMembershipAgreement, OrgMembershipDocumentsResponse } from '@lfx-one/shared/interfaces';
 import { TooltipModule } from 'primeng/tooltip';
@@ -42,6 +43,7 @@ export class DocumentationTabComponent {
   public readonly foundationSlug = input<string | null>(null);
 
   private readonly service = inject(OrgLensMembershipsService);
+  private readonly platformId = inject(PLATFORM_ID);
 
   protected readonly retryTrigger = signal(0);
   protected readonly fetchLoading = signal(true);
@@ -117,6 +119,10 @@ export class DocumentationTabComponent {
    * (kebab-case, lowercase, sortable date prefix).
    */
   protected onDownloadAll(): void {
+    // SSR guard: this method touches `Blob`, `URL`, and `document` — all
+    // browser-only globals. Bail early during server-side rendering.
+    if (!isPlatformBrowser(this.platformId)) return;
+
     const rows = this.displayAgreements();
     if (!rows.length) return;
 

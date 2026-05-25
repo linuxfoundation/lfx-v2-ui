@@ -287,7 +287,7 @@ export type WhyCantEditDialogResult = { contactFoundation: boolean } | null;
  * Spec 018 changes (round 1 + round 2):
  * - `fileSizeKb` widened from `number` → `number | null` (FR-014/FR-018). Snowflake/Salesforce
  *   do not store file size; the BFF returns null for Snowflake-backed responses. UI drops the
- *   `· {size} KB` metadata segment via `@if (agreement.fileSizeKb != null)` when null.
+ *   `· {size} KB` metadata segment via `@if (agreement.fileSizeKb !== null)` when null.
  * - `downloadUrl: string | null` added (round 2 FR-031). Sourced from
  *   `Opportunity.Membership_Doc_Download_URL__c` via bronze → silver → platinum chain. NULL
  *   for older agreements (pre-UAT-2023 process change) — UI renders the View link as

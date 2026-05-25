@@ -37,6 +37,32 @@ const DATA_LOAD_TIMEOUT = 30_000;
 
 test.setTimeout(90_000);
 
+/**
+ * RFC 4180-aware column counter for a single CSV line.
+ *
+ * Walks character-by-character tracking whether we are inside a quoted field;
+ * a doubled-quote inside a quoted field (`""`) is treated as an escaped quote,
+ * not a field terminator. This is correct for inputs like `"Foo ""Bar"""`
+ * which the previous `replace(/"[^"]*"/g, 'X')` heuristic miscounted.
+ */
+function countRfc4180Columns(line: string): number {
+  let columns = 1;
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        i++; // skip the escaped quote
+        continue;
+      }
+      inQuotes = !inQuotes;
+    } else if (ch === ',' && !inQuotes) {
+      columns++;
+    }
+  }
+  return columns;
+}
+
 test.describe('Documentation Tab — testid resolution (SC-008, FR-028)', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(DOCS_URL_AGL, { waitUntil: 'domcontentloaded' });
@@ -219,10 +245,7 @@ test.describe('Documentation Tab — CSV download (SC-013, SC-014, FR-032)', () 
     // Each data row has exactly 9 comma-separated columns (allowing for RFC 4180 quoted fields).
     expect(lines.length).toBeGreaterThanOrEqual(2); // header + at least one data row
     for (const line of lines.slice(1)) {
-      // Strip quoted fields before counting commas — a quick RFC 4180 sanity check.
-      const stripped = line.replace(/"[^"]*"/g, 'X');
-      const commaCount = (stripped.match(/,/g) ?? []).length;
-      expect(commaCount).toBe(8); // 9 columns = 8 separators
+      expect(countRfc4180Columns(line)).toBe(9);
     }
   });
 

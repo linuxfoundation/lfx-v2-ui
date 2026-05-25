@@ -15,7 +15,9 @@ interface RawAgreementRow {
   ASSET_ID: string;
   AGREEMENT_ID: string;
   AGREEMENT_NAME: string;
-  SIGNED_DATE: string;
+  // Nullable: query uses `ORDER BY SIGNED_DATE DESC NULLS LAST` and `formatDate`
+  // already accepts null.
+  SIGNED_DATE: string | null;
   MEMBERSHIP_TIER: string;
   MEMBERSHIP_STATUS_RAW: string;
   IS_CURRENT: boolean;
@@ -63,7 +65,11 @@ export class OrgLensDocumentsService {
 
     const result = await this.snowflakeService.execute<RawAgreementRow>(query, [accountId, foundationId]);
 
-    const agreements: OrgMembershipAgreement[] = result.rows.map((raw) => this.shapeRow(raw));
+    // Defensive: the Snowflake SDK callback signature is `rows: any[] | undefined`,
+    // so an empty/missing result here would otherwise throw on `.map` and surface
+    // as a 500 instead of an empty agreements list.
+    const rows = result.rows ?? [];
+    const agreements: OrgMembershipAgreement[] = rows.map((raw) => this.shapeRow(raw));
 
     return {
       accountId,
