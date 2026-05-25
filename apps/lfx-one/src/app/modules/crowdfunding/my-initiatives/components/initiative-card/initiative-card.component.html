@@ -14,12 +14,18 @@
   (keydown.enter)="onCardClick()"
   (keydown.space)="onCardClick(); $event.preventDefault()">
   <!-- Avatar / Icon -->
-  <lfx-avatar [label]="initiative().name" shape="square" size="large" [styleClass]="avatarStyleClass()" [ariaLabel]="fundTypeLabel() + ' initiative icon'" />
+  <lfx-avatar
+    [image]="initiative().logoUrl"
+    [label]="initiative().name"
+    shape="square"
+    size="large"
+    [styleClass]="avatarStyleClass()"
+    [ariaLabel]="fundTypeLabel() + ' initiative icon'" />
 
   <!-- Content -->
   <div class="flex flex-col gap-1 min-w-0 flex-1">
     <span class="text-xs font-semibold flex items-center gap-1" [class]="fundTypeColorClass()">
-      <i [class]="fundTypeIcon()" aria-hidden="true"></i>
+      <!-- <i [class]="fundTypeIcon()" aria-hidden="true"></i> -->
       {{ fundTypeLabel() }}
     </span>
     <div class="flex items-center gap-2 flex-wrap">
