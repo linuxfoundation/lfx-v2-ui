@@ -1,9 +1,11 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+// Both transitions run for 300ms so the longest CSS animation matches FADE_OUT_MS in pending-actions.component.ts and
+// the JS doesn't drop the row before the fade has finished playing.
 .pending-action-row {
   transition:
-    opacity 250ms ease-out,
+    opacity 300ms ease-out,
     max-height 300ms ease-out;
   max-height: 12rem;
   overflow: hidden;

@@ -14,9 +14,11 @@
   padding: 0;
 }
 
+// All transitions run for 300ms so the longest CSS animation matches FADE_OUT_MS in pending-actions-drawer.component.ts
+// and the JS doesn't drop the row before the fade has finished playing.
 .pending-action-card {
   transition:
-    opacity 250ms ease-out,
+    opacity 300ms ease-out,
     max-height 300ms ease-out,
     padding 300ms ease-out,
     margin 300ms ease-out,

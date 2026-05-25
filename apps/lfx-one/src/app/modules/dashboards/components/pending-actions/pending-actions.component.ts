@@ -3,7 +3,7 @@
 
 import { Component, computed, DestroyRef, effect, inject, input, model, output, signal, Signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink, UrlTree } from '@angular/router';
 import { PendingActionsDrawerComponent } from '@app/modules/dashboards/components/pending-actions-drawer/pending-actions-drawer.component';
 import { RsvpButtonGroupComponent } from '@app/modules/meetings/components/rsvp-button-group/rsvp-button-group.component';
 import { ButtonComponent } from '@components/button/button.component';
@@ -36,6 +36,7 @@ export class PendingActionsComponent {
   private readonly meetingService = inject(MeetingService);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
 
   public readonly pendingActions = input.required<PendingActionItem[]>();
   public readonly displayLimit = input<number>(2);
@@ -84,7 +85,12 @@ export class PendingActionsComponent {
       this.castVoteRequested.emit(item.voteUid);
       return;
     }
-    this.startCompletion(item, { withSkeleton: false });
+    // RSVP fallback (meeting load failed): the user is being redirected to the meeting page to RSVP from there — opening
+    // the page is not the same as completing the RSVP, so we leave the reminder visible. Only successful RSVP submission
+    // hides the row.
+    if (item.type !== 'RSVP') {
+      this.startCompletion(item, { withSkeleton: false });
+    }
     this.actionClick.emit(item);
   }
 
@@ -110,14 +116,12 @@ export class PendingActionsComponent {
     this.hiddenActionsVersion.update((v) => v + 1);
   }
 
-  private buildToastMeetingData(item: PendingActionItem): { meetingHref: string; meetingTitle: string } | undefined {
-    if (item.buttonLink) {
-      return { meetingHref: item.buttonLink, meetingTitle: item.text };
-    }
-    if (item.meetingUid) {
-      return { meetingHref: `/meetings/${item.meetingUid}`, meetingTitle: item.text };
-    }
-    return undefined;
+  // Parse the href into a UrlTree up-front so `[routerLink]` preserves query params (e.g. `?password=...`).
+  // Binding a raw string with `?` to `[routerLink]` treats the entire value as a path segment and URL-encodes the query separator.
+  private buildToastMeetingData(item: PendingActionItem): { meetingUrl: UrlTree; meetingTitle: string } | undefined {
+    const href = item.buttonLink ?? (item.meetingUid ? `/meetings/${item.meetingUid}` : null);
+    if (!href) return undefined;
+    return { meetingUrl: this.router.parseUrl(href), meetingTitle: item.text };
   }
 
   private loadMeeting(meetingUid: string): void {
