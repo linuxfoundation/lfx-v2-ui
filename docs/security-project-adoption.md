@@ -96,7 +96,7 @@ set.
 | `complete` | `Complete` / `Completed` | Reviewer approved the submission. |
 
 The table filters should use persisted states in query params and request
-payloads. Display-only labels such as `Available`, `Adopted`, or `Completed`
+payloads. Display-only labels such as `Available` or `Completed`
 should be derived in the UI from the persisted state plus owner context.
 
 ## Admin Flow
