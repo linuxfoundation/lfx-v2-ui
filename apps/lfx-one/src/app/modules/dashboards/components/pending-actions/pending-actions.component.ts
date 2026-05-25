@@ -1,8 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, DestroyRef, effect, inject, input, model, output, signal, Signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, computed, DestroyRef, inject, input, model, output, signal, Signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { Router, RouterLink, UrlTree } from '@angular/router';
 import { PendingActionsDrawerComponent } from '@app/modules/dashboards/components/pending-actions-drawer/pending-actions-drawer.component';
 import { RsvpButtonGroupComponent } from '@app/modules/meetings/components/rsvp-button-group/rsvp-button-group.component';
@@ -58,10 +58,7 @@ export class PendingActionsComponent {
   private readonly failedMeetingUids = signal<ReadonlySet<string>>(new Set());
 
   // Clamped display limit shared by slicing, hasMore, and skeleton-swap arrival logic — rejects NaN/Infinity, floors fractional values, default 2.
-  protected readonly safeDisplayLimit: Signal<number> = computed(() => {
-    const raw = this.displayLimit();
-    return Number.isFinite(raw) ? Math.max(0, Math.trunc(raw)) : 2;
-  });
+  protected readonly safeDisplayLimit: Signal<number> = this.initSafeDisplayLimit();
   protected readonly visibleActionsUnlimited: Signal<PendingActionItem[]> = this.initVisibleActionsUnlimited();
   protected readonly visibleActions: Signal<PendingActionItem[]> = this.initVisibleActions();
   protected readonly totalVisible: Signal<number> = computed(() => this.visibleActionsUnlimited().length);
@@ -70,13 +67,15 @@ export class PendingActionsComponent {
 
   public constructor() {
     // Eagerly load Meeting payloads for every inline RSVP row so its buttons render immediately.
-    effect(() => {
-      for (const row of this.decoratedActions()) {
-        if (row.isRsvpInline && !row.meeting && !row.isLoading) {
-          this.loadMeeting(row.meetingUid as string);
+    toObservable(this.decoratedActions)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((rows) => {
+        for (const row of rows) {
+          if (row.isRsvpInline && !row.meeting && !row.isLoading) {
+            this.loadMeeting(row.meetingUid as string);
+          }
         }
-      }
-    });
+      });
   }
 
   protected handleAgendaOrOtherClick(item: DecoratedPendingAction): void {
@@ -223,6 +222,13 @@ export class PendingActionsComponent {
       default:
         return response;
     }
+  }
+
+  private initSafeDisplayLimit(): Signal<number> {
+    return computed(() => {
+      const raw = this.displayLimit();
+      return Number.isFinite(raw) ? Math.max(0, Math.trunc(raw)) : 2;
+    });
   }
 
   private initVisibleActionsUnlimited(): Signal<PendingActionItem[]> {

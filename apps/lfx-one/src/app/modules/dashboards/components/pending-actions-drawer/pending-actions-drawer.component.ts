@@ -1,8 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, DestroyRef, effect, inject, input, model, output, signal, Signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, computed, DestroyRef, inject, input, model, output, signal, Signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { Router, UrlTree } from '@angular/router';
 import { RsvpButtonGroupComponent } from '@app/modules/meetings/components/rsvp-button-group/rsvp-button-group.component';
 import { ButtonComponent } from '@components/button/button.component';
@@ -14,21 +14,12 @@ import { HiddenActionsService } from '@shared/services/hidden-actions.service';
 import { MessageService } from 'primeng/api';
 import { DrawerModule } from 'primeng/drawer';
 import { SkeletonModule } from 'primeng/skeleton';
-import { timer } from 'rxjs';
+import { combineLatest, filter, timer } from 'rxjs';
 
-import type { Meeting, MeetingRsvp, PendingActionItem, RsvpResponse } from '@lfx-one/shared/interfaces';
+import type { DrawerActionRow, Meeting, MeetingRsvp, PendingActionItem, RsvpResponse } from '@lfx-one/shared/interfaces';
 
 // Fade + collapse animation duration (must match CSS transition in pending-actions-drawer.component.scss).
 const FADE_OUT_MS = 300;
-
-interface DrawerActionRow extends PendingActionItem {
-  rowKey: string;
-  isRsvpInline: boolean;
-  isVoteInline: boolean;
-  meeting: Meeting | null;
-  isMeetingLoading: boolean;
-  meetingLoadFailed: boolean;
-}
 
 @Component({
   selector: 'lfx-pending-actions-drawer',
@@ -64,14 +55,18 @@ export class PendingActionsDrawerComponent {
 
   public constructor() {
     // When the drawer becomes visible, eagerly load Meeting payloads for every RSVP row so the inline RSVP buttons render immediately.
-    effect(() => {
-      if (!this.visible()) return;
-      for (const row of this.visibleRows()) {
-        if (row.isRsvpInline && !row.meeting && !row.isMeetingLoading && !row.meetingLoadFailed) {
-          this.loadMeeting(row.meetingUid as string);
+    combineLatest([toObservable(this.visible), toObservable(this.visibleRows)])
+      .pipe(
+        filter(([isVisible]) => isVisible),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(([, rows]) => {
+        for (const row of rows) {
+          if (row.isRsvpInline && !row.meeting && !row.isMeetingLoading && !row.meetingLoadFailed) {
+            this.loadMeeting(row.meetingUid as string);
+          }
         }
-      }
-    });
+      });
   }
 
   protected onClose(): void {
