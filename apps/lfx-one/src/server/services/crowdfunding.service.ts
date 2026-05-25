@@ -9,12 +9,13 @@ import {
   CrowdfundingTransaction,
   InitiativeDetail,
   InitiativesResponse,
+  MyDonationsResponse,
 } from '@lfx-one/shared/interfaces';
 import { DEFAULT_CROWDFUNDING_PAGE_SIZE } from '@lfx-one/shared/constants';
 import { Request } from 'express';
 
-import { MOCK_INITIATIVES, MOCK_TRANSACTIONS } from '../mock-data/crowdfunding.mock';
-import { mapToInitiativeBase, mapToInitiativeDetail, mapToTransaction } from '../utils/crowdfunding-mapper';
+import { MOCK_DONATION_HISTORY, MOCK_INITIATIVES, MOCK_TRANSACTIONS } from '../mock-data/crowdfunding.mock';
+import { mapDonationHistoryToMyDonation, mapToInitiativeBase, mapToInitiativeDetail, mapToTransaction } from '../utils/crowdfunding-mapper';
 import { logger } from './logger.service';
 
 export class CrowdfundingService {
@@ -64,6 +65,22 @@ export class CrowdfundingService {
     }
 
     return mapToInitiativeDetail(initiative);
+  }
+
+  public async getMyDonations(req: Request, username: string, size?: number, from?: number): Promise<MyDonationsResponse> {
+    logger.debug(req, 'get_my_donations', 'Fetching donation history for user', { username, size, from });
+
+    const initiativeIdByName = new Map(MOCK_INITIATIVES.map((i) => [i.name, i.id]));
+    const allItems = MOCK_DONATION_HISTORY.map((item) => mapDonationHistoryToMyDonation(item, initiativeIdByName.get(item.initiativeName)));
+
+    const total = allItems.length;
+    const offset = from ?? 0;
+    const pageSize = size ?? total;
+    const page = allItems.slice(offset, offset + pageSize);
+
+    logger.debug(req, 'get_my_donations', 'Returning donation history', { total, page: page.length });
+
+    return { data: page, total, pageSize, offset };
   }
 
   public async getInitiativeTransactions(

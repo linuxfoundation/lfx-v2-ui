@@ -10,6 +10,7 @@ import { CrowdfundingController } from '../controllers/crowdfunding.controller';
 const router = Router();
 const crowdfundingController = new CrowdfundingController();
 
+router.get('/my-donations', (req, res, next) => crowdfundingController.getMyDonations(req, res, next));
 router.get('/initiatives-stats', (req, res, next) => crowdfundingController.getInitiativesStats(req, res, next));
 router.get('/initiatives', (req, res, next) => crowdfundingController.getMyInitiatives(req, res, next));
 router.get('/initiatives/:slug/transactions', (req, res, next) => crowdfundingController.getInitiativeTransactions(req, res, next));

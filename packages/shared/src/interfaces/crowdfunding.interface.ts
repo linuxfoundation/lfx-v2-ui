@@ -71,6 +71,29 @@ export interface CrowdfundingTransactionList {
   size: number;
 }
 
+/**
+ * A single donation made by the authenticated user, as returned by
+ * GET /api/crowdfunding/my-donations.
+ *
+ * Mirrors the RecentDonation shape from the upstream crowdfunding service.
+ * donorName and donorLogoUrl are omitted — they map from the user's profile
+ * and are not yet available without a profile service call.
+ */
+export interface MyDonation {
+  id: string;
+  /** Omitted until user-profile enrichment is available. */
+  donorName?: string;
+  donorLogoUrl?: string;
+  donorType: 'organization' | 'member';
+  amountCents: number;
+  /** Unix timestamp in milliseconds. */
+  date: number;
+  initiativeId?: string;
+  initiativeName?: string;
+}
+
+export type MyDonationsResponse = OffsetPaginatedResponse<MyDonation>;
+
 export interface FundingGoal {
   id: string;
   name: string;

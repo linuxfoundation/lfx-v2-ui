@@ -3,6 +3,9 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
+import { DonationHistoryItem } from '@lfx-one/shared/interfaces';
+import { FundType } from '@lfx-one/shared/enums';
+
 import { BackendInitiative, BackendTransaction } from '../types/crowdfunding.types';
 
 export const MOCK_TRANSACTIONS: Record<string, BackendTransaction[]> = {
@@ -164,5 +167,118 @@ export const MOCK_INITIATIVES: BackendInitiative[] = [
     },
     goals: [],
     sponsors: [],
+  },
+];
+
+export const MOCK_DONATION_HISTORY: DonationHistoryItem[] = [
+  {
+    id: 'd1',
+    initiativeName: 'Zephyr RTOS Security Hardening',
+    initiativeIcon: '🔐',
+    fundType: FundType.SECURITY_AUDIT,
+    fundTypeIcon: 'fa-shield-halved',
+    date: 'Apr 2, 2026',
+    kind: 'one-time',
+    amount: 500,
+  },
+  {
+    id: 'd2',
+    initiativeName: 'OpenTelemetry Community Fund',
+    initiativeIcon: '🌀',
+    fundType: FundType.GENERAL_FUND,
+    fundTypeIcon: 'fa-piggy-bank',
+    date: 'Apr 1, 2026',
+    kind: 'monthly',
+    amount: 50,
+  },
+  {
+    id: 'd3',
+    initiativeName: 'Linux Kernel Mentorship Fund',
+    initiativeIcon: '🐧',
+    fundType: FundType.MENTORSHIP,
+    fundTypeIcon: 'fa-user-group',
+    date: 'Mar 15, 2026',
+    kind: 'one-time',
+    amount: 250,
+  },
+  {
+    id: 'd4',
+    initiativeName: 'OpenTelemetry Community Fund',
+    initiativeIcon: '🌀',
+    fundType: FundType.GENERAL_FUND,
+    fundTypeIcon: 'fa-piggy-bank',
+    date: 'Mar 1, 2026',
+    kind: 'monthly',
+    amount: 50,
+  },
+  {
+    id: 'd5',
+    initiativeName: 'Zephyr RTOS Security Hardening',
+    initiativeIcon: '🔒',
+    fundType: FundType.SECURITY_AUDIT,
+    fundTypeIcon: 'fa-shield-halved',
+    date: 'Jan 20, 2026',
+    kind: 'one-time',
+    amount: 100,
+  },
+  {
+    id: 'd6',
+    initiativeName: 'OpenTelemetry Community Fund',
+    initiativeIcon: '🌀',
+    fundType: FundType.GENERAL_FUND,
+    fundTypeIcon: 'fa-piggy-bank',
+    date: 'Jan 1, 2026',
+    kind: 'monthly',
+    amount: 50,
+  },
+  {
+    id: 'd7',
+    initiativeName: 'Linux Kernel Mentorship Fund',
+    initiativeIcon: '🦀',
+    fundType: FundType.MENTORSHIP,
+    fundTypeIcon: 'fa-user-group',
+    date: 'Dec 5, 2025',
+    kind: 'one-time',
+    amount: 100,
+  },
+  {
+    id: 'd8',
+    initiativeName: 'OpenTelemetry Community Fund',
+    initiativeIcon: '🌀',
+    fundType: FundType.GENERAL_FUND,
+    fundTypeIcon: 'fa-piggy-bank',
+    date: 'Dec 1, 2025',
+    kind: 'monthly',
+    amount: 50,
+  },
+  {
+    id: 'd9',
+    initiativeName: 'OpenTelemetry Community Fund',
+    initiativeIcon: '🔭',
+    fundType: FundType.GENERAL_FUND,
+    fundTypeIcon: 'fa-piggy-bank',
+    date: 'Nov 12, 2025',
+    kind: 'one-time',
+    amount: 200,
+  },
+  {
+    id: 'd10',
+    initiativeName: 'OpenTelemetry Community Fund',
+    initiativeIcon: '🌀',
+    fundType: FundType.GENERAL_FUND,
+    fundTypeIcon: 'fa-piggy-bank',
+    date: 'Nov 1, 2025',
+    kind: 'monthly',
+    amount: 50,
+  },
+  {
+    id: 'd11',
+    initiativeName: 'OpenTelemetry Community Fund',
+    initiativeIcon: '🌀',
+    fundType: FundType.GENERAL_FUND,
+    fundTypeIcon: 'fa-piggy-bank',
+    date: 'Oct 1, 2025',
+    kind: 'monthly',
+    amount: 50,
   },
 ];

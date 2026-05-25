@@ -11,6 +11,8 @@ import {
   InitiativeDetail,
   SponsorEntry,
   CrowdfundingInitiativeStatus,
+  MyDonation,
+  DonationHistoryItem,
 } from '@lfx-one/shared/interfaces';
 import { FundType } from '@lfx-one/shared/enums';
 
@@ -98,5 +100,25 @@ export function mapToTransaction(b: BackendTransaction): CrowdfundingTransaction
     donorType: b.donor_type,
     donorLogoUrl: b.donor_logo_url,
     donorUsername: b.donor_username,
+  };
+}
+
+/**
+ * Maps a DonationHistoryItem (the authenticated user's outbound donation record)
+ * to the MyDonation shape expected by the my-donations endpoint.
+ *
+ * @param item        - The donation history item to map.
+ * @param initiativeId - Resolved initiative ID looked up from MOCK_INITIATIVES by name
+ *                       in the service layer; omitted until the real API provides it.
+ */
+export function mapDonationHistoryToMyDonation(item: DonationHistoryItem, initiativeId?: string): MyDonation {
+  return {
+    id: item.id,
+    // donorName / donorLogoUrl omitted — require user-profile enrichment.
+    donorType: 'member',
+    amountCents: item.amount * 100,
+    date: new Date(item.date).getTime(),
+    initiativeId,
+    initiativeName: item.initiativeName,
   };
 }

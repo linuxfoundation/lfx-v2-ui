@@ -39,7 +39,41 @@ export class CrowdfundingController {
     }
   }
 
-  // GET /api/crowdfunding/initiatives/stats
+  /**
+   * GET /api/crowdfunding/my-donations
+   * Get the authenticated user's donation history
+   */
+  public async getMyDonations(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_my_donations');
+
+    try {
+      const rawUsername = await getUsernameFromAuth(req);
+
+      if (!rawUsername) {
+        throw new AuthenticationError('User authentication required', {
+          operation: 'get_my_donations',
+        });
+      }
+
+      const username = stripAuthPrefix(rawUsername);
+      const { size, from } = req.query;
+      const donations = await this.crowdfundingService.getMyDonations(req, username, size ? Number(size) : undefined, from ? Number(from) : undefined);
+
+      logger.success(req, 'get_my_donations', startTime, {
+        result_count: donations.data.length,
+        total: donations.total,
+      });
+
+      res.json(donations);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/crowdfunding/initiatives-stats
+   * Get aggregated initiatives stats for the authenticated user
+   */
   public async getInitiativesStats(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_initiatives_stats');
 

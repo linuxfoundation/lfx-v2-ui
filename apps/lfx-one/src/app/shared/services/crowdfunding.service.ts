@@ -6,8 +6,14 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 
-import { EMPTY_CROWDFUNDING_STATS, EMPTY_INITIATIVES_RESPONSE, EMPTY_TRANSACTION_LIST } from '@lfx-one/shared/constants';
-import { CrowdfundingInitiativesStats, CrowdfundingTransactionList, InitiativeDetail, InitiativesResponse } from '@lfx-one/shared/interfaces';
+import { EMPTY_CROWDFUNDING_STATS, EMPTY_INITIATIVES_RESPONSE, EMPTY_MY_DONATIONS, EMPTY_TRANSACTION_LIST } from '@lfx-one/shared/constants';
+import {
+  CrowdfundingInitiativesStats,
+  CrowdfundingTransactionList,
+  InitiativeDetail,
+  InitiativesResponse,
+  MyDonationsResponse,
+} from '@lfx-one/shared/interfaces';
 import { catchError, Observable, of } from 'rxjs';
 
 @Injectable({
@@ -41,6 +47,14 @@ export class CrowdfundingService {
         return of(null);
       })
     );
+  }
+
+  public getMyDonations(params?: { size?: number; from?: number }): Observable<MyDonationsResponse> {
+    let httpParams = new HttpParams();
+    if (params?.size != null) httpParams = httpParams.set('size', String(params.size));
+    if (params?.from != null) httpParams = httpParams.set('from', String(params.from));
+
+    return this.http.get<MyDonationsResponse>('/api/crowdfunding/my-donations', { params: httpParams }).pipe(catchError(() => of(EMPTY_MY_DONATIONS)));
   }
 
   public getInitiativeTransactions(
