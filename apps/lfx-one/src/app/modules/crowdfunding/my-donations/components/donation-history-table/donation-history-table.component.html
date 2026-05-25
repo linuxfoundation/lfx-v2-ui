@@ -13,7 +13,7 @@
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-100 bg-white">
-        @for (item of visibleItems(); track item.id) {
+        @for (item of displayItems(); track item.id) {
           <tr class="hover:bg-gray-50 transition-colors" [attr.data-testid]="'donation-row-' + item.id">
             <!-- Initiative -->
             <td class="px-4 py-3">
@@ -47,7 +47,7 @@
 
   @if (hasMore()) {
     <div class="flex justify-center pt-3" data-testid="donation-history-load-more">
-      <lfx-button label="Load more" severity="secondary" size="small" (click)="loadMore()" />
+      <lfx-button label="Load more" severity="secondary" size="small" (click)="onLoadMore()" />
     </div>
   }
 </div>

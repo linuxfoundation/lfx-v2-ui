@@ -2,16 +2,16 @@
 // SPDX-License-Identifier: MIT
 
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { environment } from '@environments/environment';
 import { MyDonation, DonationStats, PaymentMethod, RecurringDonation } from '@lfx-one/shared/interfaces';
-import { map } from 'rxjs';
 import { CrowdfundingService } from '@app/shared/services/crowdfunding.service';
 import { MOCK_DONATION_STATS, MOCK_PAYMENT_METHODS, MOCK_RECURRING_DONATIONS } from '../crowdfunding.mock';
 import { DonationsStatsBarComponent } from './components/donations-stats-bar/donations-stats-bar.component';
 import { DonationHistoryTableComponent } from './components/donation-history-table/donation-history-table.component';
 import { PaymentMethodsComponent } from './components/payment-methods/payment-methods.component';
 import { RecurringDonationsListComponent } from './components/recurring-donations-list/recurring-donations-list.component';
+
+const DONATION_PAGE_SIZE = 10;
 
 @Component({
   selector: 'lfx-my-donations',
@@ -25,12 +25,30 @@ export class MyDonationsComponent {
   protected readonly crowdfundingUrl = environment.urls.crowdfunding;
   protected readonly stats = signal<DonationStats>(MOCK_DONATION_STATS);
   protected readonly recurringDonations = signal<RecurringDonation[]>(MOCK_RECURRING_DONATIONS);
-  protected readonly donationHistory = toSignal(
-    this.crowdfundingService.getMyDonations().pipe(map((res) => res.data)),
-    { initialValue: [] as MyDonation[] },
-  );
   protected readonly paymentMethods = signal<PaymentMethod[]>(MOCK_PAYMENT_METHODS);
   protected readonly cancelledCount = signal(4);
+
+  protected readonly donationHistory = signal<MyDonation[]>([]);
+  protected readonly donationHistoryHasMore = signal(false);
+  private donationHistoryOffset = 0;
+
+  constructor() {
+    this.fetchDonationPage();
+  }
+
+  protected onLoadMoreDonations(): void {
+    this.fetchDonationPage();
+  }
+
+  private fetchDonationPage(): void {
+    this.crowdfundingService
+      .getMyDonations({ size: DONATION_PAGE_SIZE, from: this.donationHistoryOffset })
+      .subscribe((res) => {
+        this.donationHistory.update((existing) => [...existing, ...res.data]);
+        this.donationHistoryOffset += res.data.length;
+        this.donationHistoryHasMore.set(this.donationHistoryOffset < res.total);
+      });
+  }
 
   protected onViewCancelled(): void {
     // TODO: navigate to cancelled donations view
