@@ -57,9 +57,6 @@ export function mapToInitiativeDetail(b: BackendInitiative): InitiativeDetail {
     impactStats: undefined,
     projectHealthStats: undefined,
     projectHealthRating: undefined,
-    // TODO: map donationRecords and expenseRecords from the dedicated transactions endpoint once available
-    donationRecords: [],
-    expenseRecords: [],
   };
 }
 

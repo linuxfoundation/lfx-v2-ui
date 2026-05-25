@@ -30,7 +30,7 @@ export class InitiativeOverviewSidebarComponent {
     const transactions = toSignal(
       toObservable(this.initiative).pipe(
         switchMap((initiative) =>
-          this.crowdfundingService.getInitiativeTransactions(initiative.slug, { type: 'donation', size: 5 }),
+          this.crowdfundingService.getInitiativeTransactions(initiative.slug, { type: 'donations', size: 5 }),
         ),
       ),
       { initialValue: { data: [], totalCount: 0, from: 0, size: 0 } },

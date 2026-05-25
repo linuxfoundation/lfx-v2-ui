@@ -39,7 +39,7 @@ export class CrowdfundingService {
 
   public getInitiativeTransactions(
     slug: string,
-    params?: { type?: 'donation' | 'reimbursement'; size?: number; from?: number }
+    params?: { type?: 'donations' | 'expenses'; size?: number; from?: number }
   ): Observable<CrowdfundingTransactionList> {
     let httpParams = new HttpParams();
     if (params?.type) httpParams = httpParams.set('type', params.type);

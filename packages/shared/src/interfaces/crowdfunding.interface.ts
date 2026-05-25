@@ -53,10 +53,10 @@ export interface SponsorEntry {
   totalCents: number;
 }
 
-/** A single crowdfunding transaction (donation or reimbursement) returned by GET /initiatives/:slug/transactions */
+/** A single crowdfunding transaction returned by GET /initiatives/:slug/transactions */
 export interface CrowdfundingTransaction {
   id: string;
-  type: 'donation' | 'reimbursement';
+  type: 'donations' | 'expenses';
   amountCents: number;
   date: string;
   category?: string;
@@ -133,8 +133,6 @@ export interface InitiativeDetail extends InitiativeBase {
   projectHealthRating?: string;
   fundingGoals?: FundingGoal[];
   financialSummary?: FinancialSummary;
-  donationRecords?: DonationRecord[];
-  expenseRecords?: ExpenseRecord[];
 }
 
 export type CrowdfundingInitiativeStatus = 'active' | 'pending' | 'closed';
