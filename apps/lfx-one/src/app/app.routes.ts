@@ -6,7 +6,11 @@ import { Routes } from '@angular/router';
 import { authGuard } from './shared/guards/auth.guard';
 import { executiveDirectorGuard } from './shared/guards/executive-director.guard';
 import { lensRedirectGuard } from './shared/guards/lens-redirect.guard';
+import { orgLensEnabledGuard } from './shared/guards/org-lens-enabled.guard';
 import { projectQueryParamGuard } from './shared/guards/project-query-param.guard';
+
+const loadOrgPlaceholderPage = () =>
+  import('./modules/dashboards/org/components/org-placeholder-page/org-placeholder-page.component').then((m) => m.OrgPlaceholderPageComponent);
 
 export const routes: Routes = [
   {
@@ -56,11 +60,105 @@ export const routes: Routes = [
         canActivate: [projectQueryParamGuard],
         loadComponent: () => import('./modules/dashboards/dashboard.component').then((m) => m.DashboardComponent),
       },
-      // Org Lens dashboard (placeholder — reuses DashboardComponent for now)
+      // Org Lens — dark-launched behind `org-lens-enabled` (CanMatch); /org/* is invisible when the flag is off.
       {
         path: 'org',
+        canMatch: [orgLensEnabledGuard],
         data: { lens: 'org' },
-        loadComponent: () => import('./modules/dashboards/dashboard.component').then((m) => m.DashboardComponent),
+        children: [
+          {
+            path: '',
+            pathMatch: 'full',
+            redirectTo: 'overview',
+          },
+          {
+            path: 'overview',
+            data: {
+              lens: 'org',
+              title: 'Org Overview',
+              description: 'A summary of your organization across the Linux Foundation.',
+              icon: 'fa-light fa-grid-2',
+              showDevelopmentNotice: true,
+            },
+            loadComponent: () => import('./modules/dashboards/org/org-overview/org-overview.component').then((m) => m.OrgOverviewComponent),
+          },
+          {
+            path: 'memberships',
+            data: { lens: 'org', title: 'Memberships', description: 'Active memberships and tier history.', icon: 'fa-light fa-display' },
+            loadComponent: () => import('./modules/dashboards/org/org-memberships/org-memberships.component').then((m) => m.OrgMembershipsComponent),
+          },
+          {
+            path: 'memberships/:foundationId',
+            data: {
+              lens: 'org',
+              title: 'Membership Detail',
+              description: 'Key contacts, board, governance, and documentation for a membership.',
+              icon: 'fa-light fa-id-card',
+            },
+            loadComponent: () =>
+              import('./modules/dashboards/org/org-membership-detail/org-membership-detail.component').then((m) => m.OrgMembershipDetailComponent),
+          },
+          {
+            path: 'projects',
+            data: { lens: 'org', title: 'Projects', description: 'Projects your organization participates in.', icon: 'fa-light fa-folder' },
+            loadComponent: loadOrgPlaceholderPage,
+          },
+          {
+            path: 'roi',
+            data: { lens: 'org', title: 'ROI', description: 'Return on investment across your memberships and engagement.', icon: 'fa-light fa-chart-line-up' },
+            loadComponent: loadOrgPlaceholderPage,
+          },
+          {
+            path: 'governance',
+            data: { lens: 'org', title: 'Governance', description: 'Board seats and governance participation.', icon: 'fa-light fa-layer-group' },
+            loadComponent: loadOrgPlaceholderPage,
+          },
+          {
+            path: 'people',
+            data: { lens: 'org', title: 'People', description: 'Employees and contributors associated with your organization.', icon: 'fa-light fa-users' },
+            loadComponent: loadOrgPlaceholderPage,
+          },
+          {
+            path: 'contributions',
+            data: {
+              lens: 'org',
+              title: 'Code Contributions',
+              description: "Open-source contributions from your organization's contributors.",
+              icon: 'fa-light fa-code',
+            },
+            loadComponent: loadOrgPlaceholderPage,
+          },
+          {
+            path: 'events',
+            data: { lens: 'org', title: 'Events', description: 'Events your organization is sponsoring or attending.', icon: 'fa-light fa-calendar' },
+            loadComponent: loadOrgPlaceholderPage,
+          },
+          {
+            path: 'training',
+            data: {
+              lens: 'org',
+              title: 'Training & Certification',
+              description: 'Training enrollments and certifications across your organization.',
+              icon: 'fa-light fa-graduation-cap',
+            },
+            loadComponent: loadOrgPlaceholderPage,
+          },
+          {
+            path: 'meetings',
+            data: { lens: 'org', title: 'Meetings', description: 'Meetings your organization is participating in.', icon: 'fa-light fa-video' },
+            loadComponent: loadOrgPlaceholderPage,
+          },
+          {
+            path: 'groups',
+            data: { lens: 'org', title: 'Groups', description: 'Committees your organization participates in.', icon: 'fa-light fa-users-rectangle' },
+            loadComponent: loadOrgPlaceholderPage,
+          },
+          {
+            path: 'profile',
+            data: { lens: 'org', title: 'Profile', description: 'Public-facing details about your organization.', icon: 'fa-light fa-file' },
+            loadComponent: loadOrgPlaceholderPage,
+          },
+        ],
       },
       // Foundation Lens — feature routes (lens-tagged so deep links restore the foundation lens)
       {
@@ -106,6 +204,12 @@ export const routes: Routes = [
         loadChildren: () => import('./modules/surveys/surveys.routes').then((m) => m.SURVEY_ROUTES),
       },
       {
+        path: 'foundation/newsletters',
+        data: { lens: 'foundation' },
+        canActivate: [executiveDirectorGuard, projectQueryParamGuard],
+        loadChildren: () => import('./modules/newsletters/newsletters.routes').then((m) => m.NEWSLETTER_ROUTES),
+      },
+      {
         path: 'foundation/settings',
         data: { lens: 'foundation' },
         canActivate: [projectQueryParamGuard],
@@ -149,6 +253,12 @@ export const routes: Routes = [
         loadChildren: () => import('./modules/surveys/surveys.routes').then((m) => m.SURVEY_ROUTES),
       },
       {
+        path: 'project/newsletters',
+        data: { lens: 'project' },
+        canActivate: [executiveDirectorGuard, projectQueryParamGuard],
+        loadChildren: () => import('./modules/newsletters/newsletters.routes').then((m) => m.NEWSLETTER_ROUTES),
+      },
+      {
         path: 'project/settings',
         data: { lens: 'project' },
         canActivate: [projectQueryParamGuard],
@@ -178,6 +288,11 @@ export const routes: Routes = [
         path: 'surveys',
         canActivate: [lensRedirectGuard],
         loadChildren: () => import('./modules/surveys/surveys.routes').then((m) => m.SURVEY_ROUTES),
+      },
+      {
+        path: 'newsletters',
+        canActivate: [executiveDirectorGuard, lensRedirectGuard],
+        loadChildren: () => import('./modules/newsletters/newsletters.routes').then((m) => m.NEWSLETTER_ROUTES),
       },
       {
         path: 'documents',
@@ -229,5 +344,16 @@ export const routes: Routes = [
   {
     path: 'meetings/:id',
     loadComponent: () => import('./modules/meetings/meeting-join/meeting-join.component').then((m) => m.MeetingJoinComponent),
+  },
+  // Invite acceptance — authGuard preserves ?token= through the Auth0 login redirect.
+  {
+    path: 'invite',
+    canActivate: [authGuard],
+    loadComponent: () => import('./modules/invite/invite.component').then((m) => m.InviteComponent),
+  },
+  // Error page is outside the auth guard so expired/invalid links are visible without login.
+  {
+    path: 'invite/error',
+    loadComponent: () => import('./modules/invite/invite-error/invite-error.component').then((m) => m.InviteErrorComponent),
   },
 ];
