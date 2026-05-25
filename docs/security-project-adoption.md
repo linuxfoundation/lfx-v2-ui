@@ -88,6 +88,7 @@ set.
 | `unassigned` | `Unassigned` | Package is in the queue and has no owner. |
 | `open_for_adoption` | `Open` / `Available` | Package is available for a contributor to adopt. |
 | `assigned` | `Assigned` | Admin assigned an owner, but work has not started. |
+| `adopted` | `Adopted` | Contributor adopted the package, but work has not started. |
 | `in_progress` | `In progress` | Owner is actively working through the checklist. |
 | `submitted` | `In review` | Owner submitted the checklist for ED/admin review. |
 | `changes_requested` | `Changes requested` | Reviewer sent the work back with required updates. |
