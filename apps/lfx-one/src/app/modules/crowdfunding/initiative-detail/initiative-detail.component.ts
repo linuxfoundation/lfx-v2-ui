@@ -30,9 +30,9 @@ import { InitiativeSettingsDrawerComponent } from './components/initiative-setti
 export class InitiativeDetailComponent {
   private readonly route = inject(ActivatedRoute);
 
-  protected readonly initiativeId = toSignal(this.route.paramMap.pipe(map((params) => params.get('id') ?? '')), { initialValue: '' });
+  protected readonly initiativeSlug = toSignal(this.route.paramMap.pipe(map((params) => params.get('slug') ?? '')), { initialValue: '' });
   protected readonly initiative = computed(() => {
-    // For now, always return mock data. In a real app, fetch from service based on initiativeId()
+    // For now, always return mock data. In a real app, fetch from service based on initiativeSlug()
     return MOCK_INITIATIVE_DETAIL;
   });
   protected readonly activeTab = signal<string>('overview');

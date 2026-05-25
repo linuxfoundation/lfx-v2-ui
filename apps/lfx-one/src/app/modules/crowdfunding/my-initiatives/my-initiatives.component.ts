@@ -32,8 +32,8 @@ export class MyInitiativesComponent {
   protected readonly stats: Signal<CrowdfundingInitiativesStats> = this.initStats();
 
   // ─── Protected Methods ─────────────────────────────────────────────────────
-  protected onInitiativeClick(id: string): void {
-    void this.router.navigate(['/crowdfunding/initiatives', id]);
+  protected onInitiativeClick(slug: string): void {
+    void this.router.navigate(['/crowdfunding/initiatives', slug]);
   }
 
   // ─── Private Initializers ──────────────────────────────────────────────────

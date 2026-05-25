@@ -39,7 +39,7 @@ export class InitiativeCardComponent {
 
   protected onCardClick(): void {
     if (this.isClickable()) {
-      this.cardClick.emit(this.initiative().id);
+      this.cardClick.emit(this.initiative().slug);
     }
   }
 
