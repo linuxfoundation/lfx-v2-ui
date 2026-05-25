@@ -53,15 +53,24 @@ export interface SponsorEntry {
   totalCents: number;
 }
 
-export interface RecentDonation {
+/** A single crowdfunding transaction (donation or reimbursement) returned by GET /initiatives/:slug/transactions */
+export interface CrowdfundingTransaction {
   id: string;
-  donorName: string;
-  donorLogoUrl?: string;
-  donorType: 'organization' | 'member';
+  type: 'donation' | 'reimbursement';
   amountCents: number;
-  date: number;
-  initiativeId?: string;
-  initiativeName?: string;
+  date: string;
+  category?: string;
+  donorName?: string;
+  donorType?: 'organization' | 'individual';
+  donorLogoUrl?: string;
+  donorUsername?: string;
+}
+
+export interface CrowdfundingTransactionList {
+  data: CrowdfundingTransaction[];
+  totalCount: number;
+  from: number;
+  size: number;
 }
 
 export interface FundingGoal {
@@ -119,7 +128,6 @@ export interface InitiativeDetail extends InitiativeBase {
   githubURL?: string;
   currentBalanceCents?: number;
   sponsors?: SponsorEntry[];
-  recentDonations?: RecentDonation[];
   impactStats?: ImpactStat[];
   projectHealthStats?: ProjectHealthStat[];
   projectHealthRating?: string;

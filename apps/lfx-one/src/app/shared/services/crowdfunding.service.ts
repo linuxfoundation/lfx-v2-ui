@@ -3,10 +3,10 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { EMPTY_CROWDFUNDING_STATS, EMPTY_INITIATIVES_RESPONSE } from '@lfx-one/shared/constants';
-import { CrowdfundingInitiativesStats, InitiativeDetail, InitiativesResponse } from '@lfx-one/shared/interfaces';
+import { EMPTY_CROWDFUNDING_STATS, EMPTY_INITIATIVES_RESPONSE, EMPTY_TRANSACTION_LIST } from '@lfx-one/shared/constants';
+import { CrowdfundingInitiativesStats, CrowdfundingTransactionList, InitiativeDetail, InitiativesResponse } from '@lfx-one/shared/interfaces';
 import { catchError, Observable, of } from 'rxjs';
 
 @Injectable({
@@ -35,5 +35,19 @@ export class CrowdfundingService {
 
   public getInitiativeBySlug(slug: string): Observable<InitiativeDetail | null> {
     return this.http.get<InitiativeDetail>(`/api/crowdfunding/initiatives/${slug}`).pipe(catchError(() => of(null)));
+  }
+
+  public getInitiativeTransactions(
+    slug: string,
+    params?: { type?: 'donation' | 'reimbursement'; size?: number; from?: number }
+  ): Observable<CrowdfundingTransactionList> {
+    let httpParams = new HttpParams();
+    if (params?.type) httpParams = httpParams.set('type', params.type);
+    if (params?.size != null) httpParams = httpParams.set('size', String(params.size));
+    if (params?.from != null) httpParams = httpParams.set('from', String(params.from));
+
+    return this.http
+      .get<CrowdfundingTransactionList>(`/api/crowdfunding/initiatives/${slug}/transactions`, { params: httpParams })
+      .pipe(catchError(() => of(EMPTY_TRANSACTION_LIST)));
   }
 }

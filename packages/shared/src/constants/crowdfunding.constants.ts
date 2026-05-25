@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { FundType } from '../enums/crowdfunding.enum';
-import { CrowdfundingInitiativesStats, InitiativesResponse } from '../interfaces/crowdfunding.interface';
+import { CrowdfundingInitiativesStats, CrowdfundingTransactionList, InitiativesResponse } from '../interfaces/crowdfunding.interface';
 
 export const CROWDFUNDING_FUND_TYPE_LABELS: Record<FundType, string> = {
   [FundType.GENERAL_FUND]: 'General Fund',
@@ -42,3 +42,5 @@ export const CROWDFUNDING_DONOR_AVATAR_PALETTE: string[] = [
 export const DEFAULT_CROWDFUNDING_PAGE_SIZE = 10;
 export const EMPTY_INITIATIVES_RESPONSE: InitiativesResponse = { data: [], total: 0, pageSize: DEFAULT_CROWDFUNDING_PAGE_SIZE, offset: 0 };
 export const EMPTY_CROWDFUNDING_STATS: CrowdfundingInitiativesStats = { activeCount: 0, totalRaised: 0, monthlyGain: 0, totalSponsors: 0 };
+
+export const EMPTY_TRANSACTION_LIST: CrowdfundingTransactionList = { data: [], totalCount: 0, from: 0, size: 0 };

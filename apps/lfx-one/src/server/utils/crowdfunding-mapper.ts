@@ -3,10 +3,18 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { FinancialSummary, FundingGoal, InitiativeBase, InitiativeDetail, SponsorEntry, CrowdfundingInitiativeStatus } from '@lfx-one/shared/interfaces';
+import {
+  CrowdfundingTransaction,
+  FinancialSummary,
+  FundingGoal,
+  InitiativeBase,
+  InitiativeDetail,
+  SponsorEntry,
+  CrowdfundingInitiativeStatus,
+} from '@lfx-one/shared/interfaces';
 import { FundType } from '@lfx-one/shared/enums';
 
-import { BackendGoal, BackendInitiative, BackendSponsor } from '../types/crowdfunding.types';
+import { BackendGoal, BackendInitiative, BackendSponsor, BackendTransaction } from '../types/crowdfunding.types';
 
 export function mapToInitiativeBase(b: BackendInitiative): InitiativeBase {
   return {
@@ -49,8 +57,7 @@ export function mapToInitiativeDetail(b: BackendInitiative): InitiativeDetail {
     impactStats: undefined,
     projectHealthStats: undefined,
     projectHealthRating: undefined,
-    // TODO: map from a dedicated donations endpoint once available
-    recentDonations: [],
+    // TODO: map donationRecords and expenseRecords from the dedicated transactions endpoint once available
     donationRecords: [],
     expenseRecords: [],
   };
@@ -80,5 +87,19 @@ function mapFinancialSummary(b: BackendInitiative): FinancialSummary {
     totalReceivedCents: b.financials!.total_raised_cents,
     totalExpensesCents: b.financials!.total_disbursed_cents ?? 0,
     balanceCents: b.financials!.available_balance_cents ?? 0,
+  };
+}
+
+export function mapToTransaction(b: BackendTransaction): CrowdfundingTransaction {
+  return {
+    id: b.id,
+    type: b.type as CrowdfundingTransaction['type'],
+    amountCents: b.amount_cents,
+    date: b.date,
+    category: b.category,
+    donorName: b.donor_name,
+    donorType: b.donor_type as CrowdfundingTransaction['donorType'],
+    donorLogoUrl: b.donor_logo_url,
+    donorUsername: b.donor_username,
   };
 }

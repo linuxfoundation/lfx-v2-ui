@@ -3,7 +3,26 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { BackendInitiative } from '../types/crowdfunding.types';
+import { BackendInitiative, BackendTransaction } from '../types/crowdfunding.types';
+
+export const MOCK_TRANSACTIONS: Record<string, BackendTransaction[]> = {
+  opentelemetry: [
+    { id: 'txn-otel-1', type: 'donation', amount_cents: 500000, date: '2026-05-10', donor_name: 'Google Cloud', donor_type: 'organization', donor_logo_url: 'https://avatars.githubusercontent.com/u/2810941?v=4' },
+    { id: 'txn-otel-2', type: 'donation', amount_cents: 250000, date: '2026-05-08', donor_name: 'Microsoft', donor_type: 'organization', donor_logo_url: 'https://avatars.githubusercontent.com/u/6154722?v=4' },
+    { id: 'txn-otel-3', type: 'donation', amount_cents: 100000, date: '2026-05-02', donor_name: 'Datadog', donor_type: 'organization', donor_logo_url: 'https://avatars.githubusercontent.com/u/365230?v=4' },
+    { id: 'txn-otel-4', type: 'donation', amount_cents: 25000, date: '2026-04-28', donor_name: 'alice_dev', donor_type: 'individual' },
+    { id: 'txn-otel-5', type: 'donation', amount_cents: 10000, date: '2026-04-21', donor_name: 'bob_contrib', donor_type: 'individual' },
+    { id: 'txn-otel-6', type: 'reimbursement', amount_cents: 120000, date: '2026-04-15', category: 'Maintainer Stipend', donor_name: 'Maintainer Stipends Q1' },
+    { id: 'txn-otel-7', type: 'reimbursement', amount_cents: 80000, date: '2026-04-01', category: 'Infrastructure', donor_name: 'CI/CD Infrastructure' },
+  ],
+  'zephyr-security': [
+    { id: 'txn-zephyr-1', type: 'donation', amount_cents: 300000, date: '2026-05-12', donor_name: 'Nordic Semiconductor', donor_type: 'organization', donor_logo_url: 'https://avatars.githubusercontent.com/u/18768454?v=4' },
+    { id: 'txn-zephyr-2', type: 'donation', amount_cents: 200000, date: '2026-05-05', donor_name: 'NXP', donor_type: 'organization', donor_logo_url: 'https://avatars.githubusercontent.com/u/32881135?v=4' },
+    { id: 'txn-zephyr-3', type: 'donation', amount_cents: 150000, date: '2026-04-22', donor_name: 'Qualcomm', donor_type: 'organization', donor_logo_url: 'https://avatars.githubusercontent.com/u/3739855?v=4' },
+    { id: 'txn-zephyr-4', type: 'reimbursement', amount_cents: 90000, date: '2026-04-10', category: 'Security Audit', donor_name: 'Trail of Bits Audit Q1' },
+  ],
+  'linux-kernel-mentorship': [],
+};
 
 export const MOCK_INITIATIVES: BackendInitiative[] = [
   {

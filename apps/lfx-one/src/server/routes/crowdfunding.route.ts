@@ -12,6 +12,7 @@ const crowdfundingController = new CrowdfundingController();
 
 router.get('/initiatives-stats', (req, res, next) => crowdfundingController.getInitiativesStats(req, res, next));
 router.get('/initiatives', (req, res, next) => crowdfundingController.getMyInitiatives(req, res, next));
+router.get('/initiatives/:slug/transactions', (req, res, next) => crowdfundingController.getInitiativeTransactions(req, res, next));
 router.get('/initiatives/:slug', (req, res, next) => crowdfundingController.getInitiativeBySlug(req, res, next));
 
 export default router;

@@ -3,11 +3,11 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { CrowdfundingInitiativesStats, InitiativeDetail, InitiativesResponse } from '@lfx-one/shared/interfaces';
+import { CrowdfundingInitiativesStats, CrowdfundingTransactionList, InitiativeDetail, InitiativesResponse } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
-import { MOCK_INITIATIVES } from '../mock-data/crowdfunding.mock';
-import { mapToInitiativeBase, mapToInitiativeDetail } from '../utils/crowdfunding-mapper';
+import { MOCK_INITIATIVES, MOCK_TRANSACTIONS } from '../mock-data/crowdfunding.mock';
+import { mapToInitiativeBase, mapToInitiativeDetail, mapToTransaction } from '../utils/crowdfunding-mapper';
 import { logger } from './logger.service';
 
 export class CrowdfundingService {
@@ -57,5 +57,37 @@ export class CrowdfundingService {
     }
 
     return mapToInitiativeDetail(initiative);
+  }
+
+  public async getInitiativeTransactions(
+    req: Request,
+    username: string,
+    slug: string,
+    type?: string,
+    size?: number,
+    from?: number,
+  ): Promise<CrowdfundingTransactionList | null> {
+    logger.debug(req, 'get_initiative_transactions', 'Fetching transactions for initiative', { username, slug, type, size, from });
+
+    const allTransactions = MOCK_TRANSACTIONS[slug];
+
+    if (allTransactions === undefined) {
+      logger.warning(req, 'get_initiative_transactions', 'Initiative not found', { slug });
+      return null;
+    }
+
+    const filtered = type ? allTransactions.filter((t) => t.type === type) : allTransactions;
+    const pageSize = size ?? filtered.length;
+    const offset = from ?? 0;
+    const page = filtered.slice(offset, offset + pageSize);
+
+    logger.debug(req, 'get_initiative_transactions', 'Returning transactions', { total: filtered.length, page: page.length });
+
+    return {
+      data: page.map(mapToTransaction),
+      totalCount: filtered.length,
+      from: offset,
+      size: pageSize,
+    };
   }
 }

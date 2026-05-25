@@ -95,4 +95,46 @@ export class CrowdfundingController {
       next(error);
     }
   }
+
+  /**
+   * GET /api/crowdfunding/initiatives/:slug/transactions
+   * Get paginated transactions for an initiative
+   */
+  public async getInitiativeTransactions(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_initiative_transactions');
+
+    try {
+      const rawUsername = await getUsernameFromAuth(req);
+
+      if (!rawUsername) {
+        throw new AuthenticationError('User authentication required', {
+          operation: 'get_initiative_transactions',
+        });
+      }
+
+      const username = stripAuthPrefix(rawUsername);
+      const { slug } = req.params;
+      const { type, size, from } = req.query;
+
+      const transactions = await this.crowdfundingService.getInitiativeTransactions(
+        req,
+        username,
+        slug,
+        type ? String(type) : undefined,
+        size ? Number(size) : undefined,
+        from ? Number(from) : undefined,
+      );
+
+      if (!transactions) {
+        res.status(404).json({ message: `Initiative '${slug}' not found` });
+        return;
+      }
+
+      logger.success(req, 'get_initiative_transactions', startTime, { slug, total: transactions.totalCount });
+
+      res.json(transactions);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
