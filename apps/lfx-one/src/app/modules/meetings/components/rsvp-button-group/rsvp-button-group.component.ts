@@ -49,6 +49,8 @@ export class RsvpButtonGroupComponent {
 
   // Outputs
   public readonly rsvpChanged: OutputEmitterRef<MeetingRsvp> = output<MeetingRsvp>();
+  /** Emits the resolved error message when an RSVP submission fails. Pair with `suppressErrorToast=true` to render a custom error UI. */
+  public readonly rsvpFailed: OutputEmitterRef<string> = output<string>();
 
   // Internal state
   public isLoading: WritableSignal<boolean> = signal(false);
@@ -128,6 +130,8 @@ export class RsvpButtonGroupComponent {
           } else if (error?.error?.error) {
             errorMessage = error.error.error;
           }
+
+          this.rsvpFailed.emit(errorMessage);
 
           if (!this.suppressErrorToast()) {
             this.messageService.add({
