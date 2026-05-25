@@ -34,6 +34,15 @@ export class CrowdfundingService {
     );
   }
 
+  public getInitiativeBySlug(slug: string): Observable<InitiativeDetail | null> {
+    return this.http.get<InitiativeDetail>(`/api/crowdfunding/initiatives/${slug}`).pipe(
+      catchError((err) => {
+        console.error('[CrowdfundingService] getInitiativeBySlug failed', err);
+        return of(null);
+      })
+    );
+  }
+
   public getInitiativeTransactions(
     slug: string,
     params?: { type?: 'donations' | 'expenses'; size?: number; from?: number }
@@ -43,12 +52,11 @@ export class CrowdfundingService {
     if (params?.size != null) httpParams = httpParams.set('size', String(params.size));
     if (params?.from != null) httpParams = httpParams.set('from', String(params.from));
 
-    return this.http
-      .get<CrowdfundingTransactionList>(`/api/crowdfunding/initiatives/${slug}/transactions`, { params: httpParams })
-      .pipe(catchError(() => of(EMPTY_TRANSACTION_LIST)));
-  }
-
-  public getInitiativeBySlug(slug: string): Observable<InitiativeDetail | null> {
-    return this.http.get<InitiativeDetail>(`/api/crowdfunding/initiatives/${slug}`).pipe(catchError(() => of(null)));
+    return this.http.get<CrowdfundingTransactionList>(`/api/crowdfunding/initiatives/${slug}/transactions`, { params: httpParams }).pipe(
+      catchError((err) => {
+        console.error('[CrowdfundingService] getInitiativeTransactions failed', err);
+        return of(EMPTY_TRANSACTION_LIST);
+      })
+    );
   }
 }

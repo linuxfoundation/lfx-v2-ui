@@ -43,7 +43,8 @@ export interface InitiativeBase {
 export type InitiativesResponse = OffsetPaginatedResponse<InitiativeBase>;
 
 // ---------------------------------------------------------------------------
-// Initiative detail — mirrors initiative-detail.types.ts from the crowdfunding app exactly.
+// Initiative detail — types for the GET /api/crowdfunding/initiatives/:slug endpoint
+// and associated transaction/sponsor shapes.
 // ---------------------------------------------------------------------------
 
 export interface SponsorEntry {

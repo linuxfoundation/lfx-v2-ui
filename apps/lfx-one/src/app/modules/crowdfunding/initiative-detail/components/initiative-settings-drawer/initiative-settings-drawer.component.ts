@@ -55,7 +55,7 @@ export class InitiativeSettingsDrawerComponent {
         this.form.patchValue({
           name: init.name,
           description: init.description,
-          websiteUrl: init.websiteURL ?? '',
+          websiteUrl: init.websiteUrl ?? '',
           goal: init.fundingStatus?.goalsTotalCents != null ? init.fundingStatus.goalsTotalCents / 100 : null,
         });
         this.tags.set([]);

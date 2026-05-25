@@ -13,7 +13,6 @@ import {
   CROWDFUNDING_FUND_TYPE_ICONS,
   CROWDFUNDING_FUND_TYPE_LABELS,
 } from '@lfx-one/shared/constants';
-import { FundType } from '@lfx-one/shared/enums';
 import { InitiativeDetail, InitiativeMenuItem, TabOption } from '@lfx-one/shared/interfaces';
 
 @Component({
@@ -50,10 +49,10 @@ export class InitiativeDetailHeaderComponent {
     },
   ];
 
-  protected readonly fundTypeLabel = computed(() => CROWDFUNDING_FUND_TYPE_LABELS[this.initiative().initiativeType as FundType]);
-  protected readonly fundTypeIcon = computed(() => CROWDFUNDING_FUND_TYPE_ICONS[this.initiative().initiativeType as FundType]);
-  protected readonly fundTypeColorClass = computed(() => CROWDFUNDING_FUND_TYPE_COLOR_CLASSES[this.initiative().initiativeType as FundType]);
-  protected readonly avatarStyleClass = computed(() => CROWDFUNDING_FUND_TYPE_AVATAR_CLASSES[this.initiative().initiativeType as FundType]);
+  protected readonly fundTypeLabel = computed(() => CROWDFUNDING_FUND_TYPE_LABELS[this.initiative().initiativeType]);
+  protected readonly fundTypeIcon = computed(() => CROWDFUNDING_FUND_TYPE_ICONS[this.initiative().initiativeType]);
+  protected readonly fundTypeColorClass = computed(() => CROWDFUNDING_FUND_TYPE_COLOR_CLASSES[this.initiative().initiativeType]);
+  protected readonly avatarStyleClass = computed(() => CROWDFUNDING_FUND_TYPE_AVATAR_CLASSES[this.initiative().initiativeType]);
 
   protected onMoreClick(event: Event): void {
     this.moreMenu()?.toggle(event);

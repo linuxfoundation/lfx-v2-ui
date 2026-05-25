@@ -116,6 +116,15 @@ export class CrowdfundingController {
       const { slug } = req.params;
       const { type, size, from } = req.query;
 
+      const ALLOWED_TYPES = ['donations', 'expenses'] as const;
+      type AllowedType = (typeof ALLOWED_TYPES)[number];
+
+      const resolvedType = type ? String(type) : undefined;
+      if (resolvedType !== undefined && !ALLOWED_TYPES.includes(resolvedType as AllowedType)) {
+        res.status(400).json({ message: `Invalid type '${resolvedType}'. Allowed values: ${ALLOWED_TYPES.join(', ')}` });
+        return;
+      }
+
       const parseNonNegativeInt = (val: unknown): number | undefined => {
         if (val == null || val === '') return undefined;
         const n = Number(val);
@@ -126,7 +135,7 @@ export class CrowdfundingController {
         req,
         username,
         slug,
-        type ? String(type) : undefined,
+        resolvedType as AllowedType | undefined,
         parseNonNegativeInt(size),
         parseNonNegativeInt(from)
       );
