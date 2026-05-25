@@ -29,8 +29,8 @@ export interface InitiativeBase {
   slug: string;
   name: string;
   description: string;
-  status: string;
-  initiativeType: string;
+  status: CrowdfundingInitiativeStatus;
+  initiativeType: FundType;
   color: string;
   createdOn: string;
   updatedOn: string;
@@ -38,8 +38,8 @@ export interface InitiativeBase {
   logoUrl?: string;
   country?: string;
   city?: string;
-  websiteURL?: string;
-  applicationURL?: string;
+  websiteUrl?: string;
+  applicationUrl?: string;
   eventStartDate?: string;
   eventEndDate?: string;
   initiativeStats?: InitiativeStats;
