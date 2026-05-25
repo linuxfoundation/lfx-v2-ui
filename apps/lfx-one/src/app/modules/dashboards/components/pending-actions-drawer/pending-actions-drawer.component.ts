@@ -91,10 +91,21 @@ export class PendingActionsDrawerComponent {
       severity: 'success',
       summary: 'RSVP saved',
       detail: `You responded '${this.formatResponse(rsvp.response_type)}' to ${item.text}`,
-      data: item.meetingUid ? { meetingHref: `/meetings/${item.meetingUid}/details`, meetingTitle: item.text } : undefined,
+      // Prefer the canonical buttonLink (carries password query params for upcoming meetings); fall back to the meeting root only as a last resort.
+      data: this.buildToastMeetingData(item),
       life: 5000,
     });
     this.startCompletion(item);
+  }
+
+  private buildToastMeetingData(item: PendingActionItem): { meetingHref: string; meetingTitle: string } | undefined {
+    if (item.buttonLink) {
+      return { meetingHref: item.buttonLink, meetingTitle: item.text };
+    }
+    if (item.meetingUid) {
+      return { meetingHref: `/meetings/${item.meetingUid}`, meetingTitle: item.text };
+    }
+    return undefined;
   }
 
   private loadMeeting(meetingUid: string): void {

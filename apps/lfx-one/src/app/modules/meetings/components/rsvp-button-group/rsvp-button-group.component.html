@@ -3,15 +3,22 @@
 
 @if (compact()) {
   <!-- Compact mode: bare outlined CTA buttons with colored icon + label per response (no surrounding container). -->
+  <!--
+    Selected-state Tailwind classes use the `!` important modifier to win over the always-applied base classes
+    (e.g. `bg-white`); class names containing `!` are wired through `[ngClass]` object keys to keep template
+    parsing unambiguous across Angular compiler versions.
+  -->
   <div class="flex items-center gap-2" [attr.data-testid]="'meeting-rsvp-buttons-compact'">
     <button
       type="button"
       (click)="handleRsvpClick('accepted')"
       [disabled]="isLoading() || disabled()"
       class="inline-flex items-center gap-1.5 px-3 h-8 rounded-md border border-blue-300 bg-white text-blue-700 hover:bg-blue-50 hover:border-blue-500 disabled:opacity-60 disabled:cursor-not-allowed transition-colors text-xs font-medium"
-      [class.!bg-blue-600]="selectedResponse() === 'accepted'"
-      [class.!border-blue-600]="selectedResponse() === 'accepted'"
-      [class.!text-white]="selectedResponse() === 'accepted'"
+      [ngClass]="{
+        '!bg-blue-600': selectedResponse() === 'accepted',
+        '!border-blue-600': selectedResponse() === 'accepted',
+        '!text-white': selectedResponse() === 'accepted',
+      }"
       [attr.data-testid]="'meeting-rsvp-button-yes'">
       <i class="fa-light fa-circle-check text-sm"></i>
       <span>Yes</span>
@@ -21,9 +28,11 @@
       (click)="handleRsvpClick('declined')"
       [disabled]="isLoading() || disabled()"
       class="inline-flex items-center gap-1.5 px-3 h-8 rounded-md border border-red-300 bg-white text-red-700 hover:bg-red-50 hover:border-red-500 disabled:opacity-60 disabled:cursor-not-allowed transition-colors text-xs font-medium"
-      [class.!bg-red-600]="selectedResponse() === 'declined'"
-      [class.!border-red-600]="selectedResponse() === 'declined'"
-      [class.!text-white]="selectedResponse() === 'declined'"
+      [ngClass]="{
+        '!bg-red-600': selectedResponse() === 'declined',
+        '!border-red-600': selectedResponse() === 'declined',
+        '!text-white': selectedResponse() === 'declined',
+      }"
       [attr.data-testid]="'meeting-rsvp-button-no'">
       <i class="fa-light fa-circle-xmark text-sm"></i>
       <span>No</span>
@@ -33,9 +42,11 @@
       (click)="handleRsvpClick('maybe')"
       [disabled]="isLoading() || disabled()"
       class="inline-flex items-center gap-1.5 px-3 h-8 rounded-md border border-amber-300 bg-white text-amber-700 hover:bg-amber-50 hover:border-amber-500 disabled:opacity-60 disabled:cursor-not-allowed transition-colors text-xs font-medium"
-      [class.!bg-amber-500]="selectedResponse() === 'maybe'"
-      [class.!border-amber-500]="selectedResponse() === 'maybe'"
-      [class.!text-white]="selectedResponse() === 'maybe'"
+      [ngClass]="{
+        '!bg-amber-500': selectedResponse() === 'maybe',
+        '!border-amber-500': selectedResponse() === 'maybe',
+        '!text-white': selectedResponse() === 'maybe',
+      }"
       [attr.data-testid]="'meeting-rsvp-button-maybe'">
       <i class="fa-light fa-circle-question text-sm"></i>
       <span>Maybe</span>

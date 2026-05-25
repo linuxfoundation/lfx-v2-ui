@@ -56,10 +56,15 @@ export class PendingActionsComponent {
   private readonly loadingMeetingUids = signal<ReadonlySet<string>>(new Set());
   private readonly failedMeetingUids = signal<ReadonlySet<string>>(new Set());
 
+  // Clamped display limit shared by slicing, hasMore, and skeleton-swap arrival logic — rejects NaN/Infinity, floors fractional values, default 2.
+  protected readonly safeDisplayLimit: Signal<number> = computed(() => {
+    const raw = this.displayLimit();
+    return Number.isFinite(raw) ? Math.max(0, Math.trunc(raw)) : 2;
+  });
   protected readonly visibleActionsUnlimited: Signal<PendingActionItem[]> = this.initVisibleActionsUnlimited();
   protected readonly visibleActions: Signal<PendingActionItem[]> = this.initVisibleActions();
   protected readonly totalVisible: Signal<number> = computed(() => this.visibleActionsUnlimited().length);
-  protected readonly hasMore: Signal<boolean> = computed(() => this.totalVisible() > this.displayLimit());
+  protected readonly hasMore: Signal<boolean> = computed(() => this.totalVisible() > this.safeDisplayLimit());
   protected readonly decoratedActions: Signal<DecoratedPendingAction[]> = this.initDecoratedActions();
 
   public constructor() {
@@ -89,7 +94,8 @@ export class PendingActionsComponent {
       severity: 'success',
       summary: 'RSVP saved',
       detail: `You responded '${this.formatResponse(rsvp.response_type)}' to ${item.text}`,
-      data: item.meetingUid ? { meetingHref: `/meetings/${item.meetingUid}/details`, meetingTitle: item.text } : undefined,
+      // Prefer the canonical buttonLink (carries password query params for upcoming meetings); fall back to the meeting root only as a last resort.
+      data: this.buildToastMeetingData(item),
       life: 5000,
     });
     this.startCompletion(item, { withSkeleton: true });
@@ -102,6 +108,16 @@ export class PendingActionsComponent {
   protected onDrawerActionCompleted(): void {
     // Drawer persists the hide cookie itself; we just need to recompute visibility so the inline list and `View all (N)` count refresh.
     this.hiddenActionsVersion.update((v) => v + 1);
+  }
+
+  private buildToastMeetingData(item: PendingActionItem): { meetingHref: string; meetingTitle: string } | undefined {
+    if (item.buttonLink) {
+      return { meetingHref: item.buttonLink, meetingTitle: item.text };
+    }
+    if (item.meetingUid) {
+      return { meetingHref: `/meetings/${item.meetingUid}`, meetingTitle: item.text };
+    }
+    return undefined;
   }
 
   private loadMeeting(meetingUid: string): void {
@@ -148,7 +164,7 @@ export class PendingActionsComponent {
         if (!options.withSkeleton) return;
 
         // After the recompute, the new arrival (if any) occupies the last visible slot — render it as a skeleton briefly so the user sees a "loading in" effect.
-        const limit = this.getSafeDisplayLimit();
+        const limit = this.safeDisplayLimit();
         const visible = this.visibleActionsUnlimited();
         if (limit === 0 || visible.length < limit) return;
 
@@ -216,13 +232,7 @@ export class PendingActionsComponent {
   }
 
   private initVisibleActions(): Signal<PendingActionItem[]> {
-    return computed(() => this.visibleActionsUnlimited().slice(0, this.getSafeDisplayLimit()));
-  }
-
-  // Single source of truth for the clamped display limit: rejects NaN/Infinity, floors fractional values, and falls back to the default of 2.
-  private getSafeDisplayLimit(): number {
-    const raw = this.displayLimit();
-    return Number.isFinite(raw) ? Math.max(0, Math.trunc(raw)) : 2;
+    return computed(() => this.visibleActionsUnlimited().slice(0, this.safeDisplayLimit()));
   }
 
   private initDecoratedActions(): Signal<DecoratedPendingAction[]> {
