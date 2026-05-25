@@ -47,9 +47,9 @@ export class InitiativeDetailComponent {
     return toSignal(
       toObservable(this.initiativeSlug).pipe(
         filter((slug) => !!slug),
-        switchMap((slug) => this.crowdfundingService.getInitiativeBySlug(slug)),
+        switchMap((slug) => this.crowdfundingService.getInitiativeBySlug(slug))
       ),
-      { initialValue: null },
+      { initialValue: null }
     );
   }
 }
