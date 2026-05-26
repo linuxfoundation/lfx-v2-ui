@@ -133,9 +133,7 @@ export class NewsletterManageComponent {
   public readonly canProceed = computed(() => this.computeCanProceed(this.currentStep()));
   public readonly canGoPrevious = computed(() => this.currentStep() > 1);
   public readonly canGoNext = computed(() => this.currentStep() < this.totalSteps && this.canProceed());
-  public readonly canSaveDraft = computed(
-    () => this.hasContext() && this.audienceFilled() && this.subjectFilled() && this.bodyFilled() && !this.savingDraft()
-  );
+  public readonly canSaveDraft = computed(() => this.hasContext() && this.audienceFilled() && this.subjectFilled() && this.bodyFilled() && !this.savingDraft());
   public readonly isLastStep = computed(() => this.currentStep() === this.totalSteps);
   public readonly currentStepTitle = computed(() => NEWSLETTER_STEP_TITLES[this.currentStep()] ?? '');
   protected readonly savedLabel = computed(() => {
