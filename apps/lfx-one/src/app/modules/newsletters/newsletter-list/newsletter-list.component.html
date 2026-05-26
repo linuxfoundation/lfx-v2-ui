@@ -97,7 +97,19 @@
                       </span>
                     </td>
                     <td class="text-right">
-                      <lfx-tag value="Sent" severity="success"></lfx-tag>
+                      <div class="flex items-center justify-end gap-2">
+                        <lfx-button
+                          icon="fa-light fa-eye"
+                          severity="secondary"
+                          size="small"
+                          [text]="true"
+                          (onClick)="openPreview(newsletter, $event)"
+                          [attr.data-testid]="'newsletter-view-' + newsletter.id"
+                          pTooltip="View newsletter"
+                          tooltipPosition="top">
+                        </lfx-button>
+                        <lfx-tag value="Sent" severity="success"></lfx-tag>
+                      </div>
                     </td>
                   } @else {
                     <td>
@@ -143,3 +155,15 @@
 </div>
 
 <p-confirmDialog></p-confirmDialog>
+
+@if (selectedNewsletter(); as n) {
+  <lfx-newsletter-preview-drawer
+    [(visible)]="previewVisible"
+    [subject]="n.subject"
+    [bodyHtml]="n.bodyHtml"
+    [edName]="edName()"
+    [logoUrl]="logoUrl()"
+    [displayName]="displayName()"
+    [edReplyEmail]="n.edReplyEmail">
+  </lfx-newsletter-preview-drawer>
+}
