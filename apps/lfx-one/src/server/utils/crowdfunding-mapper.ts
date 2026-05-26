@@ -110,6 +110,7 @@ export function mapToTransaction(b: BackendTransaction): CrowdfundingTransaction
     donorType: b.donor_type,
     donorLogoUrl: b.donor_logo_url,
     donorUsername: b.donor_username,
+    initiativeId: b.initiative_id,
   };
 }
 

@@ -3,6 +3,7 @@
 
 import { ChangeDetectionStrategy, Component, computed, inject, Signal, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { Router } from '@angular/router';
 import { environment } from '@environments/environment';
 import { MyDonation, DonationStats, PaymentMethod, RecurringDonation, RecurringDonationsResponse } from '@lfx-one/shared/interfaces';
 import { DEFAULT_CROWDFUNDING_PAGE_SIZE, EMPTY_DONATION_STATS } from '@lfx-one/shared/constants';
@@ -25,6 +26,7 @@ const EMPTY_HISTORY_STATE = { items: [] as MyDonation[], hasMore: false };
 })
 export class MyDonationsComponent {
   // ─── Private Injections ───────────────────────────────────────────────────
+  private readonly router = inject(Router);
   private readonly crowdfundingService = inject(CrowdfundingService);
 
   // ─── Public Fields ────────────────────────────────────────────────────────
@@ -49,6 +51,10 @@ export class MyDonationsComponent {
   // ─── Protected Methods ────────────────────────────────────────────────────
   protected onLoadMoreDonations(): void {
     this.loadMore$.next();
+  }
+
+  protected onViewRecurringDetail(donation: RecurringDonation): void {
+    void this.router.navigate(['/crowdfunding/donations/recurring', donation.id]);
   }
 
   protected onViewCancelled(): void {

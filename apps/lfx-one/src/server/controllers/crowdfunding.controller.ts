@@ -252,7 +252,7 @@ export class CrowdfundingController {
 
       const username = stripAuthPrefix(rawUsername);
       const { slug } = req.params;
-      const { type, size, from } = req.query;
+      const { type, size, from, kind } = req.query;
 
       const ALLOWED_TYPES = ['donations', 'expenses'] as const;
       type AllowedType = (typeof ALLOWED_TYPES)[number];
@@ -260,6 +260,15 @@ export class CrowdfundingController {
       const resolvedType = type ? String(type) : undefined;
       if (resolvedType !== undefined && !ALLOWED_TYPES.includes(resolvedType as AllowedType)) {
         res.status(400).json({ message: `Invalid type '${resolvedType}'. Allowed values: ${ALLOWED_TYPES.join(', ')}` });
+        return;
+      }
+
+      const ALLOWED_KINDS = ['one-time', 'recurring'] as const;
+      type AllowedKind = (typeof ALLOWED_KINDS)[number];
+
+      const resolvedKind = kind ? String(kind) : undefined;
+      if (resolvedKind !== undefined && !ALLOWED_KINDS.includes(resolvedKind as AllowedKind)) {
+        res.status(400).json({ message: `Invalid kind '${resolvedKind}'. Allowed values: ${ALLOWED_KINDS.join(', ')}` });
         return;
       }
 
@@ -275,7 +284,8 @@ export class CrowdfundingController {
         slug,
         resolvedType as AllowedType | undefined,
         parseNonNegativeInt(size),
-        parseNonNegativeInt(from)
+        parseNonNegativeInt(from),
+        resolvedKind as AllowedKind | undefined
       );
 
       if (!transactions) {

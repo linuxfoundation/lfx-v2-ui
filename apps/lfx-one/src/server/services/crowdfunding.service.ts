@@ -149,9 +149,10 @@ export class CrowdfundingService {
     slug: string,
     type?: CrowdfundingTransaction['type'],
     size?: number,
-    from?: number
+    from?: number,
+    kind?: 'one-time' | 'recurring'
   ): Promise<CrowdfundingTransactionList | null> {
-    logger.debug(req, 'get_initiative_transactions', 'Fetching transactions for initiative', { username, slug, type, size, from });
+    logger.debug(req, 'get_initiative_transactions', 'Fetching transactions for initiative', { username, slug, type, size, from, kind });
 
     const allTransactions = MOCK_TRANSACTIONS[slug];
 
@@ -160,7 +161,7 @@ export class CrowdfundingService {
       return null;
     }
 
-    const filtered = type ? allTransactions.filter((t) => t.type === type) : allTransactions;
+    const filtered = allTransactions.filter((t) => (type ? t.type === type : true)).filter((t) => (kind ? t.kind === kind : true));
     const pageSize = size ?? DEFAULT_CROWDFUNDING_PAGE_SIZE;
     const offset = from ?? 0;
     const page = filtered.slice(offset, offset + pageSize);

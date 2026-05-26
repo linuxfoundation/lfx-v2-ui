@@ -71,6 +71,8 @@ export interface BackendTransaction {
   donor_type?: 'organization' | 'individual';
   donor_logo_url?: string;
   donor_username?: string;
+  initiative_id?: string;
+  kind?: 'one-time' | 'recurring';
 }
 
 /** Raw snake_case response from GET /v1/me/payment-account on the upstream crowdfunding service. */

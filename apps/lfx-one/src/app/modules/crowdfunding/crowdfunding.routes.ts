@@ -25,4 +25,9 @@ export const CROWDFUNDING_ROUTES: Routes = [
     loadComponent: () => import('./my-donations/my-donations.component').then((m) => m.MyDonationsComponent),
     canActivate: [authGuard],
   },
+  {
+    path: 'donations/recurring/:id',
+    loadComponent: () => import('./recurring-donation-detail/recurring-donation-detail.component').then((m) => m.RecurringDonationDetailComponent),
+    canActivate: [authGuard],
+  },
 ];
