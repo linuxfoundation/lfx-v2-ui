@@ -42,10 +42,7 @@ export interface InitiativeBase {
 
 export type InitiativesResponse = OffsetPaginatedResponse<InitiativeBase>;
 
-// ---------------------------------------------------------------------------
-// Initiative detail — types for the GET /api/crowdfunding/initiatives/:slug endpoint
-// and associated transaction/sponsor shapes.
-// ---------------------------------------------------------------------------
+// Initiative detail types — GET /api/crowdfunding/initiatives/:slug.
 
 export interface SponsorEntry {
   id: string;
@@ -126,7 +123,7 @@ export interface ProjectHealthStat {
 
 /** Full initiative data returned by the GET /initiatives/:slug detail endpoint. */
 export interface InitiativeDetail extends InitiativeBase {
-  githubURL?: string;
+  githubUrl?: string;
   currentBalanceCents?: number;
   sponsors?: SponsorEntry[];
   impactStats?: ImpactStat[];

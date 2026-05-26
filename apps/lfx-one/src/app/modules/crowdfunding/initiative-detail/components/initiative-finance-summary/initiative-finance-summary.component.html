@@ -27,7 +27,7 @@
       aria-valuemin="0"
       aria-valuemax="100"></div>
   </div>
-  <p class="text-xs text-gray-500 mb-6">{{ initiative().initiativeStats?.supporters ?? 0 }} sponsors</p>
+  <p class="text-xs text-gray-500 mb-6">{{ initiative().sponsors?.length ?? 0 }} sponsors</p>
 
   <!-- Funding goals -->
   @if (fundingGoalsWithMeta().length > 0) {

@@ -4,7 +4,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal, Signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { filter, switchMap } from 'rxjs';
+import { filter, map, switchMap } from 'rxjs';
 import { ButtonComponent } from '@components/button/button.component';
 import { InitiativeDetail } from '@lfx-one/shared/interfaces';
 import { CrowdfundingService } from '@services/crowdfunding.service';
@@ -13,7 +13,6 @@ import { InitiativeOverviewComponent } from './components/initiative-overview/in
 import { InitiativeFinancialsComponent } from './components/initiative-financials/initiative-financials.component';
 import { InitiativeAnnouncementsComponent } from './components/initiative-announcements/initiative-announcements.component';
 import { InitiativeSettingsDrawerComponent } from './components/initiative-settings-drawer/initiative-settings-drawer.component';
-import { map } from 'rxjs';
 
 @Component({
   selector: 'lfx-initiative-detail',
@@ -34,13 +33,13 @@ export class InitiativeDetailComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly crowdfundingService = inject(CrowdfundingService);
 
-  // ─── Computed Signals ──────────────────────────────────────────────────────
-  protected readonly initiativeSlug = toSignal(this.route.paramMap.pipe(map((params) => params.get('slug') ?? '')), { initialValue: '' });
-  protected readonly initiative: Signal<InitiativeDetail | null> = this.initInitiative();
-
   // ─── WritableSignals ───────────────────────────────────────────────────────
   protected readonly activeTab = signal<string>('overview');
   protected readonly settingsDrawerVisible = signal(false);
+
+  // ─── Computed Signals ──────────────────────────────────────────────────────
+  protected readonly initiativeSlug = toSignal(this.route.paramMap.pipe(map((params) => params.get('slug') ?? '')), { initialValue: '' });
+  protected readonly initiative: Signal<InitiativeDetail | null> = this.initInitiative();
 
   // ─── Private Initializers ──────────────────────────────────────────────────
   private initInitiative(): Signal<InitiativeDetail | null> {

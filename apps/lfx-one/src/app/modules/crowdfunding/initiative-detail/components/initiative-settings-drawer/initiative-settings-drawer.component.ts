@@ -46,6 +46,7 @@ export class InitiativeSettingsDrawerComponent {
   private readonly formValue = toSignal(this.form.valueChanges, { initialValue: this.form.value });
   protected readonly nameLength = computed(() => this.formValue().name?.length ?? 0);
   protected readonly descriptionLength = computed(() => this.formValue().description?.length ?? 0);
+  protected readonly initiativeInitial = computed(() => this.initiative().name.charAt(0));
 
   public constructor() {
     toObservable(this.visible)

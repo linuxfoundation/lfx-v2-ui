@@ -3,7 +3,8 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { CrowdfundingInitiativesStats, CrowdfundingTransactionList, InitiativeDetail, InitiativesResponse } from '@lfx-one/shared/interfaces';
+import { CrowdfundingInitiativesStats, CrowdfundingTransactionList, CrowdfundingTransaction, InitiativeDetail, InitiativesResponse } from '@lfx-one/shared/interfaces';
+import { DEFAULT_CROWDFUNDING_PAGE_SIZE } from '@lfx-one/shared/constants';
 import { Request } from 'express';
 
 import { MOCK_INITIATIVES, MOCK_TRANSACTIONS } from '../mock-data/crowdfunding.mock';
@@ -63,7 +64,7 @@ export class CrowdfundingService {
     req: Request,
     username: string,
     slug: string,
-    type?: string,
+    type?: CrowdfundingTransaction['type'],
     size?: number,
     from?: number
   ): Promise<CrowdfundingTransactionList | null> {
@@ -77,7 +78,7 @@ export class CrowdfundingService {
     }
 
     const filtered = type ? allTransactions.filter((t) => t.type === type) : allTransactions;
-    const pageSize = size ?? filtered.length;
+    const pageSize = size ?? DEFAULT_CROWDFUNDING_PAGE_SIZE;
     const offset = from ?? 0;
     const page = filtered.slice(offset, offset + pageSize);
 

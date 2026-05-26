@@ -53,7 +53,7 @@ export function mapToInitiativeDetail(b: BackendInitiative): InitiativeDetail {
     fundingGoals: (b.goals ?? []).map(mapFundingGoal),
     financialSummary: b.financials ? mapFinancialSummary(b) : undefined,
     // Not yet available from the backend
-    githubURL: undefined,
+    githubUrl: undefined,
     impactStats: undefined,
     projectHealthStats: undefined,
     projectHealthRating: undefined,
@@ -90,12 +90,12 @@ function mapFinancialSummary(b: BackendInitiative): FinancialSummary {
 export function mapToTransaction(b: BackendTransaction): CrowdfundingTransaction {
   return {
     id: b.id,
-    type: b.type as CrowdfundingTransaction['type'],
+    type: b.type,
     amountCents: b.amount_cents,
     date: b.date,
     category: b.category,
     donorName: b.donor_name,
-    donorType: b.donor_type as CrowdfundingTransaction['donorType'],
+    donorType: b.donor_type,
     donorLogoUrl: b.donor_logo_url,
     donorUsername: b.donor_username,
   };

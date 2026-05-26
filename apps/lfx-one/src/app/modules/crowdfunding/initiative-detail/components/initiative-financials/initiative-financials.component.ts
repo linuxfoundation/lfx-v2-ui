@@ -6,12 +6,11 @@
 import { Component, computed, inject, input, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { AvatarComponent } from '@components/avatar/avatar.component';
-import { CROWDFUNDING_DONOR_AVATAR_PALETTE } from '@lfx-one/shared/constants';
+import { CROWDFUNDING_DONOR_AVATAR_PALETTE, DEFAULT_CROWDFUNDING_PAGE_SIZE } from '@lfx-one/shared/constants';
 import { CrowdfundingTransaction, CrowdfundingTransactionList, InitiativeDetail } from '@lfx-one/shared/interfaces';
 import { concat, concatMap, finalize, of, scan, Subject, switchMap } from 'rxjs';
 import { CrowdfundingService } from '@app/shared/services/crowdfunding.service';
 
-const PAGE_SIZE = 10;
 const EMPTY_TRANSACTION_STATE: { items: CrowdfundingTransaction[]; totalCount: number } = { items: [], totalCount: 0 };
 
 @Component({
@@ -21,55 +20,33 @@ const EMPTY_TRANSACTION_STATE: { items: CrowdfundingTransaction[]; totalCount: n
   styleUrl: './initiative-financials.component.scss',
 })
 export class InitiativeFinancialsComponent {
-  // -------------------------------------------------------------------------
-  // Inputs
-  // -------------------------------------------------------------------------
-
-  public readonly initiative = input.required<InitiativeDetail>();
-
-  // -------------------------------------------------------------------------
   // Dependencies
-  // -------------------------------------------------------------------------
-
   private readonly crowdfundingService = inject(CrowdfundingService);
 
-  // -------------------------------------------------------------------------
-  // State
-  // -------------------------------------------------------------------------
+  // Inputs
+  public readonly initiative = input.required<InitiativeDetail>();
 
+  // State
   private readonly nextDonationsPage$ = new Subject<void>();
   private readonly nextExpensesPage$ = new Subject<void>();
 
   protected readonly donationsLoading = signal(false);
   protected readonly expensesLoading = signal(false);
 
-  // -------------------------------------------------------------------------
   // Derived state (financial summary)
-  // -------------------------------------------------------------------------
-
   protected readonly formattedTotalReceived = computed(() => this.formatCurrency((this.initiative().financialSummary?.totalReceivedCents ?? 0) / 100));
   protected readonly formattedTotalExpenses = computed(() => this.formatCurrency((this.initiative().financialSummary?.totalExpensesCents ?? 0) / 100));
   protected readonly formattedBalance = computed(() => this.formatCurrency((this.initiative().financialSummary?.balanceCents ?? 0) / 100));
 
-  // -------------------------------------------------------------------------
   // Derived state (donations — paginated via transactions endpoint)
-  // -------------------------------------------------------------------------
-
   protected readonly donationsState = this.initDonationsState();
   protected readonly donationsWithMeta = this.initDonationsWithMeta();
   protected readonly hasMoreDonations = computed(() => this.donationsState().items.length < this.donationsState().totalCount);
 
-  // -------------------------------------------------------------------------
   // Derived state (expenses — paginated via transactions endpoint)
-  // -------------------------------------------------------------------------
-
   protected readonly expensesState = this.initExpensesState();
   protected readonly expensesWithMeta = this.initExpensesWithMeta();
   protected readonly hasMoreExpenses = computed(() => this.expensesState().items.length < this.expensesState().totalCount);
-
-  // -------------------------------------------------------------------------
-  // Event handlers
-  // -------------------------------------------------------------------------
 
   protected loadMoreDonations(): void {
     this.donationsLoading.set(true);
@@ -81,20 +58,16 @@ export class InitiativeFinancialsComponent {
     this.nextExpensesPage$.next();
   }
 
-  // -------------------------------------------------------------------------
-  // Private initializers
-  // -------------------------------------------------------------------------
-
   private initDonationsState(): Signal<{ items: CrowdfundingTransaction[]; totalCount: number }> {
     return toSignal(
       toObservable(this.initiative).pipe(
         switchMap((initiative) =>
-          concat(of(0), this.nextDonationsPage$.pipe(scan((offset) => offset + PAGE_SIZE, 0))).pipe(
+          concat(of(0), this.nextDonationsPage$.pipe(scan((offset) => offset + DEFAULT_CROWDFUNDING_PAGE_SIZE, 0))).pipe(
             concatMap((from) =>
               this.crowdfundingService
                 .getInitiativeTransactions(initiative.slug, {
                   type: 'donations',
-                  size: PAGE_SIZE,
+                  size: DEFAULT_CROWDFUNDING_PAGE_SIZE,
                   from,
                 })
                 .pipe(finalize(() => this.donationsLoading.set(false)))
@@ -127,12 +100,12 @@ export class InitiativeFinancialsComponent {
     return toSignal(
       toObservable(this.initiative).pipe(
         switchMap((initiative) =>
-          concat(of(0), this.nextExpensesPage$.pipe(scan((offset) => offset + PAGE_SIZE, 0))).pipe(
+          concat(of(0), this.nextExpensesPage$.pipe(scan((offset) => offset + DEFAULT_CROWDFUNDING_PAGE_SIZE, 0))).pipe(
             concatMap((from) =>
               this.crowdfundingService
                 .getInitiativeTransactions(initiative.slug, {
                   type: 'expenses',
-                  size: PAGE_SIZE,
+                  size: DEFAULT_CROWDFUNDING_PAGE_SIZE,
                   from,
                 })
                 .pipe(finalize(() => this.expensesLoading.set(false)))
@@ -159,10 +132,6 @@ export class InitiativeFinancialsComponent {
       }))
     );
   }
-
-  // -------------------------------------------------------------------------
-  // Private helpers
-  // -------------------------------------------------------------------------
 
   private donorAvatarClass(name: string): string {
     let hash = 0;
