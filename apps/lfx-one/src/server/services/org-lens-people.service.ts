@@ -22,7 +22,6 @@ interface OrgPeopleAllRow {
   ACCOUNT_ID: string;
   PERSON_KEY: string;
   LFID: string | null;
-  LF_USERNAME: string | null;
   CDP_MEMBER_ID: string | null;
   NAME: string | null;
   TITLE: string | null;
@@ -177,7 +176,6 @@ export class OrgLensPeopleService {
         ACCOUNT_ID,
         PERSON_KEY,
         LFID,
-        LF_USERNAME,
         CDP_MEMBER_ID,
         NAME,
         TITLE,

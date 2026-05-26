@@ -1,7 +1,13 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import type { OrgAllEmployeeActivityOption, OrgAllEmployeesResponse, PeopleTabConfig, PeopleTabId } from '../interfaces/org-people.interface';
+import type {
+  OrgAllEmployeeActivityOption,
+  OrgAllEmployeeDetail,
+  OrgAllEmployeesResponse,
+  PeopleTabConfig,
+  PeopleTabId,
+} from '../interfaces/org-people.interface';
 
 /** Org People page tabs in visible order (`all` is the default). */
 export const PEOPLE_TABS: readonly PeopleTabConfig[] = [
@@ -29,6 +35,16 @@ export const EMPTY_ORG_ALL_EMPLOYEES_RESPONSE: OrgAllEmployeesResponse = {
   rows: [],
   stats: { activeInOss: 0, inGovernance: 0, codeContributors: 0, eventAttendees: 0, trainees: 0 },
   foundations: [],
+};
+
+/** Zero-valued OrgAllEmployeeDetail — fallback for failed/empty detail fetches. Callers spread + override `personKey`. */
+export const EMPTY_ORG_ALL_EMPLOYEE_DETAIL: OrgAllEmployeeDetail = {
+  personKey: '',
+  boardSeats: [],
+  committeeSeats: [],
+  code: [],
+  events: [],
+  training: [],
 };
 
 /** Activity-filter dropdown options for the All Employees table. */

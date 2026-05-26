@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { DecimalPipe } from '@angular/common';
-import { Component, computed, inject, signal, Signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal, Signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { combineLatest, distinctUntilChanged, map, of, skip, switchMap, take, tap } from 'rxjs';
@@ -39,6 +39,7 @@ export class AllEmployeesComponent {
   private readonly accountContext = inject(AccountContextService);
   private readonly dataService = inject(AllEmployeesService);
   private readonly personPanel = inject(PersonProfilePanelService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly initialLimit = ORG_ALL_EMPLOYEES_INITIAL_LIMIT;
 
@@ -143,6 +144,12 @@ export class AllEmployeesComponent {
     return this.sortDirection() === 1 ? 'fa-light fa-sort-up' : 'fa-light fa-sort-down';
   }
 
+  protected onRowKeydown(event: KeyboardEvent, row: OrgAllEmployeeRow): void {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    this.toggleRow(row);
+  }
+
   protected toggleRow(row: OrgAllEmployeeRow): void {
     const open = !!this.expansion()[row.personKey];
     if (open) {
@@ -206,7 +213,8 @@ export class AllEmployeesComponent {
       if (q) {
         const inName = row.name.toLowerCase().includes(q);
         const inTitle = (row.title ?? '').toLowerCase().includes(q);
-        if (!inName && !inTitle) return false;
+        const inEmail = (row.email ?? '').toLowerCase().includes(q);
+        if (!inName && !inTitle && !inEmail) return false;
       }
       if (foundationId && !row.engagedFoundationIds.includes(foundationId)) return false;
       if (activity !== 'all') {
@@ -256,7 +264,7 @@ export class AllEmployeesComponent {
     this.detailLoading.update((state) => ({ ...state, [row.personKey]: true }));
     this.dataService
       .getEmployeeDetail(accountId, row.personKey)
-      .pipe(take(1))
+      .pipe(take(1), takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (detail) => {
           this.detailMap.update((state) => ({ ...state, [row.personKey]: detail }));

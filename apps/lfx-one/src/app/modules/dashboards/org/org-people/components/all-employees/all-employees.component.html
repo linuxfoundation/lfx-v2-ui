@@ -142,10 +142,14 @@
         <tbody>
           @for (row of visibleRows(); track row.personKey) {
             <tr
-              class="cursor-pointer border-b border-gray-100 hover:bg-gray-50"
+              class="cursor-pointer border-b border-gray-100 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              role="button"
+              tabindex="0"
               [attr.data-testid]="'org-people-all-employees-row-' + row.personKey"
               [attr.aria-expanded]="isExpanded(row.personKey)"
-              (click)="toggleRow(row)">
+              [attr.aria-label]="'Toggle details for ' + row.name"
+              (click)="toggleRow(row)"
+              (keydown)="onRowKeydown($event, row)">
               <td class="px-2 py-3 align-middle">
                 <i
                   class="fa-light fa-chevron-right block text-xs text-gray-400 transition-transform"
