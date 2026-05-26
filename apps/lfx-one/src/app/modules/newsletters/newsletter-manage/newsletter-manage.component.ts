@@ -124,6 +124,9 @@ export class NewsletterManageComponent {
   public readonly canProceed = computed(() => this.computeCanProceed(this.currentStep()));
   public readonly canGoPrevious = computed(() => this.currentStep() > 1);
   public readonly canGoNext = computed(() => this.currentStep() < this.totalSteps && this.canProceed());
+  public readonly canSaveDraft = computed(
+    () => this.hasContext() && this.audienceFilled() && this.subjectFilled() && this.bodyFilled() && !this.savingDraft()
+  );
   public readonly isLastStep = computed(() => this.currentStep() === this.totalSteps);
   public readonly currentStepTitle = computed(() => NEWSLETTER_STEP_TITLES[this.currentStep()] ?? '');
   protected readonly savedLabel = computed(() => {
@@ -165,6 +168,11 @@ export class NewsletterManageComponent {
 
   protected onCancel(): void {
     this.goToList();
+  }
+
+  protected onSaveAsDraft(): void {
+    if (!this.canSaveDraft()) return;
+    this.saveDraft(true).pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
   }
 
   protected openPreviewDrawer(): void {
@@ -441,7 +449,7 @@ export class NewsletterManageComponent {
     return this.audienceFilled() && this.subjectFilled() && this.bodyFilled();
   }
 
-  private saveDraft() {
+  private saveDraft(isManual = false) {
     const id = this.newsletterId();
     this.savingDraft.set(true);
     const basePayload = {
@@ -459,6 +467,7 @@ export class NewsletterManageComponent {
         map((draft) => {
           this.version.set(draft.version);
           this.savedAt.set(new Date());
+          if (isManual) this.notifyDraftSaved();
           return draft;
         }),
         catchError((err: HttpErrorResponse) => this.handleAutosaveError(err))
@@ -485,10 +494,19 @@ export class NewsletterManageComponent {
           queryParamsHandling: 'merge',
           replaceUrl: true,
         });
+        if (isManual) this.notifyDraftSaved();
         return draft;
       }),
       catchError((err: HttpErrorResponse) => this.handleAutosaveError(err))
     );
+  }
+
+  private notifyDraftSaved(): void {
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Draft saved',
+      detail: 'Your newsletter draft was saved.',
+    });
   }
 
   // Surface autosave failures — silent failures let the user navigate away believing the draft saved.
