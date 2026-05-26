@@ -4,6 +4,7 @@
 import { FundType } from '../enums/crowdfunding.enum';
 import {
   CrowdfundingInitiativesStats,
+  CrowdfundingTransaction,
   CrowdfundingTransactionList,
   DonationStats,
   InitiativesResponse,
@@ -51,6 +52,7 @@ export const EMPTY_INITIATIVES_RESPONSE: InitiativesResponse = { data: [], total
 export const EMPTY_CROWDFUNDING_STATS: CrowdfundingInitiativesStats = { activeCount: 0, totalRaised: 0, monthlyGain: 0, totalSponsors: 0 };
 
 export const EMPTY_TRANSACTION_LIST: CrowdfundingTransactionList = { data: [], totalCount: 0, from: 0, size: 0 };
+export const EMPTY_TRANSACTION_STATE: { items: CrowdfundingTransaction[]; totalCount: number } = { items: [], totalCount: 0 };
 export const EMPTY_MY_DONATIONS: MyDonationsResponse = { data: [], total: 0, pageSize: 0, offset: 0 };
 export const EMPTY_RECURRING_DONATIONS: RecurringDonationsResponse = { data: [], total: 0, pageSize: 0, offset: 0 };
 export const EMPTY_DONATION_STATS: DonationStats = { totalDonated: 0, initiativesSupported: 0, activeRecurringAmount: 0, activeRecurringCount: 0 };

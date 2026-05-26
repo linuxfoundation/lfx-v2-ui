@@ -6,12 +6,10 @@
 import { Component, computed, inject, input, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { AvatarComponent } from '@components/avatar/avatar.component';
-import { CROWDFUNDING_DONOR_AVATAR_PALETTE, DEFAULT_CROWDFUNDING_PAGE_SIZE } from '@lfx-one/shared/constants';
+import { CROWDFUNDING_DONOR_AVATAR_PALETTE, DEFAULT_CROWDFUNDING_PAGE_SIZE, EMPTY_TRANSACTION_STATE } from '@lfx-one/shared/constants';
 import { CrowdfundingTransaction, CrowdfundingTransactionList, InitiativeDetail } from '@lfx-one/shared/interfaces';
 import { concat, concatMap, finalize, of, scan, Subject, switchMap } from 'rxjs';
 import { CrowdfundingService } from '@app/shared/services/crowdfunding.service';
-
-const EMPTY_TRANSACTION_STATE: { items: CrowdfundingTransaction[]; totalCount: number } = { items: [], totalCount: 0 };
 
 @Component({
   selector: 'lfx-initiative-financials',
