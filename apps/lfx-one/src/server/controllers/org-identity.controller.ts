@@ -124,17 +124,23 @@ export class OrgIdentityController {
         return;
       }
 
+      // `identifier_cache_hit` reflects whether the sfid→uid LRU lookup served the
+      // request without an upstream call. For `uid`-routed requests no resolver
+      // lookup happens, so we report it as `null` rather than a tautological
+      // boolean — keeps the operational cache-hit-ratio metric meaningful.
       let uid: string | null = identifier;
-      let cacheHit = true;
+      let identifierCacheHit: boolean | null = null;
       if (identifierKind === 'sfid') {
-        cacheHit = false;
-        uid = await this.orgIdentityResolver.getUidBySfid(identifier, req);
+        const result = await this.orgIdentityResolver.getUidBySfid(identifier, req);
+        uid = result.uid;
+        identifierCacheHit = result.cacheHit;
         if (!uid) {
           res.status(404).json({ error: 'Organization not found' });
           logger.success(req, 'get_org_canonical_record', startTime, {
             identifier_kind: identifierKind,
             uid: null,
             status_code: 404,
+            identifier_cache_hit: identifierCacheHit,
           });
           return;
         }
@@ -147,6 +153,7 @@ export class OrgIdentityController {
           identifier_kind: identifierKind,
           uid,
           status_code: 404,
+          identifier_cache_hit: identifierCacheHit,
         });
         return;
       }
@@ -157,7 +164,7 @@ export class OrgIdentityController {
         identifier_kind: identifierKind,
         uid: response.uid,
         has_parent: !!response.parentUid,
-        cache_hit: cacheHit,
+        identifier_cache_hit: identifierCacheHit,
       });
 
       res.setHeader('Cache-Control', 'no-store');

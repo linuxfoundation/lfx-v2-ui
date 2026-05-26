@@ -12,19 +12,15 @@
  * - S1: org-selector trigger renders for an authorized user (Story 1 / SC-002)
  * - S2: server-side search hits /api/nav/org-items?name=… and refreshes the list (Story 1 Scenario 2)
  * - S5: selection persists into selectedAccount + fires the canonical record fetch (Story 4)
- * - S9: zero-grants user does NOT see the trigger (Story 1 Scenario 5 / Q3 visibility gate)
+ * - S9: zero-grants visibility gate — stubbed authenticated session with empty
+ *       role-grants AND empty persona-seeds leaves the org-selector slot
+ *       reporting `data-visible="false"` (Story 1 Scenario 5 / Q3)
  *
  * Prerequisites:
  * - Dev server reachable at the Playwright baseURL (default http://localhost:4200)
  * - `apps/lfx-one/.env` populated with TEST_USERNAME / TEST_PASSWORD for a user
  *   with FGA access to at least one b2b_org in the dev sandbox
  * - `org-lens-enabled` LaunchDarkly flag toggled ON for the test user
- *
- * Notes:
- * - The zero-grants assertion (S9) runs as an unauthenticated context because we
- *   cannot stub LD per-test; spinning up a real zero-grants Auth0 user would
- *   double the auth surface area. We assert the trigger is absent on the login
- *   page (where unauthenticated requests land) as a structural smoke check.
  */
 
 import { expect, Page, test } from '@playwright/test';
@@ -144,21 +140,67 @@ test.describe('Org Selector — authorized user smoke set (S1/S2/S5)', () => {
   });
 });
 
-// S9 — zero-grants visibility gate. We exercise the unauthenticated path as a proxy for "no grants":
-// the trigger MUST NOT render on the login page. A real zero-grants signed-in user would require a
-// secondary Auth0 fixture which is out of scope per the spec test-strategy decision (D-008).
+// S9 — zero-grants visibility gate (authenticated path). We stub both inputs
+// to `effectiveShowOrgSelector` — `/api/orgs/me/role-grants` (empty writers +
+// auditors) and `/api/user/personas` (empty `organizations`) — so the gate's
+// `(writers ∨ auditors ∨ personaSeeds)` clause evaluates false against the real
+// authenticated session. The slot exposes its computed state on `data-visible`
+// (added by spec 020 for testability), giving us a hermetic assertion without
+// having to navigate to `/org` and unwind the empty-response redirect dance.
 test.describe('Org Selector — zero-grants visibility gate (S9)', () => {
-  test('S9: trigger is not present on the unauthenticated /login surface', async ({ browser }) => {
-    // Use a fresh storage state so we don't inherit the global-setup auth
-    const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  test('S9: with empty role-grants AND empty persona-seeds, the slot reports data-visible="false" and the trigger is hidden', async ({ page }) => {
+    // Skip when the auth fixture didn't bootstrap — same logic as the authorized suite.
+    await page.goto(APP_HOME, { waitUntil: 'domcontentloaded' });
     try {
-      const page = await context.newPage();
-      await page.goto('/login', { waitUntil: 'domcontentloaded' });
-      // We should be on Auth0 or a public login surface, NOT the authenticated app shell.
-      // The selector trigger MUST be absent in both cases.
-      await expect(page.getByTestId('org-selector')).toHaveCount(0);
-    } finally {
-      await context.close();
+      const { hostname } = new URL(page.url());
+      if (hostname === 'auth0.com' || hostname.endsWith('.auth0.com')) {
+        test.skip(true, 'TEST_USERNAME / TEST_PASSWORD not configured — see global-setup.ts');
+      }
+    } catch {
+      // ignore malformed URL
     }
+
+    // Stub the two endpoints the visibility gate reads from. Both are client-side
+    // fetches (afterNextRender on the corresponding services) so a Playwright route
+    // handler installed before reload reliably intercepts them.
+    await page.route('**/api/orgs/me/role-grants', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          writers: [],
+          auditors: [],
+          username: 'e2e-zero-grants',
+          loaded_at: new Date().toISOString(),
+        }),
+      })
+    );
+    await page.route('**/api/user/personas*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          personas: ['contributor'],
+          personaProjects: {},
+          projects: [],
+          organizations: [],
+          isRootWriter: false,
+        }),
+      })
+    );
+
+    // Reload so the new route handlers intercept fresh fetches (the initial
+    // load already raced past them above).
+    await page.reload({ waitUntil: 'domcontentloaded' });
+
+    // Slot is always mounted (the parent uses `[class.hidden]`, not `@if`), so
+    // `data-visible` carries the gate's computed truth. Empty grants + empty
+    // seeds + me-lens parent input → false.
+    const slot = page.getByTestId('org-selector-slot');
+    await expect(slot).toBeAttached({ timeout: SIDEBAR_TIMEOUT });
+    await expect(slot).toHaveAttribute('data-visible', 'false');
+
+    // Visually-hidden via parent `[class.hidden]` — the trigger MUST not be visible to the user.
+    await expect(page.getByTestId('org-selector')).not.toBeVisible();
   });
 });

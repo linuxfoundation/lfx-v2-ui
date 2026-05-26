@@ -183,9 +183,12 @@ export class OrgNavigationService {
   /**
    * Local-dev mock branch. Filters, paginates, and applies the same
    * `selected_uid` injection rule as the real BFF so the popover behaves
-   * identically end-to-end when MOCK_ORG_ITEMS=true. NEVER reached in
-   * environments where the flag is unset (and is tree-shaken from the prod
-   * code path by the early-return in getOrgItems).
+   * identically end-to-end when MOCK_ORG_ITEMS=true. Unreachable at runtime
+   * in any environment where the flag is unset — the early-return in
+   * `getOrgItems` short-circuits before this method is invoked. (The fixture
+   * and this method are still present in the server bundle; "tree-shaken"
+   * would only apply to a build-time elimination step, which Node runs
+   * don't perform.)
    */
   private getMockOrgItems(req: Request, params: GetOrgItemsParams): OrgItemsResponse {
     const { pageToken, name, selectedUid } = params;

@@ -103,10 +103,16 @@ export class OrgIdentityResolver {
     return OrgIdentityResolver.singletonInstance;
   }
 
-  /** UUID lookup → sfid. Returns null when the caller can't see the org or the org has no sfid. */
-  public async getSfidByUid(uid: string, req: Request): Promise<string | null> {
+  /**
+   * UUID lookup → `{ sfid, cacheHit }`. `sfid` is null when the caller can't
+   * see the org or the org has no sfid; `cacheHit` reflects whether the result
+   * came from the LRU (true) or required an upstream `/query/resources` call
+   * (false). Both null returns and resolved values carry an honest cacheHit
+   * value so callers can emit accurate cache-hit-ratio metrics.
+   */
+  public async getSfidByUid(uid: string, req: Request): Promise<OrgIdentityLookupResult<'sfid'>> {
     const cached = this.uidToSfid.get(uid);
-    if (cached !== null) return cached;
+    if (cached !== null) return { sfid: cached, cacheHit: true };
 
     try {
       const response = await this.microserviceProxy.proxyRequest<QueryServiceResponse<B2bOrgIndexedDoc>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
@@ -119,17 +125,21 @@ export class OrgIdentityResolver {
         // Round-trip the inverse mapping too — we already paid for the upstream call.
         this.sfidToUid.set(sfid, uid);
       }
-      return sfid;
+      return { sfid, cacheHit: false };
     } catch (error) {
       logger.warning(req, 'org_identity_resolver_get_sfid', 'Failed to resolve uid → sfid', { err: error, uid });
-      return null;
+      return { sfid: null, cacheHit: false };
     }
   }
 
-  /** sfid (Salesforce id) lookup → uid. Returns null when the caller can't see the org. */
-  public async getUidBySfid(sfid: string, req: Request): Promise<string | null> {
+  /**
+   * sfid (Salesforce id) lookup → `{ uid, cacheHit }`. `uid` is null when the
+   * caller can't see the org; `cacheHit` is true when the result came from
+   * the LRU and false when an upstream `/query/resources` call was performed.
+   */
+  public async getUidBySfid(sfid: string, req: Request): Promise<OrgIdentityLookupResult<'uid'>> {
     const cached = this.sfidToUid.get(sfid);
-    if (cached !== null) return cached;
+    if (cached !== null) return { uid: cached, cacheHit: true };
 
     try {
       const response = await this.microserviceProxy.proxyRequest<QueryServiceResponse<B2bOrgIndexedDoc>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
@@ -141,10 +151,17 @@ export class OrgIdentityResolver {
         this.sfidToUid.set(sfid, uid);
         this.uidToSfid.set(uid, sfid);
       }
-      return uid;
+      return { uid, cacheHit: false };
     } catch (error) {
       logger.warning(req, 'org_identity_resolver_get_uid', 'Failed to resolve sfid → uid', { err: error, sfid });
-      return null;
+      return { uid: null, cacheHit: false };
     }
   }
 }
+
+/**
+ * Resolver return shape — carries the resolved value AND an honest cacheHit
+ * flag so callers can log cache-hit ratios without re-implementing detection.
+ * The generic narrows the value key (`uid` vs `sfid`) per call direction.
+ */
+export type OrgIdentityLookupResult<K extends 'uid' | 'sfid'> = Record<K, string | null> & { cacheHit: boolean };
