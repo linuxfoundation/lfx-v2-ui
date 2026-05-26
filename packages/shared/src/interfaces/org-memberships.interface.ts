@@ -281,22 +281,7 @@ export type WhyCantEditDialogResult = { contactFoundation: boolean } | null;
 
 // Membership Detail page — Documentation tab (spec 017 baseline + spec 018 Snowflake extension)
 
-/**
- * One agreement document in the Documentation tab list.
- *
- * Spec 018 changes (round 1 + round 2):
- * - `fileSizeKb` widened from `number` → `number | null` (FR-014/FR-018). Snowflake/Salesforce
- *   do not store file size; the BFF returns null for Snowflake-backed responses. UI drops the
- *   `· {size} KB` metadata segment via `@if (agreement.fileSizeKb !== null)` when null.
- * - `downloadUrl: string | null` added (round 2 FR-031). Sourced from
- *   `Opportunity.Membership_Doc_Download_URL__c` via bronze → silver → platinum chain. NULL
- *   for older agreements (pre-UAT-2023 process change) — UI renders the View link as
- *   disabled with `"Document not available"` tooltip (FR-028a).
- * - `statusRaw: string` added (round 2 FR-032b). One of 'Active' / 'At Risk' / 'Purchased' /
- *   'Completed' / 'Expired'. Used by the CSV export (FR-032a column 6); not rendered on screen.
- * - `tier: string` added (round 2 FR-032b). The full membership tier display label
- *   (e.g., "Platinum Membership"). Used by the CSV export (FR-032a column 7); not rendered.
- */
+/** One agreement document in the Documentation tab list. */
 export interface OrgMembershipAgreement {
   id: string;
   name: string;
@@ -309,24 +294,7 @@ export interface OrgMembershipAgreement {
   tier: string;
 }
 
-/**
- * Certificate of Membership card payload — per-`accountId`, NOT per-foundation.
- * The same payload is returned for every foundation under a given org because
- * the certificate represents the org's Linux Foundation parent membership, not
- * its sub-foundation tier (e.g., an org holding both AGL Platinum and TLF Gold
- * sees "Linux Foundation Gold Membership Certificate" on every foundation page).
- *
- * Spec 019-lfx-one-tlf-certificate-data (FR-011):
- * - Extended from spec 018's `{ downloadUrl }` to the 7-field shape below.
- * - Pre-formatted `title` and `subtitle` come directly from the dbt model
- *   (`ANALYTICS.PLATINUM_LFX_ONE.ORG_LENS_TLF_CERTIFICATE.{certificate_title,
- *   certificate_subtitle}`) so the UI is a pure data passthrough — no
- *   client-side derivation from per-foundation inputs.
- * - `downloadUrl` is the membership-agreement PDF URL (reused from spec 018's
- *   `bronze_fivetran_salesforce_b2b_opportunities.membership_doc_download_url`).
- *   v1 simplification: one URL serves both the Agreements card current-row
- *   View link and the Certificate card Download button.
- */
+/** TLF Certificate of Membership card payload — per-accountId, sourced from ORG_LENS_TLF_CERTIFICATE (spec 019). */
 export interface OrgMembershipCertificateTemplate {
   /** Pre-formatted card title. E.g. "Linux Foundation Gold Membership Certificate". */
   title: string;
@@ -344,18 +312,16 @@ export interface OrgMembershipCertificateTemplate {
   downloadUrl: string | null;
 }
 
-/**
- * Response envelope for `GET /api/orgs/:accountId/lens/memberships/:foundationId/documents`.
- *
- * Spec 019 FR-012: `certificateTemplate` widened to `... | null`. `null` means
- * either (a) the org has no active TLF Corporate Membership (legitimate non-TLF
- * member) OR (b) the cert query degraded silently per FR-010a (Promise.allSettled
- * rejected only the cert query while agreements succeeded). In both cases the UI
- * hides the Certificate card via `@if (certificateTemplate(); as cert)`.
- */
+/** Response envelope for GET /api/orgs/:accountId/lens/memberships/:foundationId/documents. */
 export interface OrgMembershipDocumentsResponse {
   accountId: string;
   foundationId: string;
   agreements: OrgMembershipAgreement[];
   certificateTemplate: OrgMembershipCertificateTemplate | null;
+}
+
+/** Internal service result: wire response plus non-wire degraded flag for observability (spec 019 SC-015). */
+export interface OrgMembershipDocumentsResult {
+  response: OrgMembershipDocumentsResponse;
+  certificateDegraded: boolean;
 }

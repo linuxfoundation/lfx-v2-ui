@@ -27,27 +27,13 @@ export class DocumentationTabComponent {
   public readonly accountId = input.required<string>();
   public readonly foundationId = input.required<string>();
 
-  /**
-   * Spec 018 CSV export keeps this input alive. Spec 019 FR-017 removed
-   * `membershipTier` and `memberSince` (the bug was that they made the
-   * Certificate card foundation-scoped instead of TLF-scoped); `orgName`
-   * stays because `onDownloadAll()` reads it for the CSV "Organization"
-   * column (FR-032a col 1). The Certificate card itself now reads
-   * `issuedTo` from `certificateTemplate()` instead — totally unrelated
-   * to this input.
-   */
+  /** CSV export "Organization" column (FR-032a col 1). */
   public readonly orgName = input.required<string>();
 
-  /**
-   * Spec 018 FR-024-ext (round 2): required for the CSV export "Foundation" column
-   * (FR-032a col 2). Parent passes `f.foundationName` from its `foundation()` signal.
-   */
+  /** CSV export "Foundation" column (FR-032a col 2). */
   public readonly foundationName = input.required<string>();
-  /**
-   * Spec 018 FR-024-ext (round 2) / FR-034a: optional slug for the CSV filename
-   * (`membership-agreements-{slug}-{YYYYMMDD}.csv`). When null, `onDownloadAll`
-   * falls back to a sanitized `foundationId` per FR-034a.
-   */
+
+  /** CSV filename slug; falls back to sanitized foundationId when null (FR-034a). */
   public readonly foundationSlug = input<string | null>(null);
 
   private readonly service = inject(OrgLensMembershipsService);
@@ -106,32 +92,16 @@ export class DocumentationTabComponent {
     return 'ready';
   });
 
-  /**
-   * Spec 019 FR-015 / FR-016: the Certificate card now reads its display
-   * strings directly from the SSR-served `certificateTemplate` block (per-org
-   * TLF data from `platinum_lfx_one_org_lens_tlf_certificate`). Returns `null`
-   * when the org has no active TLF Corporate Membership OR when the cert query
-   * degraded silently (FR-010a) — the template's `@if (certificateTemplate())`
-   * guard then hides the card entirely. No client-side derivation; the BFF is
-   * the single source of truth.
-   */
+  /** Null when org has no active TLF Corporate Membership or cert query degraded (FR-010a). */
   protected readonly certificateTemplate = computed<OrgMembershipCertificateTemplate | null>(() => this.docsData()?.certificateTemplate ?? null);
 
   protected retry(): void {
     this.retryTrigger.update((v) => v + 1);
   }
 
-  /**
-   * Spec 018 FR-032 / FR-034 / FR-034a: client-side CSV download of all loaded
-   * agreements for this (account, foundation). Pure client-side — no extra
-   * network request. Early-returns when the list is empty (FR-033).
-   *
-   * Filename pattern: `membership-agreements-{foundationSlug || sanitizedFoundationId}-{YYYYMMDD}.csv`
-   * (kebab-case, lowercase, sortable date prefix).
-   */
+  /** Client-side CSV download of all displayed agreements; no-ops when list is empty (FR-033). */
   protected onDownloadAll(): void {
-    // SSR guard: this method touches `Blob`, `URL`, and `document` — all
-    // browser-only globals. Bail early during server-side rendering.
+    // SSR guard: Blob/URL/document are browser-only globals.
     if (!isPlatformBrowser(this.platformId)) return;
 
     const rows = this.displayAgreements();
@@ -154,11 +124,7 @@ export class DocumentationTabComponent {
     URL.revokeObjectURL(url);
   }
 
-  /**
-   * Spec 018 FR-034a defensive fallback: when `foundationSlug` input is null,
-   * derive a filesystem-safe segment from `foundationId` by lowercasing and
-   * replacing any character that is not `[a-z0-9-]` with `-`.
-   */
+  /** Filesystem-safe fallback segment derived from foundationId when foundationSlug is null (FR-034a). */
   private sanitizedFoundationIdForFilename(): string {
     return this.foundationId()
       .toLowerCase()
