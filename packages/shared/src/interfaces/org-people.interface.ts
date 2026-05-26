@@ -50,7 +50,6 @@ export interface OrgAllEmployeeRow {
   name: string;
   title: string | null;
   email: string | null;
-  photoUrl: string | null;
   seatsCount: number;
   boardSeatsCount: number;
   committeeSeatsCount: number;

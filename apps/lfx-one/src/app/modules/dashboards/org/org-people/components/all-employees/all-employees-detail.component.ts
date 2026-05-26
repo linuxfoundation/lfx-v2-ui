@@ -25,6 +25,9 @@ export class AllEmployeesDetailComponent {
   protected readonly events = computed(() => this.detail()?.events ?? []);
   protected readonly training = computed(() => this.detail()?.training ?? []);
 
+  // Server denormalizes the aggregate on every event row; render once in the section header instead of repeating per row.
+  protected readonly eventsTotal = computed(() => this.events()[0]?.eventsCount ?? 0);
+
   private initHasAnyDetail(): boolean {
     const d = this.detail();
     if (!d) return false;

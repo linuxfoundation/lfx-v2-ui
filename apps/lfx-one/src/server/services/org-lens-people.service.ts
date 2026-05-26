@@ -26,7 +26,6 @@ interface OrgPeopleAllRow {
   NAME: string | null;
   TITLE: string | null;
   EMAIL: string | null;
-  PHOTO: string | null;
   SEATS_COUNT: number;
   BOARD_SEATS_COUNT: number;
   COMMITTEE_SEATS_COUNT: number;
@@ -181,7 +180,6 @@ export class OrgLensPeopleService {
         NAME,
         TITLE,
         EMAIL,
-        PHOTO,
         SEATS_COUNT,
         BOARD_SEATS_COUNT,
         COMMITTEE_SEATS_COUNT,
@@ -203,7 +201,6 @@ export class OrgLensPeopleService {
       name: row.NAME ?? '',
       title: row.TITLE,
       email: row.EMAIL,
-      photoUrl: row.PHOTO,
       seatsCount: row.SEATS_COUNT ?? 0,
       boardSeatsCount: row.BOARD_SEATS_COUNT ?? 0,
       committeeSeatsCount: row.COMMITTEE_SEATS_COUNT ?? 0,
