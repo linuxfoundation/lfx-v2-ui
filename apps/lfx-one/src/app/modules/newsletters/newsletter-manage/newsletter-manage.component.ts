@@ -26,7 +26,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { SkeletonModule } from 'primeng/skeleton';
 import { StepperModule } from 'primeng/stepper';
-import { catchError, combineLatest, debounceTime, distinctUntilChanged, filter, finalize, map, of, switchMap, take } from 'rxjs';
+import { catchError, combineLatest, concatMap, debounceTime, distinctUntilChanged, filter, finalize, map, of, Subject, switchMap, take } from 'rxjs';
 
 import { NewsletterAudienceStepComponent } from '../components/newsletter-audience-step/newsletter-audience-step.component';
 import { NewsletterContentStepComponent } from '../components/newsletter-content-step/newsletter-content-step.component';
@@ -113,6 +113,10 @@ export class NewsletterManageComponent {
   // Snapshot of the last persisted payload — autosave skips when the current form state matches,
   // preventing a redundant save after the user clicks Save as Draft while a debounce is in flight.
   private readonly lastSavedSnapshot = signal<{ subject: string; bodyHtml: string; committeeUids: string[] } | null>(null);
+  // Shared save channel — both the autosave pipe and the manual button push isManual flags here;
+  // concatMap serializes them so manual and auto saves can never run concurrently, and a queued
+  // autosave reads the live form state at execution time (no edits dropped during in-flight saves).
+  private readonly saveTrigger$ = new Subject<boolean>();
 
   // === Recipient summary (computed here so review/send steps can share it) ===
   protected readonly recipientCount = signal<number | null>(null);
@@ -144,6 +148,7 @@ export class NewsletterManageComponent {
     this.initContextLogo();
     this.initFormMirrors();
     this.initLoadDraft();
+    this.initSaveChannel();
     this.initAutosave();
     this.initRecipientCount();
   }
@@ -177,7 +182,7 @@ export class NewsletterManageComponent {
 
   protected onSaveAsDraft(): void {
     if (!this.canSaveDraft()) return;
-    this.saveDraft(true).pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+    this.saveTrigger$.next(true);
   }
 
   protected openPreviewDrawer(): void {
@@ -414,19 +419,28 @@ export class NewsletterManageComponent {
     this.fetchRecipientCountFor(committeeUids);
   }
 
-  private initAutosave(): void {
-    // Combine with edEmail so a late-arriving profile triggers autosave even when the user hasn't typed since.
-    // Skip when a save is already in flight or when the form matches the last persisted snapshot —
-    // both gates prevent the manual Save as Draft button from racing the debounced autosave.
-    combineLatest([this.form.valueChanges, toObservable(this.edEmail)])
+  private initSaveChannel(): void {
+    // concatMap serializes manual + auto saves so they can never run concurrently. A queued autosave
+    // reads form state at execution time, so edits typed during an in-flight save are not dropped.
+    this.saveTrigger$
       .pipe(
-        debounceTime(1000),
-        filter(([, email]) => this.hasContext() && this.hasAnythingToSave() && email.length > 0 && !this.savingDraft()),
-        filter(() => !this.snapshotMatchesLastSaved()),
-        switchMap(() => this.saveDraft()),
+        concatMap((isManual) => this.saveDraft(isManual)),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe();
+  }
+
+  private initAutosave(): void {
+    // Combine with edEmail so a late-arriving profile triggers autosave even when the user hasn't typed since.
+    // Snapshot dedup avoids queueing a save when the form already matches what's persisted.
+    combineLatest([this.form.valueChanges, toObservable(this.edEmail)])
+      .pipe(
+        debounceTime(1000),
+        filter(([, email]) => this.hasContext() && this.hasAnythingToSave() && email.length > 0),
+        filter(() => !this.snapshotMatchesLastSaved()),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => this.saveTrigger$.next(false));
   }
 
   private snapshotMatchesLastSaved(): boolean {
@@ -526,8 +540,8 @@ export class NewsletterManageComponent {
   }
 
   // Surface save failures — silent failures let the user navigate away believing the draft saved.
+  // savingDraft is reset by saveDraft's finalize; no need to re-set it here.
   private handleSaveError(err: HttpErrorResponse, isManual: boolean) {
-    this.savingDraft.set(false);
     if (err.status === 409) {
       this.messageService.add({
         severity: 'warn',
