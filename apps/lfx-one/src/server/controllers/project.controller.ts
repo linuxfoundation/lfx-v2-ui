@@ -13,7 +13,7 @@ import { ReadableStream as NodeReadableStream } from 'node:stream/web';
 import { ServiceValidationError } from '../errors';
 import { contentDispositionAttachment } from '../helpers/content-disposition.helper';
 import { buildVCalendar, fetchAllMeetingPages, meetingsToVEvents } from '../helpers/ics.helper';
-import { getStringQueryParam } from '../helpers/validation.helper';
+import { getStringQueryParam, validateUidParameter } from '../helpers/validation.helper';
 import { logger } from '../services/logger.service';
 import { MeetingService } from '../services/meeting.service';
 import { ProjectService } from '../services/project.service';
@@ -144,6 +144,15 @@ export class ProjectController {
     const startTime = logger.startOperation(req, 'get_project_sfid', { project_uid: uid });
 
     try {
+      if (
+        !validateUidParameter(uid, req, next, {
+          operation: 'get_project_sfid',
+          service: 'project_controller',
+        })
+      ) {
+        return;
+      }
+
       const sfid = await this.projectService.getProjectSfidByUid(req, uid);
 
       logger.success(req, 'get_project_sfid', startTime, {
