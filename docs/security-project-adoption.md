@@ -25,13 +25,23 @@ tracking.
 This is the MVP. It requires no new SBOM ingestion and validates whether
 surfacing stewardship needs turns into real commitments.
 
-- Stewardship status on every project health surface:
+- Project health status on every project health surface:
   - `healthy`
   - `under_maintained`
   - `maintainer_orphaned`
+- Project stewardship status on every project health surface:
+  - `not_open`
   - `open_for_stewardship`
-  - `steward_onboarding`
   - `stewarded`
+  - `closed`
+- Handoff status for active interests:
+  - `interest_expressed`
+  - `program_review`
+  - `connected`
+  - `onboarding`
+  - `active`
+  - `blocked`
+  - `closed`
 - Browsable marketplace of projects open for stewardship.
 - Project detail cards with health metrics, bus factor, tech stack, recent
   activity, security response time, and concrete asks.
@@ -153,26 +163,53 @@ flowchart TD
   complete --> insights["Status visible in Self Serve<br/>Analytics link opens Insights"]
 ```
 
-## Project Stewardship State Model
+## Project Stewardship Status Model
+
+Project stewardship uses three related but separate statuses. Do not collapse
+them into one enum: the marketplace needs to filter project health, whether the
+project is open for stewardship, and the lifecycle of a specific handoff.
+
+### Health Status
+
+| Persisted state       | UI label           | Meaning                                                          |
+| --------------------- | ------------------ | ---------------------------------------------------------------- |
+| `healthy`             | `Healthy`          | Project does not currently need stewardship help.                |
+| `under_maintained`    | `Under-maintained` | Health signals show maintainer, activity, or response-time risk. |
+| `maintainer_orphaned` | `Maintainer gap`   | Maintainer coverage is below the threshold for the project.      |
+
+### Stewardship Status
+
+| Persisted state        | UI label    | Meaning                                                  |
+| ---------------------- | ----------- | -------------------------------------------------------- |
+| `not_open`             | `Not open`  | Project is not seeking a steward.                        |
+| `open_for_stewardship` | `Open`      | Project has at least one concrete ask open for interest. |
+| `stewarded`            | `Stewarded` | At least one steward is active for an ask.               |
+| `closed`               | `Closed`    | Stewardship ask is no longer active.                     |
+
+### Handoff Status
+
+| Persisted state      | UI label             | Meaning                                                                            |
+| -------------------- | -------------------- | ---------------------------------------------------------------------------------- |
+| `interest_expressed` | `Interest expressed` | A person or company expressed interest.                                            |
+| `program_review`     | `Program review`     | Program staff is reviewing fit, scope, and availability.                           |
+| `connected`          | `Connected`          | Program staff connected the interested steward with maintainers or program owners. |
+| `onboarding`         | `Onboarding`         | Handoff is accepted and onboarding is underway.                                    |
+| `active`             | `Active`             | Steward is actively helping the project.                                           |
+| `blocked`            | `Blocked`            | Handoff cannot proceed until a blocker is resolved.                                |
+| `closed`             | `Closed`             | Interest or handoff ended.                                                         |
 
 ```mermaid
-stateDiagram-v2
-  [*] --> Healthy
-  Healthy --> UnderMaintained: health signal crosses threshold
-  UnderMaintained --> MaintainerOrphaned: maintainer coverage drops
-  UnderMaintained --> OpenForStewardship: maintainer/admin requests help
-  MaintainerOrphaned --> OpenForStewardship: admin opens concrete ask
-  OpenForStewardship --> InterestExpressed: contributor/company expresses interest
-  InterestExpressed --> ProgramReview: staff reviews fit and scope
-  ProgramReview --> Connected: introduce to maintainers/program owner
-  Connected --> StewardOnboarding: handoff accepted
-  StewardOnboarding --> Stewarded: steward active
-  Stewarded --> Healthy: health/security improves
-  Stewarded --> Blocked: handoff blocked
-  Blocked --> Connected: blocker resolved
-  OpenForStewardship --> Closed: no longer seeking steward
-  Stewarded --> Closed: stewardship ended
-  Closed --> [*]
+flowchart TD
+  health["health_status<br/>healthy, under_maintained, maintainer_orphaned"] --> open["stewardship_status<br/>open_for_stewardship"]
+  open --> interest["handoff_status<br/>interest_expressed"]
+  interest --> review["handoff_status<br/>program_review"]
+  review --> connected["handoff_status<br/>connected"]
+  connected --> onboarding["handoff_status<br/>onboarding"]
+  onboarding --> active["handoff_status<br/>active"]
+  active --> stewarded["stewardship_status<br/>stewarded"]
+  active --> blocked["handoff_status<br/>blocked"]
+  blocked --> connected
+  stewarded --> closed["stewardship_status<br/>closed"]
 ```
 
 ### Project Stewardship Record
@@ -971,26 +1008,55 @@ Relevant existing patterns:
 Suggested module:
 
 ```text
-apps/lfx-one/src/app/modules/security/
-|-- security.routes.ts
-|-- security-work-dashboard/
-|-- security-admin-dashboard/
-|-- package-detail-drawer/
+apps/lfx-one/src/app/modules/stewardship/
+|-- stewardship.routes.ts
+|-- project-stewardship-marketplace/
+|-- project-stewardship-detail/
+|-- my-stewardship/
+|-- package-security-dashboard/
+|-- stewardship-request-drawer/
 `-- components/
 ```
 
 Suggested routes:
 
-- `/security` with `data: { lens: 'me' }`
-- `/foundation/security` with `data: { lens: 'foundation' }`, ED/admin gated
-- `/project/security` placeholder initially, linking to the foundation security
-  queue filtered to known packages for the selected project. The placeholder
-  should explain that coverage improves as package-to-repo mapping confidence
-  improves and should include an `Open in Insights` link.
+- `/stewardship` with `data: { lens: 'me' }`
+- `/foundation/stewardship` with `data: { lens: 'foundation' }`, ED/admin gated
+- `/project/:slug/stewardship` for project stewardship status, concrete asks,
+  current stewards, and maintainer `Request a steward`
+- `/foundation/security/stewardship` for the specialized package security queue
 
 ## Backend/API Contract
 
 Do not build the frontend against mock data. Minimum real API surface:
+
+### Project Stewardship MVP API
+
+- `GET /api/stewardship/projects`
+  - filters: `foundation_id`, `q`, `health_status`, `stewardship_status`,
+    `handoff_status`, `skill`, `language`, `urgency`, `stewardship_type`
+  - cursor pagination and sort
+- `GET /api/stewardship/projects/:project_uid`
+- `POST /api/stewardship/projects/:project_uid/requests`
+  - maintainer/admin creates a concrete ask and opens project stewardship
+- `PATCH /api/stewardship/requests/:request_id`
+  - update concrete ask, urgency, skills, status, or close request
+- `POST /api/stewardship/requests/:request_id/interests`
+  - contributor or company expresses interest
+- `PATCH /api/stewardship/interests/:interest_id`
+  - program staff updates handoff status, assignee, notes, and blocker state
+- `GET /api/stewardship/my-work`
+  - interests, onboarding, active stewardship, and package security work
+- `GET /api/stewardship/summary`
+  - marketplace and program metrics
+
+Shared project-level interfaces should live in:
+
+```text
+packages/shared/src/interfaces/stewardship.interface.ts
+```
+
+### Package Security Stewardship API
 
 - `GET /api/security/packages`
   - filters, cursor pagination, sort
