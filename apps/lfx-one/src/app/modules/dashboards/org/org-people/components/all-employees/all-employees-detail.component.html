@@ -5,7 +5,7 @@
   @if (loading()) {
     <div class="text-xs italic text-gray-400" data-testid="org-people-all-employees-detail-loading">Loading details…</div>
   } @else if (error()) {
-    <div class="flex items-center justify-between gap-3 py-2" data-testid="org-people-all-employees-detail-error">
+    <div class="flex items-center justify-between gap-3 py-2" role="alert" aria-live="assertive" data-testid="org-people-all-employees-detail-error">
       <span class="text-sm text-red-600">
         <i class="fa-light fa-triangle-exclamation mr-1.5" aria-hidden="true"></i>
         Failed to load activity detail.

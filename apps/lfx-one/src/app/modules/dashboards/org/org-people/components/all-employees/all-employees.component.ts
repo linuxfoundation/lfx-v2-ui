@@ -137,13 +137,11 @@ export class AllEmployeesComponent {
   protected readonly ariaSortMap: Signal<Record<OrgAllEmployeeSortColumn, 'ascending' | 'descending' | 'none'>> = computed(() => this.initAriaSortMap());
 
   public constructor() {
-    // Reset all state and cancel any in-flight detail fetches when the selected account changes; skip the initial emission on mount.
-    toObservable(this.accountContext.selectedAccount)
-      .pipe(skip(1), takeUntilDestroyed())
-      .subscribe(() => {
-        this.detailCancel$.next();
-        this.resetAllState();
-      });
+    // Reset all state and cancel in-flight detail fetches only when the actual accountId changes; subscribing to selectedAccount directly would also fire on object-ref refreshes (e.g. Snowflake enrichment re-setting the same account) and wipe user search/filter state.
+    this.accountId$.pipe(skip(1), takeUntilDestroyed()).subscribe(() => {
+      this.detailCancel$.next();
+      this.resetAllState();
+    });
 
     // Reset pagination to the initial cap when any filter/sort input changes; skip(1) drops the synchronous initial combineLatest emission.
     combineLatest([
@@ -224,11 +222,6 @@ export class AllEmployeesComponent {
 
   protected retryDetail(row: OrgAllEmployeeRow): void {
     const key = this.detailKey(row.personKey);
-    this.detailErrorMap.update((s) => {
-      const next = { ...s };
-      delete next[key];
-      return next;
-    });
     this.detailMap.update((s) => {
       const next = { ...s };
       delete next[key];
@@ -327,6 +320,8 @@ export class AllEmployeesComponent {
     if (this.detailMap()[key]) return;
     if (this.detailLoading()[key]) return;
 
+    // Clear any stale error from a prior failed fetch so collapse+re-expand (which bypasses retryDetail) also recovers cleanly.
+    this.clearDetailError(key);
     this.detailLoading.update((state) => ({ ...state, [key]: true }));
     this.dataService
       .getEmployeeDetail(accountId, row.personKey)
@@ -349,6 +344,15 @@ export class AllEmployeesComponent {
 
   private clearDetailLoading(key: string): void {
     this.detailLoading.update((state) => {
+      const next = { ...state };
+      delete next[key];
+      return next;
+    });
+  }
+
+  private clearDetailError(key: string): void {
+    this.detailErrorMap.update((state) => {
+      if (!state[key]) return state;
       const next = { ...state };
       delete next[key];
       return next;
