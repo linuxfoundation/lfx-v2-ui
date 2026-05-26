@@ -3,6 +3,7 @@
 
 import { ORG_SELECTOR_MOCK_PAGE_SIZE } from '@lfx-one/shared/constants';
 import { B2bOrgIndexedDoc, GetOrgItemsParams, OrgItem, OrgItemsQuery, OrgItemsResponse, QueryServiceResponse } from '@lfx-one/shared/interfaces';
+import { isFilterSafeIdentifier } from '@lfx-one/shared/utils';
 import { Request } from 'express';
 
 import { isMockOrgItemsEnabled } from '../utils/mock-org-items.util';
@@ -105,6 +106,12 @@ export class OrgNavigationService {
 
   /** Second upstream call to pin the selected row at the top of the first page; null on miss → silent fallback per FR-014. */
   private async fetchSelectedItem(req: Request, uid: string): Promise<OrgItem | null> {
+    // selectedUid arrives from `?selected_uid=` (untrusted client input). Reject anything
+    // outside the filter-safe allowlist before interpolating into the query-service filter.
+    if (!isFilterSafeIdentifier(uid)) {
+      logger.warning(req, 'fetch_selected_org_item', 'Refusing selected_uid lookup for input outside filter-safe allowlist');
+      return null;
+    }
     try {
       const response = await this.microserviceProxy.proxyRequest<QueryServiceResponse<B2bOrgIndexedDoc>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'b2b_org',
