@@ -145,6 +145,8 @@ export class AllEmployeesComponent {
   }
 
   protected onRowKeydown(event: KeyboardEvent, row: OrgAllEmployeeRow): void {
+    // Ignore events bubbled from interactive descendants (e.g. the inner name <button>) so a keypress on the button doesn't also toggle the row.
+    if (event.target !== event.currentTarget) return;
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
     this.toggleRow(row);
@@ -267,10 +269,15 @@ export class AllEmployeesComponent {
       .pipe(take(1), takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (detail) => {
+          // Drop responses whose request was issued for an account that's no longer selected — avoids stale-detail leak after an account switch.
+          if (this.accountContext.selectedAccount().accountId !== accountId) return;
           this.detailMap.update((state) => ({ ...state, [row.personKey]: detail }));
           this.clearDetailLoading(row.personKey);
         },
-        error: () => this.clearDetailLoading(row.personKey),
+        error: () => {
+          if (this.accountContext.selectedAccount().accountId !== accountId) return;
+          this.clearDetailLoading(row.personKey);
+        },
       });
   }
 
