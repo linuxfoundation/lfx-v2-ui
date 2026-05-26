@@ -5,11 +5,12 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, DestroyRef, inject, signal, Signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { combineLatest, distinctUntilChanged, map, of, skip, switchMap, take, tap } from 'rxjs';
+import { catchError, combineLatest, distinctUntilChanged, finalize, map, of, skip, Subject, switchMap, take, takeUntil, tap } from 'rxjs';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
+import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { AccountContextService } from '@services/account-context.service';
 import { PersonProfilePanelService } from '@services/person-profile-panel.service';
 
@@ -32,7 +33,7 @@ import { AllEmployeesDetailComponent } from './all-employees-detail.component';
 /** All Employees tab body — filter bar, 5 stat cards, sortable table with chevron-toggled detail rows. */
 @Component({
   selector: 'lfx-org-people-all-employees',
-  imports: [DecimalPipe, FormsModule, InputTextModule, SelectModule, SkeletonModule, TooltipModule, AllEmployeesDetailComponent],
+  imports: [DecimalPipe, FormsModule, InputTextModule, SelectModule, SkeletonModule, TooltipModule, EmptyStateComponent, AllEmployeesDetailComponent],
   templateUrl: './all-employees.component.html',
 })
 export class AllEmployeesComponent {
@@ -51,9 +52,19 @@ export class AllEmployeesComponent {
   protected readonly sortDirection = signal<OrgAllEmployeeSortDirection>(1);
   protected readonly limit = signal<number>(ORG_ALL_EMPLOYEES_INITIAL_LIMIT);
 
+  // Expansion is per-(account, personKey) reset on account change → personKey is unique within an account, so keying by personKey alone is safe.
   protected readonly expansion = signal<Record<string, boolean>>({});
+
+  // detail caches are keyed by `${accountId}:${personKey}` so an in-flight response from account A can't pollute account B's view even if the same personKey exists in both.
   protected readonly detailMap = signal<Record<string, OrgAllEmployeeDetail>>({});
   protected readonly detailLoading = signal<Record<string, boolean>>({});
+  protected readonly detailErrorMap = signal<Record<string, boolean>>({});
+
+  // Retry tick — incremented to re-trigger the list fetch without changing accountId.
+  protected readonly retryTrigger = signal<number>(0);
+
+  // Cancels any in-flight detail subscription when the selected account changes; prevents stale writes and frees server work.
+  private readonly detailCancel$ = new Subject<void>();
 
   // Spread to a mutable array so PrimeNG's mutable [options] input type accepts it without an unsafe cast.
   protected readonly activityOptions: OrgAllEmployeeActivityOption[] = [...ORG_ALL_EMPLOYEE_ACTIVITY_OPTIONS];
@@ -72,20 +83,33 @@ export class AllEmployeesComponent {
   private readonly loadingState = signal<boolean>(true);
   protected readonly isLoading = this.loadingState.asReadonly();
 
+  private readonly fetchErrorState = signal<boolean>(false);
+  protected readonly fetchError = this.fetchErrorState.asReadonly();
+
   private readonly accountId$ = toObservable(this.accountContext.selectedAccount).pipe(
     map((account) => account.accountId),
     distinctUntilChanged()
   );
 
   protected readonly response: Signal<OrgAllEmployeesResponse> = toSignal(
-    this.accountId$.pipe(
-      tap(() => this.loadingState.set(true)),
-      switchMap((accountId) => {
+    combineLatest([this.accountId$, toObservable(this.retryTrigger)]).pipe(
+      tap(() => {
+        this.loadingState.set(true);
+        this.fetchErrorState.set(false);
+      }),
+      switchMap(([accountId]) => {
         if (!accountId) {
           this.loadingState.set(false);
           return of(EMPTY_ORG_ALL_EMPLOYEES_RESPONSE);
         }
-        return this.dataService.getAllEmployees(accountId).pipe(tap(() => this.loadingState.set(false)));
+        return this.dataService.getAllEmployees(accountId).pipe(
+          tap(() => this.loadingState.set(false)),
+          catchError(() => {
+            this.fetchErrorState.set(true);
+            this.loadingState.set(false);
+            return of(EMPTY_ORG_ALL_EMPLOYEES_RESPONSE);
+          })
+        );
       })
     ),
     { initialValue: EMPTY_ORG_ALL_EMPLOYEES_RESPONSE }
@@ -107,15 +131,19 @@ export class AllEmployeesComponent {
 
   protected readonly footerCountLabel: Signal<string> = computed(() => this.initFooterCountLabel());
 
-  protected readonly hasNoCompany = computed(() => !this.accountContext.selectedAccount().accountId);
-
   protected readonly isFiltering: Signal<boolean> = computed(() => this.initIsFiltering());
 
+  // Precomputed aria-sort per column — keeps the template free of method calls in [attr.aria-sort] bindings.
+  protected readonly ariaSortMap: Signal<Record<OrgAllEmployeeSortColumn, 'ascending' | 'descending' | 'none'>> = computed(() => this.initAriaSortMap());
+
   public constructor() {
-    // Reset all state when the selected account changes; skip the initial emission on mount.
+    // Reset all state and cancel any in-flight detail fetches when the selected account changes; skip the initial emission on mount.
     toObservable(this.accountContext.selectedAccount)
       .pipe(skip(1), takeUntilDestroyed())
-      .subscribe(() => this.resetAllState());
+      .subscribe(() => {
+        this.detailCancel$.next();
+        this.resetAllState();
+      });
 
     // Reset pagination to the initial cap when any filter/sort input changes; skip(1) drops the synchronous initial combineLatest emission.
     combineLatest([
@@ -171,11 +199,15 @@ export class AllEmployeesComponent {
   }
 
   protected getDetail(personKey: string): OrgAllEmployeeDetail | null {
-    return this.detailMap()[personKey] ?? null;
+    return this.detailMap()[this.detailKey(personKey)] ?? null;
   }
 
   protected isDetailLoading(personKey: string): boolean {
-    return !!this.detailLoading()[personKey];
+    return !!this.detailLoading()[this.detailKey(personKey)];
+  }
+
+  protected isDetailError(personKey: string): boolean {
+    return !!this.detailErrorMap()[this.detailKey(personKey)];
   }
 
   protected showAll(): void {
@@ -184,6 +216,25 @@ export class AllEmployeesComponent {
 
   protected onPersonClick(row: OrgAllEmployeeRow): void {
     this.personPanel.open(row.name);
+  }
+
+  protected retry(): void {
+    this.retryTrigger.update((v) => v + 1);
+  }
+
+  protected retryDetail(row: OrgAllEmployeeRow): void {
+    const key = this.detailKey(row.personKey);
+    this.detailErrorMap.update((s) => {
+      const next = { ...s };
+      delete next[key];
+      return next;
+    });
+    this.detailMap.update((s) => {
+      const next = { ...s };
+      delete next[key];
+      return next;
+    });
+    this.loadDetailIfNeeded(row);
   }
 
   protected getInitials(name: string): string {
@@ -257,34 +308,49 @@ export class AllEmployeesComponent {
     return this.searchTerm().trim().length > 0 || !!this.selectedFoundationId() || this.selectedActivity() !== 'all';
   }
 
+  private initAriaSortMap(): Record<OrgAllEmployeeSortColumn, 'ascending' | 'descending' | 'none'> {
+    const active = this.sortColumn();
+    const direction: 'ascending' | 'descending' = this.sortDirection() === 1 ? 'ascending' : 'descending';
+    return {
+      name: active === 'name' ? direction : 'none',
+      seats: active === 'seats' ? direction : 'none',
+      commits: active === 'commits' ? direction : 'none',
+      events: active === 'events' ? direction : 'none',
+      courses: active === 'courses' ? direction : 'none',
+    };
+  }
+
   private loadDetailIfNeeded(row: OrgAllEmployeeRow): void {
-    if (this.detailMap()[row.personKey]) return;
-    if (this.detailLoading()[row.personKey]) return;
     const accountId = this.accountContext.selectedAccount().accountId;
     if (!accountId) return;
+    const key = this.detailKey(row.personKey);
+    if (this.detailMap()[key]) return;
+    if (this.detailLoading()[key]) return;
 
-    this.detailLoading.update((state) => ({ ...state, [row.personKey]: true }));
+    this.detailLoading.update((state) => ({ ...state, [key]: true }));
     this.dataService
       .getEmployeeDetail(accountId, row.personKey)
-      .pipe(take(1), takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        take(1),
+        takeUntil(this.detailCancel$),
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.clearDetailLoading(key))
+      )
       .subscribe({
-        next: (detail) => {
-          // Drop responses whose request was issued for an account that's no longer selected — avoids stale-detail leak after an account switch.
-          if (this.accountContext.selectedAccount().accountId !== accountId) return;
-          this.detailMap.update((state) => ({ ...state, [row.personKey]: detail }));
-          this.clearDetailLoading(row.personKey);
-        },
-        error: () => {
-          if (this.accountContext.selectedAccount().accountId !== accountId) return;
-          this.clearDetailLoading(row.personKey);
-        },
+        next: (detail) => this.detailMap.update((state) => ({ ...state, [key]: detail })),
+        error: () => this.detailErrorMap.update((state) => ({ ...state, [key]: true })),
       });
   }
 
-  private clearDetailLoading(personKey: string): void {
+  /** Composite (account, person) key — keeps per-account detail caches isolated even across rapid account switches. */
+  private detailKey(personKey: string): string {
+    return `${this.accountContext.selectedAccount().accountId}:${personKey}`;
+  }
+
+  private clearDetailLoading(key: string): void {
     this.detailLoading.update((state) => {
       const next = { ...state };
-      delete next[personKey];
+      delete next[key];
       return next;
     });
   }
@@ -299,6 +365,7 @@ export class AllEmployeesComponent {
     this.expansion.set({});
     this.detailMap.set({});
     this.detailLoading.set({});
+    this.detailErrorMap.set({});
   }
 
   private static numericSortValue(row: OrgAllEmployeeRow, column: Exclude<OrgAllEmployeeSortColumn, 'name'>): number {

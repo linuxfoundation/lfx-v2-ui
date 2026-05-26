@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { DecimalPipe } from '@angular/common';
-import { Component, computed, input, Signal } from '@angular/core';
+import { Component, computed, input, output, Signal } from '@angular/core';
 import type { OrgAllEmployeeDetail } from '@lfx-one/shared/interfaces';
 
 /** Expandable detail sub-table for one All Employees row — up to five sections, empty ones hidden. */
@@ -14,6 +14,8 @@ import type { OrgAllEmployeeDetail } from '@lfx-one/shared/interfaces';
 export class AllEmployeesDetailComponent {
   public readonly detail = input.required<OrgAllEmployeeDetail | null>();
   public readonly loading = input<boolean>(false);
+  public readonly error = input<boolean>(false);
+  public readonly retry = output<void>();
 
   protected readonly hasAnyDetail: Signal<boolean> = computed(() => this.initHasAnyDetail());
 

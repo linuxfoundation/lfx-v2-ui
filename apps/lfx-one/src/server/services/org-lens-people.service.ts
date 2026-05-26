@@ -145,14 +145,15 @@ export class OrgLensPeopleService {
     const eventsCount = eventRows.length;
     const events = eventRows.map((row) => this.mapEventRow(row, eventsCount));
 
-    // courses_count = COUNT(DISTINCT course_id) — same course on both enrolled/certified sides collapses to one.
+    // COUNT(DISTINCT) over the same id mapTrainingRow uses (COURSE_ID with COURSE_OR_CERT_ID fallback), so counts and rendered row keys agree.
     const distinctCourseIds = new Set<string>();
     const distinctCertifiedCourseIds = new Set<string>();
     for (const row of trainingRows) {
-      if (row.COURSE_ID) {
-        distinctCourseIds.add(row.COURSE_ID);
+      const courseId = row.COURSE_ID ?? row.COURSE_OR_CERT_ID;
+      if (courseId) {
+        distinctCourseIds.add(courseId);
         if (row.STATUS === 'Certified') {
-          distinctCertifiedCourseIds.add(row.COURSE_ID);
+          distinctCertifiedCourseIds.add(courseId);
         }
       }
     }
