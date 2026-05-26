@@ -145,16 +145,17 @@
                     Download
                   </a>
                 } @else {
-                  <button
-                    type="button"
-                    [disabled]="true"
-                    class="inline-flex cursor-not-allowed items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white opacity-50"
-                    data-testid="membership-detail-docs-certificate-download"
-                    pTooltip="Document not available"
-                    tooltipPosition="top">
-                    <i class="fa-light fa-download"></i>
-                    Download
-                  </button>
+                  <!-- Wrap the disabled button in a span so the tooltip remains reachable when [disabled] suppresses pointer events on the button itself. -->
+                  <span class="inline-flex" pTooltip="Document not available" tooltipPosition="top">
+                    <button
+                      type="button"
+                      [disabled]="true"
+                      class="inline-flex cursor-not-allowed items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white opacity-50"
+                      data-testid="membership-detail-docs-certificate-download">
+                      <i class="fa-light fa-download"></i>
+                      Download
+                    </button>
+                  </span>
                 }
               </div>
             </div>
