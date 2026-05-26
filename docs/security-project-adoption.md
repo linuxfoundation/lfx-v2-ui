@@ -59,8 +59,8 @@ flowchart TD
   changes --> blocked["Mark blocked"]
   changes --> complete["Mark complete"]
 
-  checklist --> release["Release stewardship / decline with reason"]
-  release --> open
+  checklist --> return["Return stewardship with reason"]
+  return --> open
   checklist --> stale["Stale by aging policy"]
   stale --> open
   blocked --> triage
@@ -80,11 +80,11 @@ stateDiagram-v2
   Assigned --> InProgress: owner starts checklist
   Assigned --> Returned: owner declines with reason
   Claimed --> InProgress: owner starts checklist
-  Claimed --> Returned: owner releases work
-  Returned --> OpenForStewardship: available again
+  Claimed --> Returned: owner returns work
+  Returned --> OpenForStewardship: admin reopens to pool
   Returned --> Assigned: admin reassigns
   InProgress --> Submitted: submit for review
-  InProgress --> Returned: owner releases work
+  InProgress --> Returned: owner returns work
   InProgress --> Stale: no progress past aging threshold
   Stale --> OpenForStewardship: auto-release or admin release
   Stale --> InProgress: owner resumes before release
@@ -124,21 +124,21 @@ Persisted API states should stay stable and machine-readable. UI labels can be
 friendlier, but filters, tags, and transitions should map back to this canonical
 set.
 
-| Persisted state          | UI label                 | Meaning                                                                                               |
-| ------------------------ | ------------------------ | ----------------------------------------------------------------------------------------------------- |
-| `unassigned`             | `Unassigned`             | Package is in the queue and has no owner.                                                             |
-| `open_for_stewardship`   | `Open` / `Available`     | Package is available for a contributor to claim.                                                      |
-| `assigned`               | `Assigned`               | Admin assigned an owner, but work has not started.                                                    |
-| `claimed`                | `Claimed`                | Contributor claimed the package, but work has not started.                                            |
-| `in_progress`            | `In progress`            | Owner is actively working through the checklist.                                                      |
-| `submitted`              | `In review`              | Owner submitted the checklist for ED/admin review.                                                    |
-| `changes_requested`      | `Changes requested`      | Reviewer sent the work back with required updates.                                                    |
-| `blocked`                | `Blocked`                | Work cannot proceed until the blocker is resolved.                                                    |
-| `stale`                  | `Stale`                  | No checklist progress past the stale threshold.                                                       |
-| `returned`               | `Returned`               | Owner returned stewardship to the queue with a required reason.                                       |
-| `complete`               | `Complete` / `Completed` | Reviewer approved the submission.                                                                     |
-| `needs_reverification`   | `Needs reverification`   | Completed stewardship was reopened by new advisory, maintainer change, age policy, or admin action.   |
-| `no_longer_in_scope`     | `No longer in scope`     | Package is deprecated, transferred, removed, or out of scope.                                         |
+| Persisted state        | UI label                 | Meaning                                                                                             |
+| ---------------------- | ------------------------ | --------------------------------------------------------------------------------------------------- |
+| `unassigned`           | `Unassigned`             | Package is in the queue and has no owner.                                                           |
+| `open_for_stewardship` | `Open` / `Available`     | Package is available for a contributor to claim.                                                    |
+| `assigned`             | `Assigned`               | Admin assigned an owner, but work has not started.                                                  |
+| `claimed`              | `Claimed`                | Contributor claimed the package, but work has not started.                                          |
+| `in_progress`          | `In progress`            | Owner is actively working through the checklist.                                                    |
+| `submitted`            | `In review`              | Owner submitted the checklist for ED/admin review.                                                  |
+| `changes_requested`    | `Changes requested`      | Reviewer sent the work back with required updates.                                                  |
+| `blocked`              | `Blocked`                | Work cannot proceed until the blocker is resolved.                                                  |
+| `stale`                | `Stale`                  | No checklist progress past the stale threshold.                                                     |
+| `returned`             | `Returned`               | Owner returned stewardship to the queue with a required reason.                                     |
+| `complete`             | `Complete` / `Completed` | Reviewer approved the submission.                                                                   |
+| `needs_reverification` | `Needs reverification`   | Completed stewardship was reopened by new advisory, maintainer change, age policy, or admin action. |
+| `no_longer_in_scope`   | `No longer in scope`     | Package is deprecated, transferred, removed, or out of scope.                                       |
 
 The table filters should use persisted states in query params and request
 payloads. Display-only labels such as `Available` or `Completed`
@@ -157,14 +157,19 @@ values: `declined_before_start`, `released_during_work`, `capacity`,
 `not_the_right_steward`. This preserves the reporting signal without adding
 extra states and transitions.
 
+`returned` is a durable holding state that preserves why stewardship left a
+person's queue. The package becomes available again only when an admin or system
+policy reopens it to `open_for_stewardship`, or when an admin assigns a new
+steward and moves it to `assigned`.
+
 ### Aging and Reverification Policy
 
 Default thresholds (configurable per foundation):
 
 - Warn owner after **30 days** with no checklist progress.
 - Move to `stale` after **45 days** with no checklist progress.
-- Release back to `open_for_stewardship` after **60 days** unless an admin
-  overrides.
+- Auto-release stale work back to `open_for_stewardship` after **60 days** unless
+  an admin overrides.
 
 "Checklist progress" is defined as: any checklist item state change (incomplete
 → complete or vice versa), or a contributor note added to the stewardship
@@ -172,7 +177,7 @@ record. Opening the drawer or viewing the record does not count as progress.
 
 Additional policies:
 
-- Allow owners to self-release `claimed` or `in_progress` work with a required
+- Allow owners to self-return `claimed` or `in_progress` work with a required
   reason.
 - Reopen `complete` as `needs_reverification` when a new advisory appears,
   maintainer/security contact changes, package ownership changes, package status
@@ -215,7 +220,7 @@ cannot assume one-row-at-a-time triage.
   - `Reassign steward`
   - `Mark blocked`
   - `Apply tag`
-  - `Release stale stewardships`
+  - `Auto-release stale stewardships`
 - Bulk actions above a configurable row threshold run as async jobs with a
   progress drawer/toast and a downloadable result summary. The threshold should
   be determined during implementation based on actual API response times.
@@ -223,12 +228,12 @@ cannot assume one-row-at-a-time triage.
   - `Critical unassigned`
   - `Stale stewardships`
   - `Needs reverification`
-- Additional saved views (e.g., ecosystem-specific filters like `npm owner
-  unclear` or `Maven needs maintainer`) can be added as the underlying data
-  matures.
-- Server uses optimistic locking on stewardship records. If a row changed after it
-  was loaded, the UI shows conflict copy such as: `This package was just claimed
-by {user}. Refresh to see the latest state.`
+- Additional saved views can be added as the underlying data matures, including
+  ecosystem-specific filters such as `npm owner unclear` or
+  `Maven needs maintainer`.
+- Server uses optimistic locking on stewardship records. If a row changed after
+  it was loaded, the UI shows conflict copy such as: "This package was just
+  claimed by {user}. Refresh to see the latest state."
 
 ### Assignment Policies
 
@@ -264,8 +269,8 @@ from the start.
    - Flag suspicious/stale metadata
    - Add notes
 6. User submits for review.
-7. User can release work back to the queue with a required reason if they are
-   not the right steward or no longer have capacity.
+7. User can return work with a required reason if they are not the right steward
+   or no longer have capacity.
 8. ED/admin reviews, requests changes, or marks complete.
 
 ## Notifications
@@ -285,21 +290,21 @@ Minimum notification surface:
 
 ## Role and Action Matrix
 
-| State                    | Contributor / owner                                        | ED/admin / reviewer                                                                             |
-| ------------------------ | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `unassigned`             | View                                                       | Create stewardship, assign steward, open for stewardship, bulk assign, mark no longer in scope  |
-| `open_for_stewardship`   | Claim package                                              | Assign steward, close availability, bulk assign                                                 |
-| `assigned`               | Accept/start, return with reason                           | Reassign, release, mark blocked                                                                 |
-| `claimed`                | Start checklist, return                                    | Reassign, release, mark blocked                                                                 |
-| `in_progress`            | Update checklist, submit for review, mark blocked, return  | Reassign, mark blocked, request update                                                          |
-| `submitted`              | View submission, reply to comments                         | Approve, request changes, mark blocked                                                          |
-| `changes_requested`      | Update checklist, reply, resubmit, return                  | Reassign, mark blocked                                                                          |
-| `blocked`                | Add blocker details, resolve if owner can                  | Resolve, reassign, release, mark no longer in scope                                             |
-| `returned`               | View read-only history                                     | Reopen for stewardship, assign steward, mark no longer in scope                                 |
-| `stale`                  | Resume before release, return                              | Release to open queue, reassign, extend due date                                                |
-| `complete`               | View history                                               | Reopen as needs reverification, open in Insights                                                |
-| `needs_reverification`   | Claim if open                                              | Assign steward, open for stewardship, mark no longer in scope                                   |
-| `no_longer_in_scope`     | View read-only history                                     | View read-only history, reopen only if package returns to scope                                 |
+| State                  | Contributor / owner                                       | ED/admin / reviewer                                                                            |
+| ---------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `unassigned`           | View                                                      | Create stewardship, assign steward, open for stewardship, bulk assign, mark no longer in scope |
+| `open_for_stewardship` | Claim package                                             | Assign steward, close availability, bulk assign                                                |
+| `assigned`             | Accept/start, return with reason                          | Reassign, return, mark blocked                                                                 |
+| `claimed`              | Start checklist, return                                   | Reassign, return, mark blocked                                                                 |
+| `in_progress`          | Update checklist, submit for review, mark blocked, return | Reassign, mark blocked, request update                                                         |
+| `submitted`            | View submission, reply to comments                        | Approve, request changes, mark blocked                                                         |
+| `changes_requested`    | Update checklist, reply, resubmit, return                 | Reassign, mark blocked                                                                         |
+| `blocked`              | Add blocker details, resolve if owner can                 | Resolve, reassign, return, mark no longer in scope                                             |
+| `returned`             | View read-only history                                    | Reopen for stewardship, assign steward, mark no longer in scope                                |
+| `stale`                | Resume before auto-release, return                        | Auto-release to open queue, reassign, extend due date                                          |
+| `complete`             | View history                                              | Reopen as needs reverification, open in Insights                                               |
+| `needs_reverification` | Claim if open                                             | Assign steward, open for stewardship, mark no longer in scope                                  |
+| `no_longer_in_scope`   | View read-only history                                    | View read-only history, reopen only if package returns to scope                                |
 
 Review notes:
 
@@ -874,15 +879,15 @@ composite or derived signals the UI depends on are not yet in the pipeline.
 
 ### Gaps
 
-| Gap                          | Priority | Detail                                                                                                                                                                                   |
-| ---------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Composite risk score         | High     | Risk column is the primary sort/filter axis. Raw signals exist (advisories, dependents, scorecard, maintainer count, last commit) but no composite tier. Who computes it?                |
-| Repo mapping confidence      | High     | UI shows confidence level + source. deps.dev has the mapping but does not expose a confidence signal. Need to derive: `declared` = high, `deps.dev inferred` = medium, `heuristic` = low |
-| Security contact / policy    | Medium   | Checklist includes "verify security contacts." Pipeline has maintainers but not SECURITY.md presence, security policy, or dedicated security contact. Small addition to GitHub fetch.     |
-| Package deprecation status   | Medium   | `no_longer_in_scope` needs npm deprecation flags and Maven artifact relocation/removal. Confirm registry `status` field covers these.                                                    |
-| Monorepo awareness           | Medium   | Many npm packages map to the same repo. Without repo → packages cardinality, admin queue shows duplicated work with no grouping.                                                         |
-| Single maintainer flag       | Low      | Derivable from maintainer records. Should be exposed as queryable boolean, not raw records Self Serve counts client-side.                                                                 |
-| Stale repo flag              | Low      | Last commit is collected. Needs threshold definition + computed flag.                                                                                                                     |
+| Gap                        | Priority | Detail                                                                                                                                                                                   |
+| -------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Composite risk score       | High     | Risk column is the primary sort/filter axis. Raw signals exist (advisories, dependents, scorecard, maintainer count, last commit) but no composite tier. Who computes it?                |
+| Repo mapping confidence    | High     | UI shows confidence level + source. deps.dev has the mapping but does not expose a confidence signal. Need to derive: `declared` = high, `deps.dev inferred` = medium, `heuristic` = low |
+| Security contact / policy  | Medium   | Checklist includes "verify security contacts." Pipeline has maintainers but not SECURITY.md presence, security policy, or dedicated security contact. Small addition to GitHub fetch.    |
+| Package deprecation status | Medium   | `no_longer_in_scope` needs npm deprecation flags and Maven artifact relocation/removal. Confirm registry `status` field covers these.                                                    |
+| Monorepo awareness         | Medium   | Many npm packages map to the same repo. Without repo → packages cardinality, admin queue shows duplicated work with no grouping.                                                         |
+| Single maintainer flag     | Low      | Derivable from maintainer records. Should be exposed as queryable boolean, not raw records Self Serve counts client-side.                                                                |
+| Stale repo flag            | Low      | Last commit is collected. Needs threshold definition + computed flag.                                                                                                                    |
 
 ## Permissions Model
 
