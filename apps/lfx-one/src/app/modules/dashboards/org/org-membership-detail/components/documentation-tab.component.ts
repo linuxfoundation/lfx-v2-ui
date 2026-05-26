@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { isPlatformBrowser } from '@angular/common';
-import { Component, computed, inject, input, PLATFORM_ID, signal } from '@angular/core';
+import { Component, computed, inject, input, PLATFORM_ID, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import type { OrgMembershipAgreement, OrgMembershipCertificateTemplate, OrgMembershipDocumentsResponse } from '@lfx-one/shared/interfaces';
 import { TooltipModule } from 'primeng/tooltip';
@@ -24,6 +24,11 @@ type PageState = 'loading' | 'error' | 'ready';
   templateUrl: './documentation-tab.component.html',
 })
 export class DocumentationTabComponent {
+  // 1. Private injections
+  private readonly service = inject(OrgLensMembershipsService);
+  private readonly platformId = inject(PLATFORM_ID);
+
+  // 2. Public fields from inputs
   public readonly accountId = input.required<string>();
   public readonly foundationId = input.required<string>();
 
@@ -36,15 +41,13 @@ export class DocumentationTabComponent {
   /** CSV filename slug; falls back to sanitized foundationId when null (FR-034a). */
   public readonly foundationSlug = input<string | null>(null);
 
-  private readonly service = inject(OrgLensMembershipsService);
-  private readonly platformId = inject(PLATFORM_ID);
-
+  // 5. Simple WritableSignals
   protected readonly retryTrigger = signal(0);
   protected readonly fetchLoading = signal(true);
   protected readonly fetchError = signal(false);
-
   protected readonly agreements = signal<OrgMembershipAgreement[]>([]);
 
+  // 6. Complex computed/toSignal — declared via private init functions where pipelines are non-trivial
   /** View-model: agreements with the signed date pre-formatted so the template stays pure. */
   protected readonly displayAgreements = computed(() =>
     this.agreements().map((agreement) => ({
@@ -53,37 +56,7 @@ export class DocumentationTabComponent {
     }))
   );
 
-  private readonly accountId$ = toObservable(this.accountId);
-  private readonly foundationId$ = toObservable(this.foundationId);
-  private readonly retryTrigger$ = toObservable(this.retryTrigger);
-
-  private readonly docs$ = combineLatest([
-    this.accountId$.pipe(filter((id): id is string => !!id)),
-    this.foundationId$.pipe(filter((id): id is string => !!id)),
-    this.retryTrigger$,
-  ]).pipe(
-    tap(() => {
-      this.fetchLoading.set(true);
-      this.fetchError.set(false);
-    }),
-    switchMap(([accountId, foundationId]) =>
-      this.service.getMembershipDocuments(accountId, foundationId).pipe(
-        catchError(() => {
-          this.fetchError.set(true);
-          this.fetchLoading.set(false);
-          return of(null);
-        })
-      )
-    ),
-    tap((response) => {
-      this.fetchLoading.set(false);
-      if (response) {
-        this.agreements.set(response.agreements);
-      }
-    })
-  );
-
-  protected readonly docsData = toSignal<OrgMembershipDocumentsResponse | null>(this.docs$, { initialValue: null });
+  protected readonly docsData: Signal<OrgMembershipDocumentsResponse | null> = this.initDocsData();
 
   protected readonly pageState = computed<PageState>(() => {
     if (this.fetchLoading()) return 'loading';
@@ -95,6 +68,7 @@ export class DocumentationTabComponent {
   /** Null when org has no active TLF Corporate Membership or cert query degraded (FR-010a). */
   protected readonly certificateTemplate = computed<OrgMembershipCertificateTemplate | null>(() => this.docsData()?.certificateTemplate ?? null);
 
+  // 9. Protected methods
   protected retry(): void {
     this.retryTrigger.update((v) => v + 1);
   }
@@ -124,7 +98,42 @@ export class DocumentationTabComponent {
     URL.revokeObjectURL(url);
   }
 
-  /** Filesystem-safe fallback segment derived from foundationId when foundationSlug is null (FR-034a). */
+  // 10. Private initializer functions (grouped)
+  private initDocsData(): Signal<OrgMembershipDocumentsResponse | null> {
+    const accountId$ = toObservable(this.accountId);
+    const foundationId$ = toObservable(this.foundationId);
+    const retryTrigger$ = toObservable(this.retryTrigger);
+
+    const docs$ = combineLatest([
+      accountId$.pipe(filter((id): id is string => !!id)),
+      foundationId$.pipe(filter((id): id is string => !!id)),
+      retryTrigger$,
+    ]).pipe(
+      tap(() => {
+        this.fetchLoading.set(true);
+        this.fetchError.set(false);
+      }),
+      switchMap(([accountId, foundationId]) =>
+        this.service.getMembershipDocuments(accountId, foundationId).pipe(
+          catchError(() => {
+            this.fetchError.set(true);
+            this.fetchLoading.set(false);
+            return of(null);
+          })
+        )
+      ),
+      tap((response) => {
+        this.fetchLoading.set(false);
+        if (response) {
+          this.agreements.set(response.agreements);
+        }
+      })
+    );
+
+    return toSignal<OrgMembershipDocumentsResponse | null>(docs$, { initialValue: null });
+  }
+
+  // 11. Other private helpers
   private sanitizedFoundationIdForFilename(): string {
     return this.foundationId()
       .toLowerCase()
