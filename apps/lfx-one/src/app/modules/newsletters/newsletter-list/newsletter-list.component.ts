@@ -23,11 +23,12 @@ import {
 } from '@lfx-one/shared/interfaces';
 import { NewsletterService } from '@services/newsletter.service';
 import { ProjectContextService } from '@services/project-context.service';
+import { ProjectService } from '@services/project.service';
 import { UserService } from '@services/user.service';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
-import { combineLatest, distinctUntilChanged, finalize, take } from 'rxjs';
+import { catchError, combineLatest, distinctUntilChanged, finalize, map, of, switchMap, take } from 'rxjs';
 
 import { NewsletterPreviewDrawerComponent } from '../components/newsletter-preview-drawer/newsletter-preview-drawer.component';
 
@@ -53,6 +54,7 @@ export class NewsletterListComponent {
   // === Services ===
   private readonly projectContextService = inject(ProjectContextService);
   private readonly newsletterService = inject(NewsletterService);
+  private readonly projectService = inject(ProjectService);
   private readonly userService = inject(UserService);
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
@@ -75,6 +77,7 @@ export class NewsletterListComponent {
   protected readonly deletingId = signal<string | null>(null);
   protected readonly previewVisible = signal<boolean>(false);
   protected readonly selectedNewsletter = signal<NewsletterListItem | null>(null);
+  private readonly fetchedLogoUrl = signal<string | undefined>(undefined);
 
   // === Reactive context ===
   public readonly activeContext: Signal<ProjectContext | null> = this.projectContextService.activeContext;
@@ -83,7 +86,7 @@ export class NewsletterListComponent {
   public readonly contextType: Signal<NewsletterContextType> = computed(() => (this.isFoundationContext() ? 'foundation' : 'project'));
   public readonly hasContext: Signal<boolean> = computed(() => this.contextUid().length > 0);
   public readonly displayName: Signal<string> = computed(() => this.activeContext()?.name ?? '');
-  public readonly logoUrl: Signal<string | undefined> = computed(() => this.activeContext()?.logoUrl ?? undefined);
+  public readonly logoUrl: Signal<string | undefined> = computed(() => this.activeContext()?.logoUrl || this.fetchedLogoUrl());
   public readonly edName: Signal<string> = computed(() => {
     const user = this.userService.user();
     return user?.name || user?.given_name || user?.nickname || 'Executive Director';
@@ -110,6 +113,7 @@ export class NewsletterListComponent {
 
   public constructor() {
     this.initLoadOnContextOrTab();
+    this.initContextLogo();
   }
 
   protected onStatusTabChange(tab: string): void {
@@ -208,6 +212,24 @@ export class NewsletterListComponent {
           this.nextPageToken.set(undefined);
         }
       });
+  }
+
+  private initContextLogo(): void {
+    toObservable(this.activeContext)
+      .pipe(
+        switchMap((ctx) => {
+          if (ctx?.logoUrl || !ctx?.slug) {
+            this.fetchedLogoUrl.set(undefined);
+            return of(undefined);
+          }
+          return this.projectService.getProject(ctx.slug, false).pipe(
+            map((project) => project?.logo_url || undefined),
+            catchError(() => of(undefined))
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((url) => this.fetchedLogoUrl.set(url));
   }
 
   private loadInitial(status: NewsletterStatus): void {
