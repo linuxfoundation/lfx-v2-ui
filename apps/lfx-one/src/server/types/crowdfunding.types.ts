@@ -60,3 +60,31 @@ export interface BackendCrowdfundingResponse {
   data: BackendInitiative[];
   meta: { total: number; limit: number; offset: number };
 }
+
+export interface BackendTransaction {
+  id: string;
+  type: 'donations' | 'expenses';
+  amount_cents: number;
+  date: string;
+  category?: string;
+  donor_name?: string;
+  donor_type?: 'organization' | 'individual';
+  donor_logo_url?: string;
+  donor_username?: string;
+}
+
+/** Raw snake_case response from GET /v1/me/payment-account on the upstream crowdfunding service. */
+export interface PaymentMethodWire {
+  payment_method_id: string;
+  last_four: string;
+  brand: string;
+  expiry_month: number;
+  expiry_year: number;
+}
+
+export interface BackendTransactionList {
+  data: BackendTransaction[];
+  total_count: number;
+  from: number;
+  size: number;
+}
