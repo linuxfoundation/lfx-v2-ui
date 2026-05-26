@@ -25,7 +25,7 @@
       }
 
       <!-- Tags -->
-      @if (donation().tags && donation().tags!.length > 0) {
+      @if (donation().tags?.length) {
         <div class="flex flex-wrap items-center gap-1.5 mt-1" data-testid="initiative-tags">
           @for (tag of donation().tags; track tag) {
             <lfx-tag [value]="tag" severity="secondary" [rounded]="true" />
@@ -35,14 +35,14 @@
     </div>
 
     <!-- View Initiative -->
-    @if (donation().initiativeUrl) {
+    @if (donation().initiativeUrl; as initiativeUrl) {
       <lfx-button
         label="View Initiative"
         icon="fa-light fa-arrow-up-right-from-square"
         iconPos="right"
         severity="secondary"
         size="small"
-        [href]="donation().initiativeUrl!"
+        [href]="initiativeUrl"
         target="_blank"
         rel="noopener noreferrer"
         data-testid="view-initiative-btn" />
