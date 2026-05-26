@@ -52,9 +52,14 @@ export class OrgRoleGrantsService {
     }
 
     try {
+      // Encode the username defensively — a JWT claim with reserved characters
+      // (`:` / `,` / spaces / etc.) would otherwise break the filter grammar
+      // or open up filter-injection paths. Matches the encoding pattern used by
+      // OrgIdentityResolver for uid/sfid filters.
+      const encodedUsername = encodeURIComponent(username);
       const response = await this.microserviceProxy.proxyRequest<QueryServiceResponse<B2bOrgSettingsDoc>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'b2b_org_settings',
-        filters_or: [`writers.username:${username}`, `auditors.username:${username}`],
+        filters_or: [`writers.username:${encodedUsername}`, `auditors.username:${encodedUsername}`],
         per_page: ORG_ROLE_GRANTS_HARD_CAP,
       });
 
