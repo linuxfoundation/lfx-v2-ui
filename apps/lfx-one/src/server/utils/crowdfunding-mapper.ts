@@ -11,6 +11,8 @@ import {
   InitiativeDetail,
   SponsorEntry,
   CrowdfundingInitiativeStatus,
+  MyDonation,
+  DonationHistoryItem,
 } from '@lfx-one/shared/interfaces';
 import { FundType } from '@lfx-one/shared/enums';
 
@@ -98,5 +100,18 @@ export function mapToTransaction(b: BackendTransaction): CrowdfundingTransaction
     donorType: b.donor_type,
     donorLogoUrl: b.donor_logo_url,
     donorUsername: b.donor_username,
+  };
+}
+
+// Maps a DonationHistoryItem to the MyDonation wire shape; initiativeId is a best-effort lookup.
+export function mapDonationHistoryToMyDonation(item: DonationHistoryItem, initiativeId?: string): MyDonation {
+  return {
+    id: item.id,
+    // donorName / donorLogoUrl omitted — require user-profile enrichment.
+    donorType: 'member',
+    amountCents: Math.round(item.amount * 100),
+    date: new Date(item.date).getTime(),
+    initiativeId,
+    initiativeName: item.initiativeName,
   };
 }

@@ -71,6 +71,22 @@ export interface CrowdfundingTransactionList {
   size: number;
 }
 
+/** A donation made by the authenticated user — returned by GET /api/crowdfunding/my-donations. */
+export interface MyDonation {
+  id: string;
+  /** Omitted until user-profile enrichment is available. */
+  donorName?: string;
+  donorLogoUrl?: string;
+  donorType: 'organization' | 'member';
+  amountCents: number;
+  /** Unix timestamp in milliseconds. */
+  date: number;
+  initiativeId?: string;
+  initiativeName?: string;
+}
+
+export type MyDonationsResponse = OffsetPaginatedResponse<MyDonation>;
+
 export interface FundingGoal {
   id: string;
   name: string;
@@ -212,6 +228,8 @@ export interface RecurringDonation {
   pausedSince?: string;
 }
 
+export type RecurringDonationsResponse = OffsetPaginatedResponse<RecurringDonation>;
+
 export interface DonationHistoryItem {
   id: string;
   initiativeName: string;
@@ -223,11 +241,13 @@ export interface DonationHistoryItem {
   amount: number;
 }
 
+/** Matches CardDetails from the upstream crowdfunding payment API. */
 export interface PaymentMethod {
-  id: string;
+  paymentMethodId: string;
   brand: string;
-  last4: string;
-  expiry: string;
+  lastFour: string;
+  expiryMonth: number;
+  expiryYear: number;
 }
 
 export interface InitiativeMenuItem {

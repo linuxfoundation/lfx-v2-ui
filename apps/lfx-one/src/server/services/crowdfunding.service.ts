@@ -3,12 +3,29 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { CrowdfundingInitiativesStats, CrowdfundingTransactionList, CrowdfundingTransaction, InitiativeDetail, InitiativesResponse } from '@lfx-one/shared/interfaces';
+import {
+  CrowdfundingInitiativesStats,
+  CrowdfundingTransactionList,
+  CrowdfundingTransaction,
+  DonationStats,
+  InitiativeDetail,
+  InitiativesResponse,
+  MyDonationsResponse,
+  PaymentMethod,
+  RecurringDonationsResponse,
+} from '@lfx-one/shared/interfaces';
 import { DEFAULT_CROWDFUNDING_PAGE_SIZE } from '@lfx-one/shared/constants';
 import { Request } from 'express';
 
-import { MOCK_INITIATIVES, MOCK_TRANSACTIONS } from '../mock-data/crowdfunding.mock';
-import { mapToInitiativeBase, mapToInitiativeDetail, mapToTransaction } from '../utils/crowdfunding-mapper';
+import {
+  MOCK_DONATION_HISTORY,
+  MOCK_DONATION_STATS,
+  MOCK_INITIATIVES,
+  MOCK_PAYMENT_METHOD,
+  MOCK_RECURRING_DONATIONS,
+  MOCK_TRANSACTIONS,
+} from '../mock-data/crowdfunding.mock';
+import { mapDonationHistoryToMyDonation, mapToInitiativeBase, mapToInitiativeDetail, mapToTransaction } from '../utils/crowdfunding-mapper';
 import { logger } from './logger.service';
 
 export class CrowdfundingService {
@@ -58,6 +75,54 @@ export class CrowdfundingService {
     }
 
     return mapToInitiativeDetail(initiative);
+  }
+
+  public async getMyPaymentMethod(req: Request, username: string): Promise<PaymentMethod | null> {
+    logger.debug(req, 'get_my_payment_method', 'Fetching payment method for user', { username });
+
+    logger.debug(req, 'get_my_payment_method', 'Returning payment method', {
+      paymentMethodId: MOCK_PAYMENT_METHOD.paymentMethodId,
+      brand: MOCK_PAYMENT_METHOD.brand,
+    });
+
+    return MOCK_PAYMENT_METHOD;
+  }
+
+  public async getMyDonationStats(req: Request, username: string): Promise<DonationStats> {
+    logger.debug(req, 'get_my_donation_stats', 'Fetching donation stats for user', { username });
+
+    logger.debug(req, 'get_my_donation_stats', 'Returning donation stats', {
+      totalDonated: MOCK_DONATION_STATS.totalDonated,
+      activeRecurringCount: MOCK_DONATION_STATS.activeRecurringCount,
+    });
+
+    return MOCK_DONATION_STATS;
+  }
+
+  public async getMyRecurringDonations(req: Request, username: string): Promise<RecurringDonationsResponse> {
+    logger.debug(req, 'get_my_recurring_donations', 'Fetching recurring donations for user', { username });
+
+    const total = MOCK_RECURRING_DONATIONS.length;
+
+    logger.debug(req, 'get_my_recurring_donations', 'Returning recurring donations', { total });
+
+    return { data: MOCK_RECURRING_DONATIONS, total, pageSize: total, offset: 0 };
+  }
+
+  public async getMyDonations(req: Request, username: string, pageSize?: number, offset?: number): Promise<MyDonationsResponse> {
+    logger.debug(req, 'get_my_donations', 'Fetching donation history for user', { username, pageSize, offset });
+
+    const initiativeIdByName = new Map(MOCK_INITIATIVES.map((i) => [i.name, i.id]));
+    const allItems = MOCK_DONATION_HISTORY.map((item) => mapDonationHistoryToMyDonation(item, initiativeIdByName.get(item.initiativeName)));
+
+    const total = allItems.length;
+    const resolvedOffset = offset ?? 0;
+    const resolvedPageSize = pageSize ?? DEFAULT_CROWDFUNDING_PAGE_SIZE;
+    const page = allItems.slice(resolvedOffset, resolvedOffset + resolvedPageSize);
+
+    logger.debug(req, 'get_my_donations', 'Returning donation history', { total, page: page.length });
+
+    return { data: page, total, pageSize: resolvedPageSize, offset: resolvedOffset };
   }
 
   public async getInitiativeTransactions(

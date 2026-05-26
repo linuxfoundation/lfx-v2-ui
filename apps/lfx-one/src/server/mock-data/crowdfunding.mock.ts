@@ -3,6 +3,9 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
+import { DonationHistoryItem, DonationStats, PaymentMethod, RecurringDonation } from '@lfx-one/shared/interfaces';
+import { FundType } from '@lfx-one/shared/enums';
+
 import { BackendInitiative, BackendTransaction } from '../types/crowdfunding.types';
 
 export const MOCK_TRANSACTIONS: Record<string, BackendTransaction[]> = {
@@ -164,5 +167,156 @@ export const MOCK_INITIATIVES: BackendInitiative[] = [
     },
     goals: [],
     sponsors: [],
+  },
+];
+
+export const MOCK_PAYMENT_METHOD: PaymentMethod = {
+  paymentMethodId: 'pm_mock_1',
+  brand: 'Visa',
+  lastFour: '4567',
+  expiryMonth: 4,
+  expiryYear: 2026,
+};
+
+export const MOCK_DONATION_STATS: DonationStats = {
+  totalDonated: 1450,
+  initiativesSupported: 6,
+  activeRecurringAmount: 50,
+  activeRecurringCount: 1,
+};
+
+export const MOCK_RECURRING_DONATIONS: RecurringDonation[] = [
+  {
+    id: 'curl',
+    name: 'curl Maintenance Fund',
+    icon: '🌀',
+    status: 'active',
+    amount: 50,
+    billingDescription: 'Billed monthly on the 1st',
+    startDate: 'Jan 2025',
+    nextChargeDate: 'Jun 1, 2026',
+  },
+  {
+    id: 'rust-for-linux',
+    name: 'Rust for Linux',
+    icon: '🦀',
+    status: 'paused',
+    amount: 25,
+    billingDescription: 'Billed monthly on the 5th',
+    startDate: 'Dec 2025',
+    pausedSince: 'Feb 5, 2026',
+  },
+];
+
+export const MOCK_DONATION_HISTORY: DonationHistoryItem[] = [
+  {
+    id: 'd1',
+    initiativeName: 'Zephyr RTOS Security Hardening',
+    initiativeIcon: '🔐',
+    fundType: FundType.SECURITY_AUDIT,
+    fundTypeIcon: 'fa-shield-halved',
+    date: '2026-04-02',
+    kind: 'one-time',
+    amount: 500,
+  },
+  {
+    id: 'd2',
+    initiativeName: 'OpenTelemetry Community Fund',
+    initiativeIcon: '🌀',
+    fundType: FundType.GENERAL_FUND,
+    fundTypeIcon: 'fa-piggy-bank',
+    date: '2026-04-01',
+    kind: 'monthly',
+    amount: 50,
+  },
+  {
+    id: 'd3',
+    initiativeName: 'Linux Kernel Mentorship Fund',
+    initiativeIcon: '🐧',
+    fundType: FundType.MENTORSHIP,
+    fundTypeIcon: 'fa-user-group',
+    date: '2026-03-15',
+    kind: 'one-time',
+    amount: 250,
+  },
+  {
+    id: 'd4',
+    initiativeName: 'OpenTelemetry Community Fund',
+    initiativeIcon: '🌀',
+    fundType: FundType.GENERAL_FUND,
+    fundTypeIcon: 'fa-piggy-bank',
+    date: '2026-03-01',
+    kind: 'monthly',
+    amount: 50,
+  },
+  {
+    id: 'd5',
+    initiativeName: 'Zephyr RTOS Security Hardening',
+    initiativeIcon: '🔒',
+    fundType: FundType.SECURITY_AUDIT,
+    fundTypeIcon: 'fa-shield-halved',
+    date: '2026-01-20',
+    kind: 'one-time',
+    amount: 100,
+  },
+  {
+    id: 'd6',
+    initiativeName: 'OpenTelemetry Community Fund',
+    initiativeIcon: '🌀',
+    fundType: FundType.GENERAL_FUND,
+    fundTypeIcon: 'fa-piggy-bank',
+    date: '2026-01-01',
+    kind: 'monthly',
+    amount: 50,
+  },
+  {
+    id: 'd7',
+    initiativeName: 'Linux Kernel Mentorship Fund',
+    initiativeIcon: '🦀',
+    fundType: FundType.MENTORSHIP,
+    fundTypeIcon: 'fa-user-group',
+    date: '2025-12-05',
+    kind: 'one-time',
+    amount: 100,
+  },
+  {
+    id: 'd8',
+    initiativeName: 'OpenTelemetry Community Fund',
+    initiativeIcon: '🌀',
+    fundType: FundType.GENERAL_FUND,
+    fundTypeIcon: 'fa-piggy-bank',
+    date: '2025-12-01',
+    kind: 'monthly',
+    amount: 50,
+  },
+  {
+    id: 'd9',
+    initiativeName: 'OpenTelemetry Community Fund',
+    initiativeIcon: '🔭',
+    fundType: FundType.GENERAL_FUND,
+    fundTypeIcon: 'fa-piggy-bank',
+    date: '2025-11-12',
+    kind: 'one-time',
+    amount: 200,
+  },
+  {
+    id: 'd10',
+    initiativeName: 'OpenTelemetry Community Fund',
+    initiativeIcon: '🌀',
+    fundType: FundType.GENERAL_FUND,
+    fundTypeIcon: 'fa-piggy-bank',
+    date: '2025-11-01',
+    kind: 'monthly',
+    amount: 50,
+  },
+  {
+    id: 'd11',
+    initiativeName: 'OpenTelemetry Community Fund',
+    initiativeIcon: '🌀',
+    fundType: FundType.GENERAL_FUND,
+    fundTypeIcon: 'fa-piggy-bank',
+    date: '2025-10-01',
+    kind: 'monthly',
+    amount: 50,
   },
 ];

@@ -39,7 +39,122 @@ export class CrowdfundingController {
     }
   }
 
-  // GET /api/crowdfunding/initiatives/stats
+  // GET /api/crowdfunding/payment-method
+  public async getMyPaymentMethod(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_my_payment_method');
+
+    try {
+      const rawUsername = await getUsernameFromAuth(req);
+
+      if (!rawUsername) {
+        throw new AuthenticationError('User authentication required', {
+          operation: 'get_my_payment_method',
+        });
+      }
+
+      const username = stripAuthPrefix(rawUsername);
+      const paymentMethod = await this.crowdfundingService.getMyPaymentMethod(req, username);
+
+      if (!paymentMethod) {
+        res.status(404).json({ message: 'No payment method found' });
+        return;
+      }
+
+      logger.success(req, 'get_my_payment_method', startTime);
+
+      res.json(paymentMethod);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // GET /api/crowdfunding/donation-stats
+  public async getMyDonationStats(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_my_donation_stats');
+
+    try {
+      const rawUsername = await getUsernameFromAuth(req);
+
+      if (!rawUsername) {
+        throw new AuthenticationError('User authentication required', {
+          operation: 'get_my_donation_stats',
+        });
+      }
+
+      const username = stripAuthPrefix(rawUsername);
+      const stats = await this.crowdfundingService.getMyDonationStats(req, username);
+
+      logger.success(req, 'get_my_donation_stats', startTime);
+
+      res.json(stats);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // GET /api/crowdfunding/recurring-donations
+  public async getMyRecurringDonations(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_my_recurring_donations');
+
+    try {
+      const rawUsername = await getUsernameFromAuth(req);
+
+      if (!rawUsername) {
+        throw new AuthenticationError('User authentication required', {
+          operation: 'get_my_recurring_donations',
+        });
+      }
+
+      const username = stripAuthPrefix(rawUsername);
+      const recurringDonations = await this.crowdfundingService.getMyRecurringDonations(req, username);
+
+      logger.success(req, 'get_my_recurring_donations', startTime, {
+        result_count: recurringDonations.data.length,
+      });
+
+      res.json(recurringDonations);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // GET /api/crowdfunding/my-donations
+  public async getMyDonations(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_my_donations');
+
+    try {
+      const rawUsername = await getUsernameFromAuth(req);
+
+      if (!rawUsername) {
+        throw new AuthenticationError('User authentication required', {
+          operation: 'get_my_donations',
+        });
+      }
+
+      const username = stripAuthPrefix(rawUsername);
+      const { pageSize, offset } = req.query;
+      const parseNonNegativeInt = (val: unknown): number | undefined => {
+        if (val == null || val === '') return undefined;
+        const n = Number(val);
+        return Number.isFinite(n) && n >= 0 ? Math.floor(n) : undefined;
+      };
+      const donations = await this.crowdfundingService.getMyDonations(req, username, parseNonNegativeInt(pageSize), parseNonNegativeInt(offset));
+
+      logger.success(req, 'get_my_donations', startTime, {
+        result_count: donations.data.length,
+        total: donations.total,
+      });
+
+      res.json(donations);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/crowdfunding/initiatives-stats
+   * Get aggregated initiatives stats for the authenticated user
+   */
   public async getInitiativesStats(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_initiatives_stats');
 

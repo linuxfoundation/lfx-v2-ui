@@ -6,8 +6,24 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 
-import { EMPTY_CROWDFUNDING_STATS, EMPTY_INITIATIVES_RESPONSE, EMPTY_TRANSACTION_LIST } from '@lfx-one/shared/constants';
-import { CrowdfundingInitiativesStats, CrowdfundingTransactionList, InitiativeDetail, InitiativesResponse } from '@lfx-one/shared/interfaces';
+import {
+  EMPTY_CROWDFUNDING_STATS,
+  EMPTY_INITIATIVES_RESPONSE,
+  EMPTY_MY_DONATIONS,
+  EMPTY_RECURRING_DONATIONS,
+  EMPTY_TRANSACTION_LIST,
+  EMPTY_DONATION_STATS,
+} from '@lfx-one/shared/constants';
+import {
+  CrowdfundingInitiativesStats,
+  CrowdfundingTransactionList,
+  DonationStats,
+  InitiativeDetail,
+  InitiativesResponse,
+  MyDonationsResponse,
+  PaymentMethod,
+  RecurringDonationsResponse,
+} from '@lfx-one/shared/interfaces';
 import { catchError, Observable, of } from 'rxjs';
 
 @Injectable({
@@ -41,6 +57,26 @@ export class CrowdfundingService {
         return of(null);
       })
     );
+  }
+
+  public getMyPaymentMethod(): Observable<PaymentMethod | null> {
+    return this.http.get<PaymentMethod>('/api/crowdfunding/payment-method').pipe(catchError(() => of(null)));
+  }
+
+  public getMyDonationStats(): Observable<DonationStats> {
+    return this.http.get<DonationStats>('/api/crowdfunding/donation-stats').pipe(catchError(() => of(EMPTY_DONATION_STATS)));
+  }
+
+  public getMyRecurringDonations(): Observable<RecurringDonationsResponse> {
+    return this.http.get<RecurringDonationsResponse>('/api/crowdfunding/recurring-donations').pipe(catchError(() => of(EMPTY_RECURRING_DONATIONS)));
+  }
+
+  public getMyDonations(params?: { pageSize?: number; offset?: number }): Observable<MyDonationsResponse> {
+    let httpParams = new HttpParams();
+    if (params?.pageSize != null) httpParams = httpParams.set('pageSize', String(params.pageSize));
+    if (params?.offset != null) httpParams = httpParams.set('offset', String(params.offset));
+
+    return this.http.get<MyDonationsResponse>('/api/crowdfunding/my-donations', { params: httpParams }).pipe(catchError(() => of(EMPTY_MY_DONATIONS)));
   }
 
   public getInitiativeTransactions(
