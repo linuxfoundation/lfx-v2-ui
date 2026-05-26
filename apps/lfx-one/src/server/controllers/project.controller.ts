@@ -136,6 +136,28 @@ export class ProjectController {
   }
 
   /**
+   * GET /projects/:uid/sfid — UUID → Salesforce 18-char ID translation via NATS.
+   * Returns `{ sfid: string | null }`; null on lookup failure so callers can hide cleanly.
+   */
+  public async getProjectSfid(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { uid } = req.params;
+    const startTime = logger.startOperation(req, 'get_project_sfid', { project_uid: uid });
+
+    try {
+      const sfid = await this.projectService.getProjectSfidByUid(req, uid);
+
+      logger.success(req, 'get_project_sfid', startTime, {
+        project_uid: uid,
+        resolved: sfid != null,
+      });
+
+      res.json({ sfid });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * GET /projects/:uid/permissions
    */
   public async getProjectPermissions(req: Request, res: Response, next: NextFunction): Promise<void> {
