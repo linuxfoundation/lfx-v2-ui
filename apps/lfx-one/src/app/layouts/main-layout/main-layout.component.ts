@@ -285,10 +285,12 @@ export class MainLayoutComponent {
 
       const foundationUid = this.projectContextService.selectedFoundation()?.uid;
       if (foundationUid) {
+        const pccBaseUrl = environment.urls.pcc;
+        const baseUrl = pccBaseUrl.endsWith('/') ? pccBaseUrl.slice(0, -1) : pccBaseUrl;
         metricsItems.push({
           label: 'Social Listening',
           icon: 'fa-light fa-ear-listen',
-          url: `${environment.urls.pcc}/project/${foundationUid}/reports/social-listening`,
+          url: `${baseUrl}/project/${foundationUid}/reports/social-listening`,
           target: '_blank',
           rel: 'noopener noreferrer',
           testId: 'sidebar-metrics-social-listening',
