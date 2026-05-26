@@ -34,7 +34,7 @@ export class CrowdfundingService {
     const stats: CrowdfundingInitiativesStats = {
       activeCount: initiatives.filter((i) => i.status === 'active').length,
       totalRaised: initiatives.reduce((sum, i) => sum + (i.fundingStatus?.amountRaisedCents ?? 0), 0) / 100,
-      monthlyGain: 8400,
+      monthlyGain: 0, // TODO: derive from real API once upstream exposes monthly gain
       totalSponsors: initiatives.reduce((sum, i) => sum + (i.initiativeStats?.supporters ?? 0), 0),
     };
 

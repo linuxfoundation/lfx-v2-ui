@@ -5,11 +5,9 @@
 
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
+import { EMPTY_CROWDFUNDING_STATS, EMPTY_INITIATIVES_RESPONSE } from '@lfx-one/shared/constants';
 import { CrowdfundingInitiativesStats, InitiativesResponse } from '@lfx-one/shared/interfaces';
 import { catchError, Observable, of } from 'rxjs';
-
-const EMPTY_RESPONSE: InitiativesResponse = { data: [], total: 0, pageSize: 0, offset: 0 };
-const EMPTY_STATS: CrowdfundingInitiativesStats = { activeCount: 0, totalRaised: 0, monthlyGain: 0, totalSponsors: 0 };
 
 @Injectable({
   providedIn: 'root',
@@ -21,7 +19,7 @@ export class CrowdfundingService {
     return this.http.get<InitiativesResponse>('/api/crowdfunding/initiatives').pipe(
       catchError((err) => {
         console.error('[CrowdfundingService] getMyInitiatives failed', err);
-        return of(EMPTY_RESPONSE);
+        return of(EMPTY_INITIATIVES_RESPONSE);
       })
     );
   }
@@ -30,7 +28,7 @@ export class CrowdfundingService {
     return this.http.get<CrowdfundingInitiativesStats>('/api/crowdfunding/initiatives/stats').pipe(
       catchError((err) => {
         console.error('[CrowdfundingService] getMyInitiativesStats failed', err);
-        return of(EMPTY_STATS);
+        return of(EMPTY_CROWDFUNDING_STATS);
       })
     );
   }

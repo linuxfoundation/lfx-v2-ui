@@ -13,10 +13,7 @@ import { getUsernameFromAuth, stripAuthPrefix } from '../utils/auth-helper';
 export class CrowdfundingController {
   private readonly crowdfundingService = new CrowdfundingService();
 
-  /**
-   * GET /api/crowdfunding/initiatives
-   * Get crowdfunding initiatives for the authenticated user
-   */
+  // GET /api/crowdfunding/initiatives
   public async getMyInitiatives(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_my_initiatives');
 
@@ -42,10 +39,7 @@ export class CrowdfundingController {
     }
   }
 
-  /**
-   * GET /api/crowdfunding/initiatives/stats
-   * Get aggregated initiatives stats for the authenticated user
-   */
+  // GET /api/crowdfunding/initiatives/stats
   public async getInitiativesStats(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_initiatives_stats');
 

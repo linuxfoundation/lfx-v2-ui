@@ -3,11 +3,7 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-// ---------------------------------------------------------------------------
-// Raw response shapes from the upstream crowdfunding microservice.
-// These types are server-only — they are never exposed to the Angular client.
-// The service layer maps BackendInitiative → InitiativeBase before responding.
-// ---------------------------------------------------------------------------
+// Raw snake_case shapes from the upstream crowdfunding service — server-only.
 
 export interface BackendGoal {
   id: string;

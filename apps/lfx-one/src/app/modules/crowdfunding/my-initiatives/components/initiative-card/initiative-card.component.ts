@@ -31,10 +31,7 @@ export class InitiativeCardComponent {
   protected readonly isClickable = computed(() => this.initiative().status !== 'pending');
 
   protected readonly formattedRaised = computed(() => this.formatCurrency((this.initiative().fundingStatus?.amountRaisedCents ?? 0) / 100));
-  protected readonly formattedGoal = computed(() => {
-    const goalCents = this.initiative().fundingStatus?.goalsTotalCents;
-    return goalCents != null && goalCents > 0 ? this.formatCurrency(goalCents / 100) : null;
-  });
+  protected readonly formattedGoal: Signal<string | null> = this.initFormattedGoal();
 
   protected onCardClick(): void {
     if (this.isClickable()) {
@@ -44,6 +41,13 @@ export class InitiativeCardComponent {
 
   private formatCurrency(value: number): string {
     return `$${value.toLocaleString()}`;
+  }
+
+  private initFormattedGoal(): Signal<string | null> {
+    return computed(() => {
+      const goalCents = this.initiative().fundingStatus?.goalsTotalCents;
+      return goalCents != null && goalCents > 0 ? this.formatCurrency(goalCents / 100) : null;
+    });
   }
 
   private initProgressPercent(): Signal<number> {

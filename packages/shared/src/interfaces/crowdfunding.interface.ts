@@ -5,12 +5,6 @@ import { FundType } from '../enums/crowdfunding.enum';
 import { OffsetPaginatedResponse } from './api.interface';
 import { DonutRing } from './donut-chart.interface';
 
-// ---------------------------------------------------------------------------
-// Crowdfunding API response types
-// Normalized/proxied DTOs returned by the LFX One backend — the server maps
-// the upstream crowdfunding service's snake_case fields into this camelCase shape.
-// ---------------------------------------------------------------------------
-
 export interface InitiativeStats {
   supporters: number;
 }
