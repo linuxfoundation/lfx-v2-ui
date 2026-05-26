@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { EMPTY_ORG_ALL_EMPLOYEE_STATS } from '@lfx-one/shared/constants';
 import type {
   OrgAllEmployeeCodeContribution,
   OrgAllEmployeeCommitteeMembership,
@@ -94,14 +95,6 @@ interface TrainingRow {
   COURSE_ID: string | null;
   COURSE_NAME: string | null;
 }
-
-const EMPTY_STATS: OrgAllEmployeeStats = {
-  activeInOss: 0,
-  inGovernance: 0,
-  codeContributors: 0,
-  eventAttendees: 0,
-  trainees: 0,
-};
 
 /** Org Lens "People → All Employees" analytics — backed by the 6 PLATINUM_LFX_ONE.ORG_PEOPLE_* tables. Empty rows produce an empty envelope, never a 404. */
 export class OrgLensPeopleService {
@@ -227,7 +220,7 @@ export class OrgLensPeopleService {
     const result = await this.snowflakeService.execute<OrgPeopleStatsRow>(query, [accountId]);
 
     if (result.rows.length === 0) {
-      return EMPTY_STATS;
+      return EMPTY_ORG_ALL_EMPLOYEE_STATS;
     }
 
     const row = result.rows[0];

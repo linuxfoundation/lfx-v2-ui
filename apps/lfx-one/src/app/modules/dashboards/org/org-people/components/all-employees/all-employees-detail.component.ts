@@ -12,7 +12,7 @@ import type { OrgAllEmployeeDetail } from '@lfx-one/shared/interfaces';
   templateUrl: './all-employees-detail.component.html',
 })
 export class AllEmployeesDetailComponent {
-  public readonly detail = input.required<OrgAllEmployeeDetail | null>();
+  public readonly detail = input.required<OrgAllEmployeeDetail | null | undefined>();
   public readonly loading = input<boolean>(false);
   public readonly error = input<boolean>(false);
   public readonly retry = output<void>();
