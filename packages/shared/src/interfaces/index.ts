@@ -169,6 +169,9 @@ export * from './org-memberships.interface';
 // Org People interfaces
 export * from './org-people.interface';
 
+// Org Events interfaces
+export * from './org-events.interface';
+
 // Newsletter interfaces
 export * from './newsletter.interface';
 

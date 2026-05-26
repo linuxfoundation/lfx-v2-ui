@@ -56,5 +56,6 @@ export * from './feature-flags.constants';
 export * from './foundation-projects.constants';
 export * from './marketing-impact.constants';
 export * from './org-people.constants';
+export * from './org-events.constants';
 export * from './individual-enrollment-catalog';
 export * from './newsletter.constants';
