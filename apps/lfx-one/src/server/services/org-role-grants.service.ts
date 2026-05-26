@@ -11,6 +11,20 @@ import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
 
 /**
+ * Allowlist for usernames the query-service filter grammar can safely accept.
+ * Covers every character class OIDC providers actually use in `username` /
+ * `nickname` / `preferred_username` claims — alphanumerics, dot, dash,
+ * underscore, plus (`+` for tagged email aliases), and `@` (email-style).
+ * Crucially EXCLUDES the filter separators `:` and `,` so a hostile claim
+ * cannot alter the query shape via filter-injection.
+ */
+const FILTER_SAFE_USERNAME = /^[A-Za-z0-9._+\-@]+$/;
+
+function isFilterSafeUsername(value: string): boolean {
+  return value.length > 0 && value.length <= 256 && FILTER_SAFE_USERNAME.test(value);
+}
+
+/**
  * Shape of the `b2b_org_settings.data` payload returned by the query-service for
  * the "what can I see" pattern. Each settings doc lists the writer/auditor
  * usernames the caller may potentially appear in.
@@ -52,14 +66,28 @@ export class OrgRoleGrantsService {
     }
 
     try {
-      // Encode the username defensively — a JWT claim with reserved characters
-      // (`:` / `,` / spaces / etc.) would otherwise break the filter grammar
-      // or open up filter-injection paths. Matches the encoding pattern used by
-      // OrgIdentityResolver for uid/sfid filters.
-      const encodedUsername = encodeURIComponent(username);
+      // Defense-in-depth: validate the username against a strict allowlist before
+      // interpolating into the filter grammar. The realistic risk is low — the
+      // username comes from a trusted OIDC JWT — but a malformed claim with the
+      // filter-grammar separators (`:` or `,`) could otherwise alter the query
+      // shape upstream. Fail closed on anything outside the allowlist.
+      //
+      // We do NOT URL-encode the value here: `MicroserviceProxyService` →
+      // `ApiClientService.getFullUrl` already builds the query via
+      // `URLSearchParams.append`, which percent-encodes the value once. Encoding
+      // here would double-encode reserved chars (e.g. `@` → `%2540`) and the
+      // upstream would search for the literal `%40`, returning zero matches and
+      // hiding the org selector for valid users (CodeRabbit / Copilot back-and-forth
+      // on PR #794).
+      if (!isFilterSafeUsername(username)) {
+        logger.warning(req, 'get_org_role_grants', 'Refusing role-grants lookup for username outside filter-safe allowlist', {
+          username_length: username.length,
+        });
+        return { writers: [], auditors: [], username, loaded_at: loadedAt };
+      }
       const response = await this.microserviceProxy.proxyRequest<QueryServiceResponse<B2bOrgSettingsDoc>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'b2b_org_settings',
-        filters_or: [`writers.username:${encodedUsername}`, `auditors.username:${encodedUsername}`],
+        filters_or: [`writers.username:${username}`, `auditors.username:${username}`],
         per_page: ORG_ROLE_GRANTS_HARD_CAP,
       });
 

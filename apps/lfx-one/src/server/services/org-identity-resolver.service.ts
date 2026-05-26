@@ -114,10 +114,20 @@ export class OrgIdentityResolver {
     const cached = this.uidToSfid.get(uid);
     if (cached !== null) return { sfid: cached, cacheHit: true };
 
+    // Defense-in-depth: reject inputs containing the query-service filter
+    // separators before interpolating. UUIDs from `req.params.uid` are normally
+    // 8-4-4-4-12 hex+dash and pass the allowlist, but a tampered path param
+    // could otherwise alter the query shape. NOTE: we don't URL-encode here
+    // either — `ApiClientService.getFullUrl` already percent-encodes via
+    // `URLSearchParams`, and double-encoding would silently break valid lookups.
+    if (!isFilterSafeIdentifier(uid)) {
+      logger.warning(req, 'org_identity_resolver_get_sfid', 'Refusing uid → sfid lookup for input outside filter-safe allowlist');
+      return { sfid: null, cacheHit: false };
+    }
     try {
       const response = await this.microserviceProxy.proxyRequest<QueryServiceResponse<B2bOrgIndexedDoc>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'b2b_org',
-        filters: [`uid:${encodeURIComponent(uid)}`],
+        filters: [`uid:${uid}`],
       });
       const sfid = response?.resources?.[0]?.data?.sfid ?? null;
       if (sfid) {
@@ -141,10 +151,14 @@ export class OrgIdentityResolver {
     const cached = this.sfidToUid.get(sfid);
     if (cached !== null) return { uid: cached, cacheHit: true };
 
+    if (!isFilterSafeIdentifier(sfid)) {
+      logger.warning(req, 'org_identity_resolver_get_uid', 'Refusing sfid → uid lookup for input outside filter-safe allowlist');
+      return { uid: null, cacheHit: false };
+    }
     try {
       const response = await this.microserviceProxy.proxyRequest<QueryServiceResponse<B2bOrgIndexedDoc>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'b2b_org',
-        filters: [`sfid:${encodeURIComponent(sfid)}`],
+        filters: [`sfid:${sfid}`],
       });
       const uid = response?.resources?.[0]?.id ?? null;
       if (uid) {
@@ -157,6 +171,18 @@ export class OrgIdentityResolver {
       return { uid: null, cacheHit: false };
     }
   }
+}
+
+/**
+ * Allowlist for identifiers safely interpolatable into the query-service filter
+ * grammar. Covers UUIDs (hex + dashes) and Salesforce IDs (alphanumeric, 15 or
+ * 18 chars). Crucially EXCLUDES the filter separators `:` and `,` so a tampered
+ * path parameter cannot alter the upstream query shape.
+ */
+const FILTER_SAFE_IDENTIFIER = /^[A-Za-z0-9_-]+$/;
+
+function isFilterSafeIdentifier(value: string): boolean {
+  return value.length > 0 && value.length <= 64 && FILTER_SAFE_IDENTIFIER.test(value);
 }
 
 /**
