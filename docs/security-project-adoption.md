@@ -80,6 +80,7 @@ stateDiagram-v2
   Assigned --> InProgress: owner starts checklist
   Assigned --> Declined: owner declines with reason
   Declined --> Unassigned: admin reopens
+  Declined --> Assigned: admin reassigns
   Adopted --> InProgress: owner starts checklist
   Adopted --> Released: owner releases work
   Released --> OpenForAdoption: available again
