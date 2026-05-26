@@ -80,6 +80,20 @@ export interface LockStats {
 }
 
 /**
+ * Circuit breaker statistics for observability
+ */
+export interface SnowflakeCircuitStats {
+  /** Current circuit state */
+  state: string;
+  /** Number of consecutive failures since last success */
+  consecutiveFailures: number;
+  /** Epoch ms of the last recorded failure (0 if none) */
+  lastFailureTime: number;
+  /** Milliseconds until the circuit allows a probe request (0 when CLOSED or HALF_OPEN) */
+  msUntilProbe: number;
+}
+
+/**
  * Internal lock entry structure for in-memory locking
  */
 export interface LockEntry {
