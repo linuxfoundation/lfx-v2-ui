@@ -17,12 +17,16 @@ export function buildAgreementsCsv(agreements: readonly OrgMembershipAgreement[]
   return [headerLine, ...dataLines].join('\r\n') + '\r\n';
 }
 
-/** RFC 4180 field quoting: wraps in double-quotes when value contains `,`, `"`, `\r`, or `\n`. */
+/** RFC 4180 field quoting + OWASP formula-injection neutralization (prefix TAB when value starts with =, +, -, @). */
 function quoteField(value: string): string {
-  if (/[",\r\n]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
+  // OWASP CSV Injection mitigation: cells starting with =, +, -, or @ are
+  // executed as formulas by Excel/Sheets even when quoted. Prefixing a TAB
+  // character neutralizes the formula without changing the displayed value.
+  const safe = /^[=+\-@]/.test(value) ? `\t${value}` : value;
+  if (/[",\r\n]/.test(safe)) {
+    return `"${safe.replace(/"/g, '""')}"`;
   }
-  return value;
+  return safe;
 }
 
 /** Format an ISO date string (YYYY-MM-DD) as "MMM d, yyyy" en-US; returns '' for empty input. */

@@ -90,10 +90,12 @@
                       View
                     </a>
                   } @else {
+                    <!-- tabindex="0" so keyboard users can reach the disabled View (role="link" implies keyboard navigability per WAI-ARIA). -->
                     <span
                       class="cursor-not-allowed text-sm font-medium text-gray-400"
                       role="link"
                       aria-disabled="true"
+                      tabindex="0"
                       pTooltip="Document not available"
                       tooltipPosition="top"
                       [attr.data-testid]="'membership-detail-docs-agreement-view-' + agreement.id">
