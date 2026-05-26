@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write  # pr-lint-action posts/dismisses PR comments
 
 jobs:
   pr-title-lint:
