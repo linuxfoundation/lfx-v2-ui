@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { NgClass } from '@angular/common';
-import { afterNextRender, Component, computed, inject, input, model, Signal } from '@angular/core';
+import { afterNextRender, Component, computed, DestroyRef, inject, input, model, Signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Account, DisplayOrgItem, OrgItem } from '@lfx-one/shared/interfaces';
@@ -27,6 +27,10 @@ export class OrgSelectorComponent {
   private readonly orgNavigationService = inject(OrgNavigationService);
   private readonly orgRoleGrantsService = inject(OrgRoleGrantsService);
   private readonly userService = inject(UserService);
+  // Captured eagerly in the constructor's injection context so `takeUntilDestroyed(this.destroyRef)`
+  // inside the `afterNextRender` callback below has an explicit DestroyRef — that callback runs
+  // OUTSIDE the injection context, so a bare `takeUntilDestroyed()` there would throw at runtime.
+  private readonly destroyRef = inject(DestroyRef);
 
   public readonly isPanelOpen = model<boolean>(false);
   /**
@@ -92,7 +96,10 @@ export class OrgSelectorComponent {
         .pipe(
           distinctUntilChanged(),
           filter((enabled) => enabled),
-          takeUntilDestroyed()
+          // Explicit DestroyRef required — this callback runs after the constructor's injection
+          // context has closed, so a bare `takeUntilDestroyed()` would throw "can only be used
+          // within an injection context" on the first sidebar mount (CodeRabbit flag on PR #794).
+          takeUntilDestroyed(this.destroyRef)
         )
         .subscribe(() => this.bootstrapOrgList());
     });
