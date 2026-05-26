@@ -89,6 +89,7 @@ stateDiagram-v2
   Stale --> OpenForAdoption: auto-release or admin release
   Stale --> InProgress: owner resumes before release
   Submitted --> ChangesRequested: reviewer requests changes
+  Submitted --> Blocked: reviewer marks blocked
   ChangesRequested --> InProgress: owner updates work
   Submitted --> Complete: reviewer approves
   InProgress --> Blocked: owner flags blocker
@@ -120,7 +121,7 @@ set.
 | `submitted`            | `In review`              | Owner submitted the checklist for ED/admin review.                                               |
 | `changes_requested`    | `Changes requested`      | Reviewer sent the work back with required updates.                                               |
 | `blocked`              | `Blocked`                | Work cannot proceed until the blocker is resolved.                                               |
-| `stale`                | `Stale`                  | No checklist progress within the warning threshold.                                              |
+| `stale`                | `Stale`                  | No checklist progress past the stale threshold.                                                  |
 | `released`             | `Released`               | Owner released the adoption back to the open queue.                                              |
 | `declined`             | `Declined`               | Assigned owner declined before starting, with a required reason.                                 |
 | `reassigning`          | `Reassigning`            | Admin is changing owner while preserving prior work history.                                     |
@@ -255,15 +256,18 @@ Minimum notification surface:
 
 | State                  | Contributor / owner                                        | ED/admin / reviewer                                                                       |
 | ---------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `unassigned`           | View, claim if open permission allows                      | Create adoption, assign steward, open for adoption, bulk assign, mark no longer adoptable |
+| `unassigned`           | View                                                       | Create adoption, assign steward, open for adoption, bulk assign, mark no longer adoptable |
 | `open_for_adoption`    | Claim adoption                                             | Assign steward, close availability, bulk assign                                           |
 | `assigned`             | Accept/start, decline with reason                          | Reassign, release, mark blocked                                                           |
 | `adopted`              | Start checklist, release                                   | Reassign, release, mark blocked                                                           |
+| `declined`             | View reason, respond if reassigned                         | Reopen to unassigned, reassign, mark no longer adoptable                                  |
 | `in_progress`          | Update checklist, submit for review, mark blocked, release | Reassign, mark blocked, request update                                                    |
 | `submitted`            | View submission, reply to comments                         | Approve, request changes, mark blocked                                                    |
 | `changes_requested`    | Update checklist, reply, resubmit, release                 | Reassign, mark blocked                                                                    |
 | `blocked`              | Add blocker details, resolve if owner can                  | Resolve, reassign, release, mark no longer adoptable                                      |
+| `released`             | View read-only history                                     | Reopen for adoption, assign steward, mark no longer adoptable                             |
 | `stale`                | Resume before release, release                             | Release to open queue, reassign, extend due date                                          |
+| `reassigning`          | View read-only history                                     | Finish reassignment, cancel reassignment, mark no longer adoptable                        |
 | `complete`             | View history                                               | Reopen as needs reverification, open in Insights                                          |
 | `needs_reverification` | Claim if open                                              | Assign steward, open for adoption, mark no longer adoptable                               |
 | `no_longer_adoptable`  | View read-only history                                     | View read-only history, reopen only if package returns to scope                           |
