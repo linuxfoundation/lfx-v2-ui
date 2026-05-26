@@ -39,10 +39,7 @@ export class CrowdfundingController {
     }
   }
 
-  /**
-   * GET /api/crowdfunding/payment-method
-   * Get the authenticated user's saved payment method
-   */
+  // GET /api/crowdfunding/payment-method
   public async getMyPaymentMethod(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_my_payment_method');
 
@@ -71,10 +68,7 @@ export class CrowdfundingController {
     }
   }
 
-  /**
-   * GET /api/crowdfunding/donation-stats
-   * Get aggregated donation stats for the authenticated user
-   */
+  // GET /api/crowdfunding/donation-stats
   public async getMyDonationStats(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_my_donation_stats');
 
@@ -98,10 +92,7 @@ export class CrowdfundingController {
     }
   }
 
-  /**
-   * GET /api/crowdfunding/recurring-donations
-   * Get the authenticated user's recurring donations
-   */
+  // GET /api/crowdfunding/recurring-donations
   public async getMyRecurringDonations(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_my_recurring_donations');
 
@@ -127,10 +118,7 @@ export class CrowdfundingController {
     }
   }
 
-  /**
-   * GET /api/crowdfunding/my-donations
-   * Get the authenticated user's donation history
-   */
+  // GET /api/crowdfunding/my-donations
   public async getMyDonations(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_my_donations');
 
@@ -144,13 +132,13 @@ export class CrowdfundingController {
       }
 
       const username = stripAuthPrefix(rawUsername);
-      const { size, from } = req.query;
+      const { pageSize, offset } = req.query;
       const parseNonNegativeInt = (val: unknown): number | undefined => {
         if (val == null || val === '') return undefined;
         const n = Number(val);
         return Number.isFinite(n) && n >= 0 ? Math.floor(n) : undefined;
       };
-      const donations = await this.crowdfundingService.getMyDonations(req, username, parseNonNegativeInt(size), parseNonNegativeInt(from));
+      const donations = await this.crowdfundingService.getMyDonations(req, username, parseNonNegativeInt(pageSize), parseNonNegativeInt(offset));
 
       logger.success(req, 'get_my_donations', startTime, {
         result_count: donations.data.length,

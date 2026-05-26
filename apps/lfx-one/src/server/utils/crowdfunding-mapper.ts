@@ -103,14 +103,7 @@ export function mapToTransaction(b: BackendTransaction): CrowdfundingTransaction
   };
 }
 
-/**
- * Maps a DonationHistoryItem (the authenticated user's outbound donation record)
- * to the MyDonation shape expected by the my-donations endpoint.
- *
- * @param item        - The donation history item to map.
- * @param initiativeId - Resolved initiative ID looked up from MOCK_INITIATIVES by name
- *                       in the service layer; omitted until the real API provides it.
- */
+// Maps a DonationHistoryItem to the MyDonation wire shape; initiativeId is a best-effort lookup.
 export function mapDonationHistoryToMyDonation(item: DonationHistoryItem, initiativeId?: string): MyDonation {
   return {
     id: item.id,

@@ -71,10 +71,10 @@ export class CrowdfundingService {
     return this.http.get<RecurringDonationsResponse>('/api/crowdfunding/recurring-donations').pipe(catchError(() => of(EMPTY_RECURRING_DONATIONS)));
   }
 
-  public getMyDonations(params?: { size?: number; from?: number }): Observable<MyDonationsResponse> {
+  public getMyDonations(params?: { pageSize?: number; offset?: number }): Observable<MyDonationsResponse> {
     let httpParams = new HttpParams();
-    if (params?.size != null) httpParams = httpParams.set('size', String(params.size));
-    if (params?.from != null) httpParams = httpParams.set('from', String(params.from));
+    if (params?.pageSize != null) httpParams = httpParams.set('pageSize', String(params.pageSize));
+    if (params?.offset != null) httpParams = httpParams.set('offset', String(params.offset));
 
     return this.http.get<MyDonationsResponse>('/api/crowdfunding/my-donations', { params: httpParams }).pipe(catchError(() => of(EMPTY_MY_DONATIONS)));
   }

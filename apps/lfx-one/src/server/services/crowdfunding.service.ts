@@ -109,20 +109,20 @@ export class CrowdfundingService {
     return { data: MOCK_RECURRING_DONATIONS, total, pageSize: total, offset: 0 };
   }
 
-  public async getMyDonations(req: Request, username: string, size?: number, from?: number): Promise<MyDonationsResponse> {
-    logger.debug(req, 'get_my_donations', 'Fetching donation history for user', { username, size, from });
+  public async getMyDonations(req: Request, username: string, pageSize?: number, offset?: number): Promise<MyDonationsResponse> {
+    logger.debug(req, 'get_my_donations', 'Fetching donation history for user', { username, pageSize, offset });
 
     const initiativeIdByName = new Map(MOCK_INITIATIVES.map((i) => [i.name, i.id]));
     const allItems = MOCK_DONATION_HISTORY.map((item) => mapDonationHistoryToMyDonation(item, initiativeIdByName.get(item.initiativeName)));
 
     const total = allItems.length;
-    const offset = from ?? 0;
-    const pageSize = size ?? total;
-    const page = allItems.slice(offset, offset + pageSize);
+    const resolvedOffset = offset ?? 0;
+    const resolvedPageSize = pageSize ?? total;
+    const page = allItems.slice(resolvedOffset, resolvedOffset + resolvedPageSize);
 
     logger.debug(req, 'get_my_donations', 'Returning donation history', { total, page: page.length });
 
-    return { data: page, total, pageSize, offset };
+    return { data: page, total, pageSize: resolvedPageSize, offset: resolvedOffset };
   }
 
   public async getInitiativeTransactions(
