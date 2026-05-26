@@ -1,0 +1,126 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="container mx-auto px-4 sm:px-6 lg:px-8" data-testid="org-training">
+  <!-- Page Header -->
+  <div class="mb-6">
+    <h1 class="font-display font-light text-2xl" data-testid="org-training-title">Training &amp; Certifications</h1>
+    <p class="mt-1 text-sm text-gray-500" data-testid="org-training-subtitle">{{ subtitle }}</p>
+  </div>
+
+  <!-- Two-column layout -->
+  <div class="flex flex-col lg:flex-row gap-6 items-start" data-testid="org-training-layout">
+    <!-- ── Left / Main column ─────────────────────────────────────────────── -->
+    <div class="flex-1 min-w-0 flex flex-col gap-6" data-testid="org-training-main-col">
+
+      <!-- Stat Strip -->
+      <div data-testid="org-training-stats">
+        <lfx-card styleClass="[&_.p-card-body]:p-0 [&_.p-card-content]:p-0">
+          <div class="grid w-full grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-200">
+
+            <!-- Certificates Earned (clickable → Certifications tab) -->
+            <button
+              type="button"
+              class="flex items-center gap-3 p-4 text-left w-full hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset"
+              data-testid="org-training-stat-certificates"
+              (click)="onStatCardClick('certifications')">
+              <div class="flex items-center justify-center w-11 h-11 rounded-full bg-purple-100 text-purple-600 flex-shrink-0">
+                <i class="fa-light fa-award text-xl" aria-hidden="true"></i>
+              </div>
+              <div class="flex flex-col gap-0.5">
+                <p class="text-xl font-medium text-gray-900">&mdash;</p>
+                <p class="text-sm font-normal text-gray-900">Certificates Earned</p>
+              </div>
+            </button>
+
+            <!-- Enrolled Trainings (clickable → Trainings tab) -->
+            <button
+              type="button"
+              class="flex items-center gap-3 p-4 text-left w-full hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset"
+              data-testid="org-training-stat-enrolled"
+              (click)="onStatCardClick('trainings')">
+              <div class="flex items-center justify-center w-11 h-11 rounded-full bg-blue-100 text-blue-600 flex-shrink-0">
+                <i class="fa-light fa-book-open text-xl" aria-hidden="true"></i>
+              </div>
+              <div class="flex flex-col gap-0.5">
+                <p class="text-xl font-medium text-gray-900">&mdash;</p>
+                <p class="text-sm font-normal text-gray-900">Enrolled Trainings</p>
+              </div>
+            </button>
+
+            <!-- Completed Trainings (read-only) -->
+            <div class="flex items-center gap-3 p-4" data-testid="org-training-stat-completed">
+              <div class="flex items-center justify-center w-11 h-11 rounded-full bg-emerald-100 text-emerald-600 flex-shrink-0">
+                <i class="fa-light fa-circle-check text-xl" aria-hidden="true"></i>
+              </div>
+              <div class="flex flex-col gap-0.5">
+                <p class="text-xl font-medium text-gray-900">&mdash;</p>
+                <p class="text-sm font-normal text-gray-900">Completed Trainings</p>
+              </div>
+            </div>
+
+          </div>
+        </lfx-card>
+      </div>
+
+      <!-- Tab Strip -->
+      <div id="training-list" data-testid="org-training-tabs">
+        <lfx-filter-pills
+          [options]="tabOptions"
+          [selectedFilter]="activeTab()"
+          (filterChange)="onTabChange($event)" />
+      </div>
+
+      <!-- Leaderboard (switches with active tab) -->
+      <div data-testid="org-training-leaderboard">
+        @if (activeTab() === 'certifications') {
+          <lfx-card data-testid="org-training-leaderboard-certified">
+            <div class="p-5 flex flex-col gap-4">
+              <h2 class="text-base font-semibold text-gray-800">Certified Employees</h2>
+              <lfx-empty-state
+                icon="fa-light fa-trophy"
+                title="Leaderboard coming soon"
+                subtitle="Employee certification rankings will appear here."
+                [withCard]="false" />
+            </div>
+          </lfx-card>
+        }
+        @if (activeTab() === 'trainings') {
+          <lfx-card data-testid="org-training-leaderboard-trained">
+            <div class="p-5 flex flex-col gap-4">
+              <h2 class="text-base font-semibold text-gray-800">Trained Employees</h2>
+              <lfx-empty-state
+                icon="fa-light fa-trophy"
+                title="Leaderboard coming soon"
+                subtitle="Employee training rankings will appear here."
+                [withCard]="false" />
+            </div>
+          </lfx-card>
+        }
+      </div>
+
+    </div>
+
+    <!-- ── Right / Sidebar column ─────────────────────────────────────────── -->
+    <div class="w-full lg:w-64 flex-shrink-0 lg:border-l lg:border-gray-200 lg:pl-6" data-testid="org-training-sidebar">
+      <div class="flex flex-col gap-4" data-testid="org-training-useful-links">
+        <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Useful links</h2>
+        <ul class="flex flex-col gap-4" data-testid="org-training-links-list">
+          @for (link of usefulLinks; track link.url) {
+            <li class="flex flex-col gap-1" data-testid="org-training-link-item">
+              <a
+                [href]="link.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+                {{ link.label }}
+              </a>
+              <p class="text-sm text-gray-500 leading-relaxed">{{ link.description }}</p>
+            </li>
+          }
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
