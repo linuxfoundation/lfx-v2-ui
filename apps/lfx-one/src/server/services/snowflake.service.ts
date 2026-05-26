@@ -462,20 +462,15 @@ export class SnowflakeService {
       const elapsed = Date.now() - this.lastFailureTime;
       if (elapsed < SNOWFLAKE_CONFIG.CIRCUIT_BREAKER_RESET_TIMEOUT_MS) {
         const secondsLeft = Math.ceil((SNOWFLAKE_CONFIG.CIRCUIT_BREAKER_RESET_TIMEOUT_MS - elapsed) / 1000);
-        throw new MicroserviceError(
-          `Snowflake circuit breaker OPEN — retrying in ${secondsLeft}s`,
-          503,
-          'SNOWFLAKE_CIRCUIT_OPEN',
-          {
-            operation: 'circuit_breaker_check',
-            service: 'snowflake',
-            errorBody: {
-              state: this.circuitState,
-              consecutive_failures: this.consecutiveFailures,
-              seconds_until_probe: secondsLeft,
-            },
-          }
-        );
+        throw new MicroserviceError(`Snowflake circuit breaker OPEN — retrying in ${secondsLeft}s`, 503, 'SNOWFLAKE_CIRCUIT_OPEN', {
+          operation: 'circuit_breaker_check',
+          service: 'snowflake',
+          errorBody: {
+            state: this.circuitState,
+            consecutive_failures: this.consecutiveFailures,
+            seconds_until_probe: secondsLeft,
+          },
+        });
       }
       this.circuitState = SnowflakeCircuitState.HALF_OPEN;
       logger.info(undefined, 'snowflake_circuit_breaker', 'Circuit transitioned to HALF_OPEN — probing connection', {
@@ -507,9 +502,7 @@ export class SnowflakeService {
     this.consecutiveFailures++;
     this.lastFailureTime = Date.now();
 
-    const shouldOpen =
-      this.circuitState === SnowflakeCircuitState.HALF_OPEN ||
-      this.consecutiveFailures >= SNOWFLAKE_CONFIG.CIRCUIT_BREAKER_FAILURE_THRESHOLD;
+    const shouldOpen = this.circuitState === SnowflakeCircuitState.HALF_OPEN || this.consecutiveFailures >= SNOWFLAKE_CONFIG.CIRCUIT_BREAKER_FAILURE_THRESHOLD;
 
     if (shouldOpen) {
       this.circuitState = SnowflakeCircuitState.OPEN;
