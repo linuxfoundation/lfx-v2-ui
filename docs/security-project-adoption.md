@@ -1,42 +1,124 @@
-# Self Serve Security Package Stewardship
+# Self Serve Project Stewardship Program
 
 ## Context
 
-The Osprey / Tier 2 npm + Maven work needs a Self Serve coordination layer. The
-Slack direction was to build a tool that lets people steward a package so the
-review and hardening work can be split across a large set of dependencies.
+The Osprey / Tier 2 npm + Maven work still needs a Self Serve coordination layer
+for splitting package review and hardening work across a large set of
+dependencies. However, the MVP direction from product leadership is broader:
+validate that surfacing at-risk projects produces real stewards.
+
+The first release should therefore be a **Project Stewardship Program** surface
+where companies and individuals can find projects that need help, express
+interest, and move through a lightweight handoff. Package security stewardship
+remains important, but it should sit under the program as a specialized workflow
+and future dependency-anchored matching path.
 
 Insights and CDP should remain the source-data and analytics layer. Self Serve
-should own authentication, permissions, assignment, coordination, contributor
-workflow, and review status.
+should own authentication, permissions, marketplace discovery, stewardship
+interest, assignment, coordination, contributor workflow, and review/status
+tracking.
+
+## MVP Direction
+
+### Phase 1: Open-Discovery Project Stewardship
+
+This is the MVP. It requires no new SBOM ingestion and validates whether
+surfacing stewardship needs turns into real commitments.
+
+- Stewardship status on every project health surface:
+  - `healthy`
+  - `under_maintained`
+  - `maintainer_orphaned`
+  - `open_for_stewardship`
+  - `steward_onboarding`
+  - `stewarded`
+- Browsable marketplace of projects open for stewardship.
+- Project detail cards with health metrics, bus factor, tech stack, recent
+  activity, security response time, and concrete asks.
+- Per-project concrete ask field, for example succession, security triage,
+  dependency upgrades, release management, documentation, or maintainer
+  reinforcement.
+- Filters by skill, language, urgency, foundation, and stewardship type.
+- One-click `Express interest` action that connects the person or company to
+  maintainers or program staff.
+- Maintainer-initiated `Request a steward` submission.
+- Basic handoff tracking: interest expressed -> program review -> maintainer
+  connected -> steward onboarded.
+
+### Phase 2: Dependency-Anchored Matching
+
+This is the differentiated supply-chain path, but it depends on reliable SBOM
+ingestion and dependency graph matching.
+
+- Surface under-maintained projects in a user's or organization's SBOM.
+- Rank "where you would help most" by criticality-to-user and project risk.
+- Org-level dashboard ranking dependency trees by stewardship need.
+- Supply-chain risk flags for security teams.
+- Notifications when a depended-on project's stewardship status changes.
+
+### Phase 3: Program Operations and Retention
+
+This layer turns the program into an operated workflow.
+
+- Contributor stewardship profiles with skills, availability, and current
+  commitments.
+- Personalized recommendations from prior activity and expertise.
+- Distinct intake paths for succession and reinforcement.
+- Scope-of-commitment indicators: time required, one-time vs. ongoing, solo vs.
+  team.
+- Company sponsorship: assign employees to steward priority projects.
+- Stewardship status history and time-to-resolution metrics.
+- Program throughput and at-risk backlog reporting for foundation staff.
 
 ## Product Surface
 
 ### Entry Points
 
-- **Me lens:** `My Security Work`
-  - Shows packages/projects I'm stewarding, assigned work, due items, blocked
-    items, and review status.
-- **Foundation lens / Admin Mode:** `Security Stewardship`
+- **Me lens:** `My Stewardship`
+  - Shows projects and packages I am stewarding, expressed interests, assigned
+    work, due items, blocked items, and review/status.
+- **Foundation lens / Admin Mode:** `Project Stewardship`
   - ED/admin coordination dashboard for the selected foundation or LF-wide
-    Osprey program.
-- **Project lens:** `Security`
-  - Placeholder in v1 that links to the foundation queue filtered to known
-    packages for the selected project, then becomes a full package/repo security
-    posture view once package-to-repo mapping confidence is reliable.
+    stewardship program.
+- **Project lens:** `Stewardship`
+  - Shows project health, stewardship status, concrete asks, current stewards,
+    and a maintainer path to request a steward.
+- **Security / Osprey workflow:** `Security Stewardship`
+  - Specialized package security queue for npm/Maven and later ecosystems,
+    reachable from Admin Mode and project/package security context.
 
 ## End-to-End Flow
 
-The product flow is centered on **creating a stewardship record from a package
-security signal**. A package signal can exist without a stewardship record.
-Stewardship starts only when an admin assigns a steward, opens the package for
-contributors, or a contributor claims available work.
+The MVP product flow is centered on **open-discovery project stewardship**.
+People and companies find projects with concrete stewardship needs, express
+interest, and are connected to maintainers or program staff.
+
+```mermaid
+flowchart TD
+  health["Insights / LFX health data<br/>project health, bus factor, activity, security response"] --> marketplace["Project Stewardship Marketplace"]
+  maintainer["Maintainer / ED / Admin"] --> request["Request a steward<br/>add concrete ask"]
+  request --> marketplace
+  marketplace --> detail["Project stewardship detail<br/>health, asks, tech stack, urgency"]
+  contributor["Company or individual"] --> detail
+  detail --> interest["Express interest"]
+  interest --> review["Program staff review<br/>fit, scope, availability"]
+  review --> connect["Connect with maintainers"]
+  connect --> onboard["Steward onboarded"]
+  onboard --> active["Track stewardship status<br/>handoff, progress, outcomes"]
+  active --> metrics["Measure trust and security improvement"]
+```
+
+Package security stewardship is a specialized flow under the same program. It is
+centered on **creating a stewardship record from a package security signal**. A
+package signal can exist without a stewardship record. Stewardship starts only
+when an admin assigns a steward, opens the package for contributors, or a
+contributor claims available work.
 
 ```mermaid
 flowchart TD
   source["Insights / CDP data foundation<br/>npm + Maven Tier 2 package data"] --> sync["Security stewardship API<br/>packages, risk signals, assignments"]
   sync --> admin["Foundation Security Stewardship<br/>ED / Admin Mode"]
-  sync --> me["My Security Work<br/>Contributor view"]
+  sync --> me["My Stewardship<br/>Contributor view"]
 
   admin --> triage["Triage package signal queue<br/>filter by ecosystem, risk, status, owner"]
   triage --> detail["Open package detail drawer"]
@@ -60,7 +142,9 @@ flowchart TD
   changes --> complete["Mark complete"]
 
   checklist --> return["Return stewardship with reason"]
-  return --> open
+  return --> disposition["Admin disposition<br/>reopen or reassign"]
+  disposition --> open
+  disposition --> assigned
   checklist --> stale["Stale by aging policy"]
   stale --> open
   blocked --> triage
@@ -69,7 +153,48 @@ flowchart TD
   complete --> insights["Status visible in Self Serve<br/>Analytics link opens Insights"]
 ```
 
-## State Model
+## Project Stewardship State Model
+
+```mermaid
+stateDiagram-v2
+  [*] --> Healthy
+  Healthy --> UnderMaintained: health signal crosses threshold
+  UnderMaintained --> MaintainerOrphaned: maintainer coverage drops
+  UnderMaintained --> OpenForStewardship: maintainer/admin requests help
+  MaintainerOrphaned --> OpenForStewardship: admin opens concrete ask
+  OpenForStewardship --> InterestExpressed: contributor/company expresses interest
+  InterestExpressed --> ProgramReview: staff reviews fit and scope
+  ProgramReview --> Connected: introduce to maintainers/program owner
+  Connected --> StewardOnboarding: handoff accepted
+  StewardOnboarding --> Stewarded: steward active
+  Stewarded --> Healthy: health/security improves
+  Stewarded --> Blocked: handoff blocked
+  Blocked --> Connected: blocker resolved
+  OpenForStewardship --> Closed: no longer seeking steward
+  Stewarded --> Closed: stewardship ended
+  Closed --> [*]
+```
+
+### Project Stewardship Record
+
+The project-level record should be small enough to ship in the MVP and explicit
+enough to measure whether the program works.
+
+| Field                 | Purpose                                                                                                                                  |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `project_uid`         | LFX project identity.                                                                                                                    |
+| `foundation_uid`      | Foundation scope for permissions and reporting.                                                                                          |
+| `stewardship_status`  | Current project-level status.                                                                                                            |
+| `health_status`       | Healthy, under-maintained, maintainer-orphaned, or other derived health tier.                                                            |
+| `concrete_asks`       | Structured list of asks such as succession, security triage, dependency upgrades, release management, docs, or maintainer reinforcement. |
+| `skills`              | Languages, ecosystems, and maintainer skills requested.                                                                                  |
+| `urgency`             | Low, medium, high, urgent.                                                                                                               |
+| `scope_of_commitment` | Time required, one-time vs. ongoing, solo vs. team.                                                                                      |
+| `interest_count`      | Number of people or companies that expressed interest.                                                                                   |
+| `current_stewards`    | Active stewards or sponsor organizations.                                                                                                |
+| `handoff_status`      | Interest expressed, program review, connected, onboarding, active, blocked, closed.                                                      |
+
+## Package Security Stewardship State Model
 
 ```mermaid
 stateDiagram-v2
@@ -185,7 +310,49 @@ Additional policies:
 - Preserve stewardship history, checklist evidence, comments, blocker reasons,
   and reviewer notes through reassignment and reverification.
 
-## Admin Flow
+## Project Stewardship Marketplace Flow
+
+1. User opens `Project Stewardship`.
+2. The marketplace shows projects open for stewardship with:
+   - Stewardship status
+   - Foundation
+   - Health tier
+   - Concrete ask
+   - Skills / languages
+   - Urgency
+   - Recent activity
+   - Security response time
+   - Current interest / steward count
+3. User filters by skill, language, urgency, foundation, and stewardship type.
+4. User opens a project detail drawer or page.
+5. User clicks `Express interest`.
+6. Self Serve captures:
+   - Individual or company identity
+   - Relevant skills
+   - Availability
+   - Interest type
+   - Note to maintainers/program staff
+7. Program staff or ED/admin reviews the expression of interest.
+8. Staff connects the interested steward to maintainers or program owners.
+9. The handoff is tracked until the steward is onboarded or the interest is
+   closed.
+
+### Maintainer Request Flow
+
+1. Maintainer or ED/admin opens project stewardship context.
+2. Maintainer clicks `Request a steward`.
+3. Maintainer selects one or more concrete asks:
+   - Succession
+   - Security triage
+   - Dependency upgrades
+   - Release management
+   - Documentation
+   - Maintainer reinforcement
+   - Other
+4. Maintainer adds scope, urgency, required skills, and optional notes.
+5. Request appears in the marketplace after permission and quality checks.
+
+## Package Security Admin Flow
 
 1. ED/admin opens `Foundation -> Security Stewardship`.
 2. The page shows top metrics:
@@ -249,9 +416,9 @@ from the start.
 - Rules should write normal stewardship records so history, review, and
   analytics remain consistent with manually-created stewardships.
 
-## Contributor Flow
+## Package Contributor Flow
 
-1. User opens `Me -> My Security Work`.
+1. User opens `Me -> My Stewardship` and filters to package security work.
 2. User sees available packages to claim plus assigned/claimed packages.
 3. User opens a package drawer with:
    - Package identity
@@ -332,30 +499,76 @@ tables. This is not a marketing-style page.
 
 ### Page Header
 
-- Title: `Security Stewardship`
-- Subtitle: `Coordinate critical package review and stewardship across supported ecosystems.`
-- Primary admin action: `Create stewardship`
-- Secondary action: `Open in Insights`
+- Title: `Project Stewardship`
+- Subtitle: `Find projects that need stewardship and connect contributors with concrete asks.`
+- Primary action: `Express interest` on project detail and `Request a steward`
+  for maintainers/admins.
+- Secondary action: `Open in Insights` where analytics depth is needed.
+
+### Primary MVP Screen: Project Stewardship Marketplace
+
+The first screen should be the marketplace, not the package queue.
+
+Main filters:
+
+- Skill
+- Language / ecosystem
+- Urgency
+- Foundation
+- Stewardship type
+- Health status
+
+Main table/card fields:
+
+- Project
+- Foundation
+- Stewardship status
+- Health status
+- Concrete ask
+- Skills
+- Urgency
+- Recent activity
+- Security response time
+- Interest / steward count
+
+Project detail should show health metrics, bus factor, tech stack, recent
+activity, security response time, concrete asks, current stewards, and handoff
+status. The primary CTA is `Express interest`. Maintainers and admins also see
+`Request a steward`.
+
+### Secondary Screen: Package Security Stewardship
+
+The package queue remains a dense Admin Mode workflow for Osprey/Tier 2 package
+security stewardship. It should be linked from the broader program surface as a
+specialized security operations queue.
 
 ### Stats Band
 
-Use compact metric tiles via the existing stat-card patterns. Lead with the two
-numbers that explain scale, then show operational counts.
+Use compact metric tiles via the existing stat-card patterns.
 
-- Hero metrics:
-  - Total packages in scope
-  - Unassigned percentage
-- Operational metrics:
-  - Critical signals
-  - In review
-  - Stale
-  - Blocked
-  - Complete this week
+Project stewardship marketplace metrics:
+
+- Open stewardship asks
+- Interest expressed
+- Stewards onboarding
+- Active stewards
+- Handoffs completed
+- Under-maintained projects
+
+Package security queue metrics:
+
+- Total packages in scope
+- Unassigned percentage
+- Critical signals
+- In review
+- Stale
+- Blocked
+- Complete this week
 
 Use neutral gray, blue, amber, red, and emerald accents. Each tile should show a
 week-over-week delta when the upstream summary API supports it.
 
-### Workspace
+### Package Workspace
 
 Filter row:
 
@@ -414,9 +627,113 @@ These designs map directly to existing Self Serve structure: left lens rail,
 operational spacing, `lfx-table`, `lfx-stat-card-grid`, `lfx-filter-pills`,
 `lfx-tag`, `lfx-button`, and drawer-based details.
 
+### Project Stewardship Marketplace
+
+Purpose: open-discovery MVP where individuals and companies find projects that
+need stewardship.
+
+```text
++------------------------------------------------------------------------------+
+| Project Stewardship                           [Request a steward] [Insights] |
+| Find projects that need stewardship and connect contributors with asks.      |
++------------------------------------------------------------------------------+
+| [ Open asks 184 ] [ Interest expressed 57 ] [ Onboarding 12 ] [ Active 28 ] |
+| [ Under-maintained 96 ] [ Completed handoffs 9 ]                            |
++------------------------------------------------------------------------------+
+| Skill: Any     Language: Any     Urgency: High     Type: Security triage     |
+| [All] [Open] [Interest expressed] [Onboarding] [Stewarded] [Blocked]         |
++------------------------------------------------------------------------------+
+| Project        Foundation  Health             Ask              Urgency       |
+| OpenTelemetry  CNCF        Under-maintained   Security triage  High          |
+| Sigstore       OpenSSF     Healthy            Release mgmt     Medium        |
+| Yocto Project  LF          Maintainer gap     Succession       Urgent        |
++------------------------------------------------------------------------------+
+```
+
+Design notes:
+
+- Marketplace can use table or compact cards depending on viewport, but desktop
+  should still prioritize scan density.
+- Project names, concrete ask, urgency, and skills must be visible before
+  opening detail.
+- Primary row action is `Express interest`.
+- Maintainers/admins see `Request a steward`; contributors do not need that CTA.
+- Use health/stewardship tags, not raw scores, as the primary visual language.
+- Detail view should expose why the project needs help and what commitment is
+  expected before asking a user to express interest.
+
+### Project Stewardship Detail
+
+Purpose: explain the project need and collect interest without making the user
+leave context.
+
+```text
++----------------------------------------------+
+| OpenTelemetry                        [Close] |
+| CNCF     Health: Under-maintained            |
++----------------------------------------------+
+| Ask                                          |
+| Security triage and release support          |
+|                                              |
+| Tech stack        Go, Collector, Kubernetes  |
+| Recent activity   412 commits / 30d          |
+| Bus factor        Medium risk                |
+| Response time     9d median security reply   |
+|                                              |
+| Scope                                        |
+| Ongoing, team welcome, 2-4 hrs/week          |
+|                                              |
+| Handoff                                      |
+| Interest expressed -> Program review         |
++----------------------------------------------+
+| [Express interest] [Open in Insights]        |
++----------------------------------------------+
+```
+
+Interest form fields:
+
+- Individual or company
+- Relevant skills
+- Availability
+- Stewardship type
+- Note to maintainer/program staff
+
+### My Stewardship
+
+Purpose: personal queue for expressed interests, onboarding, active stewardship,
+and package security work.
+
+```text
++------------------------------------------------------------------------------+
+| My Stewardship                                                              |
+| Track projects and packages you are helping steward.                         |
++------------------------------------------------------------------------------+
+| [ Interests 5 ] [ Onboarding 2 ] [ Active 4 ] [ Blocked 1 ]                |
++------------------------------------------------------------------------------+
+| [All] [Projects] [Packages] [Interests] [Active] [Completed]               |
+|                                                                              |
+| Search...       Foundation: All       Status: All       Type: All           |
++------------------------------------------------------------------------------+
+| Name           Type     Foundation  Status       Ask / Work       Activity  |
+| OpenTelemetry  Project  CNCF        Review       Security triage  Today     |
+| Sigstore       Project  OpenSSF     Active       Release mgmt     May 26    |
+| lodash         Package  OpenSSF     In review    Contact verify   May 25    |
++------------------------------------------------------------------------------+
+```
+
+Design notes:
+
+- This route replaces the package-only `My Security Work` as the primary Me-lens
+  surface.
+- Project and package work can share the same status/chip system, but rows must
+  clearly identify type.
+- Contributor actions include `Continue handoff`, `Update checklist`,
+  `Submit review`, `Mark blocked`, and `Return`.
+
 ### Foundation Security Stewardship Queue
 
-Purpose: ED/admin command center for the Osprey package queue.
+Purpose: ED/admin command center for the Osprey package queue. This is a
+specialized security stewardship workflow, not the MVP front door.
 
 ```text
 +------------------------------------------------------------------------------+
@@ -454,13 +771,13 @@ Design notes:
 - Bulk actions run as async jobs when the affected row count exceeds the UI
   threshold.
 
-### My Security Work
+### Package Security Work
 
-Purpose: contributor workspace for claimed and available work.
+Purpose: filtered package-security workspace within `My Stewardship`.
 
 ```text
 +------------------------------------------------------------------------------+
-| My Security Work                                                            |
+| My Stewardship / Packages                                                   |
 | Review critical packages you're stewarding or were assigned.                 |
 +------------------------------------------------------------------------------+
 | [ Assigned to me 18 ] [ Due soon 4 ] [ In review 3 ] [ Blocked 1 ]          |
@@ -815,21 +1132,29 @@ state, actor, owner, reviewer, reason, and timestamp.
 
 ## Suggested PR Sequence
 
-1. Shared types + backend proxy/controller/service once upstream API contract is
-   confirmed.
-2. Admin package queue page with filters/table/drawer in read-only mode.
-3. Stewardship actions and `My Security Work`.
-4. Review workflow, notes, blocked states, audit trail.
-5. Project-lens package security view after package-to-repo confidence is high
-   enough.
+1. Project stewardship shared types and read API for marketplace listings.
+2. Project Stewardship Marketplace with filters and project detail in read-only
+   mode.
+3. `Express interest` and maintainer/admin `Request a steward` intake.
+4. Program staff review, maintainer connection, and handoff tracking.
+5. `My Stewardship` for expressed interests, onboarding, and active stewardship.
+6. Package security stewardship queue after project-level marketplace MVP is
+   validated, or in parallel if Osprey package operations require it.
+7. Dependency/SBOM-anchored matching once ingestion and dependency graph quality
+   are reliable.
 
 ## Open Decisions
 
 - Which upstream service owns the security stewardship API: new Osprey/security
   service, Insights API, or an existing LFX service?
-  - Leaning: dedicated security/Osprey workflow service, with Insights/CDP as
-    source-data providers, because stewardship state is workflow data rather
-    than analytics data.
+  - Leaning: a dedicated stewardship workflow service, with Insights/CDP as
+    source-data providers, because stewardship state, interest, and handoff are
+    workflow data rather than analytics data.
+- Should project stewardship and package security stewardship share one API?
+  - Leaning: share core stewardship primitives (`status`, `interest`,
+    `handoff`, `history`, `permissions`) but keep project and package resource
+    shapes separate. Project MVP should not wait on package data model
+    complexity.
 - Should this be LF-wide first or foundation-scoped first?
   - Leaning: foundation-scoped first with an LF-wide admin aggregate, because
     review ownership, SLA, and assignment pools will differ by foundation.
@@ -858,6 +1183,12 @@ state, actor, owner, reviewer, reason, and timestamp.
 - **How does the package list sync from CDP?** Batch import, real-time feed, or
   API pull? How often does the package list refresh? What happens when a package
   is added or removed upstream?
+- **What is the source of concrete asks?** Maintainer submission, ED/admin
+  curation, derived health signals, or all three? The MVP should allow manual
+  maintainer/admin asks first and layer derived recommendations later.
+- **Who reviews expressions of interest?** Program staff, ED/admin, maintainers,
+  or delegated reviewers? The handoff path needs an owner before API permission
+  work starts.
 
 ## Data Pipeline Gap Analysis
 
@@ -910,16 +1241,22 @@ cannot assign packages scoped to Foundation B.
 
 ## Priority Updates From Spec Review
 
-1. Resolve state lifecycle gaps before implementation: `needs_reverification`,
-   `stale`, `returned`, and `no_longer_in_scope`.
-2. Design for real queue volume: bulk actions, saved views, assignment policies,
+1. Make Project Stewardship Marketplace the MVP front door.
+2. Keep package security stewardship as a specialized Osprey workflow under the
+   broader program.
+3. Add project-level concrete asks, express-interest, maintainer request, and
+   handoff tracking before package review complexity.
+4. Resolve state lifecycle gaps before package workflow implementation:
+   `needs_reverification`, `stale`, `returned`, and `no_longer_in_scope`.
+5. Design for real queue volume: bulk actions, saved views, assignment policies,
    async jobs, and optimistic locking.
-3. Keep an explicit role x state x action matrix in the spec and QA plan.
-4. Treat History as a first-class collaboration and audit surface, not a single
+6. Keep explicit role x state x action matrices in the spec and QA plan for both
+   project stewardship and package stewardship.
+7. Treat History as a first-class collaboration and audit surface, not a single
    notes textarea.
-5. Keep copy and API fields ecosystem-agnostic so PyPI, RubyGems, Cargo, NuGet,
+8. Keep copy and API fields ecosystem-agnostic so PyPI, RubyGems, Cargo, NuGet,
    and Go modules can join later without route or data-model churn.
-6. Resolve composite risk signal ownership (CDP vs Self Serve scoring layer)
-   before UI implementation — the admin queue is unusable without sortable risk.
-7. Resolve data sync mechanism (batch, real-time, API pull) and refresh cadence
-   from CDP before backend work starts.
+9. Resolve composite risk signal ownership (CDP vs Self Serve scoring layer)
+   before package queue UI implementation.
+10. Resolve data sync mechanism (batch, real-time, API pull) and refresh cadence
+    from CDP before package backend work starts.
