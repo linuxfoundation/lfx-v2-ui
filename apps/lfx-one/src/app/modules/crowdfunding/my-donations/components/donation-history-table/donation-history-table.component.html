@@ -13,7 +13,7 @@
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-100 bg-white">
-        @for (item of displayItems(); track item.id) {
+        @for (item of items(); track item.id) {
           <tr class="hover:bg-gray-50 transition-colors" [attr.data-testid]="'donation-row-' + item.id">
             <!-- Initiative -->
             <td class="px-4 py-3">
@@ -24,7 +24,7 @@
             <td class="px-4 py-3 text-gray-500 whitespace-nowrap">{{ item.date | date: 'MMM d, y':'UTC' }}</td>
 
             <!-- Amount -->
-            <td class="px-4 py-3 text-right font-semibold text-gray-900 whitespace-nowrap">{{ item.formattedAmount }}</td>
+            <td class="px-4 py-3 text-right font-semibold text-gray-900 whitespace-nowrap">{{ item.amountCents / 100 | currency: 'USD' }}</td>
 
             <!-- Invoice -->
             <td class="px-4 py-3 text-right">

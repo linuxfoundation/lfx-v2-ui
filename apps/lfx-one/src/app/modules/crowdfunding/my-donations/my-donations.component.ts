@@ -5,6 +5,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, Signal, signal } 
 import { toSignal } from '@angular/core/rxjs-interop';
 import { environment } from '@environments/environment';
 import { MyDonation, DonationStats, PaymentMethod, RecurringDonation, RecurringDonationsResponse } from '@lfx-one/shared/interfaces';
+import { DEFAULT_CROWDFUNDING_PAGE_SIZE, EMPTY_DONATION_STATS } from '@lfx-one/shared/constants';
 import { CrowdfundingService } from '@app/shared/services/crowdfunding.service';
 import { DonationsStatsBarComponent } from './components/donations-stats-bar/donations-stats-bar.component';
 import { DonationHistoryTableComponent } from './components/donation-history-table/donation-history-table.component';
@@ -13,9 +14,6 @@ import { RecurringDonationsListComponent } from './components/recurring-donation
 import { Subject } from 'rxjs';
 import { concatMap, map, scan, startWith } from 'rxjs/operators';
 
-const DONATION_PAGE_SIZE = 10;
-
-const EMPTY_DONATION_STATS: DonationStats = { totalDonated: 0, initiativesSupported: 0, activeRecurringAmount: 0, activeRecurringCount: 0 };
 const EMPTY_RECURRING: RecurringDonation[] = [];
 const EMPTY_HISTORY_STATE = { items: [] as MyDonation[], hasMore: false };
 
@@ -101,7 +99,7 @@ export class MyDonationsComponent {
       this.loadMore$.pipe(
         startWith(undefined as void),
         scan((page) => page + 1, -1),
-        concatMap((page) => this.crowdfundingService.getMyDonations({ pageSize: DONATION_PAGE_SIZE, offset: page * DONATION_PAGE_SIZE })),
+        concatMap((page) => this.crowdfundingService.getMyDonations({ pageSize: DEFAULT_CROWDFUNDING_PAGE_SIZE, offset: page * DEFAULT_CROWDFUNDING_PAGE_SIZE })),
         scan(
           (acc, res) => ({
             items: [...acc.items, ...res.data],

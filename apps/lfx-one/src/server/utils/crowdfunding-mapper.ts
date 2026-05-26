@@ -109,7 +109,7 @@ export function mapDonationHistoryToMyDonation(item: DonationHistoryItem, initia
     id: item.id,
     // donorName / donorLogoUrl omitted — require user-profile enrichment.
     donorType: 'member',
-    amountCents: item.amount * 100,
+    amountCents: Math.round(item.amount * 100),
     date: new Date(item.date).getTime(),
     initiativeId,
     initiativeName: item.initiativeName,

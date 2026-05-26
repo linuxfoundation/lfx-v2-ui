@@ -117,7 +117,7 @@ export class CrowdfundingService {
 
     const total = allItems.length;
     const resolvedOffset = offset ?? 0;
-    const resolvedPageSize = pageSize ?? total;
+    const resolvedPageSize = pageSize ?? DEFAULT_CROWDFUNDING_PAGE_SIZE;
     const page = allItems.slice(resolvedOffset, resolvedOffset + resolvedPageSize);
 
     logger.debug(req, 'get_my_donations', 'Returning donation history', { total, page: page.length });
