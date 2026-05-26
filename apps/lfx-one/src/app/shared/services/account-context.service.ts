@@ -31,11 +31,7 @@ export class AccountContextService {
   private readonly http = inject(HttpClient);
   private readonly storageKey = ACCOUNT_COOKIE_KEY;
 
-  /**
-   * Spec 020 US4 — request-scope dedup. Concurrent calls for the same uid share
-   * a single in-flight promise so re-selecting the same org never fires the
-   * canonical fetch twice. Cleared on settle (resolve OR reject).
-   */
+  /** Request-scope dedup (spec 020 D-006) — concurrent calls for the same uid share one in-flight promise; cleared on settle. */
   private readonly canonicalFetchInFlight = new Map<string, Promise<void>>();
 
   /** Persona-authorised accounts seeded at bootstrap; enriched from Snowflake via getOrgLensAccountContext. */
@@ -112,17 +108,7 @@ export class AccountContextService {
     this.clearStorage();
   }
 
-  /**
-   * Spec 020 US4 — async reconciliation of the indexed snapshot against the
-   * member-service canonical record. The selector applies an optimistic update
-   * (indexed name/logo) via `setAccount`; this call patches the same signal
-   * with authoritative fields when they arrive. Member-service failures are
-   * NOT user-facing: the indexed snapshot remains in place and the warning
-   * lives only in the BFF console (FR-020).
-   *
-   * Request-scope dedup: concurrent calls for the same uid/accountId share one
-   * in-flight promise (research.md D-006).
-   */
+  /** Async reconciliation of the optimistic indexed snapshot against the member-service canonical record (spec 020 US4 / FR-020); silent on failure with request-scope dedup per D-006. */
   public async refreshCanonicalRecord(account: Account): Promise<void> {
     const identifier = account.uid || account.accountId;
     if (!identifier) {

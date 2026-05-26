@@ -6,30 +6,10 @@ import { afterNextRender, inject, Injectable, Signal, signal, WritableSignal } f
 import { RoleGrantsResponse } from '@lfx-one/shared/interfaces';
 import { catchError, map, Observable, of, tap } from 'rxjs';
 
-/**
- * Caller's role persona for a single org row. Writer wins when the caller holds
- * both — the server-side flattening enforces this invariant (auditors[] excludes
- * any uid already in writers[]).
- */
-export type OrgRolePersona = 'writer' | 'auditor';
+// Re-export the shared persona type so existing consumers can keep importing from this service module.
+export type { OrgRolePersona } from '@lfx-one/shared/interfaces';
 
-/**
- * Client-side session dictionary of the caller's role grants across all
- * `b2b_org_settings` docs they have visibility into. Loaded eagerly on app
- * boot via `afterNextRender` so the sidebar visibility gate and the per-row
- * role badges have data ready by the time the sidebar mounts.
- *
- * Lifecycle (per spec FR-018a):
- * - Loaded once on app boot.
- * - GC'd on tab close / hard navigation (lifetime = `providedIn:'root'` instance).
- * - **No client-side token-refresh subscription** — the bearer token is
- *   refreshed server-side per-request by `express-openid-connect`
- *   (`apps/lfx-one/src/server/middleware/auth.middleware.ts`) and there is no
- *   client event to subscribe to. `refresh()` exists for future user-initiated
- *   triggers (out of scope here per research.md D-003).
- * - Stale grants between page loads are accepted UX trade-off: the badge is
- *   purely visual; FGA on writes remains authoritative.
- */
+/** Session-scoped role-grants dictionary; eager-loaded on browser hydration. No mid-session invalidation per FR-018a (token refresh happens server-side). */
 @Injectable({
   providedIn: 'root',
 })
@@ -51,17 +31,12 @@ export class OrgRoleGrantsService {
   public readonly loadedAtMs: Signal<number | null> = this.loadedAtMsInternal.asReadonly();
 
   public constructor() {
-    // Eager load on browser hydration, parallel with persona enrichment.
     afterNextRender(() => {
       this.refresh().subscribe();
     });
   }
 
-  /**
-   * Re-fetch role grants. Idempotent — subsequent calls overwrite the signal
-   * state with the freshest response. Returns an Observable so callers can
-   * compose (e.g. forkJoin with persona refresh).
-   */
+  /** Re-fetch role grants; idempotent. Returns Observable<void> so callers can compose (e.g. forkJoin with persona refresh). */
   public refresh(): Observable<void> {
     this.loadingInternal.set(true);
     this.errorInternal.set(null);
@@ -76,17 +51,12 @@ export class OrgRoleGrantsService {
       catchError((error: unknown) => {
         const message = error instanceof Error ? error.message : 'Unknown error';
         this.errorInternal.set(message);
-        // Per the contract, the BFF already downgrades upstream failures to an
-        // empty 200 response — so reaching this branch typically means a
-        // local/network failure. Treat as empty grants so the sidebar
-        // visibility gate falls back to the persona-seeds branch.
+        // BFF downgrades upstream failures to empty 200 per contract, so reaching this branch typically means a transport-level failure.
+        // Treat as empty grants → sidebar visibility gate falls back to persona seeds.
         this.writerSetInternal.set(new Set());
         this.auditorSetInternal.set(new Set());
         this.loadedInternal.set(true);
         this.loadingInternal.set(false);
-        // loadedAtMs intentionally NOT set on the error path — it tracks the
-        // last successful load so callers can distinguish "never loaded" /
-        // "loaded but stale" / "load failed" without an extra signal.
         return of(undefined);
       }),
       map(() => undefined)

@@ -61,21 +61,13 @@ export class SidebarComponent {
   public readonly collapsed = input<boolean>(false);
   public readonly styleClass = input<string>('');
   public readonly showProjectSelector = input<boolean>(false);
-  /**
-   * Hint from the parent indicating the active lens warrants the org-selector slot.
-   * Combined with the org-lens feature flag and role-grants / persona-seeds gate
-   * to produce `effectiveShowOrgSelector` (spec 020 D-005 / FR-001b).
-   */
+  /** Parent lens hint for the org-selector slot; ANDed with the flag + grants/seeds gate to produce `effectiveShowOrgSelector` (spec 020 D-005). */
   public readonly showOrgSelector = input<boolean>(false);
   public readonly showMeSelector = input<boolean>(false);
   public readonly mobile = input<boolean>(false);
   public readonly selectorPanelOpen = model<boolean>(false);
 
-  /**
-   * Final org-selector trigger visibility. Composed per research.md D-005 — the
-   * trigger is hidden when the user has zero role grants AND zero persona seeds
-   * even if the parent template wants to show it for the active lens.
-   */
+  /** Final org-selector visibility — `parent input ∧ flag ∧ (writers ∨ auditors ∨ personaSeeds)` per research.md D-005. */
   protected readonly effectiveShowOrgSelector: Signal<boolean> = this.initEffectiveShowOrgSelector();
 
   private readonly orgLensFlag: Signal<boolean> = this.featureFlagService.getBooleanFlag(ORG_LENS_ENABLED_FLAG, false);

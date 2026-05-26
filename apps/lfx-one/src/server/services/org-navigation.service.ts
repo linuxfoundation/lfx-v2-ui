@@ -1,7 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { GetOrgItemsParams, OrgItem, OrgItemsQuery, OrgItemsResponse, QueryServiceResponse } from '@lfx-one/shared/interfaces';
+import { ORG_SELECTOR_MOCK_PAGE_SIZE } from '@lfx-one/shared/constants';
+import { B2bOrgIndexedDoc, GetOrgItemsParams, OrgItem, OrgItemsQuery, OrgItemsResponse, QueryServiceResponse } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
 import { isMockOrgItemsEnabled } from '../utils/mock-org-items.util';
@@ -9,31 +10,7 @@ import orgSelectorMock from './fixtures/org-selector.mock.json';
 import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
 
-/** Mock page size — bigger than the prod ~50 default so the dev e2e can scroll-paginate. */
-const MOCK_PAGE_SIZE = 8;
-
-/**
- * Shape of the `b2b_org.data` payload returned by the query-service. Only fields
- * the selector actually renders are listed — other fields exist but are ignored.
- */
-interface B2bOrgIndexedDoc {
-  sfid?: string | null;
-  name: string;
-  logo_url?: string | null;
-  primary_domain?: string | null;
-  is_member?: boolean;
-}
-
-/**
- * Server-side org-selector data source. Mirrors `NavigationService.getLensItems`
- * structurally per research.md D-001, swapping `type=project` for `type=b2b_org`.
- *
- * Two key behavioral differences from `NavigationService`:
- * 1. **FGA is fully delegated upstream** — no explicit `filters_or` for stage/funding;
- *    the query-service applies the caller's writer/auditor/cascade visibility transparently.
- * 2. **No client-side post-filter** (project-lens has a foundation visibility filter;
- *    orgs are a flat universe).
- */
+/** Server-side org-selector data source. Mirrors NavigationService with type=b2b_org per research.md D-001. */
 export class OrgNavigationService {
   private readonly microserviceProxy: MicroserviceProxyService;
 
@@ -126,17 +103,12 @@ export class OrgNavigationService {
     }
   }
 
-  /**
-   * Second upstream call to fetch the caller's selected row when it's not in the
-   * first natural page. Returns null on miss (caller can't see the requested uid)
-   * — the response is returned without the prepended row and the client silently
-   * falls back to the first natural row (FR-014).
-   */
+  /** Second upstream call to pin the selected row at the top of the first page; null on miss → silent fallback per FR-014. */
   private async fetchSelectedItem(req: Request, uid: string): Promise<OrgItem | null> {
     try {
       const response = await this.microserviceProxy.proxyRequest<QueryServiceResponse<B2bOrgIndexedDoc>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'b2b_org',
-        filters: [`uid:${encodeURIComponent(uid)}`],
+        filters: [`uid:${uid}`],
       });
       const resource = response?.resources?.[0];
       if (!resource) return null;
@@ -164,11 +136,7 @@ export class OrgNavigationService {
     return base;
   }
 
-  /**
-   * Maps a single upstream `b2b_org` resource to the BFF wire shape. The uid
-   * lives on `resource.id` (the indexed document key); the legacy sfid is in
-   * `resource.data.sfid` per spec Q1.
-   */
+  /** Maps a query-service b2b_org resource to the BFF wire shape: `uid` = resource.id, `accountId` = data.sfid per Q1. */
   private toOrgItem(resourceId: string, data: B2bOrgIndexedDoc | undefined): OrgItem {
     return {
       uid: resourceId,
@@ -180,16 +148,7 @@ export class OrgNavigationService {
     };
   }
 
-  /**
-   * Local-dev mock branch. Filters, paginates, and applies the same
-   * `selected_uid` injection rule as the real BFF so the popover behaves
-   * identically end-to-end when MOCK_ORG_ITEMS=true. Unreachable at runtime
-   * in any environment where the flag is unset — the early-return in
-   * `getOrgItems` short-circuits before this method is invoked. (The fixture
-   * and this method are still present in the server bundle; "tree-shaken"
-   * would only apply to a build-time elimination step, which Node runs
-   * don't perform.)
-   */
+  /** Local-dev mock branch (MOCK_ORG_ITEMS=true). Unreachable at runtime when the flag is unset — gated by isMockOrgItemsEnabled() in getOrgItems(). */
   private getMockOrgItems(req: Request, params: GetOrgItemsParams): OrgItemsResponse {
     const { pageToken, name, selectedUid } = params;
     const all = orgSelectorMock.items as OrgItem[];
@@ -206,8 +165,8 @@ export class OrgNavigationService {
       : [...filtered].sort((a, b) => a.name.localeCompare(b.name));
 
     const startIndex = pageToken ? parseInt(pageToken, 10) || 0 : 0;
-    const pageItems = sorted.slice(startIndex, startIndex + MOCK_PAGE_SIZE);
-    const nextPageToken = startIndex + MOCK_PAGE_SIZE < sorted.length ? String(startIndex + MOCK_PAGE_SIZE) : null;
+    const pageItems = sorted.slice(startIndex, startIndex + ORG_SELECTOR_MOCK_PAGE_SIZE);
+    const nextPageToken = startIndex + ORG_SELECTOR_MOCK_PAGE_SIZE < sorted.length ? String(startIndex + ORG_SELECTOR_MOCK_PAGE_SIZE) : null;
 
     let items = pageItems;
     if (selectedUid && !pageToken) {

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { NgClass } from '@angular/common';
-import { afterNextRender, Component, computed, DestroyRef, inject, input, model, Signal } from '@angular/core';
+import { afterNextRender, Component, computed, DestroyRef, inject, Injector, input, model, Signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Account, DisplayOrgItem, OrgItem } from '@lfx-one/shared/interfaces';
@@ -27,16 +27,12 @@ export class OrgSelectorComponent {
   private readonly orgNavigationService = inject(OrgNavigationService);
   private readonly orgRoleGrantsService = inject(OrgRoleGrantsService);
   private readonly userService = inject(UserService);
-  // Captured eagerly in the constructor's injection context so `takeUntilDestroyed(this.destroyRef)`
-  // inside the `afterNextRender` callback below has an explicit DestroyRef — that callback runs
-  // OUTSIDE the injection context, so a bare `takeUntilDestroyed()` there would throw at runtime.
+  /** Captured at construction so the afterNextRender callback below has an explicit DestroyRef + Injector — both `takeUntilDestroyed()` and `toObservable()` call inject() internally and would otherwise throw NG0203 outside the injection context. */
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
 
   public readonly isPanelOpen = model<boolean>(false);
-  /**
-   * When false the trigger is hidden (sidebar visibility gate) — skip list bootstrap so
-   * zero-grants users don't hit /api/nav/org-items or the empty-list redirect path.
-   */
+  /** When false the trigger is hidden by the sidebar gate — skip list bootstrap so zero-grants users don't hit /api/nav/org-items. */
   public readonly enabled = input<boolean>(true);
 
   protected readonly searchControl = new FormControl<string>('', { nonNullable: true });
@@ -92,13 +88,10 @@ export class OrgSelectorComponent {
     // inside afterNextRender did not reliably re-run when `enabled` flipped false→true, so the list
     // never fetched mock/live data even though the trigger was visible.
     afterNextRender(() => {
-      toObservable(this.enabled)
+      toObservable(this.enabled, { injector: this.injector })
         .pipe(
           distinctUntilChanged(),
           filter((enabled) => enabled),
-          // Explicit DestroyRef required — this callback runs after the constructor's injection
-          // context has closed, so a bare `takeUntilDestroyed()` would throw "can only be used
-          // within an injection context" on the first sidebar mount (CodeRabbit flag on PR #794).
           takeUntilDestroyed(this.destroyRef)
         )
         .subscribe(() => this.bootstrapOrgList());
@@ -164,11 +157,7 @@ export class OrgSelectorComponent {
     return null;
   }
 
-  /**
-   * Friendly grant labels. Writer is editor-level (read + mutate on the b2b_org);
-   * auditor is viewer-level (read-only). Mirrors the LFX One product naming so the
-   * badge reads as a single nameplate.
-   */
+  /** Product-naming label for the role persona: writer → "Org Admin Editor", auditor → "Org Admin Viewer". */
   private personaToLabel(persona: OrgRolePersona | null): string {
     if (persona === 'writer') return 'Org Admin Editor';
     if (persona === 'auditor') return 'Org Admin Viewer';

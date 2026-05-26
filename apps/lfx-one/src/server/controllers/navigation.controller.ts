@@ -55,11 +55,7 @@ export class NavigationController {
     }
   }
 
-  /**
-   * `GET /api/nav/org-items` — paginated, FGA-filtered org list per spec 020.
-   * See `contracts/bff-org-items.md`. Mirrors `getLensItems` but with a single
-   * implicit lens (org) and no foundation/project dispatch.
-   */
+  /** `GET /api/nav/org-items` — paginated FGA-filtered org list for the org selector (contracts/bff-org-items.md). */
   public async getOrgItems(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_org_items');
 

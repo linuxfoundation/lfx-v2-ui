@@ -13,20 +13,7 @@ import { catchError, debounceTime, distinctUntilChanged, EMPTY, filter, map, mer
 import { AccountContextService } from './account-context.service';
 import { LensService } from './lens.service';
 
-/**
- * Client-side state machine for the org-selector dropdown. Mirrors
- * `NavigationService` per research.md D-002, simplified to a single state
- * (no foundation/project pair, no hybrid mode) because orgs are a flat universe.
- *
- * Reactive pipeline:
- *   user search → debounce → reset+fetch first page (generation++)
- *   resetAndReload() → fetch first page (generation++)
- *   loadNextPage() → fetch continuation page (current generation)
- *
- * The `generation` counter drops responses from superseded fetches before they
- * touch any signal (spec FR-011). The `scan` operator dedupes by uid when
- * appending pages — an injected selected_uid can also appear in a later page.
- */
+/** Client state machine for the org-selector — single-state mirror of NavigationService (research.md D-002) with generation race-guard + uid dedup on scroll. */
 @Injectable({
   providedIn: 'root',
 })
@@ -63,11 +50,7 @@ export class OrgNavigationService {
     this.state.loadMore$.next(token);
   }
 
-  /**
-   * Triggers a fresh first-page fetch. Optional `selectedUid` hint is forwarded
-   * to the BFF so the row stays pinned to the top of the list when it would
-   * otherwise fall outside the natural first page.
-   */
+  /** Triggers a fresh first-page fetch; optional hints pin the cookie-restored selection at the top via the BFF `selected_uid` injection. */
   public resetAndReload(selectedUid?: string | null, selectedAccountId?: string | null): void {
     if (selectedUid) {
       this.restoredSelectedUid = selectedUid;
@@ -250,13 +233,7 @@ export class OrgNavigationService {
     };
   }
 
-  /**
-   * Called once per first-page response when a fresh reload was requested. If
-   * the page is genuinely empty (and upstream did not fail), we emit the
-   * documented "no access" UX: info toast, force lens back to `me`, navigate
-   * to the me landing page (FR-004 lens-redirect path, distinct from the
-   * boot-time trigger-hidden path in D-007).
-   */
+  /** Fires once per first-page response when a reload is pending; routes empty pages through the FR-004 "No access" toast+redirect. */
   private handlePendingSelection(page: OrgListPage, pendingDefaultSelection: WritableSignal<boolean>): void {
     pendingDefaultSelection.set(false);
     if (page.items.length === 0) {

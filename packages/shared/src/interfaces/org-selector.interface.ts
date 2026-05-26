@@ -4,35 +4,23 @@
 import type { Signal, WritableSignal } from '@angular/core';
 import type { Subject } from 'rxjs';
 
-/**
- * One row in the org selector dropdown. Carries BOTH identifiers per spec Q1 so the
- * client can read either the canonical UUID (member-service) or the legacy Salesforce
- * `accountId` (Snowflake / existing /api/orgs/:accountId/lens/* routes) without a
- * second resolver round-trip.
- */
+/** Selector row — carries both the canonical UUID and the legacy Salesforce id per spec 020 Q1. */
 export interface OrgItem {
-  /** Canonical b2b_org identifier (UUID 8-4-4-4-12). Sourced from query-service `resource.id`. */
+  /** Canonical b2b_org identifier (UUID 8-4-4-4-12), sourced from `resource.id`. */
   uid: string;
-  /**
-   * Legacy Salesforce account id (15 or 18 chars). Sourced from `resource.data.sfid`.
-   * Null only for orgs that were never registered with Salesforce (rare in production).
-   * Clients MUST tolerate null — selection still works on `uid` alone, but downstream
-   * Snowflake-keyed routes will not be reachable.
-   */
+  /** Legacy Salesforce account id from `resource.data.sfid`; null for orgs never registered with Salesforce. */
   accountId: string | null;
-  /** Display name. Always non-empty (query-service strips nameless orgs). */
+  /** Display name; query-service strips nameless orgs so always non-empty in practice. */
   name: string;
-  /** Logo URL; null when no logo is configured. */
+  /** Logo URL; null when no logo configured. */
   logoUrl: string | null;
   /** Optional primary web domain (e.g. "redhat.com"). */
   primaryDomain?: string | null;
-  /** LF member-org flag (filled when the indexed doc exposes it). */
+  /** LF member-org flag when the indexed doc exposes it. */
   isMember?: boolean;
 }
 
-/**
- * Display projection of an OrgItem with selection + role decoration metadata.
- */
+/** Row projection with role-decoration + selection metadata resolved once per render. */
 export interface DisplayOrgItem {
   item: OrgItem;
   isSelected: boolean;
@@ -40,71 +28,45 @@ export interface DisplayOrgItem {
   roleIcon: string;
 }
 
-/**
- * Wire shape returned by `GET /api/nav/org-items`. Mirrors `LensItemsResponse`
- * one-to-one with `type=b2b_org` substitution per `contracts/bff-org-items.md`.
- */
+/** Wire shape returned by `GET /api/nav/org-items` per `contracts/bff-org-items.md`. */
 export interface OrgItemsResponse {
-  /** Current page rows. */
   items: OrgItem[];
   /** Null when no more pages remain. */
   next_page_token: string | null;
-  /**
-   * True ONLY on the deterministic-empty failure response (FR-005). False when
-   * `items` is `[]` because the user genuinely has no matching results.
-   */
+  /** True only on the deterministic-empty failure response (FR-005); false even when items is `[]` on a real-empty page. */
   upstream_failed: boolean;
-  /** Optional total when the upstream returns it cheaply; clients tolerate null. */
+  /** Optional total when upstream returns it cheaply; clients tolerate null. */
   total?: number | null;
 }
 
-/**
- * BFF → query-service shape constructed by `OrgNavigationService.buildQuery`.
- * Not persisted; rebuilt per request.
- */
+/** BFF → query-service shape built by `OrgNavigationService.buildQuery`. */
 export interface OrgItemsQuery {
   type: 'b2b_org';
   /** Set only when caller passed a non-whitespace `name`. */
   name?: string;
   /** Set only on continuation requests. */
   page_token?: string;
-  /** `best_match` when `name` is set; `name_asc` otherwise. */
+  /** `best_match` when name is set; `name_asc` otherwise. */
   sort: 'name_asc' | 'best_match';
-  /**
-   * Always present (possibly empty). FGA is enforced upstream automatically
-   * (writer ⊕ auditor ⊕ key-contact cascade) — no explicit filter needed for that.
-   */
+  /** Always present (possibly empty); FGA is enforced upstream without explicit filters. */
   filters: string[];
   /** Used by the `selected_uid` injection second-call path. */
   filters_or?: string[];
 }
 
-/**
- * Internal getter param shape used by `OrgNavigationService.getOrgItems`.
- */
+/** Internal getter param shape used by `OrgNavigationService.getOrgItems`. */
 export interface GetOrgItemsParams {
   pageToken?: string;
   name?: string;
-  /**
-   * Hint: when set and not in the first natural page, the server makes a second
-   * `/query/resources?filters=uid:{selectedUid}` call and prepends the row.
-   * Mutually exclusive with `pageToken`.
-   */
+  /** Pin a uid at the top of the first page when it falls outside the natural results. Mutually exclusive with `pageToken`. */
   selectedUid?: string;
 }
 
-/**
- * Wire shape returned by `GET /api/orgs/me/role-grants`. The BFF flattens the
- * upstream nested `b2b_org_settings` shape to two disjoint string arrays. See
- * `contracts/bff-org-role-grants.md`.
- */
+/** Wire shape returned by `GET /api/orgs/me/role-grants` — writers/auditors are disjoint (writer-wins). */
 export interface RoleGrantsResponse {
-  /** `b2b_org.uid` values where the caller has the `writer` role. */
+  /** `b2b_org.uid` values where caller has the `writer` role. */
   writers: string[];
-  /**
-   * `b2b_org.uid` values where the caller has the `auditor` role AND is NOT
-   * also a writer on the same org (writer-wins; intersection is empty).
-   */
+  /** `b2b_org.uid` values where caller has `auditor` AND is NOT a writer on the same org. */
   auditors: string[];
   /** Caller's resolved username (from JWT). */
   username: string;
@@ -112,11 +74,7 @@ export interface RoleGrantsResponse {
   loaded_at: string;
 }
 
-/**
- * Canonical org record returned by `GET /api/orgs/uid/:uid` (or `/sfid/:accountId`
- * or polymorphic `/:id`). The BFF transforms the member-service snake_case
- * response to camelCase per `contracts/bff-org-canonical-record.md`.
- */
+/** Canonical org record returned by `GET /api/orgs/uid|sfid|:id` (member-service snake_case → camelCase). */
 export interface OrgCanonicalRecord {
   uid: string;
   /** Legacy Salesforce id; null for orgs without an sfid. */
@@ -134,10 +92,7 @@ export interface OrgCanonicalRecord {
   isMember: boolean;
 }
 
-/**
- * Internal page result used by the client `OrgNavigationService` reactive pipeline.
- * `reset=true` marks a fresh first page vs. an append emission.
- */
+/** Internal page result used by the client `OrgNavigationService` reactive pipeline. `reset=true` marks a fresh first page. */
 export interface OrgListPage {
   items: OrgItem[];
   nextPageToken: string | null;
@@ -145,19 +100,13 @@ export interface OrgListPage {
   reset: boolean;
 }
 
-/**
- * Carries the dispatch generation so stale responses can be filtered out of the
- * merged stream (spec FR-011 race-guard).
- */
+/** Carries dispatch generation so stale responses can be filtered out of the merged stream (FR-011 race-guard). */
 export interface TaggedOrgListPage {
   page: OrgListPage;
   generation: number;
 }
 
-/**
- * Client-side reactive state container — single-state (no foundation/project
- * bifurcation; orgs are a flat list).
- */
+/** Client-side reactive state container — single-state since orgs are a flat universe (no foundation/project bifurcation). */
 export interface OrgListState {
   searchTerm: WritableSignal<string>;
   items: Signal<OrgItem[]>;
@@ -171,3 +120,42 @@ export interface OrgListState {
   loadMore$: Subject<string>;
   reload$: Subject<void>;
 }
+
+/** Shape of `b2b_org.data` from the query-service indexed document — only fields the selector reads. */
+export interface B2bOrgIndexedDoc {
+  sfid?: string | null;
+  name?: string;
+  logo_url?: string | null;
+  primary_domain?: string | null;
+  is_member?: boolean;
+}
+
+/** Shape of `b2b_org_settings.data` from the query-service "what can I see" pattern. */
+export interface B2bOrgSettingsDoc {
+  writers?: { username?: string | null }[];
+  auditors?: { username?: string | null }[];
+}
+
+/** Raw response from member-service `GET /b2b_orgs/{uid}` (snake_case; BFF transforms to camelCase). */
+export interface MemberServiceB2bOrgResponse {
+  uid: string;
+  sfid?: string | null;
+  name: string;
+  description?: string | null;
+  website?: string | null;
+  primary_domain?: string | null;
+  logo_url?: string | null;
+  industry?: string | null;
+  sector?: string | null;
+  number_of_employees?: number | null;
+  parent_uid?: string | null;
+  is_member?: boolean;
+}
+
+/** Resolver return shape — carries the resolved value AND an honest cacheHit flag so callers can log accurate cache-hit ratios. */
+export type OrgIdentityLookupResult<K extends 'uid' | 'sfid'> = {
+  [P in K]: string | null;
+} & { cacheHit: boolean };
+
+/** Per-row caller role persona. Writer wins when caller holds both — server-side flattening keeps writers/auditors disjoint. */
+export type OrgRolePersona = 'writer' | 'auditor';
