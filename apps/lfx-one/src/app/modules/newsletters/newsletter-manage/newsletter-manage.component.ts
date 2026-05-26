@@ -26,7 +26,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { SkeletonModule } from 'primeng/skeleton';
 import { StepperModule } from 'primeng/stepper';
-import { catchError, combineLatest, concatMap, debounceTime, distinctUntilChanged, filter, finalize, map, of, Subject, switchMap, take } from 'rxjs';
+import { catchError, combineLatest, concatMap, debounceTime, distinctUntilChanged, EMPTY, filter, finalize, map, of, Subject, switchMap, take } from 'rxjs';
 
 import { NewsletterAudienceStepComponent } from '../components/newsletter-audience-step/newsletter-audience-step.component';
 import { NewsletterContentStepComponent } from '../components/newsletter-content-step/newsletter-content-step.component';
@@ -79,6 +79,9 @@ export class NewsletterManageComponent {
   public readonly testSending = signal<boolean>(false);
   public readonly savedAt = signal<Date | null>(null);
   public readonly savingDraft = signal<boolean>(false);
+  // Manual Save-as-Draft spinner — kept separate from `savingDraft` so the autosave debounce
+  // (which fires every ~1s while the user types) doesn't blink the manual button mid-typing.
+  public readonly manualSaving = signal<boolean>(false);
   public readonly previewDrawerVisible = signal<boolean>(false);
 
   // === Step state ===
@@ -133,7 +136,11 @@ export class NewsletterManageComponent {
   public readonly canProceed = computed(() => this.computeCanProceed(this.currentStep()));
   public readonly canGoPrevious = computed(() => this.currentStep() > 1);
   public readonly canGoNext = computed(() => this.currentStep() < this.totalSteps && this.canProceed());
-  public readonly canSaveDraft = computed(() => this.hasContext() && this.audienceFilled() && this.subjectFilled() && this.bodyFilled() && !this.savingDraft());
+  // Mirror autosave's email gate — server validates edReplyEmail contains '@', so don't enable
+  // the manual button until the user profile has loaded a usable email.
+  public readonly canSaveDraft = computed(
+    () => this.hasContext() && this.audienceFilled() && this.subjectFilled() && this.bodyFilled() && this.edEmail().length > 0 && !this.savingDraft()
+  );
   public readonly isLastStep = computed(() => this.currentStep() === this.totalSteps);
   public readonly currentStepTitle = computed(() => NEWSLETTER_STEP_TITLES[this.currentStep()] ?? '');
   protected readonly savedLabel = computed(() => {
@@ -180,6 +187,7 @@ export class NewsletterManageComponent {
 
   protected onSaveAsDraft(): void {
     if (!this.canSaveDraft()) return;
+    this.manualSaving.set(true);
     this.saveTrigger$.next(true);
   }
 
@@ -468,8 +476,19 @@ export class NewsletterManageComponent {
   }
 
   private saveDraft(isManual = false) {
+    // Execution-time dedup: a queued autosave may have been enqueued before a manual save completed
+    // and recorded its snapshot. Re-check at execution so the queued autosave is skipped if the form
+    // already matches what's persisted. Manual saves always run — the user clicked the button.
+    if (!isManual && this.snapshotMatchesLastSaved()) {
+      return EMPTY;
+    }
+
     const id = this.newsletterId();
     this.savingDraft.set(true);
+    const clearSavingFlags = () => {
+      this.savingDraft.set(false);
+      if (isManual) this.manualSaving.set(false);
+    };
     const basePayload = {
       subject: this.form.controls.subject.value,
       bodyHtml: this.form.controls.bodyHtml.value,
@@ -481,7 +500,7 @@ export class NewsletterManageComponent {
       const update: UpdateNewsletterDraftRequest = basePayload;
       return this.newsletterService.updateDraft(id, this.version(), update).pipe(
         take(1),
-        finalize(() => this.savingDraft.set(false)),
+        finalize(clearSavingFlags),
         map((draft) => {
           this.version.set(draft.version);
           this.savedAt.set(new Date());
@@ -500,7 +519,7 @@ export class NewsletterManageComponent {
     };
     return this.newsletterService.createDraft(create).pipe(
       take(1),
-      finalize(() => this.savingDraft.set(false)),
+      finalize(clearSavingFlags),
       map((draft) => {
         this.newsletterId.set(draft.id);
         this.version.set(draft.version);
