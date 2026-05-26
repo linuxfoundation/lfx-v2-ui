@@ -47,9 +47,18 @@ test.describe('Org Selector — authorized user smoke set (S1/S2/S5)', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(APP_HOME, { waitUntil: 'domcontentloaded' });
     // Hard skip when the auth-bootstrap failed — surface a clear log so CI triage doesn't
-    // chase a spec-020 regression that's actually a credentials issue.
-    if (page.url().includes('auth0.com')) {
-      test.skip(true, 'TEST_USERNAME / TEST_PASSWORD not configured — see global-setup.ts');
+    // chase a spec-020 regression that's actually a credentials issue. Use hostname-exact
+    // matching instead of substring `.includes('auth0.com')` so an attacker-controlled URL
+    // like `https://evil.com/?ref=auth0.com` or `https://auth0.com.evil.com/` can't fool
+    // the skip gate (CodeQL js/incomplete-url-substring-sanitization).
+    try {
+      const { hostname } = new URL(page.url());
+      if (hostname === 'auth0.com' || hostname.endsWith('.auth0.com')) {
+        test.skip(true, 'TEST_USERNAME / TEST_PASSWORD not configured — see global-setup.ts');
+      }
+    } catch {
+      // Malformed URL — keep the test running rather than silently skip; failures here are
+      // useful signal, not noise.
     }
   });
 

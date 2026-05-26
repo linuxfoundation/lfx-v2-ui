@@ -89,7 +89,11 @@ export class OrgSelectorComponent {
     // never fetched mock/live data even though the trigger was visible.
     afterNextRender(() => {
       toObservable(this.enabled)
-        .pipe(distinctUntilChanged(), filter((enabled) => enabled), takeUntilDestroyed())
+        .pipe(
+          distinctUntilChanged(),
+          filter((enabled) => enabled),
+          takeUntilDestroyed()
+        )
         .subscribe(() => this.bootstrapOrgList());
     });
   }
