@@ -147,19 +147,28 @@
         (click)="switchTab(tab.id)">
         <i [class]="tab.icon" aria-hidden="true"></i>
         {{ tab.label }}
+        @if (tab.id === 'upcoming' && eventsSummary() !== null) {
+          ({{ eventsSummary()!.upcomingEvents }})
+        }
       </button>
     }
   </div>
 
   <!-- Tab Panels -->
   @if (activeTab() === 'upcoming') {
-    <section role="tabpanel" id="org-events-panel-upcoming" aria-labelledby="org-events-tab-upcoming" data-testid="org-events-panel-upcoming">
-      <lfx-empty-state
-        [withCard]="false"
-        icon="fa-light fa-calendar-plus"
-        title="Coming soon"
-        subtitle="Upcoming events for your organization are being built. Check back later."
-        data-testid="org-events-upcoming-coming-soon" />
+    <section
+      role="tabpanel"
+      id="org-events-panel-upcoming"
+      aria-labelledby="org-events-tab-upcoming"
+      data-testid="org-events-panel-upcoming">
+      <lfx-org-upcoming-events-table
+        [eventsResponse]="upcomingEvents()"
+        [loading]="upcomingEventsLoading()"
+        [sortField]="upcomingSortField()"
+        [sortOrder]="upcomingSortOrder()"
+        (pageChange)="onUpcomingPageChange($event)"
+        (sortChange)="onUpcomingSortChange($event)"
+        data-testid="org-events-upcoming-table" />
     </section>
   }
 

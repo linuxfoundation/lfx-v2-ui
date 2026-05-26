@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import type { FilterOption } from '../interfaces';
-import type { OrgEventsTabConfig, OrgEventsTabId } from '../interfaces/org-events.interface';
+import type { OrgEventsResponse, OrgEventsTabConfig, OrgEventsTabId } from '../interfaces/org-events.interface';
+import { DEFAULT_EVENTS_PAGE_SIZE } from './events.constants';
 
 /** Org Events page tabs in visible order (`upcoming` is the default). */
 export const ORG_EVENTS_TABS: readonly OrgEventsTabConfig[] = [
@@ -15,6 +16,9 @@ export const DEFAULT_ORG_EVENTS_TAB_ID: OrgEventsTabId = 'upcoming';
 
 /** Derived from ORG_EVENTS_TABS; used to validate `?tab=` query-param input. */
 export const VALID_ORG_EVENTS_TAB_IDS: ReadonlySet<OrgEventsTabId> = new Set(ORG_EVENTS_TABS.map((t) => t.id));
+
+/** Empty response sentinel for the Org Events list. */
+export const EMPTY_ORG_EVENTS_RESPONSE: OrgEventsResponse = { data: [], total: 0, pageSize: DEFAULT_EVENTS_PAGE_SIZE, offset: 0 };
 
 /** Status filter options for the Org Events filter bar. */
 export const ORG_EVENTS_STATUS_OPTIONS: FilterOption[] = [
