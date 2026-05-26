@@ -1013,6 +1013,8 @@ export class AnalyticsService {
           nonResponses: 0,
           responses: 0,
           lastUpdatedLabel: 'N/A',
+          effectiveRange: 'YTD' as const,
+          periodLabel: '',
         });
       })
     );
