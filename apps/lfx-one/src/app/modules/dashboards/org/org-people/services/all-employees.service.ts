@@ -1,0 +1,42 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
+import { HttpClient } from '@angular/common/http';
+import { inject, Injectable } from '@angular/core';
+import { catchError, Observable, of } from 'rxjs';
+
+import type { OrgAllEmployeeDetail, OrgAllEmployeesResponse } from '@lfx-one/shared/interfaces';
+
+/** HTTP client for the Org Lens "All Employees" BFF endpoints. */
+@Injectable({ providedIn: 'root' })
+export class AllEmployeesService {
+  private readonly http = inject(HttpClient);
+
+  public getAllEmployees(accountId: string): Observable<OrgAllEmployeesResponse> {
+    return this.http.get<OrgAllEmployeesResponse>(`/api/orgs/${encodeURIComponent(accountId)}/lens/people/all`).pipe(
+      catchError(() =>
+        of<OrgAllEmployeesResponse>({
+          accountId,
+          rows: [],
+          stats: { activeInOss: 0, inGovernance: 0, codeContributors: 0, eventAttendees: 0, trainees: 0 },
+          foundations: [],
+        })
+      )
+    );
+  }
+
+  public getEmployeeDetail(accountId: string, personKey: string): Observable<OrgAllEmployeeDetail> {
+    return this.http.get<OrgAllEmployeeDetail>(`/api/orgs/${encodeURIComponent(accountId)}/lens/people/${encodeURIComponent(personKey)}/detail`).pipe(
+      catchError(() =>
+        of<OrgAllEmployeeDetail>({
+          personKey,
+          boardSeats: [],
+          committeeSeats: [],
+          code: [],
+          events: [],
+          training: [],
+        })
+      )
+    );
+  }
+}
