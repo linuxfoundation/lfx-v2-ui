@@ -109,6 +109,11 @@ export class NewsletterManageComponent {
   private readonly subjectValue = signal<string>('');
   private readonly bodyValue = signal<string>('');
 
+  // === Save dedup ===
+  // Snapshot of the last persisted payload — autosave skips when the current form state matches,
+  // preventing a redundant save after the user clicks Save as Draft while a debounce is in flight.
+  private readonly lastSavedSnapshot = signal<{ subject: string; bodyHtml: string; committeeUids: string[] } | null>(null);
+
   // === Recipient summary (computed here so review/send steps can share it) ===
   protected readonly recipientCount = signal<number | null>(null);
   protected readonly recipientCountLoading = signal<boolean>(false);
@@ -411,26 +416,27 @@ export class NewsletterManageComponent {
 
   private initAutosave(): void {
     // Combine with edEmail so a late-arriving profile triggers autosave even when the user hasn't typed since.
+    // Skip when a save is already in flight or when the form matches the last persisted snapshot —
+    // both gates prevent the manual Save as Draft button from racing the debounced autosave.
     combineLatest([this.form.valueChanges, toObservable(this.edEmail)])
       .pipe(
         debounceTime(1000),
-        filter(([, email]) => this.hasContext() && this.hasAnythingToSave() && email.length > 0),
-        distinctUntilChanged((a, b) => this.draftSnapshotEqual(a, b)),
+        filter(([, email]) => this.hasContext() && this.hasAnythingToSave() && email.length > 0 && !this.savingDraft()),
+        filter(() => !this.snapshotMatchesLastSaved()),
         switchMap(() => this.saveDraft()),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe();
   }
 
-  // Cheaper than JSON.stringify on a multi-KB bodyHtml: short-circuits on
-  // length/identity first, only compares characters when nothing else differs.
-  private draftSnapshotEqual(a: [unknown, string], b: [unknown, string]): boolean {
-    const [av, ae] = a;
-    const [bv, be] = b;
-    if (ae !== be) return false;
-    const ax = av as { subject?: string; bodyHtml?: string; committeeUids?: string[] };
-    const bx = bv as { subject?: string; bodyHtml?: string; committeeUids?: string[] };
-    return ax.subject === bx.subject && ax.bodyHtml === bx.bodyHtml && this.uidsEqual(ax.committeeUids ?? [], bx.committeeUids ?? []);
+  private snapshotMatchesLastSaved(): boolean {
+    const saved = this.lastSavedSnapshot();
+    if (!saved) return false;
+    return (
+      saved.subject === this.form.controls.subject.value &&
+      saved.bodyHtml === this.form.controls.bodyHtml.value &&
+      this.uidsEqual(saved.committeeUids, this.form.controls.committeeUids.value)
+    );
   }
 
   private uidsEqual(a: string[] | null | undefined, b: string[] | null | undefined): boolean {
@@ -467,10 +473,11 @@ export class NewsletterManageComponent {
         map((draft) => {
           this.version.set(draft.version);
           this.savedAt.set(new Date());
+          this.recordSavedSnapshot(basePayload);
           if (isManual) this.notifyDraftSaved();
           return draft;
         }),
-        catchError((err: HttpErrorResponse) => this.handleAutosaveError(err))
+        catchError((err: HttpErrorResponse) => this.handleSaveError(err, isManual))
       );
     }
 
@@ -486,6 +493,7 @@ export class NewsletterManageComponent {
         this.newsletterId.set(draft.id);
         this.version.set(draft.version);
         this.savedAt.set(new Date());
+        this.recordSavedSnapshot(basePayload);
         // Skip /:id/edit navigation — it tears down the component and wipes the form mid-typing.
         // Seed step in URL because isEditMode() just flipped — currentStep now reads from queryParamMap.
         this.router.navigate([], {
@@ -497,8 +505,16 @@ export class NewsletterManageComponent {
         if (isManual) this.notifyDraftSaved();
         return draft;
       }),
-      catchError((err: HttpErrorResponse) => this.handleAutosaveError(err))
+      catchError((err: HttpErrorResponse) => this.handleSaveError(err, isManual))
     );
+  }
+
+  private recordSavedSnapshot(payload: { subject: string; bodyHtml: string; committeeUids: string[] }): void {
+    this.lastSavedSnapshot.set({
+      subject: payload.subject,
+      bodyHtml: payload.bodyHtml,
+      committeeUids: [...payload.committeeUids],
+    });
   }
 
   private notifyDraftSaved(): void {
@@ -509,8 +525,8 @@ export class NewsletterManageComponent {
     });
   }
 
-  // Surface autosave failures — silent failures let the user navigate away believing the draft saved.
-  private handleAutosaveError(err: HttpErrorResponse) {
+  // Surface save failures — silent failures let the user navigate away believing the draft saved.
+  private handleSaveError(err: HttpErrorResponse, isManual: boolean) {
     this.savingDraft.set(false);
     if (err.status === 409) {
       this.messageService.add({
@@ -522,7 +538,7 @@ export class NewsletterManageComponent {
     } else {
       this.messageService.add({
         severity: 'error',
-        summary: 'Autosave failed',
+        summary: isManual ? 'Save failed' : 'Autosave failed',
         detail: err?.error?.message || err?.message || 'Could not save draft. Your changes are unsaved.',
         life: 8000,
       });
