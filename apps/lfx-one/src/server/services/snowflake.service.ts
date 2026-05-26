@@ -45,6 +45,9 @@ export class SnowflakeService {
   private circuitState: SnowflakeCircuitState = SnowflakeCircuitState.CLOSED;
   private consecutiveFailures = 0;
   private lastFailureTime = 0;
+  // True while a HALF_OPEN probe is in-flight; subsequent requests fail fast
+  // rather than stampeding Snowflake with multiple concurrent probes.
+  private probeInFlight = false;
 
   /**
    * Get the singleton instance of SnowflakeService
@@ -161,11 +164,17 @@ export class SnowflakeService {
                 .catch(reject);
             });
 
-            const timeoutPromise = new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error(`Snowflake query timed out after ${queryTimeoutMs}ms`)), queryTimeoutMs)
-            );
+            let timeoutHandle: ReturnType<typeof setTimeout>;
+            const timeoutPromise = new Promise<never>((_, reject) => {
+              timeoutHandle = setTimeout(() => reject(new Error(`Snowflake query timed out after ${queryTimeoutMs}ms`)), queryTimeoutMs);
+            });
 
-            const result = await Promise.race([executePromise, timeoutPromise]);
+            let result: SnowflakeQueryResult<T>;
+            try {
+              result = await Promise.race([executePromise, timeoutPromise]);
+            } finally {
+              clearTimeout(timeoutHandle!);
+            }
 
             const rowCount = Array.isArray(result?.rows) ? result.rows.length : 0;
             const poolStats = this.getPoolStats();
@@ -477,6 +486,20 @@ export class SnowflakeService {
         consecutive_failures: this.consecutiveFailures,
       });
     }
+
+    // Allow only one concurrent probe in HALF_OPEN — reject additional callers until
+    // the in-flight probe settles so we don't stampede Snowflake during recovery.
+    if (this.circuitState === SnowflakeCircuitState.HALF_OPEN && this.probeInFlight) {
+      throw new MicroserviceError('Snowflake circuit breaker HALF_OPEN — probe already in flight', 503, 'SNOWFLAKE_CIRCUIT_OPEN', {
+        operation: 'circuit_breaker_check',
+        service: 'snowflake',
+        errorBody: { state: this.circuitState },
+      });
+    }
+
+    if (this.circuitState === SnowflakeCircuitState.HALF_OPEN) {
+      this.probeInFlight = true;
+    }
   }
 
   /**
@@ -490,6 +513,7 @@ export class SnowflakeService {
       });
     }
     this.consecutiveFailures = 0;
+    this.probeInFlight = false;
     this.circuitState = SnowflakeCircuitState.CLOSED;
   }
 
@@ -501,6 +525,7 @@ export class SnowflakeService {
   private recordFailure(): void {
     this.consecutiveFailures++;
     this.lastFailureTime = Date.now();
+    this.probeInFlight = false;
 
     const shouldOpen = this.circuitState === SnowflakeCircuitState.HALF_OPEN || this.consecutiveFailures >= SNOWFLAKE_CONFIG.CIRCUIT_BREAKER_FAILURE_THRESHOLD;
 

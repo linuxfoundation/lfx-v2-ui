@@ -3,6 +3,8 @@
 
 import type { Column, DataType } from 'snowflake-sdk';
 
+import type { SnowflakeCircuitState } from '../enums/snowflake.enum';
+
 /**
  * Result of a Snowflake query execution
  * Uses SDK's Column type for metadata
@@ -84,7 +86,7 @@ export interface LockStats {
  */
 export interface SnowflakeCircuitStats {
   /** Current circuit state */
-  state: string;
+  state: SnowflakeCircuitState;
   /** Number of consecutive failures since last success */
   consecutiveFailures: number;
   /** Epoch ms of the last recorded failure (0 if none) */
