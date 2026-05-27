@@ -129,12 +129,28 @@ function readFrontmatter(docsRoot: string, filePath: string): { frontmatter: Doc
   }
 }
 
+// Add rel="noopener noreferrer" to any <a target="_blank"> links that survive
+// DOMPurify sanitisation — defends against reverse-tabnabbing when contributors
+// include inline HTML in markdown. Applied once at module load (not per request).
+DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+  if (node.nodeName === 'A' && node.getAttribute('target') === '_blank') {
+    node.setAttribute('rel', 'noopener noreferrer');
+  }
+});
+
 function renderMarkdown(content: string): string {
-  const rawHtml = marked.parse(content) as string;
+  // Pass `async: false` explicitly to pin synchronous behaviour regardless of
+  // any process-global `marked.use(...)` extensions added in the future.
+  const rawHtml = marked.parse(content, { async: false }) as string;
   return DOMPurify.sanitize(rawHtml);
 }
 
 let _sectionCache: DocSection[] | null = null;
+// Article cache — keyed by slugParts.join('/').  In production, articles are
+// immutable until the process restarts; in development the cache is cleared on
+// every request (same policy as _sectionCache) so edits are reflected
+// immediately without a server restart.
+const _articleCache = new Map<string, DocArticle>();
 
 export class DocsContentService {
   // In production this is set once at construction time (fast path).
@@ -155,8 +171,11 @@ export class DocsContentService {
 
     // In development, skip the cache so file edits are reflected immediately
     // without a restart. Directory mtime is unreliable for tracking edits to
-    // individual markdown files.
-    if (process.env['NODE_ENV'] !== 'production') {
+    // individual markdown files. The check is opt-in (=== 'development') rather
+    // than opt-out (!== 'production') so that deployments with an unset NODE_ENV
+    // still benefit from caching instead of re-reading 50+ files per request.
+    const isDev = process.env['NODE_ENV'] === 'development';
+    if (isDev) {
       _sectionCache = null;
     }
 
@@ -223,6 +242,16 @@ export class DocsContentService {
       return null;
     }
 
+    // Article cache — same prod/dev policy as _sectionCache.
+    const cacheKey = slugParts.join('/');
+    const isDev = process.env['NODE_ENV'] === 'development';
+    if (!isDev) {
+      const cached = _articleCache.get(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
     const filePath = resolve(docsRoot, ...slugParts, 'index.md');
     // Prevent path traversal: resolved path must stay inside docsRoot.
     if (!filePath.startsWith(`${docsRoot}${sep}`)) {
@@ -246,7 +275,11 @@ export class DocsContentService {
       breadcrumbs.push({ label: result.frontmatter.title, path: `/docs/${slugParts.join('/')}` });
     }
 
-    return { frontmatter: result.frontmatter, html, slug: slugParts, breadcrumbs };
+    const article: DocArticle = { frontmatter: result.frontmatter, html, slug: slugParts, breadcrumbs };
+    if (!isDev) {
+      _articleCache.set(cacheKey, article);
+    }
+    return article;
   }
 
   public getSitemap(): DocSitemapEntry[] {
@@ -266,7 +299,7 @@ export class DocsContentService {
 
   /** Returns the docs root, re-probing in dev mode if the constructor missed it. */
   private getDocsRoot(): string | null {
-    if (!this.docsRoot && process.env['NODE_ENV'] !== 'production') {
+    if (!this.docsRoot && process.env['NODE_ENV'] === 'development') {
       this.docsRoot = resolveDocsRoot();
     }
     return this.docsRoot;

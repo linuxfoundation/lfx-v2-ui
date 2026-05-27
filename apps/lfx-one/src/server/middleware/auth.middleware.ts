@@ -21,8 +21,9 @@ const DEFAULT_ROUTE_CONFIG: RouteAuthConfig[] = [
   { pattern: '/livez', type: 'api', auth: 'public' },
   { pattern: '/readyz', type: 'api', auth: 'public' },
 
-  // Public docs API — unauthenticated documentation content
-  { pattern: '/public/api/docs', type: 'api', auth: 'public' },
+  // Public docs API — unauthenticated documentation content.
+  // Regex used so future /public/api/docs-admin etc. do not inherit public access.
+  { pattern: /^\/public\/api\/docs(\/|$)/, type: 'api', auth: 'public' },
 
   // Public API routes - optional authentication with token benefits
   { pattern: '/public/api', type: 'api', auth: 'optional', tokenRequired: false },
@@ -51,12 +52,15 @@ const DEFAULT_ROUTE_CONFIG: RouteAuthConfig[] = [
   // Invite error page — public so unauthenticated users see the error instead of being redirected to login
   { pattern: '/invite/error', type: 'ssr', auth: 'public' },
 
-  // Public docs pages — crawler-indexable, no auth required
-  { pattern: '/docs', type: 'ssr', auth: 'public' },
+  // Public docs pages — crawler-indexable, no auth required.
+  // Regex used (not startsWith) so that future routes like /docs-admin or
+  // /docsv2 do NOT accidentally inherit public access.
+  { pattern: /^\/docs(\/|$)/, type: 'ssr', auth: 'public' },
 
-  // Sitemap and robots — crawler utility endpoints
-  { pattern: '/sitemap.xml', type: 'ssr', auth: 'public' },
-  { pattern: '/robots.txt', type: 'ssr', auth: 'public' },
+  // Sitemap and robots — crawler utility endpoints.
+  // Exact-match regex prevents /sitemap.xml.bak etc. from bypassing auth.
+  { pattern: /^\/sitemap\.xml$/, type: 'ssr', auth: 'public' },
+  { pattern: /^\/robots\.txt$/, type: 'ssr', auth: 'public' },
 
   // All other routes - Angular SSR routes requiring authentication
   { pattern: '/', type: 'ssr', auth: 'required' },

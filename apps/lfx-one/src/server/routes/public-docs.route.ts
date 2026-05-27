@@ -10,10 +10,17 @@ import { docsContentService } from '../services/docs-content.service';
 
 const router: Router = express.Router();
 
+// Cache-Control budget for public doc API responses:
+// - max-age=300  → browsers / private caches may cache for 5 minutes
+// - s-maxage=3600 → shared caches (CDN) may cache for 1 hour
+// Docs content changes only on deploy, so these TTLs are conservative.
+const DOCS_CACHE_CONTROL = 'public, max-age=300, s-maxage=3600';
+
 // GET /public/api/docs — section tree (landing nav + sidebar)
 router.get('/', (_req: Request, res: Response) => {
   try {
     const sections = docsContentService.listSections();
+    res.setHeader('Cache-Control', DOCS_CACHE_CONTROL);
     res.json({ sections });
   } catch (err) {
     serverLogger.error({ err }, 'docs: failed to list sections');
@@ -33,6 +40,7 @@ router.get('/:section', (req: Request, res: Response) => {
     res.status(404).json({ error: 'Section not found' });
     return;
   }
+  res.setHeader('Cache-Control', DOCS_CACHE_CONTROL);
   res.json(article);
 });
 
@@ -48,6 +56,7 @@ router.get('/:section/:topic', (req: Request, res: Response) => {
     res.status(404).json({ error: 'Article not found' });
     return;
   }
+  res.setHeader('Cache-Control', DOCS_CACHE_CONTROL);
   res.json(article);
 });
 

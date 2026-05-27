@@ -62,3 +62,6 @@ snowflake.log
 
 # Playwright MCP
 .playwright-mcp
+# Throwaway scratch files that should never be committed
+tmp.json
+*.tmp.json

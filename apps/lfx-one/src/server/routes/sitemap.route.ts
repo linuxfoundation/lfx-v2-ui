@@ -3,6 +3,7 @@
 
 import express, { Request, Response, Router } from 'express';
 
+import { serverLogger } from '../server-logger';
 import { docsContentService } from '../services/docs-content.service';
 
 const router: Router = express.Router();
@@ -15,25 +16,31 @@ function escapeXml(value: string): string {
 }
 
 router.get('/', (_req: Request, res: Response) => {
-  const entries = docsContentService.getSitemap();
-  const urls = entries
-    .map(
-      (e) => `  <url>
+  try {
+    const entries = docsContentService.getSitemap();
+    const urls = entries
+      .map(
+        (e) => `  <url>
     <loc>${escapeXml(BASE_URL + e.path)}</loc>
     <lastmod>${escapeXml(e.lastmod)}</lastmod>
     <changefreq>weekly</changefreq>
   </url>`
-    )
-    .join('\n');
+      )
+      .join('\n');
 
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls}
 </urlset>`;
 
-  res.setHeader('Content-Type', 'application/xml');
-  res.setHeader('Cache-Control', 'public, max-age=3600');
-  res.send(xml);
+    res.setHeader('Content-Type', 'application/xml');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(xml);
+  } catch (err) {
+    serverLogger.error({ err }, 'sitemap: failed to generate sitemap');
+    res.status(500).setHeader('Content-Type', 'application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>
+<error>Failed to generate sitemap</error>`);
+  }
 });
 
 export default router;
