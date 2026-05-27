@@ -9,7 +9,9 @@ import DOMPurify from 'isomorphic-dompurify';
 import matter from 'gray-matter';
 import { marked } from 'marked';
 
-import { logger } from './logger.service';
+import { isValidSlugParts } from '@lfx-one/shared/utils';
+
+import { serverLogger } from '../server-logger';
 
 export interface DocFrontmatter {
   title: string;
@@ -49,13 +51,6 @@ export interface DocSitemapEntry {
 
 const serverDistFolder = fileURLToPath(new URL('.', import.meta.url));
 
-/** Only allow lowercase letters, digits, and hyphens in a slug segment. */
-const SLUG_SEGMENT_REGEX = /^[a-z0-9-]+$/;
-
-function isSafeSlugParts(slugParts: string[]): boolean {
-  return slugParts.length > 0 && slugParts.every((part) => SLUG_SEGMENT_REGEX.test(part));
-}
-
 function resolveDocsRoot(): string {
   // Production: files are bundled into the browser dist under /docs-enduser
   const prodPath = resolve(serverDistFolder, '../browser/docs-enduser');
@@ -76,11 +71,11 @@ function readFrontmatter(filePath: string): { frontmatter: DocFrontmatter; conte
     const parsed = matter(raw);
     const fm = parsed.data as DocFrontmatter;
     if (!fm.title || !fm.description) {
-      logger.warn({ filePath }, 'docs-content: article missing required frontmatter fields (title, description)');
+      serverLogger.warn({ filePath }, 'docs-content: article missing required frontmatter fields (title, description)');
     }
     return { frontmatter: fm, content: parsed.content };
   } catch (err) {
-    logger.error({ filePath, err }, 'docs-content: failed to read article');
+    serverLogger.error({ filePath, err }, 'docs-content: failed to read article');
     return null;
   }
 }
@@ -155,7 +150,7 @@ export class DocsContentService {
 
   public getArticle(slugParts: string[]): DocArticle | null {
     // Validate each slug segment before using in a path expression.
-    if (!isSafeSlugParts(slugParts)) {
+    if (!isValidSlugParts(slugParts)) {
       return null;
     }
 

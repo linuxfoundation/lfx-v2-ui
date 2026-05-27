@@ -3,17 +3,12 @@
 
 import express, { Request, Response, Router } from 'express';
 
-import { logger } from '../services/logger.service';
+import { isValidSlug } from '@lfx-one/shared/utils';
+
+import { serverLogger } from '../server-logger';
 import { docsContentService } from '../services/docs-content.service';
 
 const router: Router = express.Router();
-
-/** Only allow lowercase letters, digits, and hyphens in slug segments. */
-const SLUG_RE = /^[a-z0-9-]+$/;
-
-function isValidSlug(value: string): boolean {
-  return SLUG_RE.test(value);
-}
 
 // GET /public/api/docs — section tree (landing nav + sidebar)
 router.get('/', (_req: Request, res: Response) => {
@@ -21,7 +16,7 @@ router.get('/', (_req: Request, res: Response) => {
     const sections = docsContentService.listSections();
     res.json({ sections });
   } catch (err) {
-    logger.error({ err }, 'docs: failed to list sections');
+    serverLogger.error({ err }, 'docs: failed to list sections');
     res.status(500).json({ error: 'Failed to load documentation index' });
   }
 });
