@@ -1,8 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import DOMPurify from 'isomorphic-dompurify';
@@ -49,6 +49,13 @@ export interface DocSitemapEntry {
 
 const serverDistFolder = fileURLToPath(new URL('.', import.meta.url));
 
+/** Only allow lowercase letters, digits, and hyphens in a slug segment. */
+const SLUG_SEGMENT_REGEX = /^[a-z0-9-]+$/;
+
+function isSafeSlugParts(slugParts: string[]): boolean {
+  return slugParts.length > 0 && slugParts.every((part) => SLUG_SEGMENT_REGEX.test(part));
+}
+
 function resolveDocsRoot(): string {
   // Production: files are bundled into the browser dist under /docs-enduser
   const prodPath = resolve(serverDistFolder, '../browser/docs-enduser');
@@ -84,7 +91,6 @@ function renderMarkdown(content: string): string {
 }
 
 let _sectionCache: DocSection[] | null = null;
-let _sectionCacheMtime: number | null = null;
 
 export class DocsContentService {
   private readonly docsRoot: string;
@@ -94,13 +100,11 @@ export class DocsContentService {
   }
 
   public listSections(): DocSection[] {
-    // In development, invalidate the cache when the directory mtime changes.
+    // In development, skip the cache so file edits are reflected immediately
+    // without a restart. Directory mtime is unreliable for tracking edits to
+    // individual markdown files.
     if (process.env['NODE_ENV'] !== 'production') {
-      const mtime = statSync(this.docsRoot).mtimeMs;
-      if (_sectionCacheMtime !== mtime) {
-        _sectionCache = null;
-        _sectionCacheMtime = mtime;
-      }
+      _sectionCache = null;
     }
 
     if (_sectionCache) {
@@ -150,7 +154,16 @@ export class DocsContentService {
   }
 
   public getArticle(slugParts: string[]): DocArticle | null {
-    const filePath = join(this.docsRoot, ...slugParts, 'index.md');
+    // Validate each slug segment before using in a path expression.
+    if (!isSafeSlugParts(slugParts)) {
+      return null;
+    }
+
+    const filePath = resolve(this.docsRoot, ...slugParts, 'index.md');
+    // Prevent path traversal: resolved path must stay inside docsRoot.
+    if (!filePath.startsWith(`${this.docsRoot}${sep}`)) {
+      return null;
+    }
     if (!existsSync(filePath)) {
       return null;
     }

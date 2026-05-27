@@ -1,15 +1,13 @@
 ---
 title: Votes
 description: Create polls, cast votes, and view results for project governance decisions in LFX Self Serve.
-audience: [maintainer, board-member, executive-director]
+audience: [all]
 product_area: Votes
 tags: [votes, polls, governance, decisions, elections]
 last_generated: 2026-05-22
 last_updated: 2026-05-22
 intercom_collection: Votes
 ---
-
-# Votes
 
 The Votes section lets you create and manage polls for formal project governance decisions. Votes are used for committee elections, policy approvals, and other decisions that require a recorded community response.
 

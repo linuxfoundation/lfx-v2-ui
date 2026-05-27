@@ -26,7 +26,7 @@
   <!-- Article content -->
   @if (!loading() && article(); as art) {
     <!-- Breadcrumbs -->
-    <nav aria-label="Breadcrumb" class="flex items-center gap-1.5 text-sm text-gray-500">
+    <nav data-testid="docs-breadcrumbs" aria-label="Breadcrumb" class="flex items-center gap-1.5 text-sm text-gray-500">
       @for (crumb of art.breadcrumbs; track crumb.path; let last = $last) {
         @if (!last) {
           <a [routerLink]="crumb.path" class="hover:text-blue-600 hover:underline">{{ crumb.label }}</a>
@@ -50,7 +50,12 @@
       } @else {
         <span></span>
       }
-      <a [href]="githubEditUrl" target="_blank" rel="noopener noreferrer" class="flex items-center gap-1 hover:text-blue-600 hover:underline">
+      <a
+        [href]="githubEditUrl"
+        data-testid="docs-edit-link"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="flex items-center gap-1 hover:text-blue-600 hover:underline">
         <i class="fa-brands fa-github"></i>
         Edit this page
       </a>

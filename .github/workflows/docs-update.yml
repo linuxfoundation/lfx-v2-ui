@@ -28,6 +28,9 @@
 
 name: Generate Docs Update
 
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
     inputs:
@@ -73,9 +76,18 @@ jobs:
 
       - name: Validate tags exist
         id: tags
+        env:
+          CURRENT_TAG_INPUT: ${{ github.event.inputs.current_tag }}
+          PREVIOUS_TAG_INPUT: ${{ github.event.inputs.previous_tag }}
         run: |
-          CURRENT_TAG="${{ github.event.inputs.current_tag }}"
-          PREVIOUS_TAG="${{ github.event.inputs.previous_tag }}"
+          # Bind inputs via env vars to prevent command substitution injection.
+          CURRENT_TAG="$CURRENT_TAG_INPUT"
+          PREVIOUS_TAG="$PREVIOUS_TAG_INPUT"
+
+          # Allow only safe tag characters (alphanumeric, dot, hyphen, slash, underscore).
+          TAG_PATTERN='^[A-Za-z0-9._/-]+$'
+          [[ "$CURRENT_TAG" =~ $TAG_PATTERN ]] || { echo "Error: invalid current_tag"; exit 1; }
+          [[ "$PREVIOUS_TAG" == "initial" || "$PREVIOUS_TAG" =~ $TAG_PATTERN ]] || { echo "Error: invalid previous_tag"; exit 1; }
 
           if ! git rev-parse "${CURRENT_TAG}" >/dev/null 2>&1; then
             echo "Error: tag ${CURRENT_TAG} not found"
@@ -146,7 +158,6 @@ jobs:
           CURRENT_TAG: ${{ steps.tags.outputs.current_tag }}
           PREVIOUS_TAG: ${{ steps.tags.outputs.previous_tag }}
           CHANGED_MODULES: ${{ steps.modules.outputs.changed_modules }}
-          TODAY: ${{ github.run_started_at }}
         run: |
           node << 'EOF'
           const Anthropic = require('@anthropic-ai/sdk');
@@ -157,7 +168,9 @@ jobs:
 
           const diffStat = fs.readFileSync('/tmp/diff_stat.txt', 'utf8');
           const diffFull = fs.readFileSync('/tmp/diff_trimmed.txt', 'utf8');
-          const today = process.env.TODAY.split('T')[0];
+          // Compute today's date in the script; github.run_started_at is not a
+          // valid Actions context property and evaluates to an empty string.
+          const today = new Date().toISOString().slice(0, 10);
 
           const docsRoot = path.join('docs-repo', process.env.DOCS_PATH || 'docs/enduser');
           const changedModules = process.env.CHANGED_MODULES.trim().split(/\s+/);
@@ -289,20 +302,31 @@ jobs:
           const raw = fs.readFileSync('/tmp/claude_output.json', 'utf8');
           const output = JSON.parse(raw);
 
-          const docsRoot = path.join('docs-repo', process.env.DOCS_PATH || 'docs/enduser');
+          const docsRoot = path.resolve('docs-repo', process.env.DOCS_PATH || 'docs/enduser');
+          const docsRootPrefix = docsRoot + path.sep;
+
+          function safeWrite(relPath, content, label) {
+            // Prevent model-supplied paths from escaping docsRoot.
+            if (path.isAbsolute(relPath) || relPath.includes('..')) {
+              console.error(`Skipping unsafe path: ${relPath}`);
+              return;
+            }
+            const fullPath = path.resolve(docsRoot, relPath);
+            if (!fullPath.startsWith(docsRootPrefix)) {
+              console.error(`Skipping path outside docsRoot: ${relPath}`);
+              return;
+            }
+            fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+            fs.writeFileSync(fullPath, content);
+            console.log(`${label}: ${relPath}`);
+          }
 
           for (const file of (output.files || [])) {
-            const fullPath = path.join(docsRoot, file.path);
-            fs.mkdirSync(path.dirname(fullPath), { recursive: true });
-            fs.writeFileSync(fullPath, file.content);
-            console.log(`${file.action}: ${file.path}`);
+            safeWrite(file.path, file.content, file.action);
           }
 
           for (const suggestion of (output.suggestions || [])) {
-            const fullPath = path.join(docsRoot, suggestion.path);
-            fs.mkdirSync(path.dirname(fullPath), { recursive: true });
-            fs.writeFileSync(fullPath, suggestion.content);
-            console.log(`suggestions: ${suggestion.path}`);
+            safeWrite(suggestion.path, suggestion.content, 'suggestions');
           }
 
           const prBody = [

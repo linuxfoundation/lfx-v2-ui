@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Settings
 ---
 
-# Manage Settings
-
 Use the Settings section to configure your application preferences in LFX Self Serve.
 
 ## Access your settings

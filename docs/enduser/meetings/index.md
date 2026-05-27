@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Meetings
 ---
 
-# Meetings
-
 The Meetings section lets you create, manage, and join meetings for your Linux Foundation project groups. Meetings include Technical Steering Committee (TSC) calls, working group sessions, and other recurring or one-time project gatherings.
 
 ## What you can do

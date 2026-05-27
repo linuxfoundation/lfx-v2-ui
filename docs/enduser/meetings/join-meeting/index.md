@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Meetings
 ---
 
-# Join a Meeting
-
 Any project meeting hosted in LFX Self Serve has a public join page that does not require an LFX account. This page shows the meeting details and provides the information you need to join.
 
 ## Steps

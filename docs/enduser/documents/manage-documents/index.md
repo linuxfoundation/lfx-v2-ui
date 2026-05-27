@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Documents
 ---
 
-# Manage Documents
-
 This article applies to users with **maintainer**, **board-member**, or **executive-director** personas. Use the Documents section to find and work with files associated with your project.
 
 ## Browse documents

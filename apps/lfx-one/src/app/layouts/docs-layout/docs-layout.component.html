@@ -3,7 +3,7 @@
 
 <div class="flex flex-col min-h-screen bg-white">
   <!-- Top bar -->
-  <header class="sticky top-0 z-30 flex items-center justify-between gap-4 h-14 px-4 bg-blue-900 border-b border-blue-800">
+  <header data-testid="docs-topbar" class="sticky top-0 z-30 flex items-center justify-between gap-4 h-14 px-4 bg-blue-900 border-b border-blue-800">
     <div class="flex items-center gap-3">
       <!-- Mobile nav toggle -->
       <button
@@ -16,14 +16,14 @@
       </button>
 
       <!-- Logo + name -->
-      <a routerLink="/docs" class="flex items-center gap-2 min-w-0">
+      <a routerLink="/docs" data-testid="docs-topbar-logo" class="flex items-center gap-2 min-w-0">
         <img src="https://cdn.platform.linuxfoundation.org/assets/lf-icon.svg" alt="Linux Foundation" width="28" height="28" class="shrink-0" />
         <span class="text-white font-semibold text-sm truncate">LFX Self Serve Help</span>
       </a>
     </div>
 
-    <!-- Open app link -->
-    <a href="https://app.lfx.dev" class="flex items-center gap-1.5 text-sm text-blue-200 hover:text-white transition-colors shrink-0">
+    <!-- Open app link — relative href so it works in all environments -->
+    <a href="/" data-testid="docs-open-app-link" class="flex items-center gap-1.5 text-sm text-blue-200 hover:text-white transition-colors shrink-0">
       Open the app
       <i class="fa-light fa-arrow-up-right-from-square text-xs"></i>
     </a>

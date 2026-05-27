@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Meetings
 ---
 
-# Manage Meetings
-
 This article applies to users with **maintainer**, **board-member**, or **executive-director** personas. Use this guide to update or cancel existing meetings.
 
 ## View meetings

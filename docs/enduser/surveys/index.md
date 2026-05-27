@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Surveys
 ---
 
-# Surveys
-
 The Surveys section lets you create surveys for your project community, collect responses, and analyze feedback including Net Promoter Score (NPS) data. Surveys are a tool for gathering structured input from contributors, maintainers, and stakeholders.
 
 ## What you can do

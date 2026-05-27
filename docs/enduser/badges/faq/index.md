@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Badges
 ---
 
-# Badges FAQ
-
 ## How do I earn a badge?
 
 Badges are awarded automatically when you meet the qualifying criteria for a Linux Foundation program, certification, or contribution milestone. You do not need to apply manually — the system grants badges based on your recorded activity and certifications.

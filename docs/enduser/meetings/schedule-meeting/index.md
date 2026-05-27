@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Meetings
 ---
 
-# Schedule a Meeting
-
 This article applies to users with **maintainer**, **board-member**, or **executive-director** personas. Use this workflow to create a new meeting for your project group.
 
 ## Before you begin

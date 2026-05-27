@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Profile
 ---
 
-# Profile FAQ
-
 ## How do I change my email address?
 
 Email addresses are managed in **Settings** (`/settings`), not on the Profile page. Go to Settings > **Email Settings** > **Add New Email Address**. A 6-digit verification code will be sent to the new address to confirm it.

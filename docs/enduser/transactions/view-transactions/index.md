@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Transactions
 ---
 
-# View Transactions
-
 Use the Transactions section to review your purchase and billing history on the LFX platform.
 
 ## Steps

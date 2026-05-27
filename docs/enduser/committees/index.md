@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Committees
 ---
 
-# My Groups
-
 In LFX Self Serve, committees are displayed as **Groups**. Navigate to **My Groups** at `/groups` to see your committee memberships.
 
 The Groups section lets you view and manage the committees associated with your Linux Foundation projects. Committees are formal groups that govern project decisions, including Technical Steering Committees (TSCs), boards, and other working groups.

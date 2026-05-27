@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Events
 ---
 
-# Browse Events
-
 Use the Events section to find Linux Foundation events relevant to your projects and interests.
 
 ## Steps

@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Documents
 ---
 
-# Documents FAQ
-
 ## Who can see project documents?
 
 Document visibility depends on your persona. If you cannot see expected documents, contact your project administrator.

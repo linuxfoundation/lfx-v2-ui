@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Surveys
 ---
 
-# Manage Surveys
-
 This article applies to users with **maintainer**, **board-member**, or **executive-director** personas. Use this guide to view, edit, and analyze your project surveys.
 
 ## View surveys

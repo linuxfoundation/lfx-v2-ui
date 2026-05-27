@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Mailing Lists
 ---
 
-# Create a Mailing List
-
 This article applies to users with **maintainer**, **board-member**, or **executive-director** personas. You can create new mailing lists for your project to support community communications.
 
 ## Before you begin

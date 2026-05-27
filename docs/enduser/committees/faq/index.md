@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Committees
 ---
 
-# Committees FAQ
-
 ## Who can create a committee?
 
 Users with a **maintainer**, **board-member**, or **executive-director** persona can create committees. Contributors can view committee information but cannot create or manage committees.

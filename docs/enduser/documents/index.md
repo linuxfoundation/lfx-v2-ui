@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Documents
 ---
 
-# Documents
-
 The Documents section lets you browse and manage documents associated with your Linux Foundation projects. Documents typically include governance materials, meeting notes, policy files, and other project-related content.
 
 ## What you can do

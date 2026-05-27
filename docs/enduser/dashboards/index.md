@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Dashboards
 ---
 
-# Dashboard
-
 The Dashboard is the central starting point of LFX Self Serve. It adapts to show you relevant information based on who you are (your persona) and what you are viewing (your lens).
 
 ## Lens system

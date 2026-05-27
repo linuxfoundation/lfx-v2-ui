@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Votes
 ---
 
-# Votes FAQ
-
 ## Who can create a poll?
 
 Users with **maintainer**, **board-member**, or **executive-director** personas can create polls. Contributors can participate in polls they are eligible to vote in but cannot create new ones.

@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Surveys
 ---
 
-# Create a Survey
-
 This article applies to users with **maintainer**, **board-member**, or **executive-director** personas. Use this guide to create a new survey for your project community.
 
 ## Before you begin

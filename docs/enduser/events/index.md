@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Events
 ---
 
-# Events
-
 The Events section shows Linux Foundation events relevant to you and your projects. You can browse upcoming events, view event details, and manage your attendance.
 
 ## What you can do

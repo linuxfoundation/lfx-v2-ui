@@ -14,29 +14,31 @@ const DATA_LOAD_TIMEOUT = 15_000;
 
 test.setTimeout(60_000);
 
-const MOCK_SECTIONS = [
-  {
-    section: 'meetings',
-    label: 'Meetings',
-    description: 'Schedule, manage, and join meetings.',
-    icon: 'fa-light fa-video',
-    articleCount: 3,
-    topics: [
-      { slug: 'schedule-meeting', title: 'Schedule a Meeting', description: 'How to schedule a meeting.' },
-      { slug: 'join-meeting', title: 'Join a Meeting', description: 'How to join a meeting.' },
-      { slug: 'faq', title: 'FAQ', description: 'Frequently asked questions about meetings.' },
-    ],
-  },
-  {
-    section: 'committees',
-    label: 'Groups & Committees',
-    description: 'Manage project committees.',
-    icon: 'fa-light fa-users-rectangle',
-    articleCount: 2,
-    topics: [{ slug: 'faq', title: 'FAQ', description: 'Committee FAQs.' }],
-  },
-];
+// Mock shapes must match the real API contract:
+// GET /public/api/docs  → { sections: DocSection[] }
+// GET /public/api/docs/:section/:topic → DocArticle
+const MOCK_SECTIONS = {
+  sections: [
+    {
+      slug: 'meetings',
+      title: 'Meetings',
+      description: 'Schedule, manage, and join meetings.',
+      topics: [
+        { slug: 'schedule-meeting', title: 'Schedule a Meeting', description: 'How to schedule a meeting.', path: '/docs/meetings/schedule-meeting' },
+        { slug: 'join-meeting', title: 'Join a Meeting', description: 'How to join a meeting.', path: '/docs/meetings/join-meeting' },
+        { slug: 'faq', title: 'FAQ', description: 'Frequently asked questions about meetings.', path: '/docs/meetings/faq' },
+      ],
+    },
+    {
+      slug: 'committees',
+      title: 'Groups & Committees',
+      description: 'Manage project committees.',
+      topics: [{ slug: 'faq', title: 'FAQ', description: 'Committee FAQs.', path: '/docs/committees/faq' }],
+    },
+  ],
+};
 
+// DocArticle must include slug and breadcrumbs — used by DocsArticleComponent.
 const MOCK_ARTICLE = {
   frontmatter: {
     title: 'Schedule a Meeting',
@@ -44,9 +46,14 @@ const MOCK_ARTICLE = {
     product_area: 'meetings',
     tags: ['meetings', 'scheduling'],
     last_updated: '2025-01-01',
-    last_generated: '2025-01-01',
   },
   html: '<h2>Schedule a Meeting</h2><p>To schedule a meeting, navigate to the Meetings section.</p>',
+  slug: ['meetings', 'schedule-meeting'],
+  breadcrumbs: [
+    { label: 'Help', path: '/docs' },
+    { label: 'Meetings', path: '/docs/meetings' },
+    { label: 'Schedule a Meeting', path: '/docs/meetings/schedule-meeting' },
+  ],
 };
 
 test.describe('Public Docs — Landing page', () => {
@@ -83,11 +90,11 @@ test.describe('Public Docs — Landing page', () => {
 
   test('should show a card for each mocked section', async ({ page }) => {
     const cards = page.getByTestId('docs-section-card');
-    await expect(cards).toHaveCount(MOCK_SECTIONS.length, { timeout: DATA_LOAD_TIMEOUT });
+    await expect(cards).toHaveCount(MOCK_SECTIONS.sections.length, { timeout: DATA_LOAD_TIMEOUT });
   });
 
   test('should show section label on each card', async ({ page }) => {
-    await expect(page.getByTestId('docs-section-card').first()).toContainText(MOCK_SECTIONS[0].label);
+    await expect(page.getByTestId('docs-section-card').first()).toContainText(MOCK_SECTIONS.sections[0].title);
   });
 
   test('should show the docs sidebar', async ({ page }) => {
@@ -165,7 +172,9 @@ test.describe('Public Docs — API endpoints', () => {
     const response = await request.get(`${API_BASE}`);
     expect(response.status()).toBe(200);
     const body = await response.json();
-    expect(Array.isArray(body)).toBe(true);
+    // API returns { sections: DocSection[] } — not a bare array.
+    expect(body).toHaveProperty('sections');
+    expect(Array.isArray(body.sections)).toBe(true);
   });
 
   test('GET /public/api/docs/meetings returns 200 without auth', async ({ request }) => {

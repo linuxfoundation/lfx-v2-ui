@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Mailing Lists
 ---
 
-# Manage Mailing Lists
-
 Use this page to subscribe to project mailing lists, manage your subscriptions, and (if you have the required role) update list settings.
 
 ## View mailing lists

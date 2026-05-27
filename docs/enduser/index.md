@@ -6,8 +6,6 @@ tags: [help, overview, getting-started]
 last_updated: 2026-05-27
 ---
 
-# LFX Self Serve Help Documentation
-
 Guides for [app.lfx.dev](https://app.lfx.dev) — manage your membership, communities, and contributions.
 
 ## Product Areas

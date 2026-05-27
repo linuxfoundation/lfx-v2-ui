@@ -16,6 +16,9 @@
 
 name: Validate End-User Docs
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [main]
@@ -53,7 +56,7 @@ jobs:
           const fs = require('fs');
           const path = require('path');
 
-          const REQUIRED_FIELDS = ['title', 'description'];
+          const REQUIRED_FIELDS = ['title', 'description', 'product_area', 'last_updated'];
           const docsRoot = path.join(process.cwd(), 'docs', 'enduser');
 
           function walk(dir) {
