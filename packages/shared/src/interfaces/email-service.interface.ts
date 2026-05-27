@@ -46,7 +46,7 @@ export interface EmailRecipientRecord {
    * Every unique open event for this recipient, keyed server-side by
    * SNS MessageId for dedup. Absent (not present in JSON) when the
    * recipient has never opened — upstream serializes with `omitempty`.
-   * Equivalent to `open_count === opened_at_list?.length ?? 0`.
+   * Equivalent to `open_count === (opened_at_list?.length ?? 0)`.
    */
   opened_at_list?: OpenEvent[];
   /** Total number of times the email was opened (== opened_at_list.length). */
