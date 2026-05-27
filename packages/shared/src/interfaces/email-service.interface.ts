@@ -25,6 +25,13 @@ export interface EmailServiceSendResponse {
   group_id: string;
 }
 
+export interface OpenEvent {
+  /** SNS MessageId used by the email-service to dedupe replayed SES events. */
+  event_id: string;
+  /** SES-provided open timestamp. */
+  opened_at: string;
+}
+
 export interface EmailRecipientRecord {
   email_id: string;
   group_id: string;
@@ -33,8 +40,18 @@ export interface EmailRecipientRecord {
   sent_at: string;
   delivered: boolean;
   delivered_at?: string;
+  /** True if the recipient opened the email at least once. */
   opened: boolean;
-  opened_at?: string;
+  /**
+   * Every unique open event for this recipient, keyed server-side by
+   * SNS MessageId for dedup. Empty array if never opened. Equivalent to
+   * `open_count === opened_at_list.length`.
+   */
+  opened_at_list: OpenEvent[];
+  /** Total number of times the email was opened (== opened_at_list.length). */
+  open_count: number;
+  /** Most recent open timestamp; the server only advances this forward. */
+  last_opened_at?: string;
   failed: boolean;
 }
 
@@ -50,7 +67,10 @@ export interface EmailServiceEngagementResponse {
   group_id: string;
   total_sent: number;
   delivered: number;
+  /** Total opens across the group — includes repeat opens by the same recipient. */
   opened: number;
+  /** Count of distinct recipients in the group who opened at least once. */
+  unique_opened: number;
   failed: number;
 }
 

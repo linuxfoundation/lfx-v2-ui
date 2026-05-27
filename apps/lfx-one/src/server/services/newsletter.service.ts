@@ -131,7 +131,7 @@ export class NewsletterService {
         logger.warning(req, 'newsletter_analytics', 'email-service returned no records for groupId; falling back to empty analytics', {
           newsletter_id: newsletter.id,
           group_id: newsletter.groupId,
-          email_service_error: error.message,
+          err: error,
         });
         return this.buildEmptyAnalytics(newsletter);
       }
@@ -189,8 +189,9 @@ export class NewsletterService {
 
   /**
    * Retry markSent on transient failures (network blips, upstream 5xx). Logs
-   * each failure as a warning — the central apiErrorHandler logs the final
-   * error if all attempts fail. Validation-type errors (4xx) are returned
+   * each failure as a warning with `err` (preserves stack via Pino's err
+   * serializer); the central apiErrorHandler logs the final error if all
+   * attempts fail. Validation-type errors (4xx MicroserviceError) surface
    * immediately without retry.
    */
   private async markSentWithRetry(
@@ -209,17 +210,25 @@ export class NewsletterService {
         return;
       } catch (error) {
         lastError = error;
-        const retryable = this.isRetryable(error) && attempt < MARK_SENT_MAX_ATTEMPTS;
-        logger.warning(req, operation, retryable ? 'mark-sent failed; will retry' : 'mark-sent failed; giving up', {
+        const errorRetryable = this.isRetryable(error);
+        const willRetry = errorRetryable && attempt < MARK_SENT_MAX_ATTEMPTS;
+        // Final-attempt message keeps the recovery hint operators search
+        // for ("group_id captured ... for manual recovery"); intermediate
+        // attempts log briefly.
+        const message = willRetry
+          ? 'mark-sent failed; will retry'
+          : 'mark-sent failed after all retries; emails delivered, group_id captured in logs for manual recovery';
+        logger.warning(req, operation, message, {
           newsletter_id: newsletterId,
           group_id: groupId,
           attempt,
-          retryable,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error_retryable: errorRetryable,
+          will_retry: willRetry,
+          err: error,
           sent,
           failed,
         });
-        if (!retryable) {
+        if (!willRetry) {
           break;
         }
         await this.sleep(MARK_SENT_BACKOFF_BASE_MS * 2 ** (attempt - 1));
@@ -228,14 +237,21 @@ export class NewsletterService {
     throw lastError;
   }
 
+  /**
+   * Anything that's not a clear 4xx is retryable. That covers:
+   *   - 5xx MicroserviceError (upstream availability)
+   *   - Raw transport errors (DNS hiccups, ECONNRESET, ETIMEDOUT,
+   *     "fetch failed"). MicroserviceProxyService re-throws those
+   *     unwrapped — they aren't MicroserviceError at all — so treating
+   *     non-MicroserviceError as retryable catches them.
+   * We deliberately do NOT retry 4xx: those mean the request itself is
+   * wrong (version mismatch, validation) and a retry won't help.
+   */
   private isRetryable(error: unknown): boolean {
-    if (!(error instanceof MicroserviceError)) {
-      return false;
+    if (error instanceof MicroserviceError) {
+      return error.statusCode >= 500 && error.statusCode < 600;
     }
-    // Retry transport / availability errors (5xx). Don't retry 4xx — those
-    // mean the request itself is wrong (version mismatch, validation),
-    // and retrying won't fix it.
-    return error.statusCode >= 500 && error.statusCode < 600;
+    return true;
   }
 
   private sleep(ms: number): Promise<void> {
@@ -261,26 +277,35 @@ export class NewsletterService {
   /**
    * Aggregate per-recipient EmailRecipientRecords into NewsletterAnalytics.
    *
-   * The email-service's opens model is one bit per recipient (no multi-open
-   * count), so totalOpens == uniqueOpens. Both totals and the daily-opens
-   * series use the same `opened && opened_at` predicate so the headline
-   * number always sums to the chart buckets — even if a record arrives
-   * with opened=true but opened_at missing (the README marks opened_at
-   * optional), it's excluded from both, not just the chart.
+   * Open semantics (post lfx-v2-email-service "track all opens" change):
+   *   - `totalOpens` is the sum of `open_count` across all records — i.e.
+   *     every open event, including repeat opens by the same recipient.
+   *   - `uniqueOpens` is the count of recipients with `opened === true` —
+   *     i.e. distinct recipients who opened at least once.
+   *   - `openRate` is `uniqueOpens / delivered` (reach, not frequency).
+   *
+   * For backwards compatibility against the pre-change schema (records
+   * with no `opened_at_list` / `open_count`), `open_count ?? 0` and
+   * `opened_at_list ?? []` degrade to the older "first-open-only" shape:
+   * `totalOpens` reads zero (we have no count) but `uniqueOpens` still
+   * counts `opened === true` records correctly. The daily-opens chart
+   * is empty under that fallback, which is the best we can do without
+   * per-event timestamps.
    */
   private buildAnalyticsFromRecords(newsletter: Newsletter, records: EmailRecipientRecord[]): NewsletterAnalytics {
     const totalRecipients = records.length;
     const delivered = records.filter((r) => r.delivered).length;
     const failed = records.filter((r) => r.failed).length;
-    const opensCount = records.filter((r) => r.opened && r.opened_at).length;
-    const openRate = delivered > 0 ? opensCount / delivered : 0;
+    const uniqueOpens = records.filter((r) => r.opened).length;
+    const totalOpens = records.reduce((sum, r) => sum + (r.open_count ?? 0), 0);
+    const openRate = delivered > 0 ? uniqueOpens / delivered : 0;
 
     const dailyOpens = this.aggregateDailyOpens(records);
 
     const eventTimestamps: number[] = [];
     for (const record of records) {
-      if (record.opened_at) {
-        eventTimestamps.push(new Date(record.opened_at).getTime());
+      if (record.last_opened_at) {
+        eventTimestamps.push(new Date(record.last_opened_at).getTime());
       }
       if (record.delivered_at) {
         eventTimestamps.push(new Date(record.delivered_at).getTime());
@@ -296,26 +321,48 @@ export class NewsletterService {
       totalRecipients,
       delivered,
       failed,
-      totalOpens: opensCount,
-      uniqueOpens: opensCount,
+      totalOpens,
+      uniqueOpens,
       openRate,
       dailyOpens,
       lastEventAt,
     };
   }
 
+  /**
+   * Bucket every open event by UTC day. Two parallel counters per bucket:
+   *   - `opens`: total events that day (matches `totalOpens` headline).
+   *   - `uniqueOpens`: distinct recipients that opened that day, deduped
+   *     by `email_id` (one recipient who opened five times on the same
+   *     day counts once in `uniqueOpens` but five in `opens`).
+   */
   private aggregateDailyOpens(records: EmailRecipientRecord[]): NewsletterDailyOpens[] {
-    const buckets = new Map<string, number>();
+    const opensPerDay = new Map<string, number>();
+    const uniqueOpenersPerDay = new Map<string, Set<string>>();
+
     for (const record of records) {
-      if (!record.opened || !record.opened_at) {
-        continue;
+      const events = record.opened_at_list ?? [];
+      for (const event of events) {
+        if (!event.opened_at) {
+          continue;
+        }
+        const day = event.opened_at.slice(0, 10);
+        opensPerDay.set(day, (opensPerDay.get(day) ?? 0) + 1);
+        let openers = uniqueOpenersPerDay.get(day);
+        if (!openers) {
+          openers = new Set<string>();
+          uniqueOpenersPerDay.set(day, openers);
+        }
+        openers.add(record.email_id);
       }
-      const day = record.opened_at.slice(0, 10);
-      buckets.set(day, (buckets.get(day) ?? 0) + 1);
     }
 
-    return Array.from(buckets.entries())
-      .map(([date, opens]) => ({ date, opens, uniqueOpens: opens }))
+    return Array.from(opensPerDay.keys())
+      .map((date) => ({
+        date,
+        opens: opensPerDay.get(date) ?? 0,
+        uniqueOpens: uniqueOpenersPerDay.get(date)?.size ?? 0,
+      }))
       .sort((a, b) => a.date.localeCompare(b.date));
   }
 }
