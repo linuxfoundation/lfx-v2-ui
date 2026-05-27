@@ -835,19 +835,19 @@ export class AnalyticsService {
    * @returns Observable of web activities summary response
    */
   public getWebActivitiesSummary(foundationSlug: string, classification?: string): Observable<WebActivitiesSummaryResponse> {
-    const params: Record<string, string> = { foundationSlug };
-    if (classification) params['classification'] = classification;
-    return this.http.get<WebActivitiesSummaryResponse>('/api/analytics/web-activities-summary', { params }).pipe(
-      catchError(() => {
-        return of({
-          totalSessions: 0,
-          totalPageViews: 0,
-          domainGroups: [],
-          dailyData: [],
-          dailyLabels: [],
-        });
-      })
-    );
+    return this.http
+      .get<WebActivitiesSummaryResponse>('/api/analytics/web-activities-summary', { params: this.buildFoundationParams(foundationSlug, classification) })
+      .pipe(
+        catchError(() => {
+          return of({
+            totalSessions: 0,
+            totalPageViews: 0,
+            domainGroups: [],
+            dailyData: [],
+            dailyLabels: [],
+          });
+        })
+      );
   }
 
   /**
@@ -857,9 +857,7 @@ export class AnalyticsService {
    * @returns Observable of email CTR response
    */
   public getEmailCtr(foundationSlug: string, classification?: string): Observable<EmailCtrResponse> {
-    const params: Record<string, string> = { foundationSlug };
-    if (classification) params['classification'] = classification;
-    return this.http.get<EmailCtrResponse>('/api/analytics/email-ctr', { params }).pipe(
+    return this.http.get<EmailCtrResponse>('/api/analytics/email-ctr', { params: this.buildFoundationParams(foundationSlug, classification) }).pipe(
       catchError(() => {
         return of({
           currentCtr: 0,
@@ -902,9 +900,7 @@ export class AnalyticsService {
    * @returns Social reach response with ROAS, impressions, and monthly trends
    */
   public getSocialReach(foundationSlug: string, classification?: string): Observable<SocialReachResponse> {
-    const params: Record<string, string> = { foundationSlug };
-    if (classification) params['classification'] = classification;
-    return this.http.get<SocialReachResponse>('/api/analytics/social-reach', { params }).pipe(
+    return this.http.get<SocialReachResponse>('/api/analytics/social-reach', { params: this.buildFoundationParams(foundationSlug, classification) }).pipe(
       catchError(() => {
         return of({
           totalReach: 0,
@@ -1198,9 +1194,7 @@ export class AnalyticsService {
    * @returns Observable emitting reach totals, platform breakdowns, and weekly trend (or zeroed defaults on error)
    */
   public getBrandReach(foundationSlug: string, classification?: string): Observable<BrandReachResponse> {
-    const params: Record<string, string> = { foundationSlug };
-    if (classification) params['classification'] = classification;
-    return this.http.get<BrandReachResponse>('/api/analytics/brand-reach', { params }).pipe(
+    return this.http.get<BrandReachResponse>('/api/analytics/brand-reach', { params: this.buildFoundationParams(foundationSlug, classification) }).pipe(
       catchError(() =>
         of({
           totalSocialFollowers: 0,
@@ -1248,9 +1242,7 @@ export class AnalyticsService {
    * @returns Observable emitting pipeline/revenue totals, attribution breakdowns, and event registration data (or zeroed defaults on error)
    */
   public getRevenueImpact(foundationSlug: string, classification?: string): Observable<RevenueImpactResponse> {
-    const params: Record<string, string> = { foundationSlug };
-    if (classification) params['classification'] = classification;
-    return this.http.get<RevenueImpactResponse>('/api/analytics/revenue-impact', { params }).pipe(
+    return this.http.get<RevenueImpactResponse>('/api/analytics/revenue-impact', { params: this.buildFoundationParams(foundationSlug, classification) }).pipe(
       catchError(() =>
         of({
           pipelineInfluenced: 0,
@@ -1275,10 +1267,8 @@ export class AnalyticsService {
    * @returns Observable emitting channel summary + project drill-down (or empty defaults on error)
    */
   public getMarketingAttribution(foundationSlug: string, classification?: string): Observable<MarketingAttributionResponse> {
-    const params: Record<string, string> = { foundationSlug };
-    if (classification) params['classification'] = classification;
     return this.http
-      .get<MarketingAttributionResponse>('/api/analytics/marketing-attribution', { params })
+      .get<MarketingAttributionResponse>('/api/analytics/marketing-attribution', { params: this.buildFoundationParams(foundationSlug, classification) })
       .pipe(catchError(() => of({ channels: [], projects: [] })));
   }
 
@@ -1300,5 +1290,11 @@ export class AnalyticsService {
           });
         })
       );
+  }
+
+  private buildFoundationParams(foundationSlug: string, classification?: string): Record<string, string> {
+    const params: Record<string, string> = { foundationSlug };
+    if (classification) params['classification'] = classification;
+    return params;
   }
 }
