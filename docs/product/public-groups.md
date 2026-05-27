@@ -32,6 +32,10 @@ Reference links:
   <https://github.com/cncf/open-community-groups/issues/428>
 - OCG public group example with Call for Speakers:
   <https://ocgroups.dev/cncf/group/39aenb6>
+- LFX Self Serve source:
+  <https://github.com/linuxfoundation/lfx-self-serve>
+- LFX Skills source:
+  <https://github.com/linuxfoundation/lfx-skills>
 
 The alignment assumption for this spec is:
 
@@ -65,6 +69,30 @@ The alignment assumption for this spec is:
 - External apps can build their own UI from the public contract, but writes to
   canonical group data remain owned by LFX unless a separate write contract is
   approved.
+- OCG should use the public LFX Self Serve repository and LFX Skills workflow
+  when a public group, profile, call-for-speakers, dashboard, or reporting need
+  depends on canonical LFX context.
+
+## OCG Contribution Path
+
+OCG should use the public LFX Self Serve repository and LFX Skills workflow when
+a public group, profile, call-for-speakers, dashboard, or reporting need depends
+on canonical LFX context.
+
+Recommended model:
+
+- OCG owns meetup/community activation and event operations.
+- LFX Self Serve owns canonical public foundation/project/group pages, Profile
+  links, permissions, join/apply context, and reporting.
+- OCG can consume public-safe LFX group/profile contracts and link back to LFX.
+- When OCG needs new LFX-owned behavior, contributors should open focused LFX
+  Self Serve issues, JIRA tickets, or PRs rather than duplicating the workflow
+  in OCG.
+- `linuxfoundation/lfx-skills` can accelerate research, product placement,
+  implementation, testing, and preflight validation.
+
+This keeps the public groups experience consistent while giving OCG a fast
+contribution path for LFX-adjacent work.
 
 ## Personas
 
@@ -375,6 +403,9 @@ Mapping rules:
 - Document public API contract for OCG and foundation websites.
 - Add stable links from OCG groups/events to canonical LFX groups where mapped.
 - Add optional OCG source links on public group detail pages.
+- Use the public LFX Self Serve repository and LFX Skills contribution path for
+  any new LFX-owned public group, Profile, CFP, dashboard, or reporting
+  behavior.
 
 ### Phase 4: Lens Integration
 
