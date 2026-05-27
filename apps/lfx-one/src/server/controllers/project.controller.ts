@@ -138,6 +138,7 @@ export class ProjectController {
   /**
    * GET /projects/:uid/sfid — UUID → Salesforce 18-char ID translation via NATS.
    * Returns `{ sfid: string | null }`; null on lookup failure so callers can hide cleanly.
+   * Project access is enforced via getProjectById before the NATS mapping (FGA on upstream).
    */
   public async getProjectSfid(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { uid } = req.params;
@@ -153,6 +154,7 @@ export class ProjectController {
         return;
       }
 
+      await this.projectService.getProjectById(req, uid, false);
       const sfid = await this.projectService.getProjectSfidByUid(req, uid);
 
       logger.success(req, 'get_project_sfid', startTime, {
