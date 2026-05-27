@@ -22,10 +22,16 @@ It replaced Bevy for CNCF meetup groups and is also being used by LF Energy.
 Reference links:
 
 - OCG site: <https://ocgroups.dev/>
+- OCG documentation:
+  <https://cncf-open-community-groups.mintlify.app/introduction>
 - LF Energy OCG example: <https://ocgroups.dev/lf-energy>
 - OCG source: <https://github.com/cncf/open-community-groups>
 - OCG feedback/issues:
   <https://github.com/cncf/open-community-groups/issues>
+- OCG RISC-V migration issue:
+  <https://github.com/cncf/open-community-groups/issues/428>
+- OCG public group example with Call for Speakers:
+  <https://ocgroups.dev/cncf/group/39aenb6>
 
 The alignment assumption for this spec is:
 
@@ -34,6 +40,10 @@ The alignment assumption for this spec is:
   identity, permissions, and reporting.
 - OCG's immediate LFX dependency is access to profile data/API so LFID users can
   show useful public profile information and link back to LFX Profile.
+- OCG is also discussing adjacent surfaces such as user dashboards and call for
+  speakers. Those are useful community workflows, but in LFX context they should
+  resolve through LFX Profile, project/foundation/group context, and product
+  ownership rather than become a parallel canonical experience.
 - LFX Self Serve still needs meetup/group activity visible in Me, Project, and
   Foundation lenses.
 
@@ -42,8 +52,14 @@ The alignment assumption for this spec is:
 - LFX Self Serve is canonical for official foundation/project groups, WG/SIG
   structure, group classification, join rules, permissions, and reporting.
 - OCG owns meetup/community activation and event operations.
+- LFX remains the source of truth for foundations, projects, official groups,
+  communities, LFID/Profile, and governance-adjacent workflows.
 - Meetup activity can appear in LFX Self Serve, but meetup/community groups
   should be visually distinct from official LFX groups.
+- User dashboards, call for speakers, and other participant-facing workflows may
+  link to OCG operations, but the LFX experience should own the canonical user
+  journey when those workflows are tied to projects, foundations, or official
+  groups.
 - Public APIs must expose only public-safe fields and honor group/member
   visibility settings.
 - External apps can build their own UI from the public contract, but writes to
@@ -268,6 +284,9 @@ Gaps:
 - Member/chair exposure needs a clear privacy rule tied to `member_visibility`
   and LFX Profile policy.
 - OCG/meetup mapping fields do not exist yet.
+- User dashboard and call-for-speakers boundaries need explicit product
+  decisions so OCG does not become a parallel LFX participant or project
+  workflow surface by default.
 
 ## Product Decisions
 
@@ -294,6 +313,10 @@ Gaps:
   links from usernames.
 - OCG should receive canonical group/project/foundation context from the public
   group API and person enrichment from the Profile API.
+- Call for speakers belongs in the LFX product boundary when it depends on LFID,
+  Profile, affiliation, project/foundation context, review workflows, or
+  reporting. OCG can host public event/meetup operations and link back to LFX
+  for the canonical participant and project context.
 
 ## OCG Mapping Model
 
