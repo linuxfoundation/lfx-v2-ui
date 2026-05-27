@@ -1,8 +1,10 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { IntercomBootOptions, IntercomFunction } from '@lfx-one/shared/interfaces';
+
+import { DataDogRumService } from './datadog-rum.service';
 
 // Browser-only widget; every method is a no-op during SSR.
 @Injectable({
@@ -10,23 +12,26 @@ import { IntercomBootOptions, IntercomFunction } from '@lfx-one/shared/interface
 })
 export class IntercomService {
   // Read by OpenIntercomDirective to decide whether to open Intercom or fall back to JIRA.
-  public isBooted = false;
+  // Set synchronously when boot() is called; the stub queue absorbs commands until the script loads.
+  public isBootRequested = false;
+
+  private readonly dataDogRumService = inject(DataDogRumService);
 
   private isLoaded = false;
 
   // Fire-and-forget: stub queue absorbs calls before the script loads and replays them on load.
   public boot(options: IntercomBootOptions): void {
-    if (typeof window === 'undefined' || !options.app_id || this.isBooted) {
+    if (typeof window === 'undefined' || !options.app_id || this.isBootRequested) {
       return;
     }
 
     this.loadIntercomScript(options.app_id, options.api_base);
     window.Intercom!('boot', options);
-    this.isBooted = true;
+    this.isBootRequested = true;
   }
 
   public show(): void {
-    if (typeof window === 'undefined' || !window.Intercom || !this.isBooted) {
+    if (typeof window === 'undefined' || !window.Intercom || !this.isBootRequested) {
       return;
     }
     window.Intercom('show');
@@ -37,9 +42,9 @@ export class IntercomService {
     if (typeof window === 'undefined') {
       return;
     }
-    if (window.Intercom && this.isBooted) {
+    if (window.Intercom && this.isBootRequested) {
       window.Intercom('shutdown');
-      this.isBooted = false;
+      this.isBootRequested = false;
     }
   }
 
@@ -65,8 +70,10 @@ export class IntercomService {
     };
 
     script.onerror = (error) => {
-      this.isBooted = false;
+      this.isBootRequested = false;
       console.error('IntercomService: Failed to load script', error);
+      // Surface to RUM so "users stuck in Jira fallback" is dashboardable.
+      this.dataDogRumService.addError(new Error('Intercom script failed to load'), { context: 'intercom_load' });
     };
 
     const firstScript = document.getElementsByTagName('script')[0];
@@ -86,7 +93,7 @@ export class IntercomService {
 
     if (typeof ic === 'function') {
       ic('reattach_activator');
-      ic('update', window.intercomSettings);
+      ic('update', window.intercomSettings!);
     } else {
       const stub: IntercomFunction = Object.assign(
         (...args: unknown[]) => {

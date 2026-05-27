@@ -98,6 +98,11 @@ export class AppComponent {
 
   // Fails closed: missing JWT or App ID skips boot.
   private bootIntercom(user: User): void {
+    // Browser-only: avoid per-request warn spam during SSR when claim is absent.
+    if (typeof window === 'undefined') {
+      return;
+    }
+
     const intercomJwt = user['http://lfx.dev/claims/intercom'];
     const userId = user['https://sso.linuxfoundation.org/claims/username'] || user.sub;
     const { intercomAppId } = getRuntimeConfig(this.transferState);

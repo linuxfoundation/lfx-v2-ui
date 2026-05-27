@@ -1,7 +1,11 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-/** Intercom Messenger boot options. `intercom_user_jwt` is the Auth0 JWT for identity verification. */
+/**
+ * Intercom Messenger boot options. `intercom_user_jwt` is the Intercom
+ * identity-verification JWT delivered via the `http://lfx.dev/claims/intercom`
+ * Auth0 custom claim — not the Auth0 id_token or access_token.
+ */
 export interface IntercomBootOptions {
   api_base?: string;
   app_id: string;
@@ -21,8 +25,8 @@ export interface IntercomFunction {
   (command: 'boot', options: IntercomBootOptions): void;
   (command: 'show'): void;
   (command: 'shutdown'): void;
+  (command: 'update', settings: IntercomSettings): void;
   (command: 'reattach_activator'): void;
-  (command: string, ...args: unknown[]): void;
   /** Queue of buffered calls (populated by the stub before the real script loads). */
   q?: unknown[][];
   /** Push function used by the stub to enqueue calls. */

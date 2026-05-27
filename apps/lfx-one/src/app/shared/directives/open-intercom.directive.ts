@@ -16,7 +16,7 @@ export class OpenIntercomDirective {
   public onClick(event: MouseEvent): void {
     event.preventDefault();
 
-    if (this.intercomService.isBooted) {
+    if (this.intercomService.isBootRequested) {
       this.intercomService.show();
     } else if (typeof window !== 'undefined') {
       window.open(environment.urls.support, '_blank', 'noopener,noreferrer');

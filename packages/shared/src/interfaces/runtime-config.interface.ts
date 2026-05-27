@@ -32,7 +32,10 @@ export interface RuntimeConfig {
    */
   allowedTracingUrls: string[];
 
-  /** Publicly-publishable Intercom workspace ID. Per-user identity comes from the
-   * `http://lfx.dev/claims/intercom` Auth0 claim, passed to Intercom as `intercom_user_jwt`. */
+  /**
+   * Publicly-publishable Intercom workspace ID. Per-user identity comes from
+   * the `http://lfx.dev/claims/intercom` Auth0 claim, passed to Intercom as
+   * `intercom_user_jwt`.
+   */
   intercomAppId: string;
 }
