@@ -14,8 +14,8 @@
   padding: 0;
 }
 
-// All transitions run for 300ms so the longest CSS animation matches FADE_OUT_MS in pending-actions-drawer.component.ts
-// and the JS doesn't drop the row before the fade has finished playing.
+// All transitions run for 300ms so the longest CSS animation matches PENDING_ACTION_FADE_OUT_MS in
+// @lfx-one/shared/constants and the JS doesn't drop the row before the fade has finished playing.
 .pending-action-card {
   transition:
     opacity 300ms ease-out,
