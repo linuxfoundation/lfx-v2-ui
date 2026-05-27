@@ -5,13 +5,15 @@
   <!-- Header -->
   <div class="flex flex-col gap-2">
     <h1 class="text-3xl font-bold text-gray-900">LFX Self Serve Help</h1>
-    <p class="text-lg text-gray-500">Guides for <a href="https://app.lfx.dev" class="text-blue-600 hover:underline">app.lfx.dev</a> — manage your membership, communities, and contributions.</p>
+    <p class="text-lg text-gray-500">
+      Guides for <a href="https://app.lfx.dev" class="text-blue-600 hover:underline">app.lfx.dev</a> — manage your membership, communities, and contributions.
+    </p>
   </div>
 
   <!-- Loading skeleton -->
   @if (loading()) {
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      @for (i of [1,2,3,4,5,6]; track i) {
+      @for (i of [1, 2, 3, 4, 5, 6]; track i) {
         <div class="rounded-xl border border-gray-200 p-5 animate-pulse">
           <div class="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
           <div class="h-3 bg-gray-100 rounded w-full mb-2"></div>
@@ -41,11 +43,9 @@
     <!-- Support link -->
     <div class="border-t border-gray-200 pt-6 text-sm text-gray-500">
       Can't find what you need?
-      <a
-        href="https://jira.linuxfoundation.org/servicedesk/customer/portal/4"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="text-blue-600 hover:underline">Open a support ticket</a>.
+      <a href="https://jira.linuxfoundation.org/servicedesk/customer/portal/4" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline"
+        >Open a support ticket</a
+      >.
     </div>
   }
 </div>

@@ -32,6 +32,7 @@
     "@commitlint/cli": "^20.1.0",
     "@commitlint/config-angular": "^20.0.0",
     "@linuxfoundation/lfx-ui-core": "^0.2.0",
+    "@types/dompurify": "^3.2.0",
     "@types/node": "^24.2.1",
     "@typescript-eslint/eslint-plugin": "^8.39.1",
     "@typescript-eslint/parser": "^8.39.1",
@@ -63,6 +64,8 @@
     ]
   },
   "dependencies": {
-    "chart.js": "^4.5.1"
+    "chart.js": "^4.5.1",
+    "gray-matter": "^4.0.3",
+    "isomorphic-dompurify": "^3.14.0"
   }
 }

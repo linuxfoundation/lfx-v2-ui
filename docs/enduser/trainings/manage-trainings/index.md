@@ -25,6 +25,7 @@ Use the Trainings section to view your Linux Foundation training enrollments and
 Stats displayed at the top: **Certificates Earned**, **Enrolled Trainings**, **Completed Trainings**.
 
 Tabs:
+
 - **Certifications** — certifications you have earned
 - **Enrolled Trainings** — courses you are currently enrolled in
 - **Rewards** — rewards associated with your learning activity

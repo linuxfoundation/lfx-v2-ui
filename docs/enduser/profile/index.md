@@ -30,14 +30,14 @@ All authenticated users have a profile. Every user can view and edit their own p
 
 Go to **app.lfx.dev** and select **Profile** from the left navigation sidebar, or navigate directly to `/profile`. The profile section uses a tabbed layout with the following tabs:
 
-| Tab | Route | Description |
-|-----|-------|-------------|
-| Overview | `/profile` | Summary of your profile and activity |
-| Edit Profile | `/profile/manage` | Edit your name, photo, and personal details |
-| Affiliations | `/profile/affiliations` | View and manage your project affiliations |
-| Developer | `/profile/developer` | Developer-specific settings and API access |
-| Email | `/profile/email` | Manage your email addresses |
-| Password | `/profile/password` | Change your account password |
+| Tab          | Route                   | Description                                 |
+| ------------ | ----------------------- | ------------------------------------------- |
+| Overview     | `/profile`              | Summary of your profile and activity        |
+| Edit Profile | `/profile/manage`       | Edit your name, photo, and personal details |
+| Affiliations | `/profile/affiliations` | View and manage your project affiliations   |
+| Developer    | `/profile/developer`    | Developer-specific settings and API access  |
+| Email        | `/profile/email`        | Manage your email addresses                 |
+| Password     | `/profile/password`     | Change your account password                |
 
 ## Related sections
 

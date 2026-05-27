@@ -24,13 +24,13 @@ Every file **must** include a YAML frontmatter block at the top:
 
 ```yaml
 ---
-title: "Human-readable page title"          # required — used for <title>, nav, and Intercom
-description: "One-sentence summary."        # required — used for meta description and Intercom
-product_area: Meetings                      # required — maps to Intercom collection
-audience: [contributor, maintainer]         # optional — list from: contributor, maintainer, board-member, executive-director
-tags: [meetings, schedule, calendar]        # optional — space-separated keywords for search
-last_updated: 2026-05-27                    # required — ISO date; update when content changes
-intercom_collection: Meetings               # optional — explicit Intercom collection override
+title: 'Human-readable page title' # required — used for <title>, nav, and Intercom
+description: 'One-sentence summary.' # required — used for meta description and Intercom
+product_area: Meetings # required — maps to Intercom collection
+audience: [contributor, maintainer] # optional — list from: contributor, maintainer, board-member, executive-director
+tags: [meetings, schedule, calendar] # optional — space-separated keywords for search
+last_updated: 2026-05-27 # required — ISO date; update when content changes
+intercom_collection: Meetings # optional — explicit Intercom collection override
 ---
 ```
 

@@ -24,12 +24,9 @@ test.describe('Public Docs — Layout structure', () => {
     await expect(page).not.toHaveURL(/auth0\.com/);
     await expect(page).not.toHaveURL(/\/login/);
     // Wait for either content or an error/loading state
-    await expect(
-      page
-        .getByTestId('docs-topbar')
-        .or(page.getByTestId('docs-sidebar'))
-        .or(page.getByTestId('docs-section-card'))
-    ).toBeVisible({ timeout: DATA_LOAD_TIMEOUT });
+    await expect(page.getByTestId('docs-topbar').or(page.getByTestId('docs-sidebar')).or(page.getByTestId('docs-section-card'))).toBeVisible({
+      timeout: DATA_LOAD_TIMEOUT,
+    });
   });
 
   test('page resolves to /docs without auth redirect', async ({ page }) => {

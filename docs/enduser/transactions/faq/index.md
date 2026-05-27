@@ -34,4 +34,3 @@ You can only see your own transactions. Other users and project administrators c
 ## I was charged incorrectly. Who do I contact?
 
 Contact LFX support through the Help Center. Include the transaction date, amount, and item name so the support team can investigate.
-

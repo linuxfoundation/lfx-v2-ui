@@ -2,7 +2,6 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <div class="flex flex-col gap-6 max-w-3xl mx-auto py-8 px-6">
-
   <!-- Loading skeleton -->
   @if (loading()) {
     <div class="flex flex-col gap-4 animate-pulse">
@@ -40,15 +39,9 @@
 
     <!-- Article body -->
     <article
-      class="prose prose-gray prose-sm max-w-none
-             prose-headings:font-semibold prose-headings:text-gray-900
-             prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline
-             prose-code:bg-gray-100 prose-code:rounded prose-code:px-1 prose-code:text-sm
-             prose-pre:bg-gray-900 prose-pre:rounded-lg
-             prose-blockquote:border-l-blue-400 prose-blockquote:text-gray-600"
+      class="prose prose-gray prose-sm max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-code:bg-gray-100 prose-code:rounded prose-code:px-1 prose-code:text-sm prose-pre:bg-gray-900 prose-pre:rounded-lg prose-blockquote:border-l-blue-400 prose-blockquote:text-gray-600"
       data-testid="docs-article-body"
-      [innerHTML]="safeHtml()">
-    </article>
+      [innerHTML]="safeHtml()"></article>
 
     <!-- Footer -->
     <div class="flex items-center justify-between border-t border-gray-200 pt-4 text-xs text-gray-400">
@@ -57,11 +50,7 @@
       } @else {
         <span></span>
       }
-      <a
-        [href]="githubEditUrl"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="flex items-center gap-1 hover:text-blue-600 hover:underline">
+      <a [href]="githubEditUrl" target="_blank" rel="noopener noreferrer" class="flex items-center gap-1 hover:text-blue-600 hover:underline">
         <i class="fa-brands fa-github"></i>
         Edit this page
       </a>

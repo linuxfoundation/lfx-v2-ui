@@ -17,12 +17,12 @@ The Dashboard is the central starting point of LFX Self Serve. It adapts to show
 
 The LFX dashboard uses a **lens** concept to let you switch between four different viewing perspectives:
 
-| Lens | Description |
-|------|-------------|
-| **Me** | Your personal activity, contributions, and involvement |
-| **Foundation** | Foundation-level governance, projects, and analytics |
-| **Project** | A specific project's metrics, committees, and activity |
-| **Org** | Your organization's membership and participation |
+| Lens           | Description                                            |
+| -------------- | ------------------------------------------------------ |
+| **Me**         | Your personal activity, contributions, and involvement |
+| **Foundation** | Foundation-level governance, projects, and analytics   |
+| **Project**    | A specific project's metrics, committees, and activity |
+| **Org**        | Your organization's membership and participation       |
 
 The lenses available to you depend on your persona. Not all users see all four lenses.
 
@@ -30,12 +30,12 @@ The lenses available to you depend on your persona. Not all users see all four l
 
 Your **persona** is determined by your committee memberships and roles across Linux Foundation projects. The four personas are:
 
-| Persona | Access |
-|---------|--------|
-| **Contributor** | Me and Project lenses |
-| **Maintainer** | Me and Project lenses with write access |
-| **Board Member** | Me, Foundation, and Project lenses |
-| **Executive Director** | All four lenses |
+| Persona                | Access                                  |
+| ---------------------- | --------------------------------------- |
+| **Contributor**        | Me and Project lenses                   |
+| **Maintainer**         | Me and Project lenses with write access |
+| **Board Member**       | Me, Foundation, and Project lenses      |
+| **Executive Director** | All four lenses                         |
 
 ## What you see in each lens
 
