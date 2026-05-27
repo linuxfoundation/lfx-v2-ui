@@ -687,7 +687,7 @@ export const HEALTH_METRICS_NPS_DEFAULT_SUMMARY: NpsSummaryResponse = {
   nonResponses: 0,
   responses: 0,
   lastUpdatedLabel: 'N/A',
-  effectiveRange: 'YTD',
+  range: 'YTD',
   periodLabel: '',
 };
 

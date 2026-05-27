@@ -1,7 +1,15 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { getYearForRange, NATS_CONFIG, PENDING_ACTION_SEVERITY, PENDING_ACTION_SURVEYS_ROW_LIMIT, ROOT_PROJECT_SLUG } from '@lfx-one/shared/constants';
+import {
+  getYearForRange,
+  HEALTH_METRICS_RANGES,
+  isHealthMetricsRange,
+  NATS_CONFIG,
+  PENDING_ACTION_SEVERITY,
+  PENDING_ACTION_SURVEYS_ROW_LIMIT,
+  ROOT_PROJECT_SLUG,
+} from '@lfx-one/shared/constants';
 import { NatsSubjects } from '@lfx-one/shared/enums';
 import {
   BoardMeetingInviteeRow,
@@ -3672,18 +3680,19 @@ export class ProjectService {
       EFFECTIVE_RANGE: string | null;
     }
 
-    const ORDERED_RANGES: HealthMetricsRange[] = ['YTD', 'COMPLETED_YEAR', 'COMPLETED_YEAR_2', 'COMPLETED_YEAR_3', 'COMPLETED_YEAR_4'];
-    const requestedRange: HealthMetricsRange = ORDERED_RANGES.includes(range as HealthMetricsRange) ? (range as HealthMetricsRange) : 'YTD';
-    const startIdx = ORDERED_RANGES.indexOf(requestedRange);
-    const fallbackRanges = ORDERED_RANGES.slice(startIdx);
+    const requestedRange: HealthMetricsRange = isHealthMetricsRange(range) ? range : 'YTD';
+    const startIdx = HEALTH_METRICS_RANGES.indexOf(requestedRange);
+    const fallbackRanges = HEALTH_METRICS_RANGES.slice(startIdx);
     const fallbackSuffixes = fallbackRanges.map((r) => this.getRangeSuffix(r));
 
-    const npsCoalesce = fallbackSuffixes.map((sfx) => `sr.most_recent_nps_score${sfx}`).join(', ');
-    const promotersCoalesce = fallbackSuffixes.map((sfx) => `sr.most_recent_count_promoters${sfx}`).join(', ');
-    const passivesCoalesce = fallbackSuffixes.map((sfx) => `sr.most_recent_count_passives${sfx}`).join(', ');
-    const detractorsCoalesce = fallbackSuffixes.map((sfx) => `sr.most_recent_count_detractors${sfx}`).join(', ');
-    const nonResponsesCoalesce = fallbackSuffixes.map((sfx) => `sr.most_recent_count_non_responses${sfx}`).join(', ');
-    const changeCoalesce = fallbackSuffixes.map((sfx) => `sr.nps_score_most_recent_to_previous_change${sfx}`).join(', ');
+    // Build CASE WHEN blocks so every column reads from the same period.
+    // The first suffix whose NPS score is non-null defines the effective range;
+    // all other columns use the identical WHEN ordering so no period mixing occurs.
+    const buildCaseWhen = (colPrefix: string): string =>
+      fallbackRanges
+        .map((r, i) => `WHEN sr.most_recent_nps_score${fallbackSuffixes[i]} IS NOT NULL THEN sr.${colPrefix}${fallbackSuffixes[i]}`)
+        .join('\n        ');
+
     const rangeCases = fallbackRanges.map((r, i) => `WHEN sr.most_recent_nps_score${fallbackSuffixes[i]} IS NOT NULL THEN '${r}'`).join('\n        ');
 
     const query = `
@@ -3694,13 +3703,13 @@ export class ProjectService {
       )
       SELECT
         sr.project_id AS PROJECT_ID,
-        COALESCE(${npsCoalesce}) AS NPS_SCORE,
-        COALESCE(${promotersCoalesce}) AS PROMOTERS,
-        COALESCE(${passivesCoalesce}) AS PASSIVES,
-        COALESCE(${detractorsCoalesce}) AS DETRACTORS,
-        COALESCE(${nonResponsesCoalesce}) AS NON_RESPONSES,
+        CASE ${buildCaseWhen('most_recent_nps_score')} ELSE NULL END AS NPS_SCORE,
+        CASE ${buildCaseWhen('most_recent_count_promoters')} ELSE NULL END AS PROMOTERS,
+        CASE ${buildCaseWhen('most_recent_count_passives')} ELSE NULL END AS PASSIVES,
+        CASE ${buildCaseWhen('most_recent_count_detractors')} ELSE NULL END AS DETRACTORS,
+        CASE ${buildCaseWhen('most_recent_count_non_responses')} ELSE NULL END AS NON_RESPONSES,
         sr.last_updated AS LAST_UPDATED,
-        COALESCE(${changeCoalesce}) AS CHANGE_NPS_SCORE,
+        CASE ${buildCaseWhen('nps_score_most_recent_to_previous_change')} ELSE NULL END AS CHANGE_NPS_SCORE,
         CASE
         ${rangeCases}
         ELSE NULL
@@ -3722,7 +3731,7 @@ export class ProjectService {
         nonResponses: 0,
         responses: 0,
         lastUpdatedLabel: 'N/A',
-        effectiveRange: requestedRange,
+        range: requestedRange,
         periodLabel: '',
       };
     }
@@ -3740,8 +3749,7 @@ export class ProjectService {
       }
     }
 
-    const resolvedRange: HealthMetricsRange =
-      row.EFFECTIVE_RANGE && ORDERED_RANGES.includes(row.EFFECTIVE_RANGE as HealthMetricsRange) ? (row.EFFECTIVE_RANGE as HealthMetricsRange) : requestedRange;
+    const resolvedRange: HealthMetricsRange = isHealthMetricsRange(row.EFFECTIVE_RANGE) ? row.EFFECTIVE_RANGE : requestedRange;
 
     const year = getYearForRange(resolvedRange);
     const periodLabel = resolvedRange === 'YTD' ? `YTD ${year}` : `FY ${year}`;
@@ -3760,7 +3768,7 @@ export class ProjectService {
       nonResponses,
       responses: promoters + passives + detractors + nonResponses,
       lastUpdatedLabel,
-      effectiveRange: resolvedRange,
+      range: resolvedRange,
       periodLabel,
       changeNpsScore: row.CHANGE_NPS_SCORE ?? 0,
     };
