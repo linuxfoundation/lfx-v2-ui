@@ -145,6 +145,13 @@ export function parseEntityType(req: Request, operation: string): EntityType {
   return raw as EntityType;
 }
 
+/**
+ * Extracts and validates the optional `classification` query parameter.
+ * @param req Express request object
+ * @param operation Operation name used in error metadata
+ * @returns The validated classification string, or undefined if not provided
+ * @throws {ServiceValidationError} When the value is not in VALID_CLASSIFICATIONS
+ */
 export function getValidatedClassification(req: Request, operation: string): string | undefined {
   const classification = getStringQueryParam(req, 'classification');
   if (classification && !VALID_CLASSIFICATIONS.has(classification)) {

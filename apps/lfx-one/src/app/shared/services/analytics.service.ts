@@ -897,6 +897,7 @@ export class AnalyticsService {
   /**
    * Get paid social reach metrics
    * @param foundationSlug - Foundation slug used to filter metrics
+   * @param classification - Optional LF_SUB_DOMAIN_CLASSIFICATION filter (e.g., 'LF Events', 'LF Corporate')
    * @returns Social reach response with ROAS, impressions, and monthly trends
    */
   public getSocialReach(foundationSlug: string, classification?: string): Observable<SocialReachResponse> {
@@ -1191,6 +1192,7 @@ export class AnalyticsService {
   /**
    * Get brand reach metrics for the ED dashboard (social followers + web sessions).
    * @param foundationSlug Foundation slug used to filter Snowflake queries
+   * @param classification Optional LF_SUB_DOMAIN_CLASSIFICATION filter (e.g., 'LF Events', 'LF Corporate')
    * @returns Observable emitting reach totals, platform breakdowns, and weekly trend (or zeroed defaults on error)
    */
   public getBrandReach(foundationSlug: string, classification?: string): Observable<BrandReachResponse> {
@@ -1239,6 +1241,7 @@ export class AnalyticsService {
   /**
    * Get revenue impact metrics for the ED dashboard (attribution + paid media + event registration).
    * @param foundationSlug Foundation slug used to filter Snowflake queries
+   * @param classification Optional LF_SUB_DOMAIN_CLASSIFICATION filter (e.g., 'LF Events', 'LF Corporate')
    * @returns Observable emitting pipeline/revenue totals, attribution breakdowns, and event registration data (or zeroed defaults on error)
    */
   public getRevenueImpact(foundationSlug: string, classification?: string): Observable<RevenueImpactResponse> {
@@ -1264,6 +1267,7 @@ export class AnalyticsService {
   /**
    * Get marketing attribution data by channel with multi-touch revenue models.
    * @param foundationSlug Foundation slug used to filter Snowflake queries
+   * @param classification Optional LF_SUB_DOMAIN_CLASSIFICATION filter (e.g., 'LF Events', 'LF Corporate')
    * @returns Observable emitting channel summary + project drill-down (or empty defaults on error)
    */
   public getMarketingAttribution(foundationSlug: string, classification?: string): Observable<MarketingAttributionResponse> {
