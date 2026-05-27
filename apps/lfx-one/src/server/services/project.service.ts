@@ -3751,7 +3751,11 @@ export class ProjectService {
 
     const resolvedRange = isHealthMetricsRange(row.EFFECTIVE_RANGE) ? row.EFFECTIVE_RANGE : null;
 
-    const periodLabel = resolvedRange ? (resolvedRange === 'YTD' ? `YTD ${getYearForRange(resolvedRange)}` : `FY ${getYearForRange(resolvedRange)}`) : '';
+    let periodLabel = '';
+    if (resolvedRange) {
+      const year = getYearForRange(resolvedRange);
+      periodLabel = resolvedRange === 'YTD' ? `YTD ${year}` : `FY ${year}`;
+    }
 
     const promoters = row.PROMOTERS ?? 0;
     const passives = row.PASSIVES ?? 0;
