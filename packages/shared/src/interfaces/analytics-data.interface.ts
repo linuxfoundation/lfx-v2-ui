@@ -3,6 +3,9 @@
 
 import type { ProjectTableRow } from './dashboard-metric.interface';
 
+/** Performance rating for paid project campaigns. */
+export type PaidProjectPerformance = 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'EMERGING';
+
 /**
  * Active Weeks Streak row from Snowflake ACTIVE_WEEKS_STREAK table
  * Represents a single week's activity data for a user
@@ -851,41 +854,19 @@ export interface FoundationValueConcentrationResponse {
   allOtherPercentage: number;
 }
 
-/**
- * Foundation maintainers daily row from Snowflake
- * Raw response from FOUNDATION_MAINTAINERS_YEARLY table (despite name, contains daily data)
- */
+/** Full schema of ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_MAINTAINERS_DAILY. */
 export interface FoundationMaintainersDailyRow {
-  /**
-   * Foundation ID
-   */
   FOUNDATION_ID: string;
-
-  /**
-   * Foundation name
-   */
   FOUNDATION_NAME: string;
-
-  /**
-   * Foundation URL slug
-   */
   FOUNDATION_SLUG: string;
-
-  /**
-   * Metric date (daily granularity)
-   */
-  METRIC_DATE: string;
-
-  /**
-   * Number of active maintainers on this date
-   */
+  /** Snowflake Node SDK returns DATE columns as JS Date; some paths parse strings. */
+  METRIC_DATE: Date | string;
   ACTIVE_MAINTAINERS: number;
-
-  /**
-   * Average maintainers yearly (calculated aggregate)
-   */
   AVG_MAINTAINERS_YEARLY: number;
 }
+
+/** Projection used by getFoundationMaintainers (METRIC_DATE + ACTIVE_MAINTAINERS only) — LFXV2-1625. */
+export type FoundationMaintainersDailySnapshotRow = Pick<FoundationMaintainersDailyRow, 'METRIC_DATE' | 'ACTIVE_MAINTAINERS'>;
 
 /**
  * Weekly aggregated maintainers result from Snowflake query
@@ -907,25 +888,15 @@ export interface WeeklyMaintainersRow {
   AVG_MAINTAINERS_YEARLY: number;
 }
 
-/**
- * API response for foundation maintainers query
- * Contains average maintainers and weekly trend data
- */
+/** Latest-day distinct-maintainer snapshot + daily trend for a foundation. */
 export interface FoundationMaintainersResponse {
-  /**
-   * Average number of maintainers (from AVG_MAINTAINERS_YEARLY)
-   */
-  avgMaintainers: number;
-
-  /**
-   * Daily or aggregated maintainer count data for trend visualization
-   */
+  /** Distinct active maintainers as of asOfDate (latest row of FOUNDATION_MAINTAINERS_DAILY). */
+  currentMaintainers: number;
+  /** ISO yyyy-mm-dd, or null when no rows returned. */
+  asOfDate: string | null;
+  /** Daily maintainer count data for trend visualization. */
   trendData: number[];
-
-  /**
-   * Date labels for chart visualization
-   * Array of date strings matching trendData
-   */
+  /** Date labels matching trendData (UTC-anchored, formatted server-side). */
   trendLabels: string[];
 }
 
@@ -2249,6 +2220,7 @@ export interface FoundationProjectsDetailRow {
   CONTRIBUTORS_12M_COUNT: number;
   MAINTAINERS_YTD_COUNT: number;
   MAINTAINERS_12M_COUNT: number;
+  MAINTAINERS_CURRENT_COUNT: number;
   STARS_YTD_COUNT: number;
   STARS_12M_COUNT: number;
   LAST_UPDATED_TS: Date | string | null;
@@ -2675,9 +2647,7 @@ export interface PaidCampaignPerformance {
   clicks: number;
 }
 
-/**
- * Project-level paid performance breakdown
- */
+/** Project-level paid performance breakdown. */
 export interface PaidProjectBreakdown {
   projectName: string;
   funnelStage: string;
@@ -2690,7 +2660,23 @@ export interface PaidProjectBreakdown {
   sessions: number;
   impressions: number;
   clicks: number;
-  performance: string;
+  performance: PaidProjectPerformance;
+  campaigns: PaidCampaignPerformance[];
+}
+
+/** Platform-level paid performance breakdown aggregated by ad channel. */
+export interface PaidPlatformBreakdown {
+  platform: string;
+  spend: number;
+  revenue: number;
+  roas: number;
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  cpc: number;
+  convRate: number;
+  conversions: number;
+  performance: PaidProjectPerformance;
   campaigns: PaidCampaignPerformance[];
 }
 
@@ -2709,6 +2695,7 @@ export interface SocialReachResponse {
   monthlyRoas: number[];
   channelGroups: SocialReachChannelGroup[];
   projectBreakdown?: PaidProjectBreakdown[];
+  platformBreakdown?: PaidPlatformBreakdown[];
 }
 
 // ============================================

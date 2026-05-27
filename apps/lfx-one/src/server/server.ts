@@ -19,6 +19,7 @@ import { authMiddleware } from './middleware/auth.middleware';
 import { apiErrorHandler } from './middleware/error-handler.middleware';
 import { apiRateLimiter, authRateLimiter, publicApiRateLimiter } from './middleware/rate-limit.middleware';
 import analyticsRouter from './routes/analytics.route';
+import inviteRouter from './routes/invite.route';
 import badgesRouter from './routes/badges.route';
 import changelogRouter from './routes/changelog.route';
 import committeesRouter from './routes/committees.route';
@@ -29,7 +30,9 @@ import impersonationRouter from './routes/impersonation.route';
 import mailingListsRouter from './routes/mailing-lists.route';
 import meetingsRouter from './routes/meetings.route';
 import navigationRouter from './routes/navigation.route';
+import newslettersRouter from './routes/newsletters.route';
 import organizationsRouter from './routes/organizations.route';
+import orgsRouter from './routes/orgs.route';
 import pastMeetingsRouter from './routes/past-meetings.route';
 import personaRouter from './routes/persona.route';
 import profileRouter from './routes/profile.route';
@@ -41,6 +44,7 @@ import rewardsRouter from './routes/rewards.route';
 import searchRouter from './routes/search.route';
 import surveysRouter from './routes/surveys.route';
 import trainingRouter from './routes/training.route';
+import enrollmentRouter from './routes/enrollment.route';
 import transactionRouter from './routes/transaction.route';
 import userRouter from './routes/user.route';
 import votesRouter from './routes/votes.route';
@@ -102,8 +106,23 @@ app.get('/readyz', (_req: Request, res: Response) => {
 app.get(
   '**',
   express.static(browserDistFolder, {
-    maxAge: '1y',
     index: false,
+    setHeaders: (res, filePath) => {
+      if (/-[A-Z0-9]{8,}\.(js|css|woff2?|ttf|otf|png|jpg|jpeg|svg|ico|webp)$/i.test(filePath)) {
+        // Angular emits content-hashed filenames (outputHashing: "all") — safe to
+        // cache permanently; the hash changes whenever content changes.
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        return;
+      }
+      if (/\.(html|js|css)$/i.test(filePath)) {
+        // Non-hashed HTML, JS, and CSS (e.g. index.html, main.js in dev builds where
+        // outputHashing is not "all") must revalidate on every request — stale entry
+        // bundles reference old chunk hashes and cause "Importing a module script failed".
+        res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+        return;
+      }
+      res.setHeader('Cache-Control', 'public, max-age=300');
+    },
   })
 );
 
@@ -180,6 +199,7 @@ app.use('/api/committees', committeesRouter);
 app.use('/api/mailing-lists', mailingListsRouter);
 app.use('/api/meetings', meetingsRouter);
 app.use('/api/organizations', organizationsRouter);
+app.use('/api/orgs', orgsRouter);
 app.use('/api/past-meetings', pastMeetingsRouter);
 app.use('/api/profile', profileRouter);
 app.use('/api/search', searchRouter);
@@ -196,8 +216,11 @@ app.use('/api/badges', badgesRouter);
 app.use('/api/impersonate', impersonationRouter);
 app.use('/api/training', trainingRouter);
 app.use('/api/rewards', rewardsRouter);
+app.use('/api/enrollments', enrollmentRouter);
 app.use('/api/transactions', transactionRouter);
 app.use('/api/changelog', changelogRouter);
+app.use('/api/newsletters', newslettersRouter);
+app.use('/api/invite', inviteRouter);
 
 app.use('/api/*', apiErrorHandler);
 

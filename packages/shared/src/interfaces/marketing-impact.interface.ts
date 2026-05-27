@@ -1,7 +1,13 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import type { BrandReachResponse, EmailCtrResponse, MarketingAttributionChannel, RevenueImpactResponse } from './analytics-data.interface';
+import type {
+  BrandReachResponse,
+  EmailCtrResponse,
+  MarketingAttributionChannel,
+  PaidProjectPerformance,
+  RevenueImpactResponse,
+} from './analytics-data.interface';
 
 /** Month option for the Marketing Impact page month picker. */
 export interface MarketingImpactMonthOption {
@@ -71,9 +77,6 @@ export interface AttributionChannelRow {
 /** Funnel stage identifier for the performance marketing filter. */
 export type FunnelStage = 'all' | 'tofu' | 'mofu' | 'bofu';
 
-/** Performance rating for paid project campaigns. */
-export type PaidProjectPerformance = 'EXCELLENT' | 'GOOD' | 'POOR' | 'NO REVENUE';
-
 /** View-model row for the performance marketing project table. */
 export interface PaidProjectRow {
   name: string;
@@ -84,6 +87,17 @@ export interface PaidProjectRow {
   impressions: string;
   performance: PaidProjectPerformance;
   performanceClass: string;
+  campaigns: PaidCampaignRow[];
+}
+
+/** View-model row for a nested campaign under a project. */
+export interface PaidCampaignRow {
+  campaignName: string;
+  funnelStage: string;
+  spend: string;
+  revenue: string;
+  roas: string;
+  impressions: string;
 }
 
 /** View-model row for the email type breakdown table. */
@@ -133,4 +147,36 @@ export interface WebActivityDomainRow {
   pagesPerSession: string;
   sessionShare: number;
   sessionShareFormatted: string;
+}
+
+/** View-model row for the platform performance table. */
+export interface PlatformPerformanceRow {
+  platform: string;
+  spend: string;
+  revenue: string;
+  roas: string;
+  clicks: string;
+  impressions: string;
+  ctr: string;
+  cpc: string;
+  convRate: string;
+  conversions: string;
+  performance: PaidProjectPerformance;
+  performanceClass: string;
+  campaigns: PlatformCampaignRow[];
+}
+
+/** View-model row for a nested campaign under a platform. All numeric fields are pre-formatted strings. */
+export interface PlatformCampaignRow {
+  campaignName: string;
+  /** Pre-formatted currency string, e.g. "$1,234.56" */
+  spend: string;
+  /** Pre-formatted currency string, e.g. "$5,678.90" */
+  revenue: string;
+  /** Pre-formatted ROAS multiplier string, e.g. "2.34x" */
+  roas: string;
+  /** Pre-formatted number string, e.g. "1,234" */
+  clicks: string;
+  /** Pre-formatted number string, e.g. "12,345" */
+  impressions: string;
 }

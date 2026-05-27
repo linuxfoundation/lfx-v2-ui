@@ -66,6 +66,9 @@ export * from './snowflake.interface';
 // Account interfaces
 export * from './account.interface';
 
+// Org Lens (per-account TLF membership tier + cdev org mapping) interfaces
+export * from './org-lens.interface';
+
 // Mailing list interfaces
 export * from './mailing-list.interface';
 
@@ -101,6 +104,9 @@ export * from './lens.interface';
 
 // Navigation interfaces
 export * from './navigation.interface';
+
+// Org selector (spec 020) — paginated FGA-filtered org list + role grants + canonical record
+export * from './org-selector.interface';
 
 // Persona detection interfaces
 export * from './persona-detection.interface';
@@ -148,6 +154,9 @@ export * from './stat-card.interface';
 // Intercom interfaces
 export * from './intercom.interface';
 
+// Org involvement interfaces (cross-foundation org overview)
+export * from './org-involvement.interface';
+
 // Changelog interfaces
 export * from './changelog.interface';
 
@@ -156,3 +165,18 @@ export * from './object.interface';
 
 // Marketing Impact interfaces
 export * from './marketing-impact.interface';
+
+// Enrollment interfaces
+export * from './enrollment.interface';
+
+// Org Memberships interfaces
+export * from './org-memberships.interface';
+
+// Org People interfaces
+export * from './org-people.interface';
+
+// Newsletter interfaces
+export * from './newsletter.interface';
+
+// Invite interfaces
+export * from './invite.interface';

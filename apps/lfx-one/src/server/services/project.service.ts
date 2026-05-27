@@ -35,7 +35,7 @@ import {
   FoundationHealthEventsMonthlyRow,
   FoundationHealthScoreDistributionResponse,
   FoundationHealthScoreDistributionRow,
-  FoundationMaintainersDailyRow,
+  FoundationMaintainersDailySnapshotRow,
   FoundationMaintainersDistributionResponse,
   FoundationMaintainersDistributionRow,
   FoundationMaintainersMonthlyResponse,
@@ -102,6 +102,7 @@ import {
   UploadProjectDocumentRequest,
   WebActivitiesSummaryResponse,
 } from '@lfx-one/shared/interfaces';
+import type { PaidProjectPerformance } from '@lfx-one/shared/interfaces';
 import { computeIsFoundation, nullifyEmptyStrings } from '@lfx-one/shared/utils';
 import { Request } from 'express';
 import FormData from 'form-data';
@@ -382,17 +383,12 @@ export class ProjectService {
     operation: 'add' | 'update' | 'remove',
     usernameOrEmail: string,
     role?: 'view' | 'manage',
-    manualUserInfo?: { name: string; email: string; username: string; avatar?: string }
+    manualUserInfo?: { name: string; email: string; username?: string; avatar?: string }
   ): Promise<ProjectSettings> {
-    // Step 1: Determine the appropriate identifier for backend operations
-    // For emails, use the sub; for usernames, use the username directly
-    let backendIdentifier = usernameOrEmail.trim();
-    if (usernameOrEmail.includes('@')) {
-      // For emails, get the sub for backend operations
-      backendIdentifier = await this.resolveEmailToSub(req, usernameOrEmail);
-    }
-
-    // Step 2: Fetch current settings with ETag
+    // Step 1: Fetch current settings with ETag first.
+    // Settings must be fetched before resolveEmailToSub so that manually-added users
+    // (not present in the NATS directory) can be matched by email fallback and skip
+    // the NATS call that would otherwise throw NOT_FOUND before we reach array logic.
     const { data: settings, etag } = await this.etagService.fetchWithETag<ProjectSettings>(
       req,
       'LFX_V2_SERVICE',
@@ -400,18 +396,48 @@ export class ProjectService {
       `${operation}_user_project_permissions`
     );
 
-    // Step 3: Update the settings based on operation
+    // Step 2: Update the settings based on operation
     const updatedSettings = { ...settings };
 
     // Initialize arrays if they don't exist
     if (!updatedSettings.writers) updatedSettings.writers = [];
     if (!updatedSettings.auditors) updatedSettings.auditors = [];
 
+    // Step 3: Determine the backend identifier for array operations.
+    // For emails on update/remove: check settings first. If the user is stored without
+    // a username (manually added, not in NATS), skip resolveEmailToSub and use the
+    // email directly — calling NATS for such users would fail with NOT_FOUND.
+    const originalEmail = usernameOrEmail.includes('@') ? usernameOrEmail.trim().toLowerCase() : '';
+    const matchesByEmail = (u: { username?: string; email?: string }): boolean => !u.username && !!originalEmail && u.email?.toLowerCase() === originalEmail;
+    const existingByEmail = originalEmail ? updatedSettings.writers.find(matchesByEmail) || updatedSettings.auditors.find(matchesByEmail) : undefined;
+
+    let backendIdentifier = usernameOrEmail.trim();
+    if (originalEmail) {
+      if ((existingByEmail && (operation === 'update' || operation === 'remove')) || manualUserInfo) {
+        // Skip resolveEmailToSub in two cases:
+        // 1. update/remove on a no-username user found by email in settings (not in NATS)
+        // 2. manual-add — the user was not found in the directory; NATS would return NOT_FOUND
+        backendIdentifier = originalEmail;
+      } else {
+        backendIdentifier = await this.resolveEmailToSub(req, usernameOrEmail);
+      }
+    }
+
+    // Some users stored in settings pre-date username normalization and have an empty username.
+    // Match by email as a fallback so edits/removals work for those users too.
+    const matchesUser = (u: { username?: string; email?: string }): boolean => {
+      if (u.username && u.username === backendIdentifier) return true;
+      if (!u.username && originalEmail && u.email?.toLowerCase() === originalEmail) return true;
+      return false;
+    };
+
+    // Capture the user's existing UserInfo before removal — used by the 'update' path to
+    // avoid a NATS roundtrip when only the role is changing.
+    const existingUserInfo = updatedSettings.writers.find(matchesUser) || updatedSettings.auditors.find(matchesUser);
+
     // Remove user from both arrays first (for all operations)
-    // Compare by username property since writers/auditors are now UserInfo objects
-    // Use backendIdentifier (sub) for comparison to ensure proper removal
-    updatedSettings.writers = updatedSettings.writers.filter((u) => u.username !== backendIdentifier);
-    updatedSettings.auditors = updatedSettings.auditors.filter((u) => u.username !== backendIdentifier);
+    updatedSettings.writers = updatedSettings.writers.filter((u) => !matchesUser(u));
+    updatedSettings.auditors = updatedSettings.auditors.filter((u) => !matchesUser(u));
 
     // For 'add' or 'update', we need to add the user back with full UserInfo
     if (operation === 'add' || operation === 'update') {
@@ -420,21 +446,36 @@ export class ProjectService {
       }
 
       // Use manual user info if provided, otherwise fetch from NATS
-      let userInfo: { name: string; email: string; username: string; avatar?: string };
+      let userInfo: { name: string; email: string; username?: string; avatar?: string };
       if (manualUserInfo) {
         logger.debug(req, `${operation}_user_project_permissions`, 'Using manual user info', {
-          username: backendIdentifier,
+          username: manualUserInfo.username || '(none)',
           info_source: 'manual',
         });
         userInfo = {
           name: manualUserInfo.name,
           email: manualUserInfo.email,
-          username: backendIdentifier, // Use the sub for backend consistency
+          // Preserve whatever username the operator supplied — may be empty for users
+          // who have no username in any external directory.
+          username: manualUserInfo.username || undefined,
         };
-        // Only include avatar if it's provided and not empty
         if (manualUserInfo.avatar) {
           userInfo.avatar = manualUserInfo.avatar;
         }
+      } else if (operation === 'update' && existingUserInfo) {
+        // Role-only update: reuse the UserInfo already stored in settings.
+        // Avoids a NATS lookup that can fail when user metadata lacks an email field.
+        logger.debug(req, 'update_user_project_permissions', 'Reusing existing user info for role update', {
+          username: backendIdentifier,
+          existing_username: existingUserInfo.username,
+          existing_email: existingUserInfo.email,
+          info_source: 'existing_settings',
+        });
+        // Preserve existingUserInfo exactly as stored — do NOT overwrite username with
+        // backendIdentifier. For users added manually without a username, backendIdentifier
+        // is their email (NATS was skipped), and stamping it onto the record would
+        // incorrectly turn an intentionally empty username into an email address.
+        userInfo = { ...existingUserInfo };
       } else {
         // Fetch user info from user service via NATS using the original input
         const fetchedUserInfo = await this.getUserInfo(req, usernameOrEmail);
@@ -1343,38 +1384,37 @@ export class ProjectService {
     };
   }
 
-  /**
-   * Get foundation maintainers data from Snowflake
-   * Queries FOUNDATION_MAINTAINERS_DAILY table
-   * Returns daily maintainer counts for detailed trend visualization
-   * @param foundationSlug - Foundation slug to filter by (e.g., 'tlf', 'cncf')
-   * @returns Foundation maintainers response with average and daily trend data
-   */
+  /** Latest-day distinct-maintainer snapshot + full daily trend for a foundation (LFXV2-1625). */
   public async getFoundationMaintainers(foundationSlug: string): Promise<FoundationMaintainersResponse> {
     const query = `
       SELECT
         METRIC_DATE,
-        ACTIVE_MAINTAINERS,
-        AVG_MAINTAINERS_YEARLY
+        ACTIVE_MAINTAINERS
       FROM ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_MAINTAINERS_DAILY
       WHERE FOUNDATION_SLUG = ?
       ORDER BY METRIC_DATE ASC
     `;
 
-    const result = await this.snowflakeService.execute<FoundationMaintainersDailyRow>(query, [foundationSlug]);
+    const result = await this.snowflakeService.execute<FoundationMaintainersDailySnapshotRow>(query, [foundationSlug]);
 
-    // Get average maintainers from first row (same across all rows)
-    const avgMaintainers = result.rows.length > 0 ? Math.round(result.rows[0].AVG_MAINTAINERS_YEARLY) : 0;
+    // Filter null-METRIC_DATE rows up-front so trendData/trendLabels stay index-aligned and the snapshot picks the latest *labeled* day.
+    const trendRows = result.rows.filter((row) => row.METRIC_DATE);
 
-    // Extract daily data and labels
-    const trendData = result.rows.map((row) => row.ACTIVE_MAINTAINERS);
-    const trendLabels = result.rows.map((row) => {
+    const latest = trendRows.length > 0 ? trendRows[trendRows.length - 1] : null;
+    const currentMaintainers = latest?.ACTIVE_MAINTAINERS ?? 0;
+    // Snowflake SDK returns DATE columns as a JS Date at UTC midnight; toISOString().split('T')[0] gives the calendar key (String().slice gave "Tue May 19" in PT).
+    const asOfDate = latest ? new Date(latest.METRIC_DATE).toISOString().split('T')[0] : null;
+
+    // Anchor trend labels to UTC so the chart's rightmost tick matches the asOfDate the card subtitle renders.
+    const trendData = trendRows.map((row) => row.ACTIVE_MAINTAINERS ?? 0);
+    const trendLabels = trendRows.map((row) => {
       const date = new Date(row.METRIC_DATE);
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
     });
 
     return {
-      avgMaintainers,
+      currentMaintainers,
+      asOfDate,
       trendData,
       trendLabels,
     };
@@ -1571,7 +1611,7 @@ export class ProjectService {
         LIFECYCLE_STAGE,
         CONTRIBUTORS_90D_COUNT,
         COMMITS_90D_COUNT,
-        MAINTAINERS_YTD_COUNT,
+        MAINTAINERS_CURRENT_COUNT,
         STARS_YTD_COUNT,
         LAST_UPDATED_TS
       FROM ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_TOTAL_PROJECTS_DETAIL
@@ -1598,7 +1638,7 @@ export class ProjectService {
           row.LIFECYCLE_STAGE && VALID_LIFECYCLE_STAGES.has(row.LIFECYCLE_STAGE as LifecycleStage) ? (row.LIFECYCLE_STAGE as LifecycleStage) : null,
         activeContributors: row.CONTRIBUTORS_90D_COUNT ?? 0,
         commitsLast90Days: row.COMMITS_90D_COUNT ?? 0,
-        maintainers: row.MAINTAINERS_YTD_COUNT ?? 0,
+        maintainers: row.MAINTAINERS_CURRENT_COUNT ?? 0,
         stars: row.STARS_YTD_COUNT ?? 0,
         lastUpdated: row.LAST_UPDATED_TS ? new Date(row.LAST_UPDATED_TS).toISOString().split('T')[0] : null,
       }));
@@ -1883,11 +1923,18 @@ export class ProjectService {
    * Get web activities summary grouped by domain category
    * Queries ANALYTICS.PLATINUM_LFX_ONE.WEB_ACTIVITIES_SUMMARY and ANALYTICS.PLATINUM_LFX_ONE.WEB_ACTIVITIES_BY_PROJECT
    * @param foundationSlug - Foundation slug used to filter by FOUNDATION_SLUG (aggregates all projects under the foundation)
+   * @param classification - Optional LF_SUB_DOMAIN_CLASSIFICATION filter (e.g. 'Events', 'Corporate')
    */
-  public async getWebActivitiesSummary(foundationSlug: string): Promise<WebActivitiesSummaryResponse> {
-    logger.debug(undefined, 'get_web_activities_summary', 'Fetching web activities summary from Snowflake', { foundation_slug: foundationSlug });
+  public async getWebActivitiesSummary(foundationSlug: string, classification?: string): Promise<WebActivitiesSummaryResponse> {
+    logger.debug(undefined, 'get_web_activities_summary', 'Fetching web activities summary from Snowflake', {
+      foundation_slug: foundationSlug,
+      classification,
+    });
 
     try {
+      const classificationFilter = classification ? 'AND LF_SUB_DOMAIN_CLASSIFICATION = ?' : '';
+      const classificationParams = classification ? [classification] : [];
+
       // Query 1: Total sessions & page views per domain classification
       const summaryQuery = `
         SELECT
@@ -1896,11 +1943,14 @@ export class ProjectService {
           SUM(TOTAL_PAGE_VIEWS_LAST_30_DAYS) AS TOTAL_PAGE_VIEWS
         FROM ANALYTICS.PLATINUM_LFX_ONE.WEB_ACTIVITIES_SUMMARY
         WHERE FOUNDATION_SLUG = ?
+          ${classificationFilter}
         GROUP BY LF_SUB_DOMAIN_CLASSIFICATION
         ORDER BY TOTAL_SESSIONS DESC
       `;
 
       // Query 2: Weekly sessions for trend chart (last 6 months)
+      // WEB_ACTIVITIES_BY_PROJECT does not have LF_SUB_DOMAIN_CLASSIFICATION,
+      // so the trend chart always shows all-program totals.
       const dailyQuery = `
         SELECT
           DATE_TRUNC('WEEK', ACTIVITY_DATE) AS ACTIVITY_DATE,
@@ -1915,6 +1965,7 @@ export class ProjectService {
       const [summaryResult, dailyResult] = await Promise.all([
         this.snowflakeService.execute<{ LF_SUB_DOMAIN_CLASSIFICATION: string; TOTAL_SESSIONS: number; TOTAL_PAGE_VIEWS: number }>(summaryQuery, [
           foundationSlug,
+          ...classificationParams,
         ]),
         this.snowflakeService.execute<{ ACTIVITY_DATE: string; DAILY_SESSIONS: number }>(dailyQuery, [foundationSlug]),
       ]);
@@ -1948,12 +1999,19 @@ export class ProjectService {
    * Get email click-through rate data from Snowflake
    * Queries ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CTR_SUMMARY and ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CTR_BY_MONTH
    * @param foundationSlug - Foundation slug used to filter by FOUNDATION_SLUG
+   * @param classification - Optional LF_SUB_DOMAIN_CLASSIFICATION filter (e.g. 'Events', 'Corporate')
    * @returns Email CTR response with monthly trend and change percentage
    */
-  public async getEmailCtr(foundationSlug: string): Promise<EmailCtrResponse> {
-    logger.debug(undefined, 'get_email_ctr', 'Fetching email CTR from Snowflake Platinum tables', { foundation_slug: foundationSlug });
+  public async getEmailCtr(foundationSlug: string, classification?: string): Promise<EmailCtrResponse> {
+    logger.debug(undefined, 'get_email_ctr', 'Fetching email CTR from Snowflake Platinum tables', {
+      foundation_slug: foundationSlug,
+      classification,
+    });
 
     try {
+      const classificationFilter = classification ? 'AND LF_SUB_DOMAIN_CLASSIFICATION = ?' : '';
+      const classificationParams = classification ? [classification] : [];
+
       // Query 1: KPI card — current CTR + MoM change from email_ctr_summary
       const summaryQuery = `
         SELECT
@@ -1962,6 +2020,7 @@ export class ProjectService {
           CTR_MOM_CHANGE
         FROM ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CTR_SUMMARY
         WHERE FOUNDATION_SLUG = ?
+          ${classificationFilter}
       `;
 
       // Query 2: Monthly CTR trend (bar chart, last 6 months) from email_ctr_by_month
@@ -1976,6 +2035,7 @@ export class ProjectService {
           SUM(TOTAL_OPENS) AS TOTAL_OPENS
         FROM ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CTR_BY_MONTH
         WHERE FOUNDATION_SLUG = ?
+          ${classificationFilter}
           AND PUBLISHED_MONTH_DATE >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         GROUP BY PUBLISHED_MONTH, PUBLISHED_MONTH_DATE
         ORDER BY PUBLISHED_MONTH_DATE ASC
@@ -1989,10 +2049,12 @@ export class ProjectService {
           CTR_LAST_6_MONTHS AS AVG_CTR
         FROM ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CTR_SUMMARY
         WHERE FOUNDATION_SLUG = ?
+          ${classificationFilter}
         ORDER BY CTR_LAST_6_MONTHS DESC
       `;
 
       // Query 4: Per-campaign performance from email_campaign_performance (last 6 months)
+      // Note: EMAIL_CAMPAIGN_PERFORMANCE does not have LF_SUB_DOMAIN_CLASSIFICATION — no classification filter here
       const campaignPerfQuery = `
         SELECT
           MARKETING_EMAIL_NAME,
@@ -2010,12 +2072,18 @@ export class ProjectService {
       `;
 
       const [summaryResult, monthlyResult, campaignResult, campaignPerfResult] = await Promise.all([
-        this.snowflakeService.execute<{ PROJECT_NAME: string; CTR_LAST_COMPLETED_MONTH: number; CTR_MOM_CHANGE: number }>(summaryQuery, [foundationSlug]),
+        this.snowflakeService.execute<{ PROJECT_NAME: string; CTR_LAST_COMPLETED_MONTH: number; CTR_MOM_CHANGE: number }>(summaryQuery, [
+          foundationSlug,
+          ...classificationParams,
+        ]),
         this.snowflakeService.execute<{ PUBLISHED_MONTH: string; PUBLISHED_MONTH_DATE: string; MONTHLY_CTR: number; TOTAL_SENDS: number; TOTAL_OPENS: number }>(
           monthlyQuery,
-          [foundationSlug]
+          [foundationSlug, ...classificationParams]
         ),
-        this.snowflakeService.execute<{ PROJECT_NAME: string; LF_SUB_DOMAIN_CLASSIFICATION: string; AVG_CTR: number }>(campaignQuery, [foundationSlug]),
+        this.snowflakeService.execute<{ PROJECT_NAME: string; LF_SUB_DOMAIN_CLASSIFICATION: string; AVG_CTR: number }>(campaignQuery, [
+          foundationSlug,
+          ...classificationParams,
+        ]),
         this.snowflakeService
           .execute<{
             MARKETING_EMAIL_NAME: string;
@@ -2194,59 +2262,54 @@ export class ProjectService {
 
     try {
       // Block 1: Total impressions, spend, revenue (last 6 months)
+      // Uses LAST_TOUCH_REVENUE as the default attribution model across all blocks
       const impressionsQuery = `
-      SELECT SUM(IMPRESSIONS) AS TOTAL_IMPRESSIONS, SUM(SPEND) AS TOTAL_SPEND, SUM(FIRST_TOUCH_REVENUE) AS TOTAL_REVENUE
-      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
+      SELECT SUM(IMPRESSIONS) AS TOTAL_IMPRESSIONS, SUM(SPEND) AS TOTAL_SPEND, SUM(LAST_TOUCH_REVENUE) AS TOTAL_REVENUE
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
       WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         AND FOUNDATION_SLUG = ?
     `;
 
-      // Block 2: ROAS KPI — latest completed month
+      // Block 2: ROAS KPI — last two completed months for MoM (last-touch attribution)
       const roasKpiQuery = `
-      SELECT FIRST_TOUCH_ROAS AS ROAS, ROAS_MOM_PCT
-      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
+      SELECT
+        CAMPAIGN_MONTH,
+        ROUND(DIV0(SUM(LAST_TOUCH_REVENUE), NULLIF(SUM(SPEND), 0)), 2) AS ROAS
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
       WHERE FOUNDATION_SLUG = ?
         AND CAMPAIGN_MONTH < DATE_TRUNC('MONTH', CURRENT_DATE())
-      QUALIFY ROW_NUMBER() OVER (ORDER BY CAMPAIGN_MONTH DESC) = 1
+        AND CAMPAIGN_MONTH >= DATEADD('MONTH', -2, DATE_TRUNC('MONTH', CURRENT_DATE()))
+      GROUP BY CAMPAIGN_MONTH
+      ORDER BY CAMPAIGN_MONTH DESC
     `;
 
-      // Block 3: Monthly ROAS trend (bar chart, last 6 months)
+      // Block 3: Monthly ROAS trend (bar chart, last 6 months, last-touch attribution)
       const monthlyRoasQuery = `
-      SELECT CAMPAIGN_MONTH, FIRST_TOUCH_ROAS AS ROAS
-      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
+      SELECT CAMPAIGN_MONTH, ROUND(DIV0(SUM(LAST_TOUCH_REVENUE), NULLIF(SUM(SPEND), 0)), 2) AS ROAS
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
       WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         AND FOUNDATION_SLUG = ?
+      GROUP BY CAMPAIGN_MONTH
       ORDER BY CAMPAIGN_MONTH
     `;
 
       // Block 4: Monthly impressions (bar chart, last 6 months)
       const monthlyImpressionsQuery = `
-      SELECT CAMPAIGN_MONTH, IMPRESSIONS
-      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
-      WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
-        AND FOUNDATION_SLUG = ?
-      ORDER BY CAMPAIGN_MONTH
-    `;
-
-      // Block 5: Impressions by channel (horizontal bar chart, last 6 months)
-      const channelQuery = `
-      SELECT CHANNEL, SUM(IMPRESSIONS) AS IMPRESSIONS
+      SELECT CAMPAIGN_MONTH, SUM(IMPRESSIONS) AS IMPRESSIONS
       FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
       WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         AND FOUNDATION_SLUG = ?
-      GROUP BY CHANNEL
-      ORDER BY IMPRESSIONS DESC
+      GROUP BY CAMPAIGN_MONTH
+      ORDER BY CAMPAIGN_MONTH
     `;
 
-      // Block 6: Project + campaign level performance breakdown (last 6 months)
-      // Uses LINEAR_REVENUE (not FIRST_TOUCH) — the per-campaign drill-down uses linear
-      // attribution to distribute credit fairly across touchpoints, while the top-level
-      // KPI (Blocks 1–2) uses first-touch for the headline ROAS.
+      // Block 5: Project + campaign level performance breakdown (last 6 months)
+      // All blocks use LAST_TOUCH_REVENUE as the default attribution model
       const projectPerfQuery = `
       SELECT
         PROJECT_NAME, CAMPAIGN_NAME, FUNNEL_STAGE,
-        SUM(SPEND) AS SPEND, SUM(LINEAR_REVENUE) AS REVENUE,
-        ROUND(DIV0(SUM(LINEAR_REVENUE), SUM(SPEND)), 2) AS ROAS,
+        SUM(SPEND) AS SPEND, SUM(LAST_TOUCH_REVENUE) AS REVENUE,
+        ROUND(DIV0(SUM(LAST_TOUCH_REVENUE), SUM(SPEND)), 2) AS ROAS,
         SUM(CONV) AS CONVERSIONS,
         ROUND(DIV0(SUM(CONV), NULLIF(SUM(CLICKS), 0)) * 100, 2) AS CONV_RATE,
         ROUND(DIV0(SUM(SPEND), NULLIF(SUM(CLICKS), 0)), 2) AS CPC,
@@ -2260,12 +2323,32 @@ export class ProjectService {
       ORDER BY SPEND DESC
     `;
 
-      const [impressionsResult, roasKpiResult, monthlyRoasResult, monthlyImpressionsResult, channelResult, projectPerfResult] = await Promise.all([
+      // Block 6: Platform-level performance breakdown (by CHANNEL + CAMPAIGN_NAME)
+      // All blocks use LAST_TOUCH_REVENUE as the default attribution model
+      // Also used to derive channelGroups (impressions by channel) — eliminates a separate query
+      const platformPerfQuery = `
+      SELECT
+        CHANNEL, CAMPAIGN_NAME,
+        SUM(SPEND) AS SPEND, SUM(LAST_TOUCH_REVENUE) AS REVENUE,
+        ROUND(DIV0(SUM(LAST_TOUCH_REVENUE), SUM(SPEND)), 2) AS ROAS,
+        SUM(CLICKS) AS CLICKS,
+        SUM(IMPRESSIONS) AS IMPRESSIONS,
+        ROUND(DIV0(SUM(CLICKS), NULLIF(SUM(IMPRESSIONS), 0)) * 100, 2) AS CTR,
+        ROUND(DIV0(SUM(SPEND), NULLIF(SUM(CLICKS), 0)), 2) AS CPC,
+        ROUND(DIV0(SUM(CONV), NULLIF(SUM(CLICKS), 0)) * 100, 2) AS CONV_RATE,
+        SUM(CONV) AS CONVERSIONS
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
+      WHERE FOUNDATION_SLUG = ?
+        AND CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
+      GROUP BY CHANNEL, CAMPAIGN_NAME
+      ORDER BY CHANNEL, SPEND DESC
+    `;
+
+      const [impressionsResult, roasKpiResult, monthlyRoasResult, monthlyImpressionsResult, projectPerfResult, platformPerfResult] = await Promise.all([
         this.snowflakeService.execute<{ TOTAL_IMPRESSIONS: number; TOTAL_SPEND: number; TOTAL_REVENUE: number }>(impressionsQuery, [foundationSlug]),
-        this.snowflakeService.execute<{ ROAS: number; ROAS_MOM_PCT: number }>(roasKpiQuery, [foundationSlug]),
+        this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; ROAS: number }>(roasKpiQuery, [foundationSlug]),
         this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; ROAS: number }>(monthlyRoasQuery, [foundationSlug]),
         this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; IMPRESSIONS: number }>(monthlyImpressionsQuery, [foundationSlug]),
-        this.snowflakeService.execute<{ CHANNEL: string; IMPRESSIONS: number }>(channelQuery, [foundationSlug]),
         this.snowflakeService
           .execute<{
             PROJECT_NAME: string;
@@ -2303,13 +2386,50 @@ export class ProjectService {
               }[],
             };
           }),
+        this.snowflakeService
+          .execute<{
+            CHANNEL: string;
+            CAMPAIGN_NAME: string;
+            SPEND: number;
+            REVENUE: number;
+            ROAS: number;
+            CLICKS: number;
+            IMPRESSIONS: number;
+            CTR: number;
+            CPC: number;
+            CONV_RATE: number;
+            CONVERSIONS: number;
+          }>(platformPerfQuery, [foundationSlug])
+          .catch((error) => {
+            logger.warning(undefined, 'get_social_reach', 'Optional platform breakdown query failed, degrading gracefully', {
+              foundation_slug: foundationSlug,
+              err: error,
+            });
+            return {
+              rows: [] as {
+                CHANNEL: string;
+                CAMPAIGN_NAME: string;
+                SPEND: number;
+                REVENUE: number;
+                ROAS: number;
+                CLICKS: number;
+                IMPRESSIONS: number;
+                CTR: number;
+                CPC: number;
+                CONV_RATE: number;
+                CONVERSIONS: number;
+              }[],
+            };
+          }),
       ]);
 
       const totalReach = impressionsResult.rows[0]?.TOTAL_IMPRESSIONS ?? 0;
       const totalSpend = impressionsResult.rows[0]?.TOTAL_SPEND ?? 0;
       const totalRevenue = impressionsResult.rows[0]?.TOTAL_REVENUE ?? 0;
-      const roas = roasKpiResult.rows[0]?.ROAS ?? 0;
-      const roasMomPct = roasKpiResult.rows[0]?.ROAS_MOM_PCT ?? 0;
+      const currentRoas = roasKpiResult.rows[0]?.ROAS ?? 0;
+      const previousRoas = roasKpiResult.rows[1]?.ROAS ?? 0;
+      const roas = currentRoas;
+      const roasMomPct = previousRoas > 0 ? ((currentRoas - previousRoas) / previousRoas) * 100 : 0;
 
       if (monthlyImpressionsResult.rows.length === 0) {
         return {
@@ -2323,6 +2443,8 @@ export class ProjectService {
           monthlyLabels: [],
           monthlyRoas: [],
           channelGroups: [],
+          projectBreakdown: [],
+          platformBreakdown: [],
         };
       }
 
@@ -2333,10 +2455,42 @@ export class ProjectService {
         return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
       });
 
-      const channelGroups = channelResult.rows.map((row) => ({
-        channel: row.CHANNEL,
-        totalImpressions: row.IMPRESSIONS,
-      }));
+      // Aggregate platform rows by CHANNEL for channelGroups and platformBreakdown
+      const platformMap = new Map<
+        string,
+        {
+          spend: number;
+          revenue: number;
+          clicks: number;
+          impressions: number;
+          conversions: number;
+          campaigns: typeof platformPerfResult.rows;
+        }
+      >();
+      for (const row of platformPerfResult.rows) {
+        const existing = platformMap.get(row.CHANNEL) ?? {
+          spend: 0,
+          revenue: 0,
+          clicks: 0,
+          impressions: 0,
+          conversions: 0,
+          campaigns: [] as typeof platformPerfResult.rows,
+        };
+        existing.spend += row.SPEND ?? 0;
+        existing.revenue += row.REVENUE ?? 0;
+        existing.clicks += row.CLICKS ?? 0;
+        existing.impressions += row.IMPRESSIONS ?? 0;
+        existing.conversions += row.CONVERSIONS ?? 0;
+        existing.campaigns.push(row);
+        platformMap.set(row.CHANNEL, existing);
+      }
+
+      const channelGroups = Array.from(platformMap.entries())
+        .map(([channel, data]) => ({
+          channel,
+          totalImpressions: data.impressions,
+        }))
+        .sort((a, b) => b.totalImpressions - a.totalImpressions);
 
       // Shape project breakdown with nested campaigns
       const projectMap = new Map<
@@ -2376,12 +2530,14 @@ export class ProjectService {
         projectMap.set(row.PROJECT_NAME, existing);
       }
 
-      const getPaidPerformance = (projectRoas: number): string => {
+      const getPaidPerformance = (projectRoas: number): PaidProjectPerformance => {
         if (projectRoas >= 2) return 'EXCELLENT';
         if (projectRoas >= 1) return 'GOOD';
-        if (projectRoas > 0) return 'POOR';
-        return 'NO REVENUE';
+        if (projectRoas > 0) return 'AVERAGE';
+        return 'EMERGING';
       };
+
+      const CAMPAIGN_TOP_N = 10;
 
       const formatFunnel = (stages: Set<string>): string => {
         const priority = ['BoFU', 'MoFU', 'ToFU', 'ToFU2', 'Unknown'];
@@ -2410,9 +2566,9 @@ export class ProjectService {
             impressions: data.impressions,
             clicks: data.clicks,
             performance: getPaidPerformance(projectRoas),
-            campaigns: data.campaigns
+            campaigns: [...data.campaigns]
               .sort((a, b) => (b.SPEND ?? 0) - (a.SPEND ?? 0))
-              .slice(0, 10)
+              .slice(0, CAMPAIGN_TOP_N)
               .map((c) => ({
                 campaignName: c.CAMPAIGN_NAME,
                 funnelStage: c.FUNNEL_STAGE ?? 'Unknown',
@@ -2423,6 +2579,45 @@ export class ProjectService {
                 convRate: c.CONV_RATE ?? 0,
                 cpc: c.CPC ?? 0,
                 sessions: c.SESSIONS ?? 0,
+                impressions: c.IMPRESSIONS ?? 0,
+                clicks: c.CLICKS ?? 0,
+              })),
+          };
+        })
+        .sort((a, b) => b.spend - a.spend);
+
+      const platformBreakdown = Array.from(platformMap.entries())
+        .map(([channel, data]) => {
+          // Ratios recomputed from aggregated totals; averaging per-campaign values would be statistically incorrect.
+          const platRoas = data.spend > 0 ? Math.round((data.revenue / data.spend) * 100) / 100 : 0;
+          const platCtr = data.impressions > 0 ? Math.round((data.clicks / data.impressions) * 10000) / 100 : 0;
+          const platCpc = data.clicks > 0 ? Math.round((data.spend / data.clicks) * 100) / 100 : 0;
+          const platConvRate = data.clicks > 0 ? Math.round((data.conversions / data.clicks) * 10000) / 100 : 0;
+          return {
+            platform: channel,
+            spend: Math.round(data.spend * 100) / 100,
+            revenue: Math.round(data.revenue * 100) / 100,
+            roas: platRoas,
+            clicks: data.clicks,
+            impressions: data.impressions,
+            ctr: platCtr,
+            cpc: platCpc,
+            convRate: platConvRate,
+            conversions: data.conversions,
+            performance: getPaidPerformance(platRoas),
+            campaigns: [...data.campaigns]
+              .sort((a, b) => (b.SPEND ?? 0) - (a.SPEND ?? 0))
+              .slice(0, CAMPAIGN_TOP_N)
+              .map((c) => ({
+                campaignName: c.CAMPAIGN_NAME,
+                funnelStage: 'Unknown',
+                spend: Math.round((c.SPEND ?? 0) * 100) / 100,
+                revenue: Math.round((c.REVENUE ?? 0) * 100) / 100,
+                roas: c.ROAS ?? 0,
+                conversions: c.CONVERSIONS ?? 0,
+                convRate: c.CONV_RATE ?? 0,
+                cpc: c.CPC ?? 0,
+                sessions: 0,
                 impressions: c.IMPRESSIONS ?? 0,
                 clicks: c.CLICKS ?? 0,
               })),
@@ -2442,6 +2637,7 @@ export class ProjectService {
         monthlyRoas,
         channelGroups,
         projectBreakdown,
+        platformBreakdown,
       };
     } catch (error) {
       logger.warning(undefined, 'get_social_reach', 'Failed to fetch social reach data, returning defaults', {
@@ -2459,6 +2655,8 @@ export class ProjectService {
         monthlyLabels: [],
         monthlyRoas: [],
         channelGroups: [],
+        projectBreakdown: [],
+        platformBreakdown: [],
       };
     }
   }

@@ -4,6 +4,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import {
+  OrgLensAccountContextResponse,
   ActiveWeeksStreakResponse,
   CertifiedEmployeesResponse,
   CodeCommitsDailyResponse,
@@ -206,6 +207,17 @@ export class AnalyticsService {
     );
   }
 
+  /** Resolve display attributes + tier for the persona-authorised account IDs (drives selector + header badge). */
+  public getOrgLensAccountContext(accountIds: string[]): Observable<OrgLensAccountContextResponse[]> {
+    if (accountIds.length === 0) {
+      return of([]);
+    }
+    const params = { accountIds: accountIds.join(',') };
+    return this.http
+      .get<OrgLensAccountContextResponse[]>('/api/analytics/org-lens-account-context', { params })
+      .pipe(catchError(() => of([] as OrgLensAccountContextResponse[])));
+  }
+
   /**
    * Get certified employees data for an organization with monthly trend
    * @param accountId - Required account ID to filter by specific organization
@@ -400,16 +412,13 @@ export class AnalyticsService {
     );
   }
 
-  /**
-   * Get foundation maintainers data from Snowflake
-   * @param foundationSlug - Required foundation slug to filter by (e.g., 'tlf', 'cncf')
-   * @returns Observable of foundation maintainers response with average and daily trend data
-   */
+  /** Latest-day distinct-maintainer snapshot + daily trend for a foundation. */
   public getFoundationMaintainers(foundationSlug: string): Observable<FoundationMaintainersResponse> {
     return this.http.get<FoundationMaintainersResponse>('/api/analytics/foundation-maintainers', { params: { foundationSlug } }).pipe(
       catchError(() => {
         return of({
-          avgMaintainers: 0,
+          currentMaintainers: 0,
+          asOfDate: null,
           trendData: [],
           trendLabels: [],
         });
@@ -821,10 +830,13 @@ export class AnalyticsService {
   /**
    * Get web activities summary grouped by domain category
    * @param foundationSlug - Foundation slug to filter by (e.g., 'tlf', 'cncf')
+   * @param classification - Optional LF_SUB_DOMAIN_CLASSIFICATION filter (e.g., 'Events', 'Corporate')
    * @returns Observable of web activities summary response
    */
-  public getWebActivitiesSummary(foundationSlug: string): Observable<WebActivitiesSummaryResponse> {
-    return this.http.get<WebActivitiesSummaryResponse>('/api/analytics/web-activities-summary', { params: { foundationSlug } }).pipe(
+  public getWebActivitiesSummary(foundationSlug: string, classification?: string): Observable<WebActivitiesSummaryResponse> {
+    const params: Record<string, string> = { foundationSlug };
+    if (classification) params['classification'] = classification;
+    return this.http.get<WebActivitiesSummaryResponse>('/api/analytics/web-activities-summary', { params }).pipe(
       catchError(() => {
         return of({
           totalSessions: 0,
@@ -840,10 +852,13 @@ export class AnalyticsService {
   /**
    * Get email click-through rate data
    * @param foundationSlug - Foundation slug to filter by
+   * @param classification - Optional LF_SUB_DOMAIN_CLASSIFICATION filter (e.g., 'Events', 'Corporate')
    * @returns Observable of email CTR response
    */
-  public getEmailCtr(foundationSlug: string): Observable<EmailCtrResponse> {
-    return this.http.get<EmailCtrResponse>('/api/analytics/email-ctr', { params: { foundationSlug } }).pipe(
+  public getEmailCtr(foundationSlug: string, classification?: string): Observable<EmailCtrResponse> {
+    const params: Record<string, string> = { foundationSlug };
+    if (classification) params['classification'] = classification;
+    return this.http.get<EmailCtrResponse>('/api/analytics/email-ctr', { params }).pipe(
       catchError(() => {
         return of({
           currentCtr: 0,
