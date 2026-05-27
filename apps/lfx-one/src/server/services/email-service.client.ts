@@ -31,8 +31,10 @@ export class EmailServiceClient {
    * so analytics queries can aggregate per-newsletter.
    */
   public async sendEmail(req: Request, payload: EmailServiceSendRequest): Promise<EmailServiceSendResponse> {
+    // Recipient email is intentionally omitted from log metadata to keep PII
+    // out of structured logs; group_id is the correlation key, and the
+    // email-service KV holds the recipient indexed by its own email_id.
     logger.debug(req, 'email_service_send_email', 'Sending email via NATS', {
-      to: payload.to,
       group_id: payload.group_id,
       subject_length: payload.subject.length,
     });
@@ -94,8 +96,13 @@ export class EmailServiceClient {
       const responseText = codec.decode(response.data);
       const parsed = JSON.parse(responseText) as T & { error?: string };
 
-      if (parsed && typeof parsed === 'object' && 'error' in parsed && typeof parsed.error === 'string') {
-        throw new MicroserviceError(parsed.error, 502, 'EMAIL_SERVICE_ERROR', {
+      // Email-service error envelope is `{error: "<reason>"}` — a bare object
+      // with only the error field. Tighter check than `'error' in parsed` so
+      // a successful response that legitimately includes an error field
+      // (e.g. per-recipient SMTP error attached to an EmailRecipientRecord)
+      // isn't misclassified as a full-request failure.
+      if (this.isErrorEnvelope(parsed)) {
+        throw new MicroserviceError(parsed.error as string, 502, 'EMAIL_SERVICE_ERROR', {
           operation,
           service: 'email-service',
           errorBody: parsed,
@@ -122,5 +129,13 @@ export class EmailServiceClient {
         }
       );
     }
+  }
+
+  private isErrorEnvelope(parsed: unknown): parsed is { error: string } {
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return false;
+    }
+    const obj = parsed as Record<string, unknown>;
+    return typeof obj['error'] === 'string' && Object.keys(obj).length === 1;
   }
 }
