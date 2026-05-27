@@ -901,8 +901,10 @@ export class AnalyticsService {
    * @param foundationSlug - Foundation slug used to filter metrics
    * @returns Social reach response with ROAS, impressions, and monthly trends
    */
-  public getSocialReach(foundationSlug: string): Observable<SocialReachResponse> {
-    return this.http.get<SocialReachResponse>('/api/analytics/social-reach', { params: { foundationSlug } }).pipe(
+  public getSocialReach(foundationSlug: string, classification?: string): Observable<SocialReachResponse> {
+    const params: Record<string, string> = { foundationSlug };
+    if (classification) params['classification'] = classification;
+    return this.http.get<SocialReachResponse>('/api/analytics/social-reach', { params }).pipe(
       catchError(() => {
         return of({
           totalReach: 0,
@@ -1195,8 +1197,10 @@ export class AnalyticsService {
    * @param foundationSlug Foundation slug used to filter Snowflake queries
    * @returns Observable emitting reach totals, platform breakdowns, and weekly trend (or zeroed defaults on error)
    */
-  public getBrandReach(foundationSlug: string): Observable<BrandReachResponse> {
-    return this.http.get<BrandReachResponse>('/api/analytics/brand-reach', { params: { foundationSlug } }).pipe(
+  public getBrandReach(foundationSlug: string, classification?: string): Observable<BrandReachResponse> {
+    const params: Record<string, string> = { foundationSlug };
+    if (classification) params['classification'] = classification;
+    return this.http.get<BrandReachResponse>('/api/analytics/brand-reach', { params }).pipe(
       catchError(() =>
         of({
           totalSocialFollowers: 0,
@@ -1243,8 +1247,10 @@ export class AnalyticsService {
    * @param foundationSlug Foundation slug used to filter Snowflake queries
    * @returns Observable emitting pipeline/revenue totals, attribution breakdowns, and event registration data (or zeroed defaults on error)
    */
-  public getRevenueImpact(foundationSlug: string): Observable<RevenueImpactResponse> {
-    return this.http.get<RevenueImpactResponse>('/api/analytics/revenue-impact', { params: { foundationSlug } }).pipe(
+  public getRevenueImpact(foundationSlug: string, classification?: string): Observable<RevenueImpactResponse> {
+    const params: Record<string, string> = { foundationSlug };
+    if (classification) params['classification'] = classification;
+    return this.http.get<RevenueImpactResponse>('/api/analytics/revenue-impact', { params }).pipe(
       catchError(() =>
         of({
           pipelineInfluenced: 0,
@@ -1268,9 +1274,11 @@ export class AnalyticsService {
    * @param foundationSlug Foundation slug used to filter Snowflake queries
    * @returns Observable emitting channel summary + project drill-down (or empty defaults on error)
    */
-  public getMarketingAttribution(foundationSlug: string): Observable<MarketingAttributionResponse> {
+  public getMarketingAttribution(foundationSlug: string, classification?: string): Observable<MarketingAttributionResponse> {
+    const params: Record<string, string> = { foundationSlug };
+    if (classification) params['classification'] = classification;
     return this.http
-      .get<MarketingAttributionResponse>('/api/analytics/marketing-attribution', { params: { foundationSlug } })
+      .get<MarketingAttributionResponse>('/api/analytics/marketing-attribution', { params })
       .pipe(catchError(() => of({ channels: [], projects: [] })));
   }
 
