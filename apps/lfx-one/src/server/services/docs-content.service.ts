@@ -53,7 +53,16 @@ export interface DocSitemapEntry {
 
 const serverDistFolder = fileURLToPath(new URL('.', import.meta.url));
 
-function resolveDocsRoot(): string {
+/**
+ * Locate the docs/enduser content directory. Returns null when no candidate
+ * path exists — this happens during Angular's SSR route-extraction step, where
+ * `import.meta.url` resolves to a temp compilation directory and the dist tree
+ * has not yet been materialised. In that build-time context every public method
+ * falls back to an empty/null response so extraction completes without error.
+ * At actual runtime the production path (dist/browser/docs-enduser) is always
+ * present and is returned by the first probe.
+ */
+function resolveDocsRoot(): string | null {
   // Production: files are bundled into the browser dist under /docs-enduser
   const prodPath = resolve(serverDistFolder, '../browser/docs-enduser');
   if (existsSync(prodPath)) {
@@ -64,12 +73,9 @@ function resolveDocsRoot(): string {
   if (existsSync(devPath)) {
     return devPath;
   }
-  // Build-time fallback: during Angular route extraction the CWD is the repo root
-  const cwdPath = resolve(process.cwd(), 'docs/enduser');
-  if (existsSync(cwdPath)) {
-    return cwdPath;
-  }
-  throw new Error('docs-content: cannot locate docs/enduser directory');
+  // Build-time: no docs directory reachable; caller will return empty data.
+  serverLogger.warn('docs-content: docs/enduser not found — running in build-time mode, serving empty');
+  return null;
 }
 
 function readFrontmatter(filePath: string): { frontmatter: DocFrontmatter; content: string } | null {
@@ -95,13 +101,17 @@ function renderMarkdown(content: string): string {
 let _sectionCache: DocSection[] | null = null;
 
 export class DocsContentService {
-  private readonly docsRoot: string;
+  private readonly docsRoot: string | null;
 
   public constructor() {
     this.docsRoot = resolveDocsRoot();
   }
 
   public listSections(): DocSection[] {
+    if (!this.docsRoot) {
+      return [];
+    }
+
     // In development, skip the cache so file edits are reflected immediately
     // without a restart. Directory mtime is unreliable for tracking edits to
     // individual markdown files.
@@ -160,6 +170,9 @@ export class DocsContentService {
   }
 
   public getArticle(slugParts: string[]): DocArticle | null {
+    if (!this.docsRoot) {
+      return null;
+    }
     // Validate each slug segment before using in a path expression.
     if (!isValidSlugParts(slugParts)) {
       return null;
