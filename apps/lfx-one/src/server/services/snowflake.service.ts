@@ -134,16 +134,25 @@ export class SnowflakeService {
           });
 
           const startTime = Date.now();
-          const pool = await this.ensurePool();
-          const queryTimeoutMs = options?.timeout ?? SNOWFLAKE_CONFIG.DEFAULT_QUERY_TIMEOUT;
 
           try {
+            // ensurePool is inside try so a pool-creation failure during a HALF_OPEN
+            // probe is caught by the catch below and calls recordFailure(), preventing
+            // probeInFlight from getting stuck.
+            const pool = await this.ensurePool();
+            const queryTimeoutMs = options?.timeout ?? SNOWFLAKE_CONFIG.DEFAULT_QUERY_TIMEOUT;
+
             // Race the full pool.use() + query execution against a per-query timeout.
             // This bounds event-loop exposure to a slow/unresponsive Snowflake regardless
             // of the pool's own acquire timeout — whichever fires first wins.
-            const executePromise = new Promise<SnowflakeQueryResult<T>>((resolve, reject) => {
-              pool
-                .use(async (connection: Connection) => {
+            //
+            // The pool.use callback returns a Promise that settles inside the Snowflake
+            // complete callback so generic-pool holds the connection until the statement
+            // finishes, keeping pool accounting (max, maxWaitingClients, acquireTimeout)
+            // accurate for in-flight queries.
+            const executePromise = pool.use(
+              (connection: Connection) =>
+                new Promise<SnowflakeQueryResult<T>>((resolve, reject) => {
                   connection.execute({
                     sqlText,
                     binds: binds as any[],
@@ -161,8 +170,7 @@ export class SnowflakeService {
                     },
                   });
                 })
-                .catch(reject);
-            });
+            );
 
             let timeoutHandle: ReturnType<typeof setTimeout>;
             const timeoutPromise = new Promise<never>((_, reject) => {
