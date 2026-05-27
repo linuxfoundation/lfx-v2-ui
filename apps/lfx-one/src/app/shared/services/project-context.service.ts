@@ -8,7 +8,7 @@ import { Router } from '@angular/router';
 import { isBoardScopedPersona, ProjectContext } from '@lfx-one/shared/interfaces';
 import { isSameProjectContext } from '@lfx-one/shared/utils';
 import { SsrCookieService } from 'ngx-cookie-service-ssr';
-import { catchError, map, of, switchMap } from 'rxjs';
+import { catchError, map, of, startWith, switchMap } from 'rxjs';
 
 import { LensService } from './lens.service';
 import { PersonaService } from './persona.service';
@@ -155,7 +155,7 @@ export class ProjectContextService {
           if (!foundation?.uid) {
             return of(null);
           }
-          return this.projectService.getProjectSfid(foundation.uid);
+          return this.projectService.getProjectSfid(foundation.uid).pipe(startWith(null));
         })
       ),
       { initialValue: null }
