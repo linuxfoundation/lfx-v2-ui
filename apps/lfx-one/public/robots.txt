@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /docs
+Allow: /robots.txt
+Allow: /sitemap.xml
+Disallow: /api/
+Disallow: /public/api/
+
+Sitemap: https://app.lfx.dev/sitemap.xml

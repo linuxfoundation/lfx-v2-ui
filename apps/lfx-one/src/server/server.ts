@@ -41,6 +41,7 @@ import publicCommitteesRouter from './routes/public-committees.route';
 import publicDocsRouter from './routes/public-docs.route';
 import publicMeetingsRouter from './routes/public-meetings.route';
 import publicProjectsRouter from './routes/public-projects.route';
+import sitemapRouter from './routes/sitemap.route';
 import rewardsRouter from './routes/rewards.route';
 import searchRouter from './routes/search.route';
 import surveysRouter from './routes/surveys.route';
@@ -191,6 +192,7 @@ app.use('/public/api/', publicApiRateLimiter);
 app.use('/api/', apiRateLimiter);
 app.use('/login', authRateLimiter);
 
+app.use('/sitemap.xml', sitemapRouter);
 app.use('/public/api/docs', publicDocsRouter);
 app.use('/public/api/meetings', publicMeetingsRouter);
 app.use('/public/api/committees', publicCommitteesRouter);
