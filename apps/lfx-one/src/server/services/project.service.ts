@@ -5141,16 +5141,23 @@ export class ProjectService {
         FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
         WHERE CAMPAIGN_MONTH >= DATE_TRUNC('month', DATEADD(month, -6, CURRENT_DATE()))
           AND CAMPAIGN_MONTH < DATE_TRUNC('month', CURRENT_DATE())
+          ${classificationFilter}
         GROUP BY CAMPAIGN_MONTH
         ORDER BY CAMPAIGN_MONTH DESC
         LIMIT 6
       `
         : `
-        SELECT CAMPAIGN_MONTH, SPEND, FIRST_TOUCH_REVENUE, IMPRESSIONS, FIRST_TOUCH_ROAS
+        SELECT CAMPAIGN_MONTH,
+               SUM(SPEND) AS SPEND,
+               SUM(FIRST_TOUCH_REVENUE) AS FIRST_TOUCH_REVENUE,
+               SUM(IMPRESSIONS) AS IMPRESSIONS,
+               CASE WHEN SUM(SPEND) > 0 THEN SUM(FIRST_TOUCH_REVENUE) / SUM(SPEND) ELSE 0 END AS FIRST_TOUCH_ROAS
         FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
         WHERE FOUNDATION_SLUG = ?
           AND CAMPAIGN_MONTH >= DATE_TRUNC('month', DATEADD(month, -6, CURRENT_DATE()))
           AND CAMPAIGN_MONTH < DATE_TRUNC('month', CURRENT_DATE())
+          ${classificationFilter}
+        GROUP BY CAMPAIGN_MONTH
         ORDER BY CAMPAIGN_MONTH DESC
         LIMIT 6
       `;
@@ -5266,7 +5273,7 @@ export class ProjectService {
             FIRST_TOUCH_REVENUE: number;
             IMPRESSIONS: number;
             FIRST_TOUCH_ROAS: number;
-          }>(monthlyTrendQuery, isUmbrella ? [] : [foundationSlug]),
+          }>(monthlyTrendQuery, isUmbrella ? [...classificationParams] : [foundationSlug, ...classificationParams]),
           this.snowflakeService.execute<{
             PROJECT_NAME: string;
             CHANNEL: string;
