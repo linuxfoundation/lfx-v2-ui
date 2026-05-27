@@ -9,7 +9,7 @@ import DOMPurify from 'isomorphic-dompurify';
 import matter from 'gray-matter';
 import { marked } from 'marked';
 
-import { isValidSlugParts } from '@lfx-one/shared/utils';
+import { isValidSlug, isValidSlugParts } from '@lfx-one/shared/utils';
 
 import { serverLogger } from '../server-logger';
 
@@ -59,16 +59,26 @@ const serverDistFolder = fileURLToPath(new URL('.', import.meta.url));
  * `import.meta.url` resolves to a temp compilation directory and the dist tree
  * has not yet been materialised. In that build-time context every public method
  * falls back to an empty/null response so extraction completes without error.
- * At actual runtime the production path (dist/browser/docs-enduser) is always
- * present and is returned by the first probe.
+ *
+ * Path resolution order (first match wins):
+ *  1. Prod   — dist/browser/docs-enduser (Angular assets pipeline output)
+ *  2. Dev/CWD — process.cwd()/../../docs/enduser (works when cwd = apps/lfx-one
+ *               as set by the Yarn workspace / Turbo runner)
+ *  3. Dev/URL — import.meta.url-relative ../../../../docs/enduser (fallback for
+ *               environments where the server bundle is deeper in the dist tree)
  */
 function resolveDocsRoot(): string | null {
-  // Production: files are bundled into the browser dist under /docs-enduser
+  // 1. Production: files are bundled into the browser dist under /docs-enduser
   const prodPath = resolve(serverDistFolder, '../browser/docs-enduser');
   if (existsSync(prodPath)) {
     return prodPath;
   }
-  // Development: read directly from the source tree
+  // 2. Development (Yarn workspace / Turbo): process.cwd() = apps/lfx-one
+  const cwdPath = resolve(process.cwd(), '../../docs/enduser');
+  if (existsSync(cwdPath)) {
+    return cwdPath;
+  }
+  // 3. Development (import.meta.url relative): server bundle under dist/…/server/
   const devPath = resolve(serverDistFolder, '../../../../docs/enduser');
   if (existsSync(devPath)) {
     return devPath;
@@ -86,6 +96,14 @@ function readFrontmatter(filePath: string): { frontmatter: DocFrontmatter; conte
     if (!fm.title || !fm.description) {
       serverLogger.warn({ filePath }, 'docs-content: article missing required frontmatter fields (title, description)');
     }
+    // gray-matter/js-yaml parses unquoted YAML timestamps (e.g. `last_updated: 2026-05-22`)
+    // as JS Date objects. Normalise to YYYY-MM-DD string so downstream serialisation
+    // (sitemap, JSON API) always emits a valid ISO date rather than a verbose Date.toString().
+    if (fm.last_updated instanceof Date) {
+      fm.last_updated = (fm.last_updated as Date).toISOString().slice(0, 10);
+    } else if (fm.last_updated !== undefined) {
+      fm.last_updated = String(fm.last_updated).slice(0, 10);
+    }
     return { frontmatter: fm, content: parsed.content };
   } catch (err) {
     serverLogger.error({ filePath, err }, 'docs-content: failed to read article');
@@ -101,14 +119,19 @@ function renderMarkdown(content: string): string {
 let _sectionCache: DocSection[] | null = null;
 
 export class DocsContentService {
-  private readonly docsRoot: string | null;
+  // In production this is set once at construction time (fast path).
+  // In development it starts as null and is re-resolved on the first
+  // successful request — avoids a race where Angular's dev server starts
+  // the SSR process before browser assets are fully written to disk.
+  private docsRoot: string | null;
 
   public constructor() {
     this.docsRoot = resolveDocsRoot();
   }
 
   public listSections(): DocSection[] {
-    if (!this.docsRoot) {
+    const docsRoot = this.getDocsRoot();
+    if (!docsRoot) {
       return [];
     }
 
@@ -127,23 +150,26 @@ export class DocsContentService {
     const today = new Date().toISOString().split('T')[0];
 
     // Sort alphabetically so section/topic order is deterministic across filesystems.
-    const entries = readdirSync(this.docsRoot, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name));
+    const entries = readdirSync(docsRoot, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name));
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
 
       const sectionSlug = entry.name;
-      const sectionIndex = join(this.docsRoot, sectionSlug, 'index.md');
+      // Skip non-slug directory names (e.g. .git, __MACOSX, node_modules).
+      if (!isValidSlug(sectionSlug)) continue;
+      const sectionIndex = join(docsRoot, sectionSlug, 'index.md');
       if (!existsSync(sectionIndex)) continue;
 
       const sectionMeta = readFrontmatter(sectionIndex);
       if (!sectionMeta) continue;
 
       const topics: DocTopic[] = [];
-      const topicEntries = readdirSync(join(this.docsRoot, sectionSlug), { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name));
+      const topicEntries = readdirSync(join(docsRoot, sectionSlug), { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name));
       for (const topicEntry of topicEntries) {
         if (!topicEntry.isDirectory()) continue;
         const topicSlug = topicEntry.name;
-        const topicIndex = join(this.docsRoot, sectionSlug, topicSlug, 'index.md');
+        if (!isValidSlug(topicSlug)) continue;
+        const topicIndex = join(docsRoot, sectionSlug, topicSlug, 'index.md');
         if (!existsSync(topicIndex)) continue;
         const topicMeta = readFrontmatter(topicIndex);
         if (!topicMeta) continue;
@@ -170,7 +196,8 @@ export class DocsContentService {
   }
 
   public getArticle(slugParts: string[]): DocArticle | null {
-    if (!this.docsRoot) {
+    const docsRoot = this.getDocsRoot();
+    if (!docsRoot) {
       return null;
     }
     // Validate each slug segment before using in a path expression.
@@ -178,9 +205,9 @@ export class DocsContentService {
       return null;
     }
 
-    const filePath = resolve(this.docsRoot, ...slugParts, 'index.md');
+    const filePath = resolve(docsRoot, ...slugParts, 'index.md');
     // Prevent path traversal: resolved path must stay inside docsRoot.
-    if (!filePath.startsWith(`${this.docsRoot}${sep}`)) {
+    if (!filePath.startsWith(`${docsRoot}${sep}`)) {
       return null;
     }
     if (!existsSync(filePath)) {
@@ -193,7 +220,7 @@ export class DocsContentService {
     const breadcrumbs: { label: string; path: string }[] = [{ label: 'Help', path: '/docs' }];
 
     if (slugParts.length >= 1) {
-      const sectionIndex = join(this.docsRoot, slugParts[0], 'index.md');
+      const sectionIndex = join(docsRoot, slugParts[0], 'index.md');
       const sectionMeta = existsSync(sectionIndex) ? readFrontmatter(sectionIndex) : null;
       breadcrumbs.push({ label: sectionMeta?.frontmatter.title ?? slugParts[0], path: `/docs/${slugParts[0]}` });
     }
@@ -217,6 +244,14 @@ export class DocsContentService {
       }
     }
     return entries;
+  }
+
+  /** Returns the docs root, re-probing in dev mode if the constructor missed it. */
+  private getDocsRoot(): string | null {
+    if (!this.docsRoot && process.env['NODE_ENV'] !== 'production') {
+      this.docsRoot = resolveDocsRoot();
+    }
+    return this.docsRoot;
   }
 }
 

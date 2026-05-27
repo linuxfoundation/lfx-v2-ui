@@ -9,13 +9,18 @@ const router: Router = express.Router();
 
 const BASE_URL = (process.env['APP_URL'] ?? 'https://app.lfx.dev').replace(/\/+$/, '');
 
+/** Escape the five XML special characters to prevent invalid XML or injection. */
+function escapeXml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+}
+
 router.get('/', (_req: Request, res: Response) => {
   const entries = docsContentService.getSitemap();
   const urls = entries
     .map(
       (e) => `  <url>
-    <loc>${BASE_URL}${e.path}</loc>
-    <lastmod>${e.lastmod}</lastmod>
+    <loc>${escapeXml(BASE_URL + e.path)}</loc>
+    <lastmod>${escapeXml(e.lastmod)}</lastmod>
     <changefreq>weekly</changefreq>
   </url>`
     )

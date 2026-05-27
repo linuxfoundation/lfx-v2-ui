@@ -41,6 +41,10 @@ export class DocsArticleComponent implements OnInit {
           const slugParts = topic ? [section, topic] : [section];
           this.loading.set(true);
           this.notFound.set(false);
+          // Clear stale content immediately so the old article body never
+          // co-renders with a subsequent "not found" state (or blank state).
+          this.article.set(null);
+          this.safeHtml.set(null);
           return this.docsService.getArticle(slugParts);
         }),
         takeUntilDestroyed(this.destroyRef)
@@ -49,6 +53,7 @@ export class DocsArticleComponent implements OnInit {
         this.loading.set(false);
         if (!data) {
           this.notFound.set(true);
+          this.titleService.setTitle('Article not found — LFX Self Serve Help');
           return;
         }
         this.article.set(data);

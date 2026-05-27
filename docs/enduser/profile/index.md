@@ -5,7 +5,7 @@ audience: [all]
 product_area: Profile
 tags: [profile, account, email, password, affiliations, developer]
 last_generated: 2026-05-22
-last_updated: 2026-05-22
+last_updated: 2026-05-27
 intercom_collection: Profile
 ---
 
@@ -28,14 +28,13 @@ All authenticated users have a profile. Every user can view and edit their own p
 
 Go to **app.lfx.dev** and select **Profile** from the left navigation sidebar, or navigate directly to `/profile`. The profile section uses a tabbed layout with the following tabs:
 
-| Tab          | Route                   | Description                                 |
-| ------------ | ----------------------- | ------------------------------------------- |
-| Overview     | `/profile`              | Summary of your profile and activity        |
-| Edit Profile | `/profile/manage`       | Edit your name, photo, and personal details |
-| Affiliations | `/profile/affiliations` | View and manage your project affiliations   |
-| Developer    | `/settings/developer`   | Developer-specific settings and API access  |
-| Email        | `/settings/email`       | Manage your email addresses                 |
-| Password     | `/settings/password`    | Change your account password                |
+| Tab         | Route                  | Description                                      |
+| ----------- | ---------------------- | ------------------------------------------------ |
+| Attribution | `/profile/attribution` | Edit your name, photo, work history, and links   |
+| Identities  | `/profile/identities`  | Connect and manage your identity services        |
+| Developer   | `/profile/developer`   | Developer-specific settings and API access token |
+| Email       | `/profile/email`       | Manage your email addresses                      |
+| Password    | `/profile/password`    | Change your account password                     |
 
 ## Related sections
 

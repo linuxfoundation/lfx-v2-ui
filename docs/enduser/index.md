@@ -22,7 +22,7 @@ Guides for [app.lfx.dev](https://app.lfx.dev) — manage your membership, commun
 | [My Votes](./votes/)                      | Participate in elections and votes for your governing boards.        |
 | [My Badges](./badges/)                    | View and share digital badges you have earned through LFX.           |
 | [Profile](./profile/)                     | Update your name, photo, affiliations, and identity connections.     |
-| [Account Settings](./settings/)           | Manage your email, password, and notification preferences.           |
+| [Account Settings](./settings/)           | Manage your email addresses, password, and account security.         |
 | [Training & Certifications](./trainings/) | Track your Linux Foundation training enrollments and certifications. |
 | [My Transactions](./transactions/)        | View your payment history and receipts for LFX purchases.            |
 
