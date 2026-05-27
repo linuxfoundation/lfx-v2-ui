@@ -1,0 +1,112 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="flex flex-col min-h-screen bg-white">
+
+  <!-- Top bar -->
+  <header class="sticky top-0 z-30 flex items-center justify-between gap-4 h-14 px-4 bg-blue-900 border-b border-blue-800">
+    <div class="flex items-center gap-3">
+      <!-- Mobile nav toggle -->
+      <button
+        type="button"
+        aria-label="Toggle navigation"
+        data-testid="docs-mobile-nav-toggle"
+        (click)="toggleMobileNav()"
+        class="lg:hidden flex items-center justify-center w-8 h-8 rounded text-blue-200 hover:bg-white/10 transition-colors">
+        <i class="fa-light fa-bars text-lg"></i>
+      </button>
+
+      <!-- Logo + name -->
+      <a routerLink="/docs" class="flex items-center gap-2 min-w-0">
+        <img
+          src="https://cdn.platform.linuxfoundation.org/assets/lf-icon.svg"
+          alt="Linux Foundation"
+          width="28"
+          height="28"
+          class="shrink-0" />
+        <span class="text-white font-semibold text-sm truncate">LFX Self Serve Help</span>
+      </a>
+    </div>
+
+    <!-- Open app link -->
+    <a
+      href="https://app.lfx.dev"
+      class="flex items-center gap-1.5 text-sm text-blue-200 hover:text-white transition-colors shrink-0">
+      Open the app
+      <i class="fa-light fa-arrow-up-right-from-square text-xs"></i>
+    </a>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden">
+
+    <!-- Mobile nav overlay -->
+    @if (mobileNavOpen()) {
+      <div
+        aria-hidden="true"
+        class="fixed inset-0 z-20 bg-black/40 lg:hidden"
+        (click)="closeMobileNav()">
+      </div>
+    }
+
+    <!-- Left sidebar nav -->
+    <aside
+      data-testid="docs-sidebar"
+      [class]="mobileNavOpen()
+        ? 'fixed inset-y-0 left-0 z-20 flex flex-col w-72 bg-white border-r border-gray-200 overflow-y-auto translate-x-0 transition-transform lg:relative lg:flex lg:w-64 lg:translate-x-0'
+        : 'fixed inset-y-0 left-0 z-20 flex flex-col w-72 bg-white border-r border-gray-200 overflow-y-auto -translate-x-full transition-transform lg:relative lg:flex lg:w-64 lg:translate-x-0'">
+
+      <div class="flex flex-col gap-1 p-4 pt-5">
+        <a
+          routerLink="/docs"
+          routerLinkActive="text-blue-700 font-semibold bg-blue-50"
+          [routerLinkActiveOptions]="{ exact: true }"
+          (click)="closeMobileNav()"
+          class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-100 transition-colors">
+          <i class="fa-light fa-house-chimney w-4 text-gray-400"></i>
+          Help Home
+        </a>
+
+        <div class="mt-2 flex flex-col gap-3">
+          @for (section of sections(); track section.slug) {
+            <div class="flex flex-col gap-0.5">
+              <a
+                [routerLink]="['/docs', section.slug]"
+                routerLinkActive="text-blue-700 font-semibold"
+                (click)="closeMobileNav()"
+                class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors">
+                {{ section.title }}
+              </a>
+              @for (topic of section.topics; track topic.slug) {
+                <a
+                  [routerLink]="['/docs', section.slug, topic.slug]"
+                  routerLinkActive="text-blue-700 bg-blue-50"
+                  (click)="closeMobileNav()"
+                  class="flex items-center gap-2 pl-7 pr-3 py-1 text-xs text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-800 transition-colors">
+                  {{ topic.title }}
+                </a>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Support link at the bottom of the sidebar -->
+      <div class="mt-auto p-4 border-t border-gray-200">
+        <a
+          href="https://jira.linuxfoundation.org/servicedesk/customer/portal/4"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex items-center gap-2 px-3 py-2 text-xs text-gray-500 rounded-lg hover:bg-gray-100 transition-colors">
+          <i class="fa-light fa-question-circle w-4"></i>
+          Support
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 overflow-y-auto" data-testid="docs-main-content">
+      <router-outlet />
+    </main>
+
+  </div>
+</div>

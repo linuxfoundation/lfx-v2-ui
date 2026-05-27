@@ -356,4 +356,10 @@ export const routes: Routes = [
     path: 'invite/error',
     loadComponent: () => import('./modules/invite/invite-error/invite-error.component').then((m) => m.InviteErrorComponent),
   },
+  // Public documentation — no auth required; indexable by crawlers and usable without login.
+  {
+    path: 'docs',
+    loadComponent: () => import('./layouts/docs-layout/docs-layout.component').then((m) => m.DocsLayoutComponent),
+    loadChildren: () => import('./modules/docs/docs.routes').then((m) => m.DOCS_ROUTES),
+  },
 ];
