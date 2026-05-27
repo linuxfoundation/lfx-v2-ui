@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable, makeStateKey, TransferState } from '@angular/core';
 import { catchError, Observable, of, tap } from 'rxjs';
 
@@ -62,7 +62,10 @@ export class DocsService {
         this.transferState.set(SECTIONS_KEY, data);
         this._sectionsCache = data;
       }),
-      catchError(() => of({ sections: [] }))
+      catchError((err: HttpErrorResponse) => {
+        console.error('[DocsService] failed to load sections', err.status, err.message);
+        return of({ sections: [] });
+      })
     );
   }
 
@@ -76,7 +79,12 @@ export class DocsService {
     const path = `/public/api/docs/${slugParts.join('/')}`;
     return this.http.get<DocArticle>(path).pipe(
       tap((data) => this.transferState.set(key, data)),
-      catchError(() => of(null))
+      catchError((err: HttpErrorResponse) => {
+        if (err.status !== 404) {
+          console.error('[DocsService] failed to load article', path, err.status, err.message);
+        }
+        return of(null);
+      })
     );
   }
 }
