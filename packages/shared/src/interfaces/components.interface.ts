@@ -543,15 +543,10 @@ export interface DrawerActionRow extends PendingActionItem {
   meetingLoadFailed: boolean;
 }
 
-/**
- * Lighter pending-action row used by committee-overview's static list (no inline RSVP, no meeting fetch).
- * Carries only the row identity + computed background class needed for stable @for tracking and zebra striping.
- */
+/** Lighter pending-action row used by committee-overview's static list — adds a stable `@for ... track` key. */
 export interface CommitteePendingActionRow extends PendingActionItem {
   /** Stable row identifier used for `@for ... track` */
   rowKey: string;
-  /** Tailwind background class — zebra stripe via `stableKeyParity(rowKey)` */
-  rowClass: string;
 }
 
 /**

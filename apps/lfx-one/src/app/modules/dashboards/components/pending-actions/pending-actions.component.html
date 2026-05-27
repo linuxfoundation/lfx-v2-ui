@@ -25,6 +25,8 @@
           <a
             [routerLink]="message.data.meetingUrl"
             class="text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline inline-flex items-center gap-1 mt-1"
+            [attr.aria-label]="message.data.meetingTitle ? 'View details for ' + message.data.meetingTitle : 'View meeting details'"
+            [attr.title]="message.data.meetingTitle ? 'View details for ' + message.data.meetingTitle : null"
             data-testid="dashboard-pending-actions-toast-meeting-link">
             <i class="fa-light fa-arrow-up-right-from-square text-[10px]" aria-hidden="true"></i>
             <span>View meeting details</span>

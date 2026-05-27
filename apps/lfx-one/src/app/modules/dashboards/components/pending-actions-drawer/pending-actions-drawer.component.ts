@@ -14,7 +14,7 @@ import { HiddenActionsService } from '@shared/services/hidden-actions.service';
 import { MessageService } from 'primeng/api';
 import { DrawerModule } from 'primeng/drawer';
 import { SkeletonModule } from 'primeng/skeleton';
-import { combineLatest, filter, timer } from 'rxjs';
+import { filter, timer } from 'rxjs';
 
 import type { DrawerActionRow, Meeting, MeetingRsvp, PendingActionItem, RsvpResponse } from '@lfx-one/shared/interfaces';
 
@@ -53,13 +53,16 @@ export class PendingActionsDrawerComponent {
 
   public constructor() {
     // When the drawer becomes visible, eagerly load Meeting payloads for every RSVP row so the inline RSVP buttons render immediately.
-    combineLatest([toObservable(this.visible), toObservable(this.visibleRows)])
+    // Subscribe only to the visibility signal (not `visibleRows`) — `visibleRows` re-emits every time `meetingCache` updates,
+    // which would cause an O(n) rescan per fetched meeting (O(n²) overall). Read `visibleRows()` synchronously inside the
+    // subscribe instead so each fetch fires exactly once per row.
+    toObservable(this.visible)
       .pipe(
-        filter(([isVisible]) => isVisible),
+        filter((isVisible) => isVisible),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(([, rows]) => {
-        for (const row of rows) {
+      .subscribe(() => {
+        for (const row of this.visibleRows()) {
           if (row.isRsvpInline && !row.meeting && !row.isMeetingLoading && !row.meetingLoadFailed) {
             this.loadMeeting(row.meetingUid as string);
           }
