@@ -58,9 +58,7 @@ export class MainLayoutComponent {
   // Newsletter nav visibility: ED persona always sees it; non-ED users see it
   // when they have writer (or owner-equivalent) permission on the currently
   // active foundation/project. canWrite() is reactive to context changes.
-  private readonly canSeeNewsletters: Signal<boolean> = computed(
-    () => this.personaService.currentPersona() === 'executive-director' || this.projectContextService.canWrite()
-  );
+  private readonly canSeeNewsletters: Signal<boolean> = this.initCanSeeNewsletters();
 
   // Lens-aware sidebar items
   protected readonly sidebarItems = computed((): SidebarMenuItem[] => {
@@ -501,6 +499,10 @@ export class MainLayoutComponent {
       .subscribe(() => {
         window.location.reload();
       });
+  }
+
+  private initCanSeeNewsletters(): Signal<boolean> {
+    return computed(() => this.personaService.currentPersona() === 'executive-director' || this.projectContextService.canWrite());
   }
 
   /**
