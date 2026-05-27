@@ -4,13 +4,14 @@
 import { Router } from 'express';
 
 import { NewsletterController } from '../controllers/newsletter.controller';
-import { requireExecutiveDirector } from '../middleware/require-executive-director.middleware';
 
 const router = Router();
 const newsletterController = new NewsletterController();
 
-// All newsletter endpoints are Executive Director-only.
-router.use(requireExecutiveDirector);
+// Authorization is enforced by the downstream lfx-v2-newsletter-service (FGA
+// via the forwarded user bearer token) and by the corresponding frontend
+// route guards. Don't gate on persona here — newsletters are accessible to
+// Executive Directors AND writers/owners of the foundation or project.
 
 // List newsletters (drafts + sent) and per-newsletter analytics
 router.get('/', (req, res, next) => newsletterController.listNewsletters(req, res, next));
