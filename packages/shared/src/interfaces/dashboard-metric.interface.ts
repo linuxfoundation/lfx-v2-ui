@@ -447,7 +447,7 @@ export interface NpsSummaryResponse {
   lastUpdatedLabel: string;
   /** Range whose data was actually returned — may differ from the requested range when YTD is empty and the BFF fell back to a prior year */
   range: HealthMetricsRange;
-  /** Human-readable period label derived from effectiveRange (e.g. "YTD 2026" or "FY 2025") */
+  /** Human-readable period label derived from `range` (e.g. "YTD 2026" or "FY 2025"); empty string when no period has data */
   periodLabel: string;
   /** Optional period-over-period NPS change (omit from card UI in v1) */
   changeNpsScore?: number;

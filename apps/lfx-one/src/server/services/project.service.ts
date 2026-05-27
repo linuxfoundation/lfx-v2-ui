@@ -3690,7 +3690,7 @@ export class ProjectService {
     // all other columns use the identical WHEN ordering so no period mixing occurs.
     const buildCaseWhen = (colPrefix: string): string =>
       fallbackRanges
-        .map((r, i) => `WHEN sr.most_recent_nps_score${fallbackSuffixes[i]} IS NOT NULL THEN sr.${colPrefix}${fallbackSuffixes[i]}`)
+        .map((_, i) => `WHEN sr.most_recent_nps_score${fallbackSuffixes[i]} IS NOT NULL THEN sr.${colPrefix}${fallbackSuffixes[i]}`)
         .join('\n        ');
 
     const rangeCases = fallbackRanges.map((r, i) => `WHEN sr.most_recent_nps_score${fallbackSuffixes[i]} IS NOT NULL THEN '${r}'`).join('\n        ');
@@ -3749,10 +3749,9 @@ export class ProjectService {
       }
     }
 
-    const resolvedRange: HealthMetricsRange = isHealthMetricsRange(row.EFFECTIVE_RANGE) ? row.EFFECTIVE_RANGE : requestedRange;
+    const resolvedRange = isHealthMetricsRange(row.EFFECTIVE_RANGE) ? row.EFFECTIVE_RANGE : null;
 
-    const year = getYearForRange(resolvedRange);
-    const periodLabel = resolvedRange === 'YTD' ? `YTD ${year}` : `FY ${year}`;
+    const periodLabel = resolvedRange ? (resolvedRange === 'YTD' ? `YTD ${getYearForRange(resolvedRange)}` : `FY ${getYearForRange(resolvedRange)}`) : '';
 
     const promoters = row.PROMOTERS ?? 0;
     const passives = row.PASSIVES ?? 0;
@@ -3768,7 +3767,7 @@ export class ProjectService {
       nonResponses,
       responses: promoters + passives + detractors + nonResponses,
       lastUpdatedLabel,
-      range: resolvedRange,
+      range: resolvedRange ?? requestedRange,
       periodLabel,
       changeNpsScore: row.CHANGE_NPS_SCORE ?? 0,
     };
