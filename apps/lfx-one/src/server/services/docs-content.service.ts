@@ -88,7 +88,24 @@ function resolveDocsRoot(): string | null {
   return null;
 }
 
-function readFrontmatter(filePath: string): { frontmatter: DocFrontmatter; content: string } | null {
+/**
+ * Read and parse a markdown file's YAML frontmatter and body.
+ *
+ * @param docsRoot - The resolved docs root directory (used as a path-containment
+ *   guard — any `filePath` that does not reside inside `docsRoot` is rejected
+ *   so path-traversal is impossible even if a caller passes a tainted value).
+ * @param filePath - Absolute path to an `index.md` file inside `docsRoot`.
+ */
+function readFrontmatter(docsRoot: string, filePath: string): { frontmatter: DocFrontmatter; content: string } | null {
+  // Path-containment guard: reject any path that escapes the docs root.
+  // This is the last line of defence against path traversal — callers such as
+  // getArticle() already validate slugs and check containment, but having the
+  // check here as well satisfies static-analysis tools (e.g. CodeQL
+  // js/path-injection) that require sanitisation to be co-located with the
+  // readFileSync call.
+  if (!filePath.startsWith(`${docsRoot}${sep}`)) {
+    return null;
+  }
   const startTime = Date.now();
   try {
     const raw = readFileSync(filePath, 'utf-8');
@@ -100,8 +117,8 @@ function readFrontmatter(filePath: string): { frontmatter: DocFrontmatter; conte
     // gray-matter/js-yaml parses unquoted YAML timestamps (e.g. `last_updated: 2026-05-22`)
     // as JS Date objects. Normalise to YYYY-MM-DD string so downstream serialisation
     // (sitemap, JSON API) always emits a valid ISO date rather than a verbose Date.toString().
-    if (fm.last_updated instanceof Date) {
-      fm.last_updated = (fm.last_updated as Date).toISOString().slice(0, 10);
+    if ((fm.last_updated as unknown) instanceof Date) {
+      fm.last_updated = (fm.last_updated as unknown as Date).toISOString().slice(0, 10);
     } else if (fm.last_updated !== undefined) {
       fm.last_updated = String(fm.last_updated).slice(0, 10);
     }
@@ -161,7 +178,7 @@ export class DocsContentService {
       const sectionIndex = join(docsRoot, sectionSlug, 'index.md');
       if (!existsSync(sectionIndex)) continue;
 
-      const sectionMeta = readFrontmatter(sectionIndex);
+      const sectionMeta = readFrontmatter(docsRoot, sectionIndex);
       if (!sectionMeta) continue;
 
       const topics: DocTopic[] = [];
@@ -172,7 +189,7 @@ export class DocsContentService {
         if (!isValidSlug(topicSlug)) continue;
         const topicIndex = join(docsRoot, sectionSlug, topicSlug, 'index.md');
         if (!existsSync(topicIndex)) continue;
-        const topicMeta = readFrontmatter(topicIndex);
+        const topicMeta = readFrontmatter(docsRoot, topicIndex);
         if (!topicMeta) continue;
         topics.push({
           slug: topicSlug,
@@ -214,7 +231,7 @@ export class DocsContentService {
     if (!existsSync(filePath)) {
       return null;
     }
-    const result = readFrontmatter(filePath);
+    const result = readFrontmatter(docsRoot, filePath);
     if (!result) return null;
 
     const html = renderMarkdown(result.content);
@@ -222,7 +239,7 @@ export class DocsContentService {
 
     if (slugParts.length >= 1) {
       const sectionIndex = join(docsRoot, slugParts[0], 'index.md');
-      const sectionMeta = existsSync(sectionIndex) ? readFrontmatter(sectionIndex) : null;
+      const sectionMeta = existsSync(sectionIndex) ? readFrontmatter(docsRoot, sectionIndex) : null;
       breadcrumbs.push({ label: sectionMeta?.frontmatter.title ?? slugParts[0], path: `/docs/${slugParts[0]}` });
     }
     if (slugParts.length >= 2) {
