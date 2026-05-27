@@ -11,7 +11,7 @@ import { marked } from 'marked';
 
 import { isValidSlug, isValidSlugParts } from '@lfx-one/shared/utils';
 
-import { serverLogger } from '../server-logger';
+import { logger } from './logger.service';
 
 export interface DocFrontmatter {
   title: string;
@@ -84,17 +84,18 @@ function resolveDocsRoot(): string | null {
     return devPath;
   }
   // Build-time: no docs directory reachable; caller will return empty data.
-  serverLogger.warn('docs-content: docs/enduser not found — running in build-time mode, serving empty');
+  logger.warning(undefined, 'resolve_docs_root', 'docs/enduser not found — running in build-time mode, serving empty');
   return null;
 }
 
 function readFrontmatter(filePath: string): { frontmatter: DocFrontmatter; content: string } | null {
+  const startTime = Date.now();
   try {
     const raw = readFileSync(filePath, 'utf-8');
     const parsed = matter(raw);
     const fm = parsed.data as DocFrontmatter;
     if (!fm.title || !fm.description) {
-      serverLogger.warn({ filePath }, 'docs-content: article missing required frontmatter fields (title, description)');
+      logger.warning(undefined, 'read_frontmatter', 'article missing required frontmatter fields (title, description)', { filePath });
     }
     // gray-matter/js-yaml parses unquoted YAML timestamps (e.g. `last_updated: 2026-05-22`)
     // as JS Date objects. Normalise to YYYY-MM-DD string so downstream serialisation
@@ -106,7 +107,7 @@ function readFrontmatter(filePath: string): { frontmatter: DocFrontmatter; conte
     }
     return { frontmatter: fm, content: parsed.content };
   } catch (err) {
-    serverLogger.error({ filePath, err }, 'docs-content: failed to read article');
+    logger.error(undefined, 'read_frontmatter', startTime, err, { filePath });
     return null;
   }
 }
