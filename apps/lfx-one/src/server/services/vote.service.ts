@@ -38,7 +38,7 @@ export class VoteService {
   }
 
   /**
-   * Fetches all votes based on query parameters
+   * Fetches a single page of votes using cursor-based pagination — callers paginate via the returned page_token.
    */
   public async getVotes(req: Request, query: Record<string, any> = {}): Promise<PaginatedResponse<Vote>> {
     logger.debug(req, 'get_votes', 'Starting vote fetch', {

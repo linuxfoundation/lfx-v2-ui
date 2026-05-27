@@ -100,12 +100,14 @@ export class VotesDashboardComponent {
   });
 
   // Lens-change pagination reset is independent of the data-fetch pipelines so it fires for every lens emission, not just Me-lens loads.
+  // fetch$.next() forces initVotes() to re-run after the reset — field-init order means it would otherwise see stale currentFirst and stop at the page-token guard.
   public constructor() {
     toObservable(this.lensService.activeLens)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.pageTokens = [];
         this.currentFirst.set(0);
+        this.fetch$.next();
       });
   }
 
