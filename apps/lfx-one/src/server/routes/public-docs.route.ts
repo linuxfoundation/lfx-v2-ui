@@ -37,13 +37,21 @@ router.get('/:section', (req: Request, res: Response) => {
     res.status(400).json({ error: 'Invalid section slug' });
     return;
   }
-  const article = docsContentService.getArticle([section]);
-  if (!article) {
-    res.status(404).json({ error: 'Section not found' });
-    return;
+  const startTime = logger.startOperation(req, 'get_section_article');
+  try {
+    const article = docsContentService.getArticle([section]);
+    if (!article) {
+      logger.success(req, 'get_section_article', startTime, { found: false });
+      res.status(404).json({ error: 'Section not found' });
+      return;
+    }
+    res.setHeader('Cache-Control', DOCS_CACHE_CONTROL);
+    logger.success(req, 'get_section_article', startTime, { found: true });
+    res.json(article);
+  } catch (err) {
+    logger.error(req, 'get_section_article', startTime, err);
+    res.status(500).json({ error: 'Failed to load section article' });
   }
-  res.setHeader('Cache-Control', DOCS_CACHE_CONTROL);
-  res.json(article);
 });
 
 // GET /public/api/docs/:section/:topic — topic article
@@ -53,13 +61,21 @@ router.get('/:section/:topic', (req: Request, res: Response) => {
     res.status(400).json({ error: 'Invalid slug' });
     return;
   }
-  const article = docsContentService.getArticle([section, topic]);
-  if (!article) {
-    res.status(404).json({ error: 'Article not found' });
-    return;
+  const startTime = logger.startOperation(req, 'get_topic_article');
+  try {
+    const article = docsContentService.getArticle([section, topic]);
+    if (!article) {
+      logger.success(req, 'get_topic_article', startTime, { found: false });
+      res.status(404).json({ error: 'Article not found' });
+      return;
+    }
+    res.setHeader('Cache-Control', DOCS_CACHE_CONTROL);
+    logger.success(req, 'get_topic_article', startTime, { found: true });
+    res.json(article);
+  } catch (err) {
+    logger.error(req, 'get_topic_article', startTime, err);
+    res.status(500).json({ error: 'Failed to load article' });
   }
-  res.setHeader('Cache-Control', DOCS_CACHE_CONTROL);
-  res.json(article);
 });
 
 export default router;

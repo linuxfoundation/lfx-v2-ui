@@ -268,7 +268,12 @@ export class DocsContentService {
 
     if (slugParts.length >= 1) {
       const sectionIndex = join(docsRoot, slugParts[0], 'index.md');
-      const sectionMeta = existsSync(sectionIndex) ? readFrontmatter(docsRoot, sectionIndex) : null;
+      // Path-containment guard: sectionIndex must stay inside docsRoot (satisfies
+      // CodeQL js/path-injection — slug is already validated but guard is explicit).
+      const sectionMeta =
+        sectionIndex.startsWith(`${docsRoot}${sep}`) && existsSync(sectionIndex)
+          ? readFrontmatter(docsRoot, sectionIndex)
+          : null;
       breadcrumbs.push({ label: sectionMeta?.frontmatter.title ?? slugParts[0], path: `/docs/${slugParts[0]}` });
     }
     if (slugParts.length >= 2) {

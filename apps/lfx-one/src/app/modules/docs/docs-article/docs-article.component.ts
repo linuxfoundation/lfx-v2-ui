@@ -4,7 +4,7 @@
 import { isPlatformBrowser } from '@angular/common';
 import { Component, DestroyRef, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { DomSanitizer, Meta, SafeHtml, Title } from '@angular/platform-browser';
+import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { switchMap } from 'rxjs';
 
@@ -21,14 +21,15 @@ export class DocsArticleComponent implements OnInit {
   private readonly docsService = inject(DocsService);
   private readonly titleService = inject(Title);
   private readonly metaService = inject(Meta);
-  private readonly sanitizer = inject(DomSanitizer);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly destroyRef = inject(DestroyRef);
 
   public readonly article = signal<DocArticle | null>(null);
   public readonly loading = signal(true);
   public readonly notFound = signal(false);
-  public readonly safeHtml = signal<SafeHtml | null>(null);
+  // Server sanitizes HTML via DOMPurify before it reaches the client; Angular's
+  // built-in [innerHTML] sanitizer provides an additional defense-in-depth layer.
+  public readonly articleHtml = signal<string | null>(null);
 
   public ngOnInit(): void {
     // Subscribe to paramMap (not snapshot) so navigating between /docs/a and
@@ -44,7 +45,7 @@ export class DocsArticleComponent implements OnInit {
           // Clear stale content immediately so the old article body never
           // co-renders with a subsequent "not found" state (or blank state).
           this.article.set(null);
-          this.safeHtml.set(null);
+          this.articleHtml.set(null);
           return this.docsService.getArticle(slugParts);
         }),
         takeUntilDestroyed(this.destroyRef)
@@ -54,11 +55,14 @@ export class DocsArticleComponent implements OnInit {
         if (!data) {
           this.notFound.set(true);
           this.titleService.setTitle('Article not found — LFX Self Serve Help');
+          // Clear any stale meta from the previous page to prevent stale SEO tags.
+          this.metaService.updateTag({ name: 'description', content: '' });
+          this.metaService.updateTag({ property: 'og:title', content: 'Article not found — LFX Self Serve Help' });
+          this.metaService.updateTag({ property: 'og:description', content: '' });
           return;
         }
         this.article.set(data);
-        // Server has already sanitized the HTML via DOMPurify; bypassSecurityTrustHtml is safe here.
-        this.safeHtml.set(this.sanitizer.bypassSecurityTrustHtml(data.html));
+        this.articleHtml.set(data.html);
         this.titleService.setTitle(`${data.frontmatter.title} — LFX Self Serve Help`);
         this.metaService.updateTag({ name: 'description', content: data.frontmatter.description });
         this.metaService.updateTag({ property: 'og:title', content: data.frontmatter.title });

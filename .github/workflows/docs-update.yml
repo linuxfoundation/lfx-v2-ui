@@ -21,7 +21,7 @@
 #
 #   ANTHROPIC_API_KEY   Anthropic API key (for Claude doc generation)
 #   DOCS_REPO_PAT       PAT with repo scope (to push branch + open PR)
-#                       Required only when DOCS_REPO is a separate repo.
+#                       Required — used to push branches and open PRs on the docs repo.
 #
 #   Then update DOCS_REPO and DOCS_PATH below if needed, and switch the
 #   trigger from workflow_dispatch to release: [published].
@@ -294,6 +294,8 @@ jobs:
 
       - name: Apply generated files to docs repo
         if: steps.modules.outputs.changed_modules != ''
+        env:
+          CURRENT_TAG: ${{ steps.tags.outputs.current_tag }}
         run: |
           node << 'EOF'
           const fs = require('fs');
