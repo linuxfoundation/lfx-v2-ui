@@ -43,7 +43,7 @@ export class DocsService {
   private readonly http = inject(HttpClient);
   private readonly transferState = inject(TransferState);
 
-  getSections(): Observable<{ sections: DocSection[] }> {
+  public getSections(): Observable<{ sections: DocSection[] }> {
     if (this.transferState.hasKey(SECTIONS_KEY)) {
       const cached = this.transferState.get(SECTIONS_KEY, { sections: [] });
       this.transferState.remove(SECTIONS_KEY);
@@ -55,7 +55,7 @@ export class DocsService {
     );
   }
 
-  getArticle(slugParts: string[]): Observable<DocArticle | null> {
+  public getArticle(slugParts: string[]): Observable<DocArticle | null> {
     const key = makeStateKey<DocArticle | null>(`docs_article_${slugParts.join('_')}`);
     if (this.transferState.hasKey(key)) {
       const cached = this.transferState.get(key, null);

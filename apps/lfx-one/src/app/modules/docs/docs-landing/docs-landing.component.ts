@@ -18,10 +18,10 @@ export class DocsLandingComponent implements OnInit {
   private readonly titleService = inject(Title);
   private readonly metaService = inject(Meta);
 
-  readonly sections = signal<DocSection[]>([]);
-  readonly loading = signal(true);
+  public readonly sections = signal<DocSection[]>([]);
+  public readonly loading = signal(true);
 
-  ngOnInit(): void {
+  public ngOnInit(): void {
     this.titleService.setTitle('Help Documentation — LFX Self Serve');
     this.metaService.updateTag({ name: 'description', content: 'Guides for app.lfx.dev — manage your membership, communities, and contributions.' });
 

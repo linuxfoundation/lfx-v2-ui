@@ -89,11 +89,11 @@ let _sectionCacheMtime: number | null = null;
 export class DocsContentService {
   private readonly docsRoot: string;
 
-  constructor() {
+  public constructor() {
     this.docsRoot = resolveDocsRoot();
   }
 
-  listSections(): DocSection[] {
+  public listSections(): DocSection[] {
     // In development, invalidate the cache when the directory mtime changes.
     if (process.env['NODE_ENV'] !== 'production') {
       const mtime = statSync(this.docsRoot).mtimeMs;
@@ -149,7 +149,7 @@ export class DocsContentService {
     return sections;
   }
 
-  getArticle(slugParts: string[]): DocArticle | null {
+  public getArticle(slugParts: string[]): DocArticle | null {
     const filePath = join(this.docsRoot, ...slugParts, 'index.md');
     if (!existsSync(filePath)) {
       return null;
@@ -172,7 +172,7 @@ export class DocsContentService {
     return { frontmatter: result.frontmatter, html, slug: slugParts, breadcrumbs };
   }
 
-  getSitemap(): DocSitemapEntry[] {
+  public getSitemap(): DocSitemapEntry[] {
     const entries: DocSitemapEntry[] = [{ path: '/docs', lastmod: new Date().toISOString().split('T')[0] }];
     const sections = this.listSections();
     for (const section of sections) {

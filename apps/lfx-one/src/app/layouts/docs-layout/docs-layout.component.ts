@@ -16,20 +16,20 @@ export class DocsLayoutComponent implements OnInit {
   private readonly docsService = inject(DocsService);
   private readonly router = inject(Router);
 
-  readonly sections = signal<DocSection[]>([]);
-  readonly mobileNavOpen = signal(false);
+  public readonly sections = signal<DocSection[]>([]);
+  public readonly mobileNavOpen = signal(false);
 
-  ngOnInit(): void {
+  public ngOnInit(): void {
     this.docsService.getSections().subscribe((data) => {
       this.sections.set(data.sections);
     });
   }
 
-  toggleMobileNav(): void {
+  public toggleMobileNav(): void {
     this.mobileNavOpen.update((v) => !v);
   }
 
-  closeMobileNav(): void {
+  public closeMobileNav(): void {
     this.mobileNavOpen.set(false);
   }
 }

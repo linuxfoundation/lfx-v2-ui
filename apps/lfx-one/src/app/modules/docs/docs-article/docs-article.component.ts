@@ -22,12 +22,12 @@ export class DocsArticleComponent implements OnInit {
   private readonly sanitizer = inject(DomSanitizer);
   private readonly platformId = inject(PLATFORM_ID);
 
-  readonly article = signal<DocArticle | null>(null);
-  readonly loading = signal(true);
-  readonly notFound = signal(false);
-  readonly safeHtml = signal<SafeHtml>('');
+  public readonly article = signal<DocArticle | null>(null);
+  public readonly loading = signal(true);
+  public readonly notFound = signal(false);
+  public readonly safeHtml = signal<SafeHtml>('');
 
-  ngOnInit(): void {
+  public ngOnInit(): void {
     const section = this.route.snapshot.paramMap.get('section') ?? '';
     const topic = this.route.snapshot.paramMap.get('topic') ?? '';
     const slugParts = topic ? [section, topic] : [section];
@@ -52,7 +52,7 @@ export class DocsArticleComponent implements OnInit {
     });
   }
 
-  get githubEditUrl(): string {
+  public get githubEditUrl(): string {
     const art = this.article();
     if (!art) return '';
     const path = art.slug.join('/');
