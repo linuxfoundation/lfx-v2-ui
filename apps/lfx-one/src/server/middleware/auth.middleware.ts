@@ -21,6 +21,9 @@ const DEFAULT_ROUTE_CONFIG: RouteAuthConfig[] = [
   { pattern: '/livez', type: 'api', auth: 'public' },
   { pattern: '/readyz', type: 'api', auth: 'public' },
 
+  // Public docs API — unauthenticated documentation content
+  { pattern: '/public/api/docs', type: 'api', auth: 'public' },
+
   // Public API routes - optional authentication with token benefits
   { pattern: '/public/api', type: 'api', auth: 'optional', tokenRequired: false },
 
@@ -47,6 +50,13 @@ const DEFAULT_ROUTE_CONFIG: RouteAuthConfig[] = [
 
   // Invite error page — public so unauthenticated users see the error instead of being redirected to login
   { pattern: '/invite/error', type: 'ssr', auth: 'public' },
+
+  // Public docs pages — crawler-indexable, no auth required
+  { pattern: '/docs', type: 'ssr', auth: 'public' },
+
+  // Sitemap and robots — crawler utility endpoints
+  { pattern: '/sitemap.xml', type: 'ssr', auth: 'public' },
+  { pattern: '/robots.txt', type: 'ssr', auth: 'public' },
 
   // All other routes - Angular SSR routes requiring authentication
   { pattern: '/', type: 'ssr', auth: 'required' },

@@ -38,6 +38,7 @@ import personaRouter from './routes/persona.route';
 import profileRouter from './routes/profile.route';
 import projectsRouter from './routes/projects.route';
 import publicCommitteesRouter from './routes/public-committees.route';
+import publicDocsRouter from './routes/public-docs.route';
 import publicMeetingsRouter from './routes/public-meetings.route';
 import publicProjectsRouter from './routes/public-projects.route';
 import rewardsRouter from './routes/rewards.route';
@@ -190,6 +191,7 @@ app.use('/public/api/', publicApiRateLimiter);
 app.use('/api/', apiRateLimiter);
 app.use('/login', authRateLimiter);
 
+app.use('/public/api/docs', publicDocsRouter);
 app.use('/public/api/meetings', publicMeetingsRouter);
 app.use('/public/api/committees', publicCommitteesRouter);
 app.use('/public/api/projects', publicProjectsRouter);
