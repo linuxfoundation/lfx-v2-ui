@@ -50,9 +50,7 @@
                 "output": "/docs-enduser"
               }
             ],
-            "styles": [
-              "src/styles.scss"
-            ],
+            "styles": ["src/styles.scss"],
             "scripts": [],
             "server": "src/main.server.ts",
             "outputMode": "server",
@@ -147,12 +145,7 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
             "host": "0.0.0.0",
-            "allowedHosts": [
-              "localhost",
-              "127.0.0.1",
-              "0.0.0.0",
-              "host.docker.internal"
-            ]
+            "allowedHosts": ["localhost", "127.0.0.1", "0.0.0.0", "host.docker.internal"]
           },
           "configurations": {
             "production": {
@@ -173,10 +166,7 @@
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
-            "lintFilePatterns": [
-              "src/**/*.ts",
-              "src/**/*.html"
-            ]
+            "lintFilePatterns": ["src/**/*.ts", "src/**/*.html"]
           }
         }
       }
@@ -184,8 +174,6 @@
   },
   "cli": {
     "analytics": false,
-    "schematicCollections": [
-      "angular-eslint"
-    ]
+    "schematicCollections": ["angular-eslint"]
   }
 }
