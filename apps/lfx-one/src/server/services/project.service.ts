@@ -2261,7 +2261,7 @@ export class ProjectService {
 
   /**
    * Get paid social reach metrics from Snowflake Platinum tables
-   * Queries ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH and ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
    * @param foundationSlug - Foundation slug used to filter by FOUNDATION_SLUG
    * @returns Social reach response with ROAS, impressions, spend, revenue, and monthly trends
    */
