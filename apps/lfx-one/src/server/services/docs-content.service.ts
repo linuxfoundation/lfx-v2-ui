@@ -28,6 +28,7 @@ export interface DocTopic {
   title: string;
   description: string;
   path: string;
+  lastmod: string;
 }
 
 export interface DocSection {
@@ -35,6 +36,7 @@ export interface DocSection {
   title: string;
   description: string;
   topics: DocTopic[];
+  lastmod: string;
 }
 
 export interface DocArticle {
@@ -107,8 +109,10 @@ export class DocsContentService {
     }
 
     const sections: DocSection[] = [];
+    const today = new Date().toISOString().split('T')[0];
 
-    const entries = readdirSync(this.docsRoot, { withFileTypes: true });
+    // Sort alphabetically so section/topic order is deterministic across filesystems.
+    const entries = readdirSync(this.docsRoot, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name));
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
 
@@ -120,7 +124,7 @@ export class DocsContentService {
       if (!sectionMeta) continue;
 
       const topics: DocTopic[] = [];
-      const topicEntries = readdirSync(join(this.docsRoot, sectionSlug), { withFileTypes: true });
+      const topicEntries = readdirSync(join(this.docsRoot, sectionSlug), { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name));
       for (const topicEntry of topicEntries) {
         if (!topicEntry.isDirectory()) continue;
         const topicSlug = topicEntry.name;
@@ -133,6 +137,7 @@ export class DocsContentService {
           title: topicMeta.frontmatter.title ?? topicSlug,
           description: topicMeta.frontmatter.description ?? '',
           path: `/docs/${sectionSlug}/${topicSlug}`,
+          lastmod: topicMeta.frontmatter.last_updated ?? today,
         });
       }
 
@@ -141,6 +146,7 @@ export class DocsContentService {
         title: sectionMeta.frontmatter.title ?? sectionSlug,
         description: sectionMeta.frontmatter.description ?? '',
         topics,
+        lastmod: sectionMeta.frontmatter.last_updated ?? today,
       });
     }
 
@@ -181,12 +187,15 @@ export class DocsContentService {
   }
 
   public getSitemap(): DocSitemapEntry[] {
-    const entries: DocSitemapEntry[] = [{ path: '/docs', lastmod: new Date().toISOString().split('T')[0] }];
     const sections = this.listSections();
+    // Use the most recent section lastmod as the landing page's lastmod.
+    const landingLastmod = sections.reduce((max, s) => (s.lastmod > max ? s.lastmod : max), sections[0]?.lastmod ?? new Date().toISOString().split('T')[0]);
+    const entries: DocSitemapEntry[] = [{ path: '/docs', lastmod: landingLastmod }];
     for (const section of sections) {
-      entries.push({ path: `/docs/${section.slug}`, lastmod: new Date().toISOString().split('T')[0] });
+      // Use frontmatter last_updated (stored in section.lastmod) per URL for accurate crawl hints.
+      entries.push({ path: `/docs/${section.slug}`, lastmod: section.lastmod });
       for (const topic of section.topics) {
-        entries.push({ path: topic.path, lastmod: new Date().toISOString().split('T')[0] });
+        entries.push({ path: topic.path, lastmod: topic.lastmod });
       }
     }
     return entries;

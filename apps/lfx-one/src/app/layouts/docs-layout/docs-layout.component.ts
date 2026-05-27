@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { DocSection, DocsService } from '../../modules/docs/services/docs.service';
 
@@ -14,7 +14,6 @@ import { DocSection, DocsService } from '../../modules/docs/services/docs.servic
 })
 export class DocsLayoutComponent implements OnInit {
   private readonly docsService = inject(DocsService);
-  private readonly router = inject(Router);
 
   public readonly sections = signal<DocSection[]>([]);
   public readonly mobileNavOpen = signal(false);

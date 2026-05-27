@@ -8,7 +8,7 @@ linkable from GitHub issues, and available to Intercom for knowledge-base ingest
 
 ```
 docs/enduser/
-├── index.md                    # Landing page (rendered at /docs)
+├── index.md                    # Metadata-only file (not rendered by the API; /docs uses DocsLandingComponent)
 ├── <section>/
 │   ├── index.md                # Section overview (rendered at /docs/<section>)
 │   └── <topic>/
@@ -17,6 +17,11 @@ docs/enduser/
 
 Each section maps to a product area (meetings, committees, votes, etc.). The `index.md` at the
 section level is the overview; sub-directories are individual how-to articles.
+
+> **Note:** The top-level `docs/enduser/index.md` is **not** served by the public API. The `/docs`
+> landing page is rendered by the Angular `DocsLandingComponent`, which builds the feature card grid
+> from the section tree returned by `GET /public/api/docs`. The file exists as a placeholder for
+> future Intercom ingestion.
 
 ## Frontmatter Contract
 
@@ -40,8 +45,11 @@ intercom_collection: Meetings # optional — explicit Intercom collection overri
 
 1. Create a directory under the appropriate section: `docs/enduser/<section>/<topic>/`
 2. Add `index.md` with the required frontmatter.
-3. Write the body in standard Markdown (GFM subset — headings, lists, code blocks, tables, links).
-4. Avoid HTML tags — the renderer strips anything not in the GFM allowlist.
+3. Write the body in standard Markdown (headings, lists, code blocks, tables, links).
+4. Avoid raw HTML tags — the renderer passes content through `marked` (CommonMark/GFM) then
+   `DOMPurify` with default settings. DOMPurify allows most safe HTML but strips script tags,
+   event handlers, and other dangerous constructs. Keep content in plain Markdown for
+   maximum Intercom compatibility.
 5. Use relative links to other articles: `../manage-meetings/` not `/docs/meetings/manage-meetings`.
 
 ## Adding a New Section

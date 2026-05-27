@@ -7,7 +7,7 @@ import { docsContentService } from '../services/docs-content.service';
 
 const router: Router = express.Router();
 
-const BASE_URL = process.env['APP_URL'] ?? 'https://app.lfx.dev';
+const BASE_URL = (process.env['APP_URL'] ?? 'https://app.lfx.dev').replace(/\/+$/, '');
 
 router.get('/', (_req: Request, res: Response) => {
   const entries = docsContentService.getSitemap();

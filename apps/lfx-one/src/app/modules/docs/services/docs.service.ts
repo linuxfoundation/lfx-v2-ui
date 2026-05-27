@@ -43,14 +43,25 @@ export class DocsService {
   private readonly http = inject(HttpClient);
   private readonly transferState = inject(TransferState);
 
+  // In-memory cache so multiple callers (DocsLayoutComponent, DocsLandingComponent)
+  // share the same result without each consuming the TransferState key independently.
+  private _sectionsCache: { sections: DocSection[] } | null = null;
+
   public getSections(): Observable<{ sections: DocSection[] }> {
+    if (this._sectionsCache) {
+      return of(this._sectionsCache);
+    }
     if (this.transferState.hasKey(SECTIONS_KEY)) {
       const cached = this.transferState.get(SECTIONS_KEY, { sections: [] });
       this.transferState.remove(SECTIONS_KEY);
+      this._sectionsCache = cached;
       return of(cached);
     }
     return this.http.get<{ sections: DocSection[] }>('/public/api/docs').pipe(
-      tap((data) => this.transferState.set(SECTIONS_KEY, data)),
+      tap((data) => {
+        this.transferState.set(SECTIONS_KEY, data);
+        this._sectionsCache = data;
+      }),
       catchError(() => of({ sections: [] }))
     );
   }
