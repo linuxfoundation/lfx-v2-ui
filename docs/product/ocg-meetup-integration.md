@@ -38,6 +38,10 @@ structure, identity, permissions, and reporting.
   mapping are needed for LFX reporting and lens experiences.
 - Data shown in LFX must preserve source labels so users can distinguish OCG
   meetup activity from canonical LFX group membership.
+- OCG group categories and regions are useful operational metadata, not
+  canonical LF group types. They must not be mapped directly to WG, SIG,
+  committee, board, TAC, maintainer council, or other governance-linked LFX
+  categories without an explicit LFX mapping.
 - OCG user-dashboard or call-for-speakers capability should be treated as
   community/event operations unless it requires canonical LFID/Profile,
   project/foundation/group, reviewer, or reporting context. In those cases, LFX
@@ -81,6 +85,39 @@ The recommended model is:
 This keeps OCG moving quickly while avoiding duplicate sources of truth. It also
 preserves data integrity because canonical LFX writes, permissions, and
 reporting remain inside LFX-owned contracts.
+
+## OCG Group Taxonomy Findings
+
+Source review of `cncf/open-community-groups` shows OCG has an operational
+meetup model, not a canonical LF governance group model.
+
+OCG's structure is:
+
+- Community: top-level container such as CNCF, LF Energy, or another LF
+  community.
+- Group: meetup/community activation unit under a community.
+- Group category: community-managed reusable taxonomy for classifying groups.
+- Region: community-managed geography list used by groups.
+- Event category: community-managed taxonomy for events.
+- Event kind: event delivery format, currently represented as `in-person`,
+  `virtual`, or `hybrid`.
+
+The OCG documentation says the Community Dashboard owns regions, group
+categories, event categories, analytics, and the group portfolio. The Group
+Dashboard uses those community-level group categories and regions in group
+settings. Database tests also show sample group categories such as
+`Technology`, `Design`, and local test categories, plus regions such as
+`North America` and `APAC`.
+
+Implication:
+
+- OCG groups are valid meetup/community activation groups.
+- OCG group categories and regions should flow into LFX as source-labeled
+  external metadata.
+- LFX Self Serve/PCC remains canonical for official LF group type, governance
+  role, join model, permissions, reporting, and lens placement.
+- Any OCG group that should appear as a canonical LFX group requires an explicit
+  mapping and product decision.
 
 ## User Experience
 
@@ -154,6 +191,11 @@ interface OcgGroup {
   name: string;
   description?: string;
   url: string;
+  active?: boolean;
+  group_category_id?: string;
+  group_category_name?: string;
+  region_id?: string;
+  region_name?: string;
   location?: {
     city?: string;
     region?: string;
@@ -254,6 +296,9 @@ Mapping rules:
 
 - OCG community -> LFX foundation/project identifies broad context.
 - OCG group -> LFX project/group only when explicitly mapped.
+- OCG group category/region -> LFX external metadata only. They do not set
+  LFX group `category`, `behavioral_class`, governance role, permissions, or
+  join mode by implication.
 - OCG event -> LFX foundation/project/group as activity, never as canonical
   structure by implication.
 - OCG user-dashboard and CFP records -> LFX Profile and project/foundation/group
@@ -320,6 +365,8 @@ OCG activity should feed Insights as source-labeled activity:
 - Show user-specific OCG event activity in Me Lens when identity mapping exists.
 - Link back to OCG for RSVP, check-in, and full event detail.
 - Display OCG activity as source-labeled, non-canonical meetup activity.
+- Preserve OCG group category, region, and event category as source-labeled
+  metadata for filtering and analytics.
 - Identify any LFX-adjacent OCG dashboard, CFP, or Profile needs as candidate
   LFX Self Serve contributions instead of OCG-owned canonical surfaces.
 
@@ -327,6 +374,7 @@ OCG activity should feed Insights as source-labeled activity:
 
 - Moving OCG event operations into LFX Self Serve.
 - Letting OCG write canonical LFX groups.
+- Treating OCG group categories or regions as canonical LFX group types.
 - Full member roster sync from OCG into LFX groups.
 - Replacing LFX meetings, votes, surveys, mailing lists, or WG/SIG workflows.
 - Replacing LFX user dashboards, Profile, CFP/reviewer workflows, or project
@@ -365,6 +413,8 @@ OCG activity should feed Insights as source-labeled activity:
 - Feed OCG source-labeled activity into Insights.
 - Add conversion/reporting metrics for meetup-to-LFX engagement.
 - Add data quality checks for unmapped OCG groups/events.
+- Add data quality checks for unmapped or ambiguous OCG group categories before
+  any category is promoted into an LFX-owned taxonomy.
 
 ### Phase 5: OCG Contribution Path
 

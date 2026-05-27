@@ -60,6 +60,9 @@ The alignment assumption for this spec is:
   communities, LFID/Profile, and governance-adjacent workflows.
 - Meetup activity can appear in LFX Self Serve, but meetup/community groups
   should be visually distinct from official LFX groups.
+- OCG group category and region values are external operational metadata. They
+  must not directly define LFX public group type, behavioral class, join mode,
+  permissions, or governance status.
 - User dashboards, call for speakers, and other participant-facing workflows may
   link to OCG operations, but the LFX experience should own the canonical user
   journey when those workflows are tied to projects, foundations, or official
@@ -93,6 +96,36 @@ Recommended model:
 
 This keeps the public groups experience consistent while giving OCG a fast
 contribution path for LFX-adjacent work.
+
+## OCG Group Taxonomy Findings
+
+Additional source review of OCG shows its group model is built for community
+activation and event operations.
+
+OCG has:
+
+- Community: the top-level operating container.
+- Group: a meetup/community activation unit inside a community.
+- Group category: a reusable, community-defined label for classifying groups.
+- Region: a reusable, community-defined geography label for groups.
+- Event category: a reusable, community-defined event label.
+- Event kind: event format, represented as `in-person`, `virtual`, or `hybrid`.
+
+OCG does not appear to define LF governance group types such as Working Group,
+SIG, committee, board, TAC, maintainer council, or reviewer body as canonical
+product concepts. Its group categories are configurable per community and are
+used for setup, discovery, filtering, and portfolio management.
+
+Implication for LFX public groups:
+
+- OCG groups can enrich public LFX pages as related meetup/community activity.
+- OCG categories and regions can be displayed as source-labeled metadata when
+  useful.
+- LFX Self Serve remains authoritative for official public group type,
+  behavioral class, parent foundation/project context, join mode, permissions,
+  and reporting.
+- Any OCG group promoted into canonical LFX group context requires an explicit
+  mapping, not name or category inference.
 
 ## Personas
 
@@ -257,6 +290,8 @@ interface PublicGroupExternalSource {
   label: string;
   url: string;
   external_id?: string;
+  external_category?: string;
+  external_region?: string;
 }
 ```
 
@@ -312,6 +347,8 @@ Gaps:
 - Member/chair exposure needs a clear privacy rule tied to `member_visibility`
   and LFX Profile policy.
 - OCG/meetup mapping fields do not exist yet.
+- OCG taxonomy fields do not exist yet for source-labeled group category,
+  region, or event category.
 - User dashboard and call-for-speakers boundaries need explicit product
   decisions so OCG does not become a parallel LFX participant or project
   workflow surface by default.
@@ -341,6 +378,9 @@ Gaps:
   links from usernames.
 - OCG should receive canonical group/project/foundation context from the public
   group API and person enrichment from the Profile API.
+- OCG group category and region values may be retained for display/filtering as
+  external metadata, but they do not write to LFX `category`,
+  `behavioral_class`, `join_mode`, or governance status.
 - Call for speakers belongs in the LFX product boundary when it depends on LFID,
   Profile, affiliation, project/foundation context, review workflows, or
   reporting. OCG can host public event/meetup operations and link back to LFX
@@ -360,6 +400,8 @@ interface PublicGroupExternalMapping {
   external_community_id?: string;
   external_group_id?: string;
   external_event_id?: string;
+  external_group_category?: string;
+  external_region?: string;
   external_url: string;
   relationship: 'source' | 'related_activity' | 'canonical_lfx_group';
 }
@@ -372,6 +414,8 @@ Mapping rules:
   relationship.
 - OCG event records remain activity records and should not create canonical LFX
   groups by implication.
+- OCG group category and region values remain external metadata unless an LFX
+  admin/product workflow explicitly maps them to an LFX-owned taxonomy.
 - Names are display hints only; UIDs and explicit mappings drive joins.
 
 ## Implementation Plan
@@ -403,6 +447,8 @@ Mapping rules:
 - Document public API contract for OCG and foundation websites.
 - Add stable links from OCG groups/events to canonical LFX groups where mapped.
 - Add optional OCG source links on public group detail pages.
+- Include optional OCG category/region labels as source-labeled metadata, not
+  canonical LFX group classifications.
 - Use the public LFX Self Serve repository and LFX Skills contribution path for
   any new LFX-owned public group, Profile, CFP, dashboard, or reporting
   behavior.
