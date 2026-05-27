@@ -1,0 +1,105 @@
+# Copyright The Linux Foundation and each contributor to LFX.
+# SPDX-License-Identifier: MIT
+#
+# Docs Validation — Validate end-user documentation on every push to main.
+#
+# Checks every file under docs/enduser/ for:
+#   - Required frontmatter fields (title, description)
+#   - Valid YAML frontmatter (parseable by gray-matter)
+#   - Non-empty body content
+#
+# The workflow does NOT publish a static site; docs are served at runtime by
+# the Express SSR server via the public-docs route and Angular DocsLayout.
+#
+# Previous purpose (VitePress / GitHub Pages deployment) was superseded by
+# LFXV2-2001 (in-app /docs endpoint). This workflow was repurposed accordingly.
+
+name: Validate End-User Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/enduser/**'
+      - '.github/workflows/deploy-docs.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/enduser/**'
+      - '.github/workflows/deploy-docs.yml'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Validate docs/enduser markdown
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install gray-matter
+        run: npm install gray-matter
+
+      - name: Validate frontmatter and content
+        run: |
+          node << 'EOF'
+          const matter = require('gray-matter');
+          const fs = require('fs');
+          const path = require('path');
+
+          const REQUIRED_FIELDS = ['title', 'description'];
+          const docsRoot = path.join(process.cwd(), 'docs', 'enduser');
+
+          function walk(dir) {
+            const entries = fs.readdirSync(dir, { withFileTypes: true });
+            return entries.flatMap(e =>
+              e.isDirectory()
+                ? walk(path.join(dir, e.name))
+                : e.name.endsWith('.md') && e.name !== 'README.md'
+                  ? [path.join(dir, e.name)]
+                  : []
+            );
+          }
+
+          const files = walk(docsRoot);
+          let errors = 0;
+
+          for (const file of files) {
+            const rel = path.relative(process.cwd(), file);
+            const raw = fs.readFileSync(file, 'utf8');
+
+            let parsed;
+            try {
+              parsed = matter(raw);
+            } catch (err) {
+              console.error(`FAIL [frontmatter parse error] ${rel}: ${err.message}`);
+              errors++;
+              continue;
+            }
+
+            for (const field of REQUIRED_FIELDS) {
+              if (!parsed.data[field]) {
+                console.error(`FAIL [missing '${field}'] ${rel}`);
+                errors++;
+              }
+            }
+
+            if (!parsed.content.trim()) {
+              console.error(`FAIL [empty body] ${rel}`);
+              errors++;
+            }
+          }
+
+          if (errors === 0) {
+            console.log(`OK — validated ${files.length} files`);
+          } else {
+            console.error(`\n${errors} error(s) found across ${files.length} files`);
+            process.exit(1);
+          }
+          EOF

@@ -1,0 +1,360 @@
+# Copyright The Linux Foundation and each contributor to LFX.
+# SPDX-License-Identifier: MIT
+#
+# Docs Update — AI-assisted documentation generation on demand.
+#
+# Detects which feature modules changed between two tags, calls the Claude API
+# to generate updated end-user documentation, and opens a PR with the file
+# changes for the team to review and merge.
+#
+# TRIGGER: workflow_dispatch only (manual).
+#   - Scheduled / release-event triggers are intentionally disabled until the
+#     required secrets are populated and the workflow is validated in staging.
+#   - To enable automatic triggering, add:
+#       on:
+#         release:
+#           types: [published]
+#     and remove the workflow_dispatch block below.
+#
+# SETUP REQUIRED (before enabling):
+#   Repo Settings → Secrets and variables → Actions → add:
+#
+#   ANTHROPIC_API_KEY   Anthropic API key (for Claude doc generation)
+#   DOCS_REPO_PAT       PAT with repo scope (to push branch + open PR)
+#                       Required only when DOCS_REPO is a separate repo.
+#
+#   Then update DOCS_REPO and DOCS_PATH below if needed, and switch the
+#   trigger from workflow_dispatch to release: [published].
+
+name: Generate Docs Update
+
+on:
+  workflow_dispatch:
+    inputs:
+      current_tag:
+        description: 'Current release tag (e.g. v1.2.3)'
+        required: true
+      previous_tag:
+        description: 'Previous release tag to diff against (e.g. v1.2.2)'
+        required: true
+
+env:
+  DOCS_REPO: linuxfoundation/lfx-self-serve
+  DOCS_PATH: docs/enduser
+  MODULES_PATH: apps/lfx-one/src/app/modules
+  CLAUDE_MODEL: claude-sonnet-4-6
+
+jobs:
+  generate-docs-update:
+    name: Generate and PR documentation updates
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout docs repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.DOCS_REPO }}
+          token: ${{ secrets.DOCS_REPO_PAT }}
+          path: docs-repo
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Claude SDK
+        run: npm install @anthropic-ai/sdk
+
+      - name: Validate tags exist
+        id: tags
+        run: |
+          CURRENT_TAG="${{ github.event.inputs.current_tag }}"
+          PREVIOUS_TAG="${{ github.event.inputs.previous_tag }}"
+
+          if ! git rev-parse "${CURRENT_TAG}" >/dev/null 2>&1; then
+            echo "Error: tag ${CURRENT_TAG} not found"
+            exit 1
+          fi
+
+          if [ "${PREVIOUS_TAG}" != "initial" ] && ! git rev-parse "${PREVIOUS_TAG}" >/dev/null 2>&1; then
+            echo "Error: tag ${PREVIOUS_TAG} not found"
+            exit 1
+          fi
+
+          echo "current_tag=${CURRENT_TAG}" >> $GITHUB_OUTPUT
+          echo "previous_tag=${PREVIOUS_TAG}" >> $GITHUB_OUTPUT
+          echo "Diffing ${PREVIOUS_TAG}..${CURRENT_TAG}"
+
+      - name: Detect changed feature modules
+        id: modules
+        run: |
+          CURRENT="${{ steps.tags.outputs.current_tag }}"
+          PREVIOUS="${{ steps.tags.outputs.previous_tag }}"
+
+          if [ "$PREVIOUS" = "initial" ]; then
+            CHANGED=$(ls ${{ env.MODULES_PATH }}/ | tr '\n' ' ')
+          else
+            CHANGED=$(git diff --name-only "${PREVIOUS}".."${CURRENT}" \
+              -- "${{ env.MODULES_PATH }}/" \
+              | sed "s|${{ env.MODULES_PATH }}/||" \
+              | cut -d'/' -f1 \
+              | sort -u \
+              | tr '\n' ' ')
+          fi
+
+          echo "changed_modules=${CHANGED}" >> $GITHUB_OUTPUT
+          echo "Changed modules: ${CHANGED}"
+
+      - name: Skip if no modules changed
+        if: steps.modules.outputs.changed_modules == ''
+        run: |
+          echo "No feature module changes between tags. Skipping doc generation."
+
+      - name: Get release diff summary
+        if: steps.modules.outputs.changed_modules != ''
+        id: diff
+        run: |
+          CURRENT="${{ steps.tags.outputs.current_tag }}"
+          PREVIOUS="${{ steps.tags.outputs.previous_tag }}"
+
+          if [ "$PREVIOUS" != "initial" ]; then
+            git diff "${PREVIOUS}".."${CURRENT}" \
+              -- "${{ env.MODULES_PATH }}/" \
+              --stat > /tmp/diff_stat.txt
+
+            git diff "${PREVIOUS}".."${CURRENT}" \
+              -- "${{ env.MODULES_PATH }}/" \
+              -- '*.ts' '*.html' > /tmp/diff_full.txt
+
+            head -c 50000 /tmp/diff_full.txt > /tmp/diff_trimmed.txt
+          else
+            echo "First release — all modules are new." > /tmp/diff_stat.txt
+            echo "" > /tmp/diff_trimmed.txt
+          fi
+
+      - name: Generate documentation with Claude
+        if: steps.modules.outputs.changed_modules != ''
+        id: generate
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CURRENT_TAG: ${{ steps.tags.outputs.current_tag }}
+          PREVIOUS_TAG: ${{ steps.tags.outputs.previous_tag }}
+          CHANGED_MODULES: ${{ steps.modules.outputs.changed_modules }}
+          TODAY: ${{ github.run_started_at }}
+        run: |
+          node << 'EOF'
+          const Anthropic = require('@anthropic-ai/sdk');
+          const fs = require('fs');
+          const path = require('path');
+
+          const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+          const diffStat = fs.readFileSync('/tmp/diff_stat.txt', 'utf8');
+          const diffFull = fs.readFileSync('/tmp/diff_trimmed.txt', 'utf8');
+          const today = process.env.TODAY.split('T')[0];
+
+          const docsRoot = path.join('docs-repo', process.env.DOCS_PATH || 'docs/enduser');
+          const changedModules = process.env.CHANGED_MODULES.trim().split(/\s+/);
+
+          const moduleDocMap = {
+            'badges': 'badges',
+            'committees': 'committees',
+            'dashboards': 'dashboards',
+            'documents': 'documents',
+            'events': 'events',
+            'mailing-lists': 'mailing-lists',
+            'meetings': 'meetings',
+            'profile': 'profile',
+            'settings': 'settings',
+            'surveys': 'surveys',
+            'trainings': 'trainings',
+            'transactions': 'transactions',
+            'votes': 'votes',
+          };
+
+          const existingDocs = {};
+          for (const mod of changedModules) {
+            const docFolder = moduleDocMap[mod];
+            if (!docFolder) continue;
+            const indexPath = path.join(docsRoot, docFolder, 'index.md');
+            if (fs.existsSync(indexPath)) {
+              existingDocs[mod] = fs.readFileSync(indexPath, 'utf8');
+            }
+          }
+
+          const prompt = `
+          You are a documentation maintainer for LFX One (app.lfx.dev).
+          A new release has shipped: ${process.env.CURRENT_TAG} (previous: ${process.env.PREVIOUS_TAG}).
+
+          ## Changed modules
+          ${process.env.CHANGED_MODULES}
+
+          ## Code diff summary
+          ${diffStat}
+
+          ## Code diff (feature modules only)
+          ${diffFull || 'No diff available — first release.'}
+
+          ## Existing documentation for changed modules
+          ${JSON.stringify(existingDocs, null, 2)}
+
+          ## Your task
+
+          For each changed module:
+
+          1. CHECK PROTECTION — Read the existing doc frontmatter:
+             - If it contains "do_not_regenerate: true" → output NO_CHANGE for that module
+             - If last_updated is present and is newer than last_generated → the doc was
+               human-edited. Do NOT rewrite it. Instead output a SUGGESTIONS block.
+             - Otherwise → regenerate the affected pages.
+
+          2. REGENERATE affected pages only — not the entire module.
+             Only update pages where the release actually changed something.
+             Leave FAQ pages alone unless an answer is now factually wrong.
+
+          3. WRITING RULES for any regenerated or new content:
+             - First paragraph = direct answer or summary
+             - Numbered steps for all procedures — never prose
+             - Max 3 sentences per paragraph
+             - Second person ("you", "your", "go to", "select")
+             - Spell out acronyms on first use
+             - Mark uncertain UI details with: <!-- VERIFY: description -->
+             - Target 200–400 words per article
+             - Update frontmatter: last_generated: ${today} and last_updated: ${today}
+
+          4. NEW MODULES — If a module has no existing doc, generate the full set:
+             {module}/index.md, {module}/{key-task}/index.md, {module}/faq/index.md
+
+          ## Output format
+
+          Output a JSON object with this structure:
+
+          {
+            "files": [
+              {
+                "path": "{module}/index.md",
+                "action": "update" | "create",
+                "content": "full file content including frontmatter"
+              }
+            ],
+            "suggestions": [
+              {
+                "path": "{module}/_suggestions-${process.env.CURRENT_TAG}.md",
+                "content": "suggestion file content"
+              }
+            ],
+            "skipped": [
+              {
+                "module": "module-name",
+                "reason": "do_not_regenerate: true | no significant user-facing changes"
+              }
+            ],
+            "summary": "1-2 sentence plain-English summary of all changes made"
+          }
+
+          Output ONLY the JSON. No preamble, no markdown fences.
+          `;
+
+          async function generate() {
+            const message = await client.messages.create({
+              model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
+              max_tokens: 16000,
+              messages: [{ role: 'user', content: prompt }]
+            });
+
+            const raw = message.content[0].text.trim();
+            fs.writeFileSync('/tmp/claude_output.json', raw);
+            console.log('Claude generation complete.');
+          }
+
+          generate().catch(err => {
+            console.error('Claude generation failed:', err);
+            process.exit(1);
+          });
+          EOF
+
+      - name: Apply generated files to docs repo
+        if: steps.modules.outputs.changed_modules != ''
+        run: |
+          node << 'EOF'
+          const fs = require('fs');
+          const path = require('path');
+
+          const raw = fs.readFileSync('/tmp/claude_output.json', 'utf8');
+          const output = JSON.parse(raw);
+
+          const docsRoot = path.join('docs-repo', process.env.DOCS_PATH || 'docs/enduser');
+
+          for (const file of (output.files || [])) {
+            const fullPath = path.join(docsRoot, file.path);
+            fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+            fs.writeFileSync(fullPath, file.content);
+            console.log(`${file.action}: ${file.path}`);
+          }
+
+          for (const suggestion of (output.suggestions || [])) {
+            const fullPath = path.join(docsRoot, suggestion.path);
+            fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+            fs.writeFileSync(fullPath, suggestion.content);
+            console.log(`suggestions: ${suggestion.path}`);
+          }
+
+          const prBody = [
+            `## Documentation update — ${process.env.CURRENT_TAG}`,
+            '',
+            output.summary || '',
+            '',
+            '### Files updated',
+            ...(output.files || []).map(f => `- \`${f.path}\` (${f.action})`),
+            '',
+            '### Human-edited docs (suggestions only, not modified)',
+            ...(output.suggestions || []).map(s => `- \`${s.path}\``),
+            '',
+            '### Skipped',
+            ...(output.skipped || []).map(s => `- **${s.module}**: ${s.reason}`),
+            '',
+            '---',
+            'Generated by: docs-update workflow',
+          ].join('\n');
+
+          fs.writeFileSync('/tmp/pr_body.md', prBody);
+          console.log('Files applied.');
+          EOF
+
+      - name: Commit and push to new branch
+        if: steps.modules.outputs.changed_modules != ''
+        working-directory: docs-repo
+        id: commit
+        run: |
+          BRANCH="docs/release-${{ steps.tags.outputs.current_tag }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "${BRANCH}"
+          git add -A
+          git diff --cached --quiet && echo "Nothing to commit" && exit 0
+
+          git commit -m "docs: update for release ${{ steps.tags.outputs.current_tag }}"
+          git push origin "${BRANCH}"
+
+          echo "branch=${BRANCH}" >> $GITHUB_OUTPUT
+
+      - name: Open PR
+        if: steps.modules.outputs.changed_modules != '' && steps.commit.outputs.branch != ''
+        env:
+          GH_TOKEN: ${{ secrets.DOCS_REPO_PAT }}
+        run: |
+          gh pr create \
+            --repo "${{ env.DOCS_REPO }}" \
+            --title "docs: update for release ${{ steps.tags.outputs.current_tag }}" \
+            --body-file /tmp/pr_body.md \
+            --base main \
+            --head "docs/release-${{ steps.tags.outputs.current_tag }}" \
+            --label "documentation"
