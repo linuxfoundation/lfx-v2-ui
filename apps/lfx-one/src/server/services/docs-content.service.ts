@@ -64,6 +64,11 @@ function resolveDocsRoot(): string {
   if (existsSync(devPath)) {
     return devPath;
   }
+  // Build-time fallback: during Angular route extraction the CWD is the repo root
+  const cwdPath = resolve(process.cwd(), 'docs/enduser');
+  if (existsSync(cwdPath)) {
+    return cwdPath;
+  }
   throw new Error('docs-content: cannot locate docs/enduser directory');
 }
 
