@@ -5,7 +5,7 @@
 
 import { NextFunction, Request, Response } from 'express';
 
-import { AuthenticationError } from '../errors';
+import { AuthenticationError, ServiceValidationError } from '../errors';
 import { CrowdfundingService } from '../services/crowdfunding.service';
 import { logger } from '../services/logger.service';
 import { getUsernameFromAuth, stripAuthPrefix } from '../utils/auth-helper';
@@ -52,12 +52,13 @@ export class CrowdfundingController {
         });
       }
 
-      const { paymentMethodId } = req.body as { paymentMethodId?: string };
-
-      if (!paymentMethodId) {
-        res.status(400).json({ message: 'paymentMethodId is required' });
-        return;
+      const rawId = (req.body as Record<string, unknown>)['paymentMethodId'];
+      if (typeof rawId !== 'string' || !rawId.trim()) {
+        throw ServiceValidationError.forField('paymentMethodId', 'paymentMethodId is required and must be a non-empty string', {
+          operation: 'save_my_payment_method',
+        });
       }
+      const paymentMethodId = rawId.trim();
 
       const username = stripAuthPrefix(rawUsername);
       const paymentMethod = await this.crowdfundingService.saveMyPaymentMethod(req, username, paymentMethodId);

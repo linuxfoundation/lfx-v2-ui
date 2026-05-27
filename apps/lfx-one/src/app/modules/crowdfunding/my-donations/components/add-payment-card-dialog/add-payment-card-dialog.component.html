@@ -1,7 +1,7 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
-<div class="flex flex-col gap-5" data-testid="add-card-form">
+<form class="flex flex-col gap-5" (submit)="$event.preventDefault(); onSubmit()" novalidate data-testid="add-card-form">
   <!-- Card number -->
   <div class="flex flex-col gap-1.5" data-testid="add-card-field-number">
     <label class="text-sm font-medium text-gray-700"> Card number <span class="text-red-500" aria-hidden="true">*</span> </label>
@@ -58,6 +58,6 @@
   <!-- Footer actions -->
   <div class="flex justify-end gap-2 pt-2 border-t border-gray-100">
     <lfx-button label="Cancel" severity="secondary" type="button" (click)="onCancel()" data-testid="add-card-cancel-btn" />
-    <lfx-button label="Add card" severity="primary" type="button" [loading]="submitting()" (click)="onSubmit()" data-testid="add-card-submit-btn" />
+    <lfx-button label="Add card" severity="primary" type="submit" [loading]="submitting()" data-testid="add-card-submit-btn" />
   </div>
-</div>
+</form>

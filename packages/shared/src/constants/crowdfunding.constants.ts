@@ -58,7 +58,7 @@ export const STRIPE_ELEMENT_STYLE = {
     lineHeight: '20px',
     '::placeholder': { color: '#94A3B8' },
   },
-  invalid: { color: '#0F172A' },
+  invalid: { color: '#EF4444' },
 };
 export const EMPTY_INITIATIVES_RESPONSE: InitiativesResponse = { data: [], total: 0, pageSize: DEFAULT_CROWDFUNDING_PAGE_SIZE, offset: 0 };
 export const EMPTY_CROWDFUNDING_STATS: CrowdfundingInitiativesStats = { activeCount: 0, totalRaised: 0, monthlyGain: 0, totalSponsors: 0 };

@@ -12,6 +12,7 @@ import { STRIPE_ELEMENT_STYLE } from '@lfx-one/shared/constants';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
 import { CrowdfundingService } from '@services/crowdfunding.service';
 import { StripeService } from '@services/stripe.service';
+import { extractErrorMessage } from '@shared/utils/http-error.utils';
 
 @Component({
   selector: 'lfx-add-payment-card-dialog',
@@ -29,6 +30,9 @@ export class AddPaymentCardDialogComponent implements OnDestroy {
   protected readonly cardNumberContainer = viewChild<ElementRef<HTMLElement>>('cardNumberContainer');
   protected readonly cardExpiryContainer = viewChild<ElementRef<HTMLElement>>('cardExpiryContainer');
   protected readonly cardCvcContainer = viewChild<ElementRef<HTMLElement>>('cardCvcContainer');
+
+  // ─── Destroy guard (prevents mount() on detached DOM nodes) ─────────────
+  private destroyed = false;
 
   // ─── Stripe element instances (not signals — not reactive values) ─────────
   private cardNumberEl: StripeCardNumberElement | null = null;
@@ -62,6 +66,7 @@ export class AddPaymentCardDialogComponent implements OnDestroy {
   }
 
   public ngOnDestroy(): void {
+    this.destroyed = true;
     this.destroyElements();
   }
 
@@ -96,6 +101,8 @@ export class AddPaymentCardDialogComponent implements OnDestroy {
       const saved = await firstValueFrom(this.crowdfundingService.savePaymentMethod(paymentMethod.id));
 
       this.dialogRef.close({ added: true, paymentMethod: saved });
+    } catch (err) {
+      this.stripeError.set(extractErrorMessage(err, 'Failed to save payment method. Please try again.'));
     } finally {
       this.submitting.set(false);
     }
@@ -113,6 +120,8 @@ export class AddPaymentCardDialogComponent implements OnDestroy {
 
   private async mountStripeElements(): Promise<void> {
     const stripe = await this.stripeService.getStripe();
+
+    if (this.destroyed) return;
 
     const numberEl = this.cardNumberContainer()?.nativeElement;
     const expiryEl = this.cardExpiryContainer()?.nativeElement;

@@ -35,7 +35,13 @@ export class StripeService {
 
     if (!this.stripePromise || this.loadedKey !== stripePublishableKey) {
       this.loadedKey = stripePublishableKey;
-      this.stripePromise = import('@stripe/stripe-js').then(({ loadStripe }) => loadStripe(stripePublishableKey));
+      this.stripePromise = import('@stripe/stripe-js')
+        .then(({ loadStripe }) => loadStripe(stripePublishableKey))
+        .catch((err) => {
+          this.stripePromise = null;
+          this.loadedKey = '';
+          return Promise.reject(err);
+        });
     }
 
     return this.stripePromise;
