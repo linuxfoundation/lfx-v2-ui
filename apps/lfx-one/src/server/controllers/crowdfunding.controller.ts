@@ -39,6 +39,37 @@ export class CrowdfundingController {
     }
   }
 
+  // POST /api/crowdfunding/payment-method
+  public async saveMyPaymentMethod(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'save_my_payment_method');
+
+    try {
+      const rawUsername = await getUsernameFromAuth(req);
+
+      if (!rawUsername) {
+        throw new AuthenticationError('User authentication required', {
+          operation: 'save_my_payment_method',
+        });
+      }
+
+      const { paymentMethodId } = req.body as { paymentMethodId?: string };
+
+      if (!paymentMethodId) {
+        res.status(400).json({ message: 'paymentMethodId is required' });
+        return;
+      }
+
+      const username = stripAuthPrefix(rawUsername);
+      const paymentMethod = await this.crowdfundingService.saveMyPaymentMethod(req, username, paymentMethodId);
+
+      logger.success(req, 'save_my_payment_method', startTime, { paymentMethodId });
+
+      res.json(paymentMethod);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // GET /api/crowdfunding/payment-method
   public async getMyPaymentMethod(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_my_payment_method');
@@ -151,10 +182,7 @@ export class CrowdfundingController {
     }
   }
 
-  /**
-   * GET /api/crowdfunding/initiatives-stats
-   * Get aggregated initiatives stats for the authenticated user
-   */
+  // GET /api/crowdfunding/initiatives-stats
   public async getInitiativesStats(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_initiatives_stats');
 

@@ -24,7 +24,7 @@ import {
   PaymentMethod,
   RecurringDonationsResponse,
 } from '@lfx-one/shared/interfaces';
-import { catchError, Observable, of } from 'rxjs';
+import { catchError, Observable, of, take } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -61,6 +61,11 @@ export class CrowdfundingService {
 
   public getMyPaymentMethod(): Observable<PaymentMethod | null> {
     return this.http.get<PaymentMethod>('/api/crowdfunding/payment-method').pipe(catchError(() => of(null)));
+  }
+
+  // POST /api/crowdfunding/payment-method — mirrors the crowdfunding-app BFF payload: { paymentMethodId }.
+  public savePaymentMethod(paymentMethodId: string): Observable<PaymentMethod> {
+    return this.http.post<PaymentMethod>('/api/crowdfunding/payment-method', { paymentMethodId }).pipe(take(1));
   }
 
   public getMyDonationStats(): Observable<DonationStats> {
