@@ -225,6 +225,8 @@ interface OcgEvent {
   ends_at?: string;
   timezone?: string;
   format: 'in_person' | 'virtual' | 'hybrid';
+  event_category_id?: string;
+  event_category_name?: string;
   location?: {
     venue?: string;
     city?: string;

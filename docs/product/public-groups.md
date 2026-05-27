@@ -292,6 +292,7 @@ interface PublicGroupExternalSource {
   external_id?: string;
   external_category?: string;
   external_region?: string;
+  external_event_category?: string;
 }
 ```
 
@@ -402,6 +403,7 @@ interface PublicGroupExternalMapping {
   external_event_id?: string;
   external_group_category?: string;
   external_region?: string;
+  external_event_category?: string;
   external_url: string;
   relationship: 'source' | 'related_activity' | 'canonical_lfx_group';
 }
