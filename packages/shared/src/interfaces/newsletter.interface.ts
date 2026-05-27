@@ -56,6 +56,7 @@ export interface NewsletterSendResult {
   sent: number;
   failed: number;
   failures: NewsletterSendFailure[];
+  groupId: string;
 }
 
 export type NewsletterStatus = 'draft' | 'sent';
@@ -74,6 +75,9 @@ export interface Newsletter {
   version: number;
   createdAt: string;
   updatedAt: string;
+  // Set at first send (UUID minted in Express, persisted via the Go newsletter
+  // service). Used to query engagement analytics from lfx-v2-email-service.
+  groupId?: string;
 }
 
 export interface CreateNewsletterDraftRequest {
