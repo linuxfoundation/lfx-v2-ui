@@ -48,9 +48,12 @@ export class ProjectService {
   }
 
   public getProjectSfid(uid: string): Observable<string | null> {
-    return this.http.get<{ sfid: string | null }>(`/api/projects/${uid}/sfid`).pipe(
+    return this.http.get<{ sfid: string | null }>(`/api/projects/${encodeURIComponent(uid)}/sfid`).pipe(
       map((res) => res.sfid ?? null),
-      catchError(() => of(null))
+      catchError((error) => {
+        console.error('Failed to fetch project sfid:', error);
+        return of(null);
+      })
     );
   }
 
