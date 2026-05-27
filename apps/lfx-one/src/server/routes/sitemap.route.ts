@@ -3,7 +3,7 @@
 
 import express, { Request, Response, Router } from 'express';
 
-import { serverLogger } from '../server-logger';
+import { logger } from '../services/logger.service';
 import { docsContentService } from '../services/docs-content.service';
 
 const router: Router = express.Router();
@@ -15,7 +15,8 @@ function escapeXml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 }
 
-router.get('/', (_req: Request, res: Response) => {
+router.get('/', (req: Request, res: Response) => {
+  const startTime = logger.startOperation(req, 'generate_sitemap');
   try {
     const entries = docsContentService.getSitemap();
     const urls = entries
@@ -33,11 +34,12 @@ router.get('/', (_req: Request, res: Response) => {
 ${urls}
 </urlset>`;
 
+    logger.success(req, 'generate_sitemap', startTime, { url_count: entries.length });
     res.setHeader('Content-Type', 'application/xml');
     res.setHeader('Cache-Control', 'public, max-age=3600');
     res.send(xml);
   } catch (err) {
-    serverLogger.error({ err }, 'sitemap: failed to generate sitemap');
+    logger.error(req, 'generate_sitemap', startTime, err);
     res.status(500).setHeader('Content-Type', 'application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>
 <error>Failed to generate sitemap</error>`);
   }

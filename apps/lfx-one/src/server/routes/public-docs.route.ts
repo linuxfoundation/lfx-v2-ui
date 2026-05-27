@@ -5,7 +5,7 @@ import express, { Request, Response, Router } from 'express';
 
 import { isValidSlug } from '@lfx-one/shared/utils';
 
-import { serverLogger } from '../server-logger';
+import { logger } from '../services/logger.service';
 import { docsContentService } from '../services/docs-content.service';
 
 const router: Router = express.Router();
@@ -17,13 +17,15 @@ const router: Router = express.Router();
 const DOCS_CACHE_CONTROL = 'public, max-age=300, s-maxage=3600';
 
 // GET /public/api/docs — section tree (landing nav + sidebar)
-router.get('/', (_req: Request, res: Response) => {
+router.get('/', (req: Request, res: Response) => {
+  const startTime = logger.startOperation(req, 'list_doc_sections');
   try {
     const sections = docsContentService.listSections();
     res.setHeader('Cache-Control', DOCS_CACHE_CONTROL);
+    logger.success(req, 'list_doc_sections', startTime, { count: sections.length });
     res.json({ sections });
   } catch (err) {
-    serverLogger.error({ err }, 'docs: failed to list sections');
+    logger.error(req, 'list_doc_sections', startTime, err);
     res.status(500).json({ error: 'Failed to load documentation index' });
   }
 });
