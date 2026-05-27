@@ -380,25 +380,27 @@ async function gracefulShutdown(signal: string): Promise<void> {
   // land on an already-closed server. SSE shutdown hooks run concurrently so
   // clients are notified and can reconnect within this window.
   //
-  // Race hooks vs the LB timer to detect slow hooks, then wait for both so
-  // the full 15s always elapses before HTTP drain begins. The .catch() on the
-  // hooks promise ensures a throwing hook can't propagate through Promise.all
-  // and bypass the HTTP / NATS / Snowflake drain below.
+  // Hooks are best-effort: if they exceed the LB drain window we log a warning
+  // and proceed — we never wait beyond LB_DRAIN_MS for hooks. `await lbDrain`
+  // after the race guarantees the full 15s always elapses (no-op when lbDrain
+  // already resolved via the race) while placing a hard ceiling on how long
+  // hooks can delay the HTTP drain.
   const LB_DRAIN_MS = 15_000; // 1.5 × readyz periodSeconds (10s)
   const lbDrain = new Promise<void>((resolve) => setTimeout(resolve, LB_DRAIN_MS));
   let hooksCompleted = false;
+  const hooksStartTime = Date.now();
   const hooks = runShutdownHooks()
     .then(() => {
       hooksCompleted = true;
     })
     .catch((err: unknown) => {
-      logger.error(undefined, 'shutdown_hooks_error', startTime, err as Error, {});
+      logger.error(undefined, 'shutdown_hooks_error', hooksStartTime, err as Error, {});
     });
   await Promise.race([hooks, lbDrain]);
   if (!hooksCompleted) {
     logger.warning(undefined, 'shutdown_hooks_slow', 'Shutdown hooks exceeded LB drain window', { budget_ms: LB_DRAIN_MS });
   }
-  await Promise.all([lbDrain, hooks]);
+  await lbDrain; // hard ceiling: never wait beyond LB_DRAIN_MS for hooks
 
   if (!httpServer) {
     logger.success(undefined, 'graceful_shutdown', startTime, { reason: 'no_http_server' });
