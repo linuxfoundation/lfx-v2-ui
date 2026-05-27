@@ -4,6 +4,7 @@
 import { Router } from 'express';
 
 import { NewsletterController } from '../controllers/newsletter.controller';
+import { requireExecutiveDirector } from '../middleware/require-executive-director.middleware';
 
 const router = Router();
 const newsletterController = new NewsletterController();
@@ -31,7 +32,11 @@ router.post('/recipients', (req, res, next) => newsletterController.getRecipient
 router.post('/test-send', (req, res, next) => newsletterController.testSend(req, res, next));
 router.post('/send', (req, res, next) => newsletterController.send(req, res, next));
 
-// AI generation stays in lfx-v2-ui
-router.post('/generate', (req, res, next) => newsletterController.generate(req, res, next));
+// AI generation stays in lfx-v2-ui and doesn't proxy to the Go service, so
+// the downstream FGA check that gates the other endpoints isn't available
+// here. Gate on ED persona to bound LiteLLM cost exposure until /generate
+// accepts a contextUid and the controller can do a writer/owner check
+// against the active project (tracked follow-up).
+router.post('/generate', requireExecutiveDirector, (req, res, next) => newsletterController.generate(req, res, next));
 
 export default router;
