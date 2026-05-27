@@ -43,6 +43,11 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "**/*.md",
+                "input": "../../docs/enduser",
+                "output": "/docs-enduser"
               }
             ],
             "styles": ["src/styles.scss"],
