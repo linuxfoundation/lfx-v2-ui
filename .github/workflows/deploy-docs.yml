@@ -47,9 +47,13 @@ jobs:
           node-version: '22'
 
       - name: Install gray-matter
-        run: npm install gray-matter
+        # Install to /tmp/validate-deps so npm doesn't try to process the
+        # repo's package.json (which uses yarn workspace:* protocol).
+        run: npm install --prefix /tmp/validate-deps gray-matter
 
       - name: Validate frontmatter and content
+        env:
+          NODE_PATH: /tmp/validate-deps/node_modules
         run: |
           node << 'EOF'
           const matter = require('gray-matter');

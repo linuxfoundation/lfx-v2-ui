@@ -6,7 +6,7 @@ linkable from GitHub issues, and available to Intercom for knowledge-base ingest
 
 ## Directory Structure
 
-```
+```text
 docs/enduser/
 ├── index.md                    # Metadata-only file (not rendered by the API; /docs uses DocsLandingComponent)
 ├── <section>/
