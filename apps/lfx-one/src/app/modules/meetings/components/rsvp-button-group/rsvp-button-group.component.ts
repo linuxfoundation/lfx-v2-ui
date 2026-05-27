@@ -36,11 +36,7 @@ export class RsvpButtonGroupComponent {
   public occurrenceId: InputSignal<string | undefined> = input<string | undefined>(undefined);
   public disabled: InputSignal<boolean> = input<boolean>(false);
   public disabledMessage: InputSignal<string> = input<string>('RSVP not available for this meeting');
-  /**
-   * Suppresses the success toast emitted by this component. Use when a caller renders its own success feedback
-   * (e.g. the dashboard pending-actions UI shows a custom keyed toast). Error toasts are always shown so RSVP
-   * failures remain visible — pass `suppressErrorToast` if a caller needs to handle errors via the `rsvpFailed` output.
-   */
+  /** Suppresses the success toast; pair with `suppressErrorToast` to suppress errors too. */
   public suppressToast: InputSignal<boolean> = input<boolean>(false);
   /** When true, suppresses the default error toast — callers handling errors via the `rsvpFailed` output. */
   public suppressErrorToast: InputSignal<boolean> = input<boolean>(false);

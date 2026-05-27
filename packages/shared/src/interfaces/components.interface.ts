@@ -527,10 +527,7 @@ export interface DecoratedPendingAction extends PendingActionItem {
   rowClass: string;
 }
 
-/**
- * Pending action row used by the right-side pending-actions drawer.
- * @description Extends PendingActionItem with inline-render flags plus per-row meeting-fetch state used by the drawer template.
- */
+/** Pending action row for the right-side drawer — adds inline-RSVP flags and per-row meeting-fetch state. */
 export interface DrawerActionRow extends PendingActionItem {
   /** Stable row identifier used for `@for ... track` */
   rowKey: string;
