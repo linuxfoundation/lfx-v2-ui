@@ -7,10 +7,11 @@ import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-i
 import { ActivatedRoute, NavigationEnd, Router, RouterModule } from '@angular/router';
 import { LensSwitcherComponent } from '@components/lens-switcher/lens-switcher.component';
 import { SidebarComponent } from '@components/sidebar/sidebar.component';
-import { ALL_LENSES, COMMITTEE_LABEL, DOCUMENT_LABEL, MAILING_LIST_LABEL, SURVEY_LABEL, VOTE_LABEL } from '@lfx-one/shared/constants';
+import { ALL_LENSES, COMMITTEE_LABEL, DOCUMENT_LABEL, MAILING_LIST_LABEL, ORG_LENS_ENABLED_FLAG, SURVEY_LABEL, VOTE_LABEL } from '@lfx-one/shared/constants';
 import { Lens, SidebarMenuItem } from '@lfx-one/shared/interfaces';
 import { AnalyticsService } from '@services/analytics.service';
 import { AppService } from '@services/app.service';
+import { FeatureFlagService } from '@services/feature-flag.service';
 import { ImpersonationService } from '@services/impersonation.service';
 import { LensService } from '@services/lens.service';
 import { PersonaService } from '@services/persona.service';
@@ -39,7 +40,11 @@ export class MainLayoutComponent {
   private readonly impersonationService = inject(ImpersonationService);
   private readonly projectContextService = inject(ProjectContextService);
   private readonly analyticsService = inject(AnalyticsService);
+  private readonly featureFlagService = inject(FeatureFlagService);
   protected readonly userService = inject(UserService);
+
+  /** Dark-launch gate; falls back to Me Lens nav when off. */
+  private readonly isOrgLensEnabled = this.featureFlagService.getBooleanFlag(ORG_LENS_ENABLED_FLAG, false);
 
   // Expose mobile sidebar state from service (writable for two-way binding with p-drawer)
   protected readonly showMobileSidebar = this.appService.showMobileSidebar;
@@ -50,19 +55,26 @@ export class MainLayoutComponent {
   // Active lens from service
   protected readonly activeLens = this.lensService.activeLens;
 
+  // Newsletter nav visibility: ED persona always sees it; non-ED users see it
+  // when they have writer (or owner-equivalent) permission on the currently
+  // active foundation/project. canWrite() is reactive to context changes.
+  private readonly canSeeNewsletters: Signal<boolean> = this.initCanSeeNewsletters();
+
   // Lens-aware sidebar items
   protected readonly sidebarItems = computed((): SidebarMenuItem[] => {
     switch (this.activeLens()) {
       case 'foundation':
         return this.foundationLensItems();
-      case 'project':
+      case 'project': {
         // Governance (Votes / Surveys / Permissions) is always surfaced under Project lens —
         // matching Foundation lens behavior. Authorization for write actions (add user,
         // edit role, remove, etc.) is enforced server-side and by per-page UI gating where
         // implemented; pre-existing gaps in those gates are tracked separately.
-        return this.projectLensItemsWithGovernance;
+        const base = this.projectLensItemsWithGovernance;
+        return this.canSeeNewsletters() ? [...base, this.projectCommunicationsSection] : base;
+      }
       case 'org':
-        return this.orgLensItems;
+        return this.isOrgLensEnabled() ? this.orgLensItems : this.meLensItems;
       default:
         return this.meLensItems;
     }
@@ -260,25 +272,57 @@ export class MainLayoutComponent {
       }
     );
 
-    if (this.personaService.currentPersona() === 'executive-director') {
+    if (this.canSeeNewsletters()) {
       items.push({
-        label: 'Metrics',
+        label: 'Communications',
         isSection: true,
         expanded: true,
         items: [
           {
-            label: 'Health Metrics',
-            icon: 'fa-light fa-chart-line-up',
-            routerLink: '/foundation/health-metrics',
-            testId: 'sidebar-metrics-health-metrics',
-          },
-          {
-            label: 'Marketing Impact',
-            icon: 'fa-light fa-bullhorn',
-            routerLink: '/foundation/marketing-impact',
-            testId: 'sidebar-metrics-marketing-impact',
+            label: 'Newsletters',
+            icon: 'fa-light fa-paper-plane',
+            routerLink: '/foundation/newsletters',
+            testId: 'sidebar-foundation-newsletters',
           },
         ],
+      });
+    }
+
+    if (this.personaService.currentPersona() === 'executive-director') {
+      const metricsItems: SidebarMenuItem[] = [
+        {
+          label: 'Health Metrics',
+          icon: 'fa-light fa-chart-line-up',
+          routerLink: '/foundation/health-metrics',
+          testId: 'sidebar-metrics-health-metrics',
+        },
+        {
+          label: 'Marketing Impact',
+          icon: 'fa-light fa-bullhorn',
+          routerLink: '/foundation/marketing-impact',
+          testId: 'sidebar-metrics-marketing-impact',
+        },
+      ];
+
+      const foundationSfid = this.projectContextService.selectedFoundationSfid();
+      if (foundationSfid) {
+        const pccBaseUrl = environment.urls.pcc;
+        const baseUrl = pccBaseUrl.endsWith('/') ? pccBaseUrl.slice(0, -1) : pccBaseUrl;
+        metricsItems.push({
+          label: 'Social Listening',
+          icon: 'fa-light fa-ear-listen',
+          url: `${baseUrl}/project/${foundationSfid}/reports/social-listening`,
+          target: '_blank',
+          rel: 'noopener noreferrer',
+          testId: 'sidebar-metrics-social-listening',
+        });
+      }
+
+      items.push({
+        label: 'Metrics',
+        isSection: true,
+        expanded: true,
+        items: metricsItems,
       });
     }
 
@@ -341,70 +385,99 @@ export class MainLayoutComponent {
     },
   ];
 
-  // --- Org Lens Items ---
+  // Project-lens Communications section (ED-only); appended dynamically in sidebarItems().
+  private readonly projectCommunicationsSection: SidebarMenuItem = {
+    label: 'Communications',
+    isSection: true,
+    expanded: true,
+    items: [
+      {
+        label: 'Newsletters',
+        icon: 'fa-light fa-paper-plane',
+        routerLink: '/project/newsletters',
+        testId: 'sidebar-project-newsletters',
+      },
+    ],
+  };
+
   private readonly orgLensItems: SidebarMenuItem[] = [
     {
-      label: 'Overview',
+      label: 'Org Overview',
       icon: 'fa-light fa-grid-2',
-      routerLink: '/org',
+      routerLink: '/org/overview',
     },
     {
-      label: 'Portfolio',
+      label: 'Org Foundations',
       isSection: true,
       expanded: true,
       items: [
         {
-          label: 'Key Projects',
-          icon: 'fa-light fa-diagram-project',
+          label: 'Memberships',
+          icon: 'fa-light fa-display',
+          routerLink: '/org/memberships',
+        },
+        {
+          label: 'Projects',
+          icon: 'fa-light fa-folder',
           routerLink: '/org/projects',
+        },
+        {
+          label: 'ROI',
+          icon: 'fa-light fa-chart-line-up',
+          routerLink: '/org/roi',
+        },
+        {
+          label: 'Governance',
+          icon: 'fa-light fa-layer-group',
+          routerLink: '/org/governance',
+        },
+      ],
+    },
+    {
+      label: 'Org Engagement',
+      isSection: true,
+      expanded: true,
+      items: [
+        {
+          label: 'People',
+          icon: 'fa-light fa-users',
+          routerLink: '/org/people',
         },
         {
           label: 'Code Contributions',
           icon: 'fa-light fa-code',
-          routerLink: '/org/code',
-        },
-      ],
-    },
-    {
-      label: 'Membership',
-      isSection: true,
-      expanded: true,
-      items: [
-        {
-          label: 'Membership',
-          icon: 'fa-light fa-id-card',
-          routerLink: '/org/membership',
+          routerLink: '/org/contributions',
         },
         {
-          label: 'Benefits',
-          icon: 'fa-light fa-gift',
-          routerLink: '/org/benefits',
+          label: 'Events',
+          icon: 'fa-light fa-calendar',
+          routerLink: '/org/events',
         },
-      ],
-    },
-    {
-      label: 'Administration',
-      isSection: true,
-      expanded: true,
-      items: [
+        {
+          label: 'Training & Certification',
+          icon: 'fa-light fa-graduation-cap',
+          routerLink: '/org/training',
+        },
+        {
+          label: 'Meetings',
+          icon: 'fa-light fa-video',
+          routerLink: '/org/meetings',
+        },
         {
           label: COMMITTEE_LABEL.plural,
           icon: 'fa-light fa-users-rectangle',
           routerLink: '/org/groups',
         },
+      ],
+    },
+    {
+      label: 'Org Admin',
+      isSection: true,
+      expanded: true,
+      items: [
         {
-          label: 'CLA Management',
-          icon: 'fa-light fa-file-signature',
-          routerLink: '/org/cla',
-        },
-        {
-          label: 'Access & Permissions',
-          icon: 'fa-light fa-key',
-          routerLink: '/org/permissions',
-        },
-        {
-          label: 'Org Profile',
-          icon: 'fa-light fa-building',
+          label: 'Profile',
+          icon: 'fa-light fa-file',
           routerLink: '/org/profile',
         },
       ],
@@ -442,6 +515,10 @@ export class MainLayoutComponent {
       .subscribe(() => {
         window.location.reload();
       });
+  }
+
+  private initCanSeeNewsletters(): Signal<boolean> {
+    return computed(() => this.personaService.currentPersona() === 'executive-director' || this.projectContextService.canWrite());
   }
 
   /**
