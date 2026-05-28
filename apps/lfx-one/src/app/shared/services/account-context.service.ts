@@ -142,6 +142,11 @@ export class AccountContextService {
     return promise;
   }
 
+  /** Spec 021 — Public propagation hook for the Org Profile edit flow after a successful PUT (FR-009); patches `selectedAccount` so sidebar + selector reflect the edit without waiting for the next natural fetch. */
+  public updateCanonicalRecord(canonical: OrgCanonicalRecord): void {
+    this.applyCanonicalRecord(canonical);
+  }
+
   private applyCanonicalRecord(canonical: OrgCanonicalRecord): void {
     const current = this.selectedAccount();
     // Only patch when the canonical record corresponds to the still-selected org —
