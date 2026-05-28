@@ -24,8 +24,9 @@
       (cancelDonation)="onCancelDonation()" />
 
     <lfx-recurring-donation-charge-history [chargeHistory]="chargeHistory()" [hasMore]="chargeHistoryHasMore()" (loadMore)="onLoadMore()" />
-  } @else {
-    <!-- Not found -->
+  } @else if (donation() === undefined) {
+    <!-- Not found — only shown after the fetch completes with no match -->
     <div class="flex items-center justify-center py-16 text-sm text-gray-400" data-testid="not-found-state">Recurring donation not found.</div>
   }
+  <!-- null = loading; no spinner yet, content renders once donation resolves -->
 </div>

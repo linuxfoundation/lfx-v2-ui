@@ -38,7 +38,8 @@ export class RecurringDonationDetailComponent {
   private readonly loadMore$ = new Subject<void>();
 
   // ─── Complex Signals ──────────────────────────────────────────────────────
-  protected readonly donation: Signal<RecurringDonation | undefined> = this.initDonation();
+  protected readonly donationId = toSignal(this.route.paramMap.pipe(map((params) => params.get('id') ?? '')), { initialValue: '' });
+  protected readonly donation: Signal<RecurringDonation | null | undefined> = this.initDonation();
   private readonly chargeHistoryState: Signal<{ items: CrowdfundingTransaction[]; hasMore: boolean }> = this.initChargeHistory();
   protected readonly chargeHistory = computed(() => this.chargeHistoryState().items);
   protected readonly chargeHistoryHasMore = computed(() => this.chargeHistoryState().hasMore);
@@ -65,18 +66,20 @@ export class RecurringDonationDetailComponent {
   }
 
   // ─── Private Initializers ─────────────────────────────────────────────────
-  private initDonation(): Signal<RecurringDonation | undefined> {
-    const id = this.route.snapshot.paramMap.get('id') ?? '';
-
-    return toSignal(this.crowdfundingService.getMyRecurringDonations().pipe(map((res: RecurringDonationsResponse) => res.data.find((d) => d.id === id))), {
-      initialValue: undefined,
-    });
+  private initDonation(): Signal<RecurringDonation | null | undefined> {
+    return toSignal(
+      toObservable(this.donationId).pipe(
+        filter((id) => !!id),
+        switchMap((id) => this.crowdfundingService.getMyRecurringDonations().pipe(map((res: RecurringDonationsResponse) => res.data.find((d) => d.id === id))))
+      ),
+      { initialValue: null }
+    );
   }
 
   private initChargeHistory(): Signal<{ items: CrowdfundingTransaction[]; hasMore: boolean }> {
     return toSignal(
       toObservable(this.donation).pipe(
-        filter((d) => d !== undefined),
+        filter((d): d is RecurringDonation => !!d),
         map((d) => d.initiativeSlug),
         switchMap((slug) =>
           this.loadMore$.pipe(
