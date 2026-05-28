@@ -207,19 +207,6 @@ export interface CrowdfundingInitiativeDetail extends CrowdfundingInitiative {
   matchPct?: number;
 }
 
-export type ChargeStatus = 'paid' | 'failed' | 'pending';
-
-/** A single line in the charge history for a recurring donation. */
-export interface ChargeHistoryItem {
-  id: string;
-  /** Display period, e.g. "May 2026". */
-  period: string;
-  status: ChargeStatus;
-  /** ISO date string of when the charge occurred. */
-  dateCharged: string;
-  amountCents: number;
-}
-
 export interface DonationStats {
   totalDonated: number;
   initiativesSupported: number;

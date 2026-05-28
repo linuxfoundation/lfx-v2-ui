@@ -8,14 +8,12 @@ import { Subject } from 'rxjs';
 import { concatMap, filter, map, scan, startWith, switchMap } from 'rxjs/operators';
 
 import { CrowdfundingTransaction, RecurringDonation, RecurringDonationsResponse } from '@lfx-one/shared/interfaces';
-import { DEFAULT_CROWDFUNDING_PAGE_SIZE } from '@lfx-one/shared/constants';
+import { DEFAULT_CROWDFUNDING_PAGE_SIZE, EMPTY_CHARGE_HISTORY_STATE } from '@lfx-one/shared/constants';
 import { CrowdfundingService } from '@app/shared/services/crowdfunding.service';
 import { ButtonComponent } from '@components/button/button.component';
 import { RecurringDonationInitiativeHeaderComponent } from './components/recurring-donation-initiative-header/recurring-donation-initiative-header.component';
 import { RecurringDonationSubscriptionSummaryComponent } from './components/recurring-donation-subscription-summary/recurring-donation-subscription-summary.component';
 import { RecurringDonationChargeHistoryComponent } from './components/recurring-donation-charge-history/recurring-donation-charge-history.component';
-
-const EMPTY_CHARGE_HISTORY_STATE = { items: [] as CrowdfundingTransaction[], hasMore: false };
 
 @Component({
   selector: 'lfx-recurring-donation-detail',
