@@ -9,8 +9,10 @@ import { requireExecutiveDirector } from '../middleware/require-executive-direct
 const router = Router();
 const newsletterController = new NewsletterController();
 
-// All newsletter endpoints are Executive Director-only.
-router.use(requireExecutiveDirector);
+// Authorization is enforced by the downstream lfx-v2-newsletter-service (FGA
+// via the forwarded user bearer token) and by the corresponding frontend
+// route guards. Don't gate on persona here — newsletters are accessible to
+// Executive Directors AND writers/owners of the foundation or project.
 
 // List newsletters (drafts + sent) and per-newsletter analytics
 router.get('/', (req, res, next) => newsletterController.listNewsletters(req, res, next));
@@ -30,7 +32,11 @@ router.post('/recipients', (req, res, next) => newsletterController.getRecipient
 router.post('/test-send', (req, res, next) => newsletterController.testSend(req, res, next));
 router.post('/send', (req, res, next) => newsletterController.send(req, res, next));
 
-// AI generation stays in lfx-v2-ui
-router.post('/generate', (req, res, next) => newsletterController.generate(req, res, next));
+// AI generation stays in lfx-v2-ui and doesn't proxy to the Go service, so
+// the downstream FGA check that gates the other endpoints isn't available
+// here. Gate on ED persona to bound LiteLLM cost exposure until /generate
+// accepts a contextUid and the controller can do a writer/owner check
+// against the active project (tracked follow-up).
+router.post('/generate', requireExecutiveDirector, (req, res, next) => newsletterController.generate(req, res, next));
 
 export default router;
