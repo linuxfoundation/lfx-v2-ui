@@ -6,7 +6,14 @@ import { stripHtml } from '@lfx-one/shared/utils';
 
 export interface NewsletterEmailChrome {
   subject: string;
-  /** Trusted Quill output — sanitized client-side at write time and stored verbatim. */
+  /**
+   * Newsletter body HTML, interpolated verbatim into the envelope. Trust
+   * boundary: the field is populated by authenticated writers via the
+   * authoring UI; there is no programmatic HTML sanitizer (e.g. DOMPurify /
+   * sanitize-html) between the form and this call. Quill's format whitelist
+   * is not a security sanitizer. If we ever accept body content from a less
+   * privileged source, sanitize upstream of this function.
+   */
   bodyHtml: string;
   edName: string;
   edReplyEmail: string;
@@ -50,7 +57,8 @@ function escapeAttr(value: string): string {
  *     `max-width:600px`, which is the standard Outlook-desktop workaround.
  *   - Chrome strings flow through escapeHtml/escapeAttr because they're
  *     user/operator-controlled (project name, subject, ED display name).
- *   - bodyHtml is interpolated verbatim — already trusted Quill output.
+ *   - bodyHtml is interpolated verbatim — see the NewsletterEmailChrome
+ *     interface for the trust-boundary contract.
  */
 export function buildNewsletterEmailHtml(input: NewsletterEmailChrome): string {
   const fallbackDisplay = input.contextType === 'foundation' ? 'Foundation' : 'Project';
