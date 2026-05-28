@@ -79,11 +79,12 @@ export class NewsletterController {
 
   /**
    * POST /api/newsletters/test-send
-   * Body: { subject, bodyHtml, toEmail, contextType, contextUid, edReplyEmail }
+   * Body: { subject, bodyHtml, toEmail, contextType, contextUid }
    *
    * Sends a single preview email via lfx-v2-email-service. No group_id is
    * supplied — test sends auto-generate one server-side and stay out of the
-   * newsletter analytics rollup.
+   * newsletter analytics rollup. edReplyEmail is intentionally not required
+   * here because the rendered email no longer surfaces a reply-to.
    */
   public async testSend(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'newsletter_test_send', {
@@ -93,7 +94,7 @@ export class NewsletterController {
 
     try {
       const payload = req.body as NewsletterTestSendPayload;
-      this.validateCommonPayload(payload, req.path, 'newsletter_test_send');
+      this.validateCommonPayload(payload, req.path, 'newsletter_test_send', false);
 
       if (!payload.toEmail || typeof payload.toEmail !== 'string' || !payload.toEmail.includes('@')) {
         throw ServiceValidationError.forField('toEmail', 'A valid recipient email is required', {
@@ -466,10 +467,17 @@ export class NewsletterController {
     }
   }
 
+  /**
+   * `requireEdReplyEmail=false` is used by the test-send path — the rendered
+   * email no longer surfaces the reply-to address, so we don't make writers
+   * supply one to run a test. The draft / real-send paths still require it
+   * because it's persisted on the Newsletter row in lfx-v2-newsletter-service.
+   */
   private validateCommonPayload(
     payload: { subject?: string; bodyHtml?: string; contextType?: string; contextUid?: string; edReplyEmail?: string },
     path: string,
-    operation: string
+    operation: string,
+    requireEdReplyEmail: boolean = true
   ): void {
     const fieldErrors: Record<string, string> = {};
 
@@ -493,7 +501,7 @@ export class NewsletterController {
       fieldErrors['contextUid'] = 'contextUid is required';
     }
 
-    if (!payload?.edReplyEmail || typeof payload.edReplyEmail !== 'string' || !payload.edReplyEmail.includes('@')) {
+    if (requireEdReplyEmail && (!payload?.edReplyEmail || typeof payload.edReplyEmail !== 'string' || !payload.edReplyEmail.includes('@'))) {
       fieldErrors['edReplyEmail'] = 'A valid edReplyEmail is required';
     }
 
