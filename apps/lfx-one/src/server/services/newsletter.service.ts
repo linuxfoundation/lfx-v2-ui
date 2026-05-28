@@ -15,6 +15,7 @@ import { randomUUID } from 'crypto';
 import { Request } from 'express';
 
 import { MicroserviceError, ServiceValidationError } from '../errors';
+import { CommitteeService } from './committee.service';
 import { EmailServiceClient } from './email-service.client';
 import { logger } from './logger.service';
 import { NewsletterServiceClient } from './newsletter-service.client';
@@ -32,10 +33,47 @@ const MARK_SENT_BACKOFF_BASE_MS = 100;
 export class NewsletterService {
   private readonly newsletterClient: NewsletterServiceClient;
   private readonly emailServiceClient: EmailServiceClient;
+  private readonly committeeService: CommitteeService;
 
-  public constructor(newsletterClient?: NewsletterServiceClient, emailServiceClient?: EmailServiceClient) {
+  public constructor(newsletterClient?: NewsletterServiceClient, emailServiceClient?: EmailServiceClient, committeeService?: CommitteeService) {
     this.newsletterClient = newsletterClient ?? new NewsletterServiceClient();
     this.emailServiceClient = emailServiceClient ?? new EmailServiceClient();
+    this.committeeService = committeeService ?? new CommitteeService();
+  }
+
+  /**
+   * Resolve newsletter recipients (email + first name) from the selected
+   * committees, deduped by lowercased email.
+   *
+   * Done in Express (not the Go newsletter-service) because the Go service's
+   * outbound `/query/resources` call carries a Heimdall-minted JWT that
+   * query-service can't validate as OIDC — FGA filters everything out and
+   * the call returns empty. Express has the user's original Auth0 bearer
+   * token and can call query-service directly with proper identity.
+   *
+   * Filters invalid emails (empty / missing `@`) to match the Go service's
+   * recipient-validation behavior, so the resulting list is safe to fan out
+   * to the email-service without per-recipient validation downstream.
+   */
+  public async resolveRecipients(req: Request, committeeUids: string[]): Promise<NewsletterRecipient[]> {
+    const perCommittee = await Promise.all(committeeUids.map((uid) => this.committeeService.getCommitteeMembers(req, uid)));
+
+    const seen = new Set<string>();
+    const recipients: NewsletterRecipient[] = [];
+    for (const members of perCommittee) {
+      for (const member of members) {
+        const email = (member.email ?? '').trim().toLowerCase();
+        if (!email || !email.includes('@') || seen.has(email)) {
+          continue;
+        }
+        seen.add(email);
+        recipients.push({
+          email,
+          firstName: (member.first_name ?? '').trim() || undefined,
+        });
+      }
+    }
+    return recipients;
   }
 
   /**
@@ -69,8 +107,7 @@ export class NewsletterService {
       });
     }
 
-    const recipientsResponse = await this.newsletterClient.getRecipients(req, { committeeUids: newsletter.committeeUids });
-    const recipients = recipientsResponse.recipients;
+    const recipients = await this.resolveRecipients(req, newsletter.committeeUids);
 
     if (recipients.length === 0) {
       throw ServiceValidationError.forField('committeeUids', 'Selected committees resolved to zero recipients; nothing to send', {

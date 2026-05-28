@@ -8,9 +8,6 @@ import {
   NewsletterDraftListResponse,
   NewsletterListParams,
   NewsletterListResponse,
-  NewsletterRecipientCount,
-  NewsletterRecipientCountPayload,
-  NewsletterRecipientsResponse,
   UpdateNewsletterDraftRequest,
 } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
@@ -69,14 +66,6 @@ export class NewsletterServiceClient {
         'If-Match': `"${params.ifMatchVersion}"`,
       }
     );
-  }
-
-  public async getRecipientCount(req: Request, payload: NewsletterRecipientCountPayload): Promise<NewsletterRecipientCount> {
-    return this.microserviceProxy.proxyRequest<NewsletterRecipientCount>(req, 'LFX_V2_SERVICE', '/newsletters/recipient-count', 'POST', undefined, payload);
-  }
-
-  public async getRecipients(req: Request, payload: NewsletterRecipientCountPayload): Promise<NewsletterRecipientsResponse> {
-    return this.microserviceProxy.proxyRequest<NewsletterRecipientsResponse>(req, 'LFX_V2_SERVICE', '/newsletters/recipients', 'POST', undefined, payload);
   }
 
   public async listNewsletters(req: Request, params: NewsletterListParams): Promise<NewsletterListResponse> {

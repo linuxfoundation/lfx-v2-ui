@@ -48,10 +48,10 @@ export class NewsletterController {
       const payload = req.body as NewsletterRecipientCountPayload;
       this.validateCommitteeUids(payload?.committeeUids, req.path, 'newsletter_recipient_count');
 
-      const result = await this.newsletterClient.getRecipientCount(req, payload);
+      const recipients = await this.newsletterService.resolveRecipients(req, payload.committeeUids);
 
-      logger.success(req, 'newsletter_recipient_count', startTime, { count: result.count });
-      res.json(result);
+      logger.success(req, 'newsletter_recipient_count', startTime, { count: recipients.length });
+      res.json({ count: recipients.length });
     } catch (error) {
       next(error);
     }
@@ -71,10 +71,10 @@ export class NewsletterController {
       const payload = req.body as NewsletterRecipientCountPayload;
       this.validateCommitteeUids(payload?.committeeUids, req.path, 'newsletter_recipients');
 
-      const result = await this.newsletterClient.getRecipients(req, payload);
+      const recipients = await this.newsletterService.resolveRecipients(req, payload.committeeUids);
 
-      logger.success(req, 'newsletter_recipients', startTime, { count: result.recipients.length });
-      res.json(result);
+      logger.success(req, 'newsletter_recipients', startTime, { count: recipients.length });
+      res.json({ recipients });
     } catch (error) {
       next(error);
     }
