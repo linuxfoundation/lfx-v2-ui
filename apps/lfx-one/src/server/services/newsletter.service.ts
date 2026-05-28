@@ -6,6 +6,7 @@ import {
   Newsletter,
   NewsletterAnalytics,
   NewsletterDailyOpens,
+  NewsletterListItem,
   NewsletterRecipient,
   NewsletterSendFailure,
   NewsletterSendResult,
@@ -176,6 +177,54 @@ export class NewsletterService {
     }
 
     return this.buildAnalyticsFromRecords(newsletter, records);
+  }
+
+  /**
+   * Overlay live email-service engagement onto the Go service's list rows.
+   *
+   * The Go service stores totalRecipients / uniqueOpens / openRate on the
+   * newsletter row at send time, derived from its own resolveRecipients
+   * call. That call hits the same FGA-filtering problem as the recipient
+   * dropdown — for writers it persists zeros even though Express actually
+   * sent emails. Result: the list table is stale while the detail page is
+   * correct (it reads from email-service).
+   *
+   * Fix: for every sent row with a groupId, fetch the engagement rollup
+   * from email-service in parallel and overlay the three engagement
+   * fields. Drafts and pre-integration sent rows pass through unchanged.
+   */
+  public async enrichListWithEngagement(req: Request, newsletters: NewsletterListItem[]): Promise<NewsletterListItem[]> {
+    const enrichments = await Promise.all(
+      newsletters.map(async (n) => {
+        if (n.status !== 'sent' || !n.groupId) {
+          return null;
+        }
+        try {
+          return await this.emailServiceClient.getEngagement(req, n.groupId);
+        } catch (error) {
+          logger.warning(req, 'newsletter_list_enrich', 'engagement rollup unavailable for newsletter; passing Go-side values through', {
+            newsletter_id: n.id,
+            group_id: n.groupId,
+            err: error,
+          });
+          return null;
+        }
+      })
+    );
+
+    return newsletters.map((n, i) => {
+      const e = enrichments[i];
+      if (!e) {
+        return n;
+      }
+      const openRate = e.delivered > 0 ? e.unique_opened / e.delivered : 0;
+      return {
+        ...n,
+        totalRecipients: e.total_sent,
+        uniqueOpens: e.unique_opened,
+        openRate,
+      };
+    });
   }
 
   /**

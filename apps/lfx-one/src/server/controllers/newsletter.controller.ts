@@ -361,6 +361,7 @@ export class NewsletterController {
         pageToken,
       };
       const result = await this.newsletterClient.listNewsletters(req, params);
+      result.newsletters = await this.newsletterService.enrichListWithEngagement(req, result.newsletters);
 
       logger.success(req, 'newsletter_list', startTime, {
         count: result.newsletters.length,
