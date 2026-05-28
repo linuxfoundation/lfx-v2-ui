@@ -135,16 +135,20 @@ export class OrgEventsDashboardComponent {
   private initUpcomingEvents(): Signal<OrgEventsResponse> {
     return toSignal(
       toObservable(
-        computed(() => ({
-          accountId: this.accountContext.selectedAccount().accountId,
-          ...this.upcomingEventsPage(),
-          searchQuery: this.searchTerm() || undefined,
-          status: this.selectedStatus() ?? null,
-          sortOrder: this.upcomingSortOrder(),
-        }))
+        computed(() => {
+          const accountId = this.accountContext.selectedAccount().accountId;
+          if (!accountId) return null;
+          return {
+            accountId,
+            ...this.upcomingEventsPage(),
+            searchQuery: this.searchTerm() || undefined,
+            status: this.selectedStatus() ?? null,
+            sortOrder: this.upcomingSortOrder(),
+          };
+        })
       ).pipe(
         debounceTime(0),
-        filter(({ accountId }): accountId is string => !!accountId),
+        filter((params): params is NonNullable<typeof params> => params !== null),
         tap(() => this.upcomingEventsLoading.set(true)),
         switchMap(({ accountId, ...params }) =>
           this.eventsService.getOrgEvents(accountId, { ...params, isPast: false }).pipe(
