@@ -31,7 +31,7 @@ export class AddPaymentCardDialogComponent implements OnDestroy {
   protected readonly cardExpiryContainer = viewChild<ElementRef<HTMLElement>>('cardExpiryContainer');
   protected readonly cardCvcContainer = viewChild<ElementRef<HTMLElement>>('cardCvcContainer');
 
-  // ─── Destroy guard (prevents mount() on detached DOM nodes) ─────────────
+  // Guards mountStripeElements from running on an already-destroyed view.
   private destroyed = false;
 
   // ─── Stripe element instances (not signals — not reactive values) ─────────
@@ -119,46 +119,50 @@ export class AddPaymentCardDialogComponent implements OnDestroy {
   }
 
   private async mountStripeElements(): Promise<void> {
-    const stripe = await this.stripeService.getStripe();
+    try {
+      const stripe = await this.stripeService.getStripe();
 
-    if (this.destroyed) return;
+      if (this.destroyed) return;
 
-    const numberEl = this.cardNumberContainer()?.nativeElement;
-    const expiryEl = this.cardExpiryContainer()?.nativeElement;
-    const cvcEl = this.cardCvcContainer()?.nativeElement;
+      const numberEl = this.cardNumberContainer()?.nativeElement;
+      const expiryEl = this.cardExpiryContainer()?.nativeElement;
+      const cvcEl = this.cardCvcContainer()?.nativeElement;
 
-    if (!stripe || !numberEl || !expiryEl || !cvcEl) return;
+      if (!stripe || !numberEl || !expiryEl || !cvcEl) return;
 
-    const elements = stripe.elements();
+      const elements = stripe.elements();
 
-    this.cardNumberEl = elements.create('cardNumber', { style: STRIPE_ELEMENT_STYLE, placeholder: '1234 5678 9012 3456' });
-    this.cardExpiryEl = elements.create('cardExpiry', { style: STRIPE_ELEMENT_STYLE });
-    this.cardCvcEl = elements.create('cardCvc', { style: STRIPE_ELEMENT_STYLE });
+      this.cardNumberEl = elements.create('cardNumber', { style: STRIPE_ELEMENT_STYLE, placeholder: '1234 5678 9012 3456' });
+      this.cardExpiryEl = elements.create('cardExpiry', { style: STRIPE_ELEMENT_STYLE });
+      this.cardCvcEl = elements.create('cardCvc', { style: STRIPE_ELEMENT_STYLE });
 
-    this.cardNumberEl.mount(numberEl);
-    this.cardExpiryEl.mount(expiryEl);
-    this.cardCvcEl.mount(cvcEl);
+      this.cardNumberEl.mount(numberEl);
+      this.cardExpiryEl.mount(expiryEl);
+      this.cardCvcEl.mount(cvcEl);
 
-    this.cardNumberEl.on('change', (e) => {
-      this.cardNumberComplete.set(e.complete);
-      this.cardNumberError.set(e.error?.message ?? '');
-    });
-    this.cardNumberEl.on('focus', () => this.cardNumberFocused.set(true));
-    this.cardNumberEl.on('blur', () => this.cardNumberFocused.set(false));
+      this.cardNumberEl.on('change', (e) => {
+        this.cardNumberComplete.set(e.complete);
+        this.cardNumberError.set(e.error?.message ?? '');
+      });
+      this.cardNumberEl.on('focus', () => this.cardNumberFocused.set(true));
+      this.cardNumberEl.on('blur', () => this.cardNumberFocused.set(false));
 
-    this.cardExpiryEl.on('change', (e) => {
-      this.cardExpiryComplete.set(e.complete);
-      this.cardExpiryError.set(e.error?.message ?? '');
-    });
-    this.cardExpiryEl.on('focus', () => this.cardExpiryFocused.set(true));
-    this.cardExpiryEl.on('blur', () => this.cardExpiryFocused.set(false));
+      this.cardExpiryEl.on('change', (e) => {
+        this.cardExpiryComplete.set(e.complete);
+        this.cardExpiryError.set(e.error?.message ?? '');
+      });
+      this.cardExpiryEl.on('focus', () => this.cardExpiryFocused.set(true));
+      this.cardExpiryEl.on('blur', () => this.cardExpiryFocused.set(false));
 
-    this.cardCvcEl.on('change', (e) => {
-      this.cardCvcComplete.set(e.complete);
-      this.cardCvcError.set(e.error?.message ?? '');
-    });
-    this.cardCvcEl.on('focus', () => this.cardCvcFocused.set(true));
-    this.cardCvcEl.on('blur', () => this.cardCvcFocused.set(false));
+      this.cardCvcEl.on('change', (e) => {
+        this.cardCvcComplete.set(e.complete);
+        this.cardCvcError.set(e.error?.message ?? '');
+      });
+      this.cardCvcEl.on('focus', () => this.cardCvcFocused.set(true));
+      this.cardCvcEl.on('blur', () => this.cardCvcFocused.set(false));
+    } catch (err) {
+      this.stripeError.set(extractErrorMessage(err, 'Failed to mount Stripe elements. Please try again.'));
+    }
   }
 
   private destroyElements(): void {
