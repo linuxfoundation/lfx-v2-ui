@@ -213,7 +213,7 @@ test.describe('Org Profile — authenticated smoke set (S1/S2/S3/S4)', () => {
   });
 
   test('S4: load error surfaces data-state="error" and retry re-fetches successfully', async ({ page }) => {
-    await stubOrgProfileContext(page, [MOCK_UID]);
+    await stubOrgProfileContext(page, { writers: [MOCK_UID] });
 
     let canonicalAttempts = 0;
     await page.route(`**/api/orgs/uid/${MOCK_UID}`, (route) => {

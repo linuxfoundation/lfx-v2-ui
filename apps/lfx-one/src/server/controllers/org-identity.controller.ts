@@ -186,7 +186,7 @@ export class OrgIdentityController {
         res.status(404).json({ error: 'Organization not found' });
         return;
       }
-      if (error instanceof MicroserviceError && error.statusCode >= 500) {
+      if (error instanceof MicroserviceError && (error.statusCode >= 500 || error.statusCode === 408)) {
         logger.warning(req, 'update_org_canonical_record', 'Upstream failure', { err: error, upstream_status: error.statusCode });
         res.status(502).json({ error: 'Unable to save changes. Please try again.' });
         return;

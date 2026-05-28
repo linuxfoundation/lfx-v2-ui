@@ -19,12 +19,24 @@ import { TooltipModule } from 'primeng/tooltip';
 
 import { InitialsPipe } from '@pipes/initials.pipe';
 import { OrgProfileService } from '@services/org-profile.service';
+import { OpenIntercomDirective } from '@shared/directives/open-intercom.directive';
 
 /** Spec 021 — Org Profile edit form (US2): reactive form with dirty-check + validation gate (FR-007), partial-update PUT (FR-008), `AccountContextService` propagation (FR-009), differentiated 403/502 toasts (FR-010). */
 @Component({
   selector: 'lfx-org-profile-edit',
   standalone: true,
-  imports: [ReactiveFormsModule, ButtonModule, InputTextModule, InputNumberModule, SelectModule, TextareaModule, ToastModule, TooltipModule, InitialsPipe],
+  imports: [
+    ReactiveFormsModule,
+    ButtonModule,
+    InputTextModule,
+    InputNumberModule,
+    SelectModule,
+    TextareaModule,
+    ToastModule,
+    TooltipModule,
+    InitialsPipe,
+    OpenIntercomDirective,
+  ],
   providers: [MessageService],
   templateUrl: './org-profile-edit.component.html',
 })
@@ -93,12 +105,6 @@ export class OrgProfileEditComponent implements OnInit {
         next: (updated) => {
           this.saving.set(false);
           this.form.enable({ emitEvent: false });
-          this.messageService.add({
-            severity: 'success',
-            summary: 'Profile updated',
-            detail: 'Your organization profile has been saved.',
-            life: 3000,
-          });
           this.saved.emit(updated);
         },
         error: (error: unknown) => {

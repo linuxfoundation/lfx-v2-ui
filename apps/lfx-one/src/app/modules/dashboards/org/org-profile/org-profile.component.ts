@@ -5,8 +5,10 @@ import { DatePipe } from '@angular/common';
 import { Component, computed, DestroyRef, inject, Injector, signal, Signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import type { OrgAddressesResponse, OrgCanonicalRecord } from '@lfx-one/shared/interfaces';
+import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
+import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { catchError, combineLatest, distinctUntilChanged, filter, forkJoin, of, switchMap, tap } from 'rxjs';
 
@@ -22,13 +24,15 @@ import { OrgProfileEditComponent } from './org-profile-edit.component';
 @Component({
   selector: 'lfx-org-profile',
   standalone: true,
-  imports: [DatePipe, SkeletonModule, ButtonModule, TooltipModule, OrgProfileEditComponent, DisplayValuePipe, InitialsPipe],
+  imports: [DatePipe, SkeletonModule, ButtonModule, ToastModule, TooltipModule, OrgProfileEditComponent, DisplayValuePipe, InitialsPipe],
+  providers: [MessageService],
   templateUrl: './org-profile.component.html',
 })
 export class OrgProfileComponent {
   private readonly accountContext = inject(AccountContextService);
   private readonly orgProfileService = inject(OrgProfileService);
   private readonly orgRoleGrants = inject(OrgRoleGrantsService);
+  private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
 
@@ -70,6 +74,12 @@ export class OrgProfileComponent {
     this.record.set(updated);
     this.accountContext.updateCanonicalRecord(updated);
     this.editMode.set(false);
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Profile updated',
+      detail: 'Your organization profile has been saved.',
+      life: 3000,
+    });
   }
 
   protected retry(): void {
