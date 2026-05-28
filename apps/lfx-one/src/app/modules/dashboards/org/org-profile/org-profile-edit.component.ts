@@ -57,8 +57,8 @@ export class OrgProfileEditComponent implements OnInit {
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly industryOptions = INDUSTRY_OPTIONS;
-  protected readonly sectorOptions = SECTOR_OPTIONS;
+  protected industryOptions: string[] = INDUSTRY_OPTIONS;
+  protected sectorOptions: string[] = SECTOR_OPTIONS;
   protected readonly descriptionMaxLength = ORG_DESCRIPTION_MAX_LENGTH;
 
   protected readonly saving = signal(false);
@@ -124,6 +124,8 @@ export class OrgProfileEditComponent implements OnInit {
 
   private initForm(): void {
     this.original = this.snapshotFromRecord(this.record());
+    this.industryOptions = this.withCurrentSelectOption(INDUSTRY_OPTIONS, this.original.industry);
+    this.sectorOptions = this.withCurrentSelectOption(SECTOR_OPTIONS, this.original.sector);
     this.form = this.fb.group({
       description: [this.original.description, [Validators.maxLength(this.descriptionMaxLength)]],
       website: [this.original.website],
@@ -188,6 +190,21 @@ export class OrgProfileEditComponent implements OnInit {
       industry: record.industry ?? '',
       sector: record.sector ?? '',
     };
+  }
+
+  /** Spec edge case — keep unrecognized backend values visible by injecting them into the dropdown list. */
+  private withCurrentSelectOption(options: string[], currentValue: string): string[] {
+    const value = currentValue.trim();
+    if (!value || options.includes(value)) {
+      return options;
+    }
+
+    const otherIndex = options.indexOf('Other');
+    if (otherIndex >= 0) {
+      return [...options.slice(0, otherIndex), value, ...options.slice(otherIndex)];
+    }
+
+    return [...options, value];
   }
 
   private computeDirty(current: OrgProfileEditableFields): boolean {

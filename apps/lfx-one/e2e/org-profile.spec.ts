@@ -207,8 +207,8 @@ test.describe('Org Profile — authenticated smoke set (S1/S2/S3/S4)', () => {
     await expect(editPage).toHaveAttribute('data-can-save', 'true');
 
     await page.getByTestId('org-profile-edit-save-button').click();
-    await expect(editPage).toHaveAttribute('data-saving', 'false');
     await expect(root).toHaveAttribute('data-mode', 'view');
+    await expect(editPage).toBeHidden();
     await expect(page.getByTestId('org-profile-description')).toContainText(updatedDescription);
   });
 
