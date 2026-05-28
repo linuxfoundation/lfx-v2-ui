@@ -23,7 +23,16 @@ import type { DecoratedPendingAction, Meeting, MeetingRsvp, PendingActionItem, R
 
 @Component({
   selector: 'lfx-pending-actions',
-  imports: [ButtonComponent, TagComponent, RsvpButtonGroupComponent, VoteBallotInlineComponent, PendingActionsDrawerComponent, SkeletonModule, ToastModule, RouterLink],
+  imports: [
+    ButtonComponent,
+    TagComponent,
+    RsvpButtonGroupComponent,
+    VoteBallotInlineComponent,
+    PendingActionsDrawerComponent,
+    SkeletonModule,
+    ToastModule,
+    RouterLink,
+  ],
   templateUrl: './pending-actions.component.html',
   styleUrl: './pending-actions.component.scss',
 })
