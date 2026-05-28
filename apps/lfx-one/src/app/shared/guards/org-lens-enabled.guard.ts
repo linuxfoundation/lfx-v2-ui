@@ -11,9 +11,6 @@ import { FeatureFlagService } from '../services/feature-flag.service';
 
 /** CanMatch guard for /org/* — waits for the feature-flag client to initialise so deep links don't race the async init. */
 export const orgLensEnabledGuard: CanMatchFn = async () => {
-  // TODO: remove this local-dev bypass before committing — restore LD flag check below
-  return true;
-
   const featureFlagService = inject(FeatureFlagService);
   const router = inject(Router);
 

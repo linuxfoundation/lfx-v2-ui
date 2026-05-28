@@ -28,6 +28,7 @@
         [class.ring-2]="activeStatFilter() === 'upcoming'"
         [class.ring-inset]="activeStatFilter() === 'upcoming'"
         [class.ring-blue-500]="activeStatFilter() === 'upcoming'"
+        [attr.aria-pressed]="activeStatFilter() === 'upcoming'"
         (click)="applyEventsStatFilter('upcoming')"
         data-testid="org-events-stat-upcoming"
         aria-label="Filter by upcoming events">
@@ -36,7 +37,7 @@
         </div>
         <div class="flex flex-col gap-0.5">
           <p class="text-xl font-medium" [class.text-gray-400]="eventsSummary() === null" [class.text-gray-900]="eventsSummary() !== null">
-            {{ eventsSummary()?.upcomingEvents ?? '&mdash;' }}
+            {{ eventsSummary()?.upcomingEvents ?? '—' }}
           </p>
           <p class="text-sm font-normal text-gray-900">Upcoming Events</p>
         </div>
@@ -50,6 +51,7 @@
         [class.ring-2]="activeStatFilter() === 'past'"
         [class.ring-inset]="activeStatFilter() === 'past'"
         [class.ring-blue-500]="activeStatFilter() === 'past'"
+        [attr.aria-pressed]="activeStatFilter() === 'past'"
         (click)="applyEventsStatFilter('past')"
         data-testid="org-events-stat-past"
         aria-label="Filter by past events">
@@ -58,7 +60,7 @@
         </div>
         <div class="flex flex-col gap-0.5">
           <p class="text-xl font-medium" [class.text-gray-400]="eventsSummary() === null" [class.text-gray-900]="eventsSummary() !== null">
-            {{ eventsSummary()?.pastEvents ?? '&mdash;' }}
+            {{ eventsSummary()?.pastEvents ?? '—' }}
           </p>
           <p class="text-sm font-normal text-gray-900">Past Events</p>
         </div>
@@ -72,6 +74,7 @@
         [class.ring-2]="activeStatFilter() === 'total'"
         [class.ring-inset]="activeStatFilter() === 'total'"
         [class.ring-blue-500]="activeStatFilter() === 'total'"
+        [attr.aria-pressed]="activeStatFilter() === 'total'"
         (click)="applyEventsStatFilter('total')"
         data-testid="org-events-stat-total"
         aria-label="Filter by total events">
@@ -80,7 +83,7 @@
         </div>
         <div class="flex flex-col gap-0.5">
           <p class="text-xl font-medium" [class.text-gray-400]="eventsSummary() === null" [class.text-gray-900]="eventsSummary() !== null">
-            {{ eventsSummary()?.totalEvents ?? '&mdash;' }}
+            {{ eventsSummary()?.totalEvents ?? '—' }}
           </p>
           <p class="text-sm font-normal text-gray-900">Total Events</p>
         </div>
