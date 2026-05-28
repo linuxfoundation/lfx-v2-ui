@@ -17,7 +17,6 @@ import { Request } from 'express';
 
 import { MicroserviceError, ServiceValidationError } from '../errors';
 import { buildNewsletterEmailHtml, buildNewsletterEmailText, NewsletterEmailChrome } from '../helpers/newsletter-email.helper';
-import { getEffectiveName, getEffectiveUsername } from '../utils/auth-helper';
 import { CommitteeService } from './committee.service';
 import { EmailServiceClient } from './email-service.client';
 import { logger } from './logger.service';
@@ -269,14 +268,12 @@ export class NewsletterService {
    */
   public async sendTest(
     req: Request,
-    payload: { subject: string; bodyHtml: string; toEmail: string; contextType: NewsletterContextType; contextUid: string; edReplyEmail: string }
+    payload: { subject: string; bodyHtml: string; toEmail: string; contextType: NewsletterContextType; contextUid: string }
   ): Promise<void> {
     const chrome = await this.resolveEmailChrome(req, payload.contextType, payload.contextUid);
     const chromeInput: NewsletterEmailChrome = {
       subject: payload.subject,
       bodyHtml: payload.bodyHtml,
-      edName: chrome.edName,
-      edReplyEmail: payload.edReplyEmail,
       displayName: chrome.displayName,
       logoUrl: chrome.logoUrl,
       contextType: payload.contextType,
@@ -298,10 +295,10 @@ export class NewsletterService {
    */
   private async fanOutEmails(
     req: Request,
-    newsletter: Pick<Newsletter, 'subject' | 'bodyHtml' | 'edReplyEmail' | 'contextType'>,
+    newsletter: Pick<Newsletter, 'subject' | 'bodyHtml' | 'contextType'>,
     recipients: NewsletterRecipient[],
     groupId: string,
-    chrome: { edName: string; displayName: string; logoUrl: string | undefined }
+    chrome: { displayName: string; logoUrl: string | undefined }
   ): Promise<{ sent: number; failures: NewsletterSendFailure[] }> {
     // Build the rendered HTML + text once; the chrome-wrapped output is the
     // same for every recipient (no personalization yet) so per-recipient
@@ -309,8 +306,6 @@ export class NewsletterService {
     const chromeInput: NewsletterEmailChrome = {
       subject: newsletter.subject,
       bodyHtml: newsletter.bodyHtml,
-      edName: chrome.edName,
-      edReplyEmail: newsletter.edReplyEmail,
       displayName: chrome.displayName,
       logoUrl: chrome.logoUrl,
       contextType: newsletter.contextType,
@@ -352,19 +347,16 @@ export class NewsletterService {
   }
 
   /**
-   * Resolve the per-send chrome (sender display name, foundation/project name,
-   * logo URL). edName comes from the OIDC session to match the in-app preview's
-   * `userService.user()?.name` path; displayName + logoUrl come from the
-   * project service (both foundations and projects are `Project` records
-   * upstream). Lookup failures degrade gracefully — the send is more important
+   * Resolve the per-send chrome (foundation/project name + logo URL) from the
+   * project service. Both foundations and projects are `Project` records
+   * upstream. Lookup failures degrade gracefully — the send is more important
    * than a polished header.
    */
   private async resolveEmailChrome(
     req: Request,
     contextType: NewsletterContextType,
     contextUid: string
-  ): Promise<{ edName: string; displayName: string; logoUrl: string | undefined }> {
-    const edName = getEffectiveName(req) || getEffectiveUsername(req) || 'Executive Director';
+  ): Promise<{ displayName: string; logoUrl: string | undefined }> {
     let displayName = contextType === 'foundation' ? 'Foundation' : 'Project';
     let logoUrl: string | undefined;
 
@@ -380,7 +372,7 @@ export class NewsletterService {
       });
     }
 
-    return { edName, displayName, logoUrl };
+    return { displayName, logoUrl };
   }
 
   /**

@@ -15,8 +15,6 @@ export interface NewsletterEmailChrome {
    * privileged source, sanitize upstream of this function.
    */
   bodyHtml: string;
-  edName: string;
-  edReplyEmail: string;
   displayName: string;
   logoUrl?: string;
   contextType: 'foundation' | 'project';
@@ -28,8 +26,6 @@ const COLOR_BLUE_500 = lfxColors.blue[500];
 const COLOR_BLUE_600 = lfxColors.blue[600];
 const COLOR_GRAY_50 = lfxColors.gray[50];
 const COLOR_GRAY_200 = lfxColors.gray[200];
-const COLOR_GRAY_400 = lfxColors.gray[400];
-const COLOR_GRAY_500 = lfxColors.gray[500];
 const COLOR_GRAY_700 = lfxColors.gray[700];
 const COLOR_GRAY_800 = lfxColors.gray[800];
 const COLOR_GRAY_900 = lfxColors.gray[900];
@@ -136,9 +132,7 @@ function escapeAttr(value: string): string {
 export function buildNewsletterEmailHtml(input: NewsletterEmailChrome): string {
   const fallbackDisplay = input.contextType === 'foundation' ? 'Foundation' : 'Project';
   const subjectSafe = escapeHtml(input.subject || 'Untitled');
-  const edNameSafe = escapeHtml(input.edName || 'Executive Director');
   const displayNameSafe = escapeHtml(input.displayName || fallbackDisplay);
-  const replyEmailSafe = escapeAttr(input.edReplyEmail);
   const styledBody = convertStandaloneCtas(inlineBodyStyles(input.bodyHtml));
 
   const logoCell = input.logoUrl
@@ -179,17 +173,7 @@ ${logoCell}
 </td>
 </tr>
 <tr>
-<td style="padding:24px 40px 0;font-size:13px;color:${COLOR_GRAY_500};font-family:${FONT_STACK};">From <strong style="color:${COLOR_GRAY_900};">${edNameSafe}</strong></td>
-</tr>
-<tr>
 <td style="padding:32px 40px;font-size:16px;color:${COLOR_GRAY_800};line-height:1.65;font-family:${FONT_STACK};">${styledBody}</td>
-</tr>
-<tr>
-<td style="background-color:${COLOR_GRAY_50};border-top:1px solid ${COLOR_GRAY_200};padding:24px 40px;font-size:12px;color:${COLOR_GRAY_500};font-family:${FONT_STACK};">
-<div style="margin-bottom:6px;">Sent by <strong style="color:${COLOR_GRAY_900};">${edNameSafe}</strong> on behalf of <strong style="color:${COLOR_GRAY_900};">${displayNameSafe}</strong>.</div>
-<div style="margin-bottom:6px;">To reply, email <a href="mailto:${replyEmailSafe}" style="color:${COLOR_BLUE_500};text-decoration:underline;">${replyEmailSafe}</a></div>
-<div style="color:${COLOR_GRAY_400};font-size:11px;">To unsubscribe from ${displayNameSafe} newsletters, reply with <strong>UNSUBSCRIBE</strong>. Delivered by <span style="font-weight:700;color:${COLOR_BLUE_500};letter-spacing:-0.02em;">LFX</span>.</div>
-</td>
 </tr>
 </table>
 </td>
@@ -200,25 +184,15 @@ ${logoCell}
 }
 
 /**
- * Plain-text counterpart of buildNewsletterEmailHtml. Mirrors the same
- * structure (From / On behalf of / body / reply-to / UNSUBSCRIBE) for clients
- * that prefer text/plain or for `View original` debugging.
+ * Plain-text counterpart of buildNewsletterEmailHtml. Mirrors the header
+ * (foundation/project · Newsletter, subject) and body for clients that prefer
+ * text/plain or for `View original` debugging.
  */
 export function buildNewsletterEmailText(input: NewsletterEmailChrome): string {
   const fallbackDisplay = input.contextType === 'foundation' ? 'Foundation' : 'Project';
-  const edName = input.edName || 'Executive Director';
   const displayName = input.displayName || fallbackDisplay;
+  const subject = input.subject || 'Untitled';
   const body = stripHtml(input.bodyHtml);
 
-  return [
-    `From: ${edName}`,
-    `On behalf of: ${displayName}`,
-    '',
-    body,
-    '',
-    '---',
-    `To reply, email ${input.edReplyEmail}`,
-    `To unsubscribe from ${displayName} newsletters, reply with UNSUBSCRIBE.`,
-    'Delivered by LFX.',
-  ].join('\n');
+  return [`${displayName} · Newsletter`, subject, '', body].join('\n');
 }
