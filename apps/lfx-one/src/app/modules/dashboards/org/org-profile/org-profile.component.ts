@@ -77,7 +77,10 @@ export class OrgProfileComponent {
   }
 
   private initLoadPipeline(): void {
-    const selectedUid$ = toObservable(computed(() => this.accountContext.selectedAccount()?.uid ?? null), { injector: this.injector });
+    const selectedUid$ = toObservable(
+      computed(() => this.accountContext.selectedAccount()?.uid ?? null),
+      { injector: this.injector }
+    );
     const retryTrigger$ = toObservable(this.retryTrigger, { injector: this.injector });
 
     combineLatest([
