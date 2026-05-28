@@ -68,25 +68,25 @@
         </div>
       </button>
 
-      <!-- Registered Events -->
+      <!-- Upcoming Events -->
       <button
         type="button"
         class="flex items-center gap-3 p-4 text-left w-full transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
-        [class.bg-blue-50]="activeStatFilter() === 'registered'"
-        [class.ring-2]="activeStatFilter() === 'registered'"
-        [class.ring-inset]="activeStatFilter() === 'registered'"
-        [class.ring-blue-500]="activeStatFilter() === 'registered'"
-        (click)="applyEventsStatFilter('registered')"
-        data-testid="org-events-stat-registered"
-        aria-label="Filter by registered events">
+        [class.bg-blue-50]="activeStatFilter() === 'upcoming'"
+        [class.ring-2]="activeStatFilter() === 'upcoming'"
+        [class.ring-inset]="activeStatFilter() === 'upcoming'"
+        [class.ring-blue-500]="activeStatFilter() === 'upcoming'"
+        (click)="applyEventsStatFilter('upcoming')"
+        data-testid="org-events-stat-upcoming"
+        aria-label="Filter by upcoming events">
         <div class="flex items-center justify-center w-11 h-11 rounded-full bg-emerald-100 text-emerald-600 flex-shrink-0">
-          <i class="fa-light fa-circle-check text-xl" aria-hidden="true"></i>
+          <i class="fa-light fa-calendar-arrow-right text-xl" aria-hidden="true"></i>
         </div>
         <div class="flex flex-col gap-0.5">
           <p class="text-xl font-medium" [class.text-gray-400]="eventsSummary() === null" [class.text-gray-900]="eventsSummary() !== null">
-            {{ eventsSummary()?.registeredEvents ?? '&mdash;' }}
+            {{ eventsSummary()?.upcomingEvents ?? '&mdash;' }}
           </p>
-          <p class="text-sm font-normal text-gray-900">Registered Events</p>
+          <p class="text-sm font-normal text-gray-900">Upcoming Events</p>
         </div>
       </button>
 

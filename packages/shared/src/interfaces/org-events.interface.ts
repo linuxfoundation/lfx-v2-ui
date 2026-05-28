@@ -7,7 +7,7 @@ import type { OffsetPaginatedResponse } from './api.interface';
 export type OrgEventsTabId = 'upcoming' | 'past';
 
 /** Stat-card filter identifier for the Org Events page. */
-export type OrgEventStatFilterId = 'total' | 'past' | 'registered';
+export type OrgEventStatFilterId = 'total' | 'past' | 'upcoming';
 
 /** Tab definition for the Org Events page. */
 export interface OrgEventsTabConfig {
@@ -49,7 +49,7 @@ export interface GetOrgEventsParams {
 export interface OrgEventsSummary {
   readonly totalEvents: number;
   readonly pastEvents: number;
-  readonly registeredEvents: number;
+  readonly upcomingEvents: number;
 }
 
 /** Backend options for OrgLensEventsService.getOrgEvents. */
