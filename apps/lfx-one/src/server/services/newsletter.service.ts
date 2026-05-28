@@ -370,8 +370,8 @@ export class NewsletterService {
 
     try {
       const project = await this.projectService.getProjectById(req, contextUid, false);
-      displayName = project?.name || displayName;
-      logoUrl = project?.logo_url || undefined;
+      displayName = project.name || displayName;
+      logoUrl = project.logo_url || undefined;
     } catch (error) {
       logger.warning(req, 'newsletter_resolve_chrome', 'Failed to resolve project chrome, using bare defaults', {
         context_type: contextType,
