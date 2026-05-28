@@ -302,7 +302,7 @@
 
                 <!-- Expanded search term rows -->
                 @if (kwExpanded) {
-                  @for (st of row.searchTerms; track $index) {
+                  @for (st of row.searchTerms; track st.searchTerm + '|' + st.matchType) {
                     <div
                       class="flex items-center gap-2 border-b border-gray-50 bg-gray-50/50 py-2 pl-6"
                       role="row"

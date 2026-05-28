@@ -65,7 +65,9 @@ import {
   HealthMetricsAggregatedRow,
   HealthMetricsDailyResponse,
   HealthMetricsRange,
+  KeywordAttributionRow,
   KeywordPerformanceResponse,
+  KeywordPerformanceRow,
   KeywordSummary,
   LifecycleStage,
   MarketingAttributionChannel,
@@ -5959,6 +5961,7 @@ export class ProjectService {
         AND REPORT_DATE >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
       GROUP BY KEYWORD_TEXT, KEYWORD_MATCH_TYPE, RECORD_TYPE, SEARCH_TERM, SEARCH_TERM_MATCH_TYPE
       ORDER BY SPEND DESC
+      LIMIT 500
       `;
 
       const attrQuery = `
@@ -5977,53 +5980,27 @@ export class ProjectService {
         AND STAT_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
       GROUP BY KEYWORD_TEXT, KEYWORD_MATCH_TYPE
       ORDER BY KEYWORD_SPEND DESC
+      LIMIT 500
       `;
 
-      interface PerfRow {
-        KEYWORD_TEXT: string;
-        KEYWORD_MATCH_TYPE: string;
-        RECORD_TYPE: string;
-        SEARCH_TERM: string | null;
-        SEARCH_TERM_MATCH_TYPE: string | null;
-        CLICKS: number;
-        SPEND: number;
-        IMPRESSIONS: number;
-        CONVERSIONS: number;
-        CONVERSIONS_VALUE: number;
-        CTR: number;
-        CPC: number;
-        CONVERSION_RATE: number;
-      }
-
-      interface AttrRow {
-        KEYWORD_TEXT: string;
-        KEYWORD_MATCH_TYPE: string;
-        KEYWORD_CLICKS: number;
-        KEYWORD_SPEND: number;
-        KEYWORD_IMPRESSIONS: number;
-        CLICK_SHARE_PCT: number;
-        ATTRIBUTED_LT_REVENUE: number;
-        ATTRIBUTED_LT_CONVERSIONS: number;
-        ATTRIBUTED_LT_ROAS: number;
-      }
-
       const [perfResult, attrResult] = await Promise.all([
-        this.snowflakeService.execute<PerfRow>(perfQuery, [foundationSlug]),
-        this.snowflakeService.execute<AttrRow>(attrQuery, [foundationSlug]).catch((error) => {
+        this.snowflakeService.execute<KeywordPerformanceRow>(perfQuery, [foundationSlug]),
+        this.snowflakeService.execute<KeywordAttributionRow>(attrQuery, [foundationSlug]).catch((error) => {
           logger.warning(undefined, 'get_keyword_performance', 'Attribution query failed, degrading gracefully', {
             foundation_slug: foundationSlug,
             err: error,
           });
-          return { rows: [] as AttrRow[] };
+          return { rows: [] as KeywordAttributionRow[] };
         }),
       ]);
 
-      const attrMap = new Map<string, AttrRow>();
+      const attrMap = new Map<string, KeywordAttributionRow>();
       for (const row of attrResult.rows) {
         attrMap.set(`${row.KEYWORD_TEXT}|${row.KEYWORD_MATCH_TYPE}`, row);
       }
 
       const keywordMap = new Map<string, KeywordSummary>();
+      const searchTermRows: KeywordPerformanceRow[] = [];
       let totalClicks = 0;
       let totalSpend = 0;
       let totalImpressions = 0;
@@ -6032,20 +6009,7 @@ export class ProjectService {
 
       for (const row of perfResult.rows) {
         if (row.RECORD_TYPE === 'search_term') {
-          const parentKey = `${row.KEYWORD_TEXT}|${row.KEYWORD_MATCH_TYPE}`;
-          const parent = keywordMap.get(parentKey);
-          if (parent && row.SEARCH_TERM) {
-            parent.searchTerms.push({
-              searchTerm: row.SEARCH_TERM,
-              matchType: row.SEARCH_TERM_MATCH_TYPE ?? '',
-              clicks: row.CLICKS ?? 0,
-              spend: Math.round((row.SPEND ?? 0) * 100) / 100,
-              impressions: row.IMPRESSIONS ?? 0,
-              ctr: Math.round((row.CTR ?? 0) * 100) / 100,
-              cpc: Math.round((row.CPC ?? 0) * 100) / 100,
-              conversions: row.CONVERSIONS ?? 0,
-            });
-          }
+          searchTermRows.push(row);
           continue;
         }
 
@@ -6079,6 +6043,23 @@ export class ProjectService {
         totalAttributedRevenue += summary.attributedRevenue;
       }
 
+      for (const row of searchTermRows) {
+        const parentKey = `${row.KEYWORD_TEXT}|${row.KEYWORD_MATCH_TYPE}`;
+        const parent = keywordMap.get(parentKey);
+        if (parent && row.SEARCH_TERM) {
+          parent.searchTerms.push({
+            searchTerm: row.SEARCH_TERM,
+            matchType: row.SEARCH_TERM_MATCH_TYPE ?? '',
+            clicks: row.CLICKS ?? 0,
+            spend: Math.round((row.SPEND ?? 0) * 100) / 100,
+            impressions: row.IMPRESSIONS ?? 0,
+            ctr: Math.round((row.CTR ?? 0) * 100) / 100,
+            cpc: Math.round((row.CPC ?? 0) * 100) / 100,
+            conversions: row.CONVERSIONS ?? 0,
+          });
+        }
+      }
+
       const keywords = [...keywordMap.values()].sort((a, b) => b.spend - a.spend);
 
       logger.debug(undefined, 'get_keyword_performance', 'Keyword performance fetched', {
@@ -6099,7 +6080,7 @@ export class ProjectService {
     } catch (error) {
       logger.warning(undefined, 'get_keyword_performance', 'Failed to fetch keyword performance, returning empty', {
         foundation_slug: foundationSlug,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        err: error,
       });
       return { keywords: [], totals: { clicks: 0, spend: 0, impressions: 0, conversions: 0, attributedRevenue: 0 } };
     }

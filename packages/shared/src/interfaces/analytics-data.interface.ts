@@ -3354,10 +3354,6 @@ export interface KeywordPerformanceRow {
   CTR: number;
   CPC: number;
   CONVERSION_RATE: number;
-  FOUNDATION_ID: string;
-  FOUNDATION_NAME: string;
-  FOUNDATION_SLUG: string;
-  CHANNEL: string;
 }
 
 /**
@@ -3367,24 +3363,13 @@ export interface KeywordPerformanceRow {
 export interface KeywordAttributionRow {
   KEYWORD_TEXT: string;
   KEYWORD_MATCH_TYPE: string;
-  STAT_MONTH: string;
   KEYWORD_CLICKS: number;
   KEYWORD_SPEND: number;
   KEYWORD_IMPRESSIONS: number;
   CLICK_SHARE_PCT: number;
-  ATTRIBUTED_FT_REVENUE: number;
   ATTRIBUTED_LT_REVENUE: number;
-  ATTRIBUTED_LINEAR_REVENUE: number;
-  ATTRIBUTED_TIME_DECAY_REVENUE: number;
-  ATTRIBUTED_FT_CONVERSIONS: number;
   ATTRIBUTED_LT_CONVERSIONS: number;
   ATTRIBUTED_LT_ROAS: number;
-  GOOGLE_CONVERSIONS: number;
-  GOOGLE_CONVERSIONS_VALUE: number;
-  FOUNDATION_ID: string;
-  FOUNDATION_NAME: string;
-  FOUNDATION_SLUG: string;
-  CHANNEL: string;
 }
 
 /** Aggregated keyword row for the UI table. */
