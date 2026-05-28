@@ -178,41 +178,5 @@
     </section>
   }
 
-  <!-- Leaderboards — always visible regardless of active tab -->
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4" data-testid="org-events-leaderboards">
-
-    <!-- Attendee Leaderboard -->
-    <lfx-card data-testid="org-events-attendee-leaderboard">
-      <ng-template #title>
-        <div class="flex items-center gap-2 text-base font-semibold text-gray-900">
-          <i class="fa-light fa-users text-gray-500" aria-hidden="true"></i>
-          Top Event Attendees &mdash; Last 12 Months
-        </div>
-      </ng-template>
-      <lfx-empty-state
-        [withCard]="false"
-        icon="fa-light fa-users"
-        title="Coming soon"
-        subtitle="Attendee leaderboard is being built."
-        data-testid="org-events-attendee-leaderboard-coming-soon" />
-    </lfx-card>
-
-    <!-- Speaker Leaderboard -->
-    <lfx-card data-testid="org-events-speaker-leaderboard">
-      <ng-template #title>
-        <div class="flex items-center gap-2 text-base font-semibold text-gray-900">
-          <i class="fa-light fa-microphone text-gray-500" aria-hidden="true"></i>
-          Top Event Speakers &mdash; Last 12 Months
-        </div>
-      </ng-template>
-      <lfx-empty-state
-        [withCard]="false"
-        icon="fa-light fa-microphone"
-        title="Coming soon"
-        subtitle="Speaker leaderboard is being built."
-        data-testid="org-events-speaker-leaderboard-coming-soon" />
-    </lfx-card>
-
-  </div>
 
 </main>
