@@ -125,25 +125,59 @@ export class SnowflakeService {
           const pool = await this.ensurePool();
 
           try {
-            // Execute query with parameterized binds
+            // Execute query with parameterized binds.
+            // Note: the Snowflake Node.js SDK does not reliably apply the `warehouse`
+            // connection option to the session when using SNOWFLAKE_JWT authentication
+            // with connection pooling.  We issue USE WAREHOUSE explicitly on each
+            // borrowed connection before running the caller's query.
             const result: any = await new Promise((resolve, reject) => {
               pool.use(async (connection: Connection) => {
-                connection.execute({
-                  sqlText,
-                  binds: binds as any[],
-                  fetchAsString: options?.fetchAsString,
-                  complete: (err: SnowflakeError | undefined, stmt: RowStatement, rows: any[] | undefined) => {
-                    if (err) {
-                      reject(err);
-                    } else {
-                      resolve({
-                        rows,
-                        metadata: stmt.getColumns(),
-                        statementHandle: stmt.getQueryId(),
+                try {
+                  // The Snowflake Node.js SDK does not reliably apply `role` or
+                  // `warehouse` from ConnectionOptions to the session when using
+                  // SNOWFLAKE_JWT authentication with connection pooling.  Issue
+                  // both USE statements explicitly on each borrowed connection.
+                  const role = process.env['SNOWFLAKE_ROLE'];
+                  if (role) {
+                    await new Promise<void>((res, rej) => {
+                      connection.execute({
+                        // Double-quote identifiers to handle uppercase names correctly.
+                        sqlText: `USE ROLE "${role}"`,
+                        complete: (err: SnowflakeError | undefined) => (err ? rej(err) : res()),
                       });
-                    }
-                  },
-                });
+                    });
+                  }
+
+                  const warehouse = process.env['SNOWFLAKE_WAREHOUSE'];
+                  if (warehouse) {
+                    await new Promise<void>((res, rej) => {
+                      connection.execute({
+                        sqlText: `USE WAREHOUSE "${warehouse}"`,
+                        complete: (err: SnowflakeError | undefined) => (err ? rej(err) : res()),
+                      });
+                    });
+                  }
+
+                  // Execute the caller's read-only query.
+                  connection.execute({
+                    sqlText,
+                    binds: binds as any[],
+                    fetchAsString: options?.fetchAsString,
+                    complete: (err: SnowflakeError | undefined, stmt: RowStatement, rows: any[] | undefined) => {
+                      if (err) {
+                        reject(err);
+                      } else {
+                        resolve({
+                          rows,
+                          metadata: stmt.getColumns(),
+                          statementHandle: stmt.getQueryId(),
+                        });
+                      }
+                    },
+                  });
+                } catch (err) {
+                  reject(err);
+                }
               });
             });
 
