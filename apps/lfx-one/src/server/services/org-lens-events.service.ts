@@ -138,8 +138,8 @@ export class OrgLensEventsService {
     return { data, total, pageSize, offset };
   }
 
-  /** GET /api/orgs/:accountId/lens/events/summary — total / past / registered counts for the stat strip. */
-  public async getOrgEventsSummary(req: Request, accountId: string, userEmail: string): Promise<OrgEventsSummary> {
+  /** GET /api/orgs/:accountId/lens/events/summary — org-wide total / past / upcoming counts for the stat strip. */
+  public async getOrgEventsSummary(req: Request, accountId: string): Promise<OrgEventsSummary> {
     logger.debug(req, 'get_org_lens_events_summary', 'Building org events summary query', { account_id: accountId });
 
     const sql = `
@@ -150,14 +150,9 @@ export class OrgLensEventsService {
         LIMIT 1
       )
       SELECT
-        COUNT(DISTINCT er.EVENT_ID)                                              AS TOTAL_EVENTS,
-        COUNT(DISTINCT CASE WHEN er.IS_PAST_EVENT = TRUE THEN er.EVENT_ID END)  AS PAST_EVENTS,
-        (
-          SELECT COUNT(DISTINCT EVENT_ID)
-          FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS
-          WHERE USER_EMAIL = ?
-            AND REGISTRATION_STATUS = 'Accepted'
-        )                                                                        AS REGISTERED_EVENTS
+        COUNT(DISTINCT er.EVENT_ID)                                               AS TOTAL_EVENTS,
+        COUNT(DISTINCT CASE WHEN er.IS_PAST_EVENT = TRUE  THEN er.EVENT_ID END)  AS PAST_EVENTS,
+        COUNT(DISTINCT CASE WHEN er.IS_PAST_EVENT = FALSE THEN er.EVENT_ID END)  AS UPCOMING_EVENTS
       FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
       JOIN account a ON UPPER(er.ACCOUNT_NAME) = UPPER(a.ACCOUNT_NAME)
       WHERE er.REGISTRATION_STATUS = 'Accepted'
@@ -166,25 +161,25 @@ export class OrgLensEventsService {
     interface SummaryRow {
       TOTAL_EVENTS: number;
       PAST_EVENTS: number;
-      REGISTERED_EVENTS: number;
+      UPCOMING_EVENTS: number;
     }
 
     let result;
     try {
-      result = await this.snowflakeService.execute<SummaryRow>(sql, [accountId, userEmail]);
+      result = await this.snowflakeService.execute<SummaryRow>(sql, [accountId]);
     } catch (error) {
       logger.warning(req, 'get_org_lens_events_summary', 'Snowflake query failed, returning zero counts', {
         error: error instanceof Error ? error.message : String(error),
         account_id: accountId,
       });
-      return { totalEvents: 0, pastEvents: 0, registeredEvents: 0 };
+      return { totalEvents: 0, pastEvents: 0, upcomingEvents: 0 };
     }
 
     const row = result.rows[0];
     const summary: OrgEventsSummary = {
       totalEvents: row?.TOTAL_EVENTS ?? 0,
       pastEvents: row?.PAST_EVENTS ?? 0,
-      registeredEvents: row?.REGISTERED_EVENTS ?? 0,
+      upcomingEvents: row?.UPCOMING_EVENTS ?? 0,
     };
 
     logger.debug(req, 'get_org_lens_events_summary', 'Fetched org events summary', { ...summary });

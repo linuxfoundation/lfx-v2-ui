@@ -32,7 +32,7 @@ export class OrgLensEventsController {
         throw new AuthenticationError('User authentication required', { operation: 'get_org_lens_events_summary' });
       }
 
-      const summary = await this.service.getOrgEventsSummary(req, accountId, userEmail);
+      const summary = await this.service.getOrgEventsSummary(req, accountId);
 
       logger.success(req, 'get_org_lens_events_summary', startTime, { account_id: accountId });
 
