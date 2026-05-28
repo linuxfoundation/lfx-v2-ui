@@ -3,9 +3,8 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { inject, Injectable, PLATFORM_ID } from '@angular/core';
+import { inject, Injectable, PLATFORM_ID, TransferState } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { TransferState } from '@angular/core';
 import type { Stripe } from '@stripe/stripe-js';
 
 import { getRuntimeConfig } from '@app/shared/providers/runtime-config.provider';

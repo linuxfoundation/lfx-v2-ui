@@ -3,7 +3,7 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { afterNextRender, Component, ElementRef, inject, OnDestroy, signal, viewChild } from '@angular/core';
+import { afterNextRender, Component, computed, ElementRef, inject, OnDestroy, signal, viewChild } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import type { StripeCardCvcElement, StripeCardExpiryElement, StripeCardNumberElement } from '@stripe/stripe-js';
 
@@ -57,6 +57,8 @@ export class AddPaymentCardDialogComponent implements OnDestroy {
   // ─── Submission state ─────────────────────────────────────────────────────
   protected readonly stripeError = signal('');
   protected readonly submitting = signal(false);
+  protected readonly elementsReady = signal(false);
+  protected readonly formReady = computed(() => this.elementsReady() && this.cardNumberComplete() && this.cardExpiryComplete() && this.cardCvcComplete());
 
   public constructor() {
     // afterNextRender runs only in the browser, after the view is available — SSR safe.
@@ -128,7 +130,12 @@ export class AddPaymentCardDialogComponent implements OnDestroy {
       const expiryEl = this.cardExpiryContainer()?.nativeElement;
       const cvcEl = this.cardCvcContainer()?.nativeElement;
 
-      if (!stripe || !numberEl || !expiryEl || !cvcEl) return;
+      if (!stripe || !numberEl || !expiryEl || !cvcEl) {
+        if (!stripe) {
+          this.stripeError.set('Payment fields are unavailable. Please refresh the page or try again later.');
+        }
+        return;
+      }
 
       const elements = stripe.elements();
 
@@ -160,12 +167,15 @@ export class AddPaymentCardDialogComponent implements OnDestroy {
       });
       this.cardCvcEl.on('focus', () => this.cardCvcFocused.set(true));
       this.cardCvcEl.on('blur', () => this.cardCvcFocused.set(false));
+
+      this.elementsReady.set(true);
     } catch (err) {
       this.stripeError.set(extractErrorMessage(err, 'Failed to mount Stripe elements. Please try again.'));
     }
   }
 
   private destroyElements(): void {
+    this.elementsReady.set(false);
     this.cardNumberEl?.destroy();
     this.cardExpiryEl?.destroy();
     this.cardCvcEl?.destroy();
