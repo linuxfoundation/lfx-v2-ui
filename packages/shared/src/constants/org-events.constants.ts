@@ -21,5 +21,7 @@ export const ORG_EVENTS_STATUS_OPTIONS: FilterOption[] = [
   { label: 'All Statuses', value: null },
   { label: 'Not Registered', value: 'not-registered' },
   { label: 'Registered', value: 'registered' },
-  { label: 'Attended', value: 'attended' },
 ];
+
+/** Valid org event status values for server-side validation. */
+export const VALID_ORG_EVENT_STATUS_VALUES: ReadonlySet<string> = new Set(['registered', 'not-registered']);
