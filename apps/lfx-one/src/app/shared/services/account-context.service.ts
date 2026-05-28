@@ -90,7 +90,13 @@ export class AccountContextService {
 
   public setAccount(account: Account): void {
     const live = this.liveAccounts().get(account.accountId);
-    const next = live ?? account;
+    const next = live
+      ? {
+          ...live,
+          uid: account.uid ?? live.uid ?? null,
+          parentUid: account.parentUid ?? live.parentUid ?? null,
+        }
+      : account;
     this.selectedAccount.set(next);
     this.persistToStorage(next);
   }
@@ -190,7 +196,11 @@ export class AccountContextService {
         const current = this.selectedAccount();
         const liveCurrent = live.get(current.accountId);
         if (liveCurrent) {
-          this.selectedAccount.set(liveCurrent);
+          this.selectedAccount.set({
+            ...liveCurrent,
+            uid: current.uid ?? liveCurrent.uid ?? null,
+            parentUid: current.parentUid ?? liveCurrent.parentUid ?? null,
+          });
         } else if (!current.accountId) {
           const firstSeed = this.userOrganizations()[0];
           if (firstSeed) {

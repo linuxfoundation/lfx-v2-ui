@@ -87,16 +87,28 @@ export class OrgProfileComponent {
   }
 
   private initLoadPipeline(): void {
-    const selectedUid$ = toObservable(
-      computed(() => this.accountContext.selectedAccount()?.uid ?? null),
+    const selectedOrg$ = toObservable(
+      computed(() => {
+        const account = this.accountContext.selectedAccount();
+        if (!account) {
+          return null;
+        }
+        if (account.uid) {
+          return { kind: 'uid' as const, id: account.uid };
+        }
+        if (account.accountId) {
+          return { kind: 'sfid' as const, id: account.accountId };
+        }
+        return null;
+      }),
       { injector: this.injector }
     );
     const retryTrigger$ = toObservable(this.retryTrigger, { injector: this.injector });
 
     combineLatest([
-      selectedUid$.pipe(
-        filter((uid): uid is string => !!uid),
-        distinctUntilChanged()
+      selectedOrg$.pipe(
+        filter((org): org is { kind: 'uid'; id: string } | { kind: 'sfid'; id: string } => !!org),
+        distinctUntilChanged((a, b) => a.kind === b.kind && a.id === b.id)
       ),
       retryTrigger$,
     ])
@@ -108,17 +120,19 @@ export class OrgProfileComponent {
           // Exiting edit mode whenever the underlying org changes preserves the "discard unsaved changes" guarantee (FR-019).
           this.editMode.set(false);
         }),
-        switchMap(([uid]) =>
-          forkJoin({
-            record: this.orgProfileService.getCanonicalRecord(uid),
-            addresses: this.orgProfileService.getAddresses(uid).pipe(catchError(() => of(null))),
+        switchMap(([org]) => {
+          const record$ = org.kind === 'uid' ? this.orgProfileService.getCanonicalRecord(org.id) : this.orgProfileService.getCanonicalRecordByAccountId(org.id);
+
+          return forkJoin({
+            record: record$,
+            addresses: record$.pipe(switchMap((record) => this.orgProfileService.getAddresses(record.uid).pipe(catchError(() => of(null))))),
           }).pipe(
             catchError(() => {
               this.loadState.set('error');
               return of(null);
             })
-          )
-        ),
+          );
+        }),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((result) => {
@@ -131,6 +145,7 @@ export class OrgProfileComponent {
 
   private computeUrlHref(raw: string | null): string | null {
     if (!raw) return null;
-    return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    const trimmed = raw.trim();
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
   }
 }

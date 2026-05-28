@@ -117,8 +117,15 @@ export class OrgProfileEditComponent implements OnInit {
       });
   }
 
-  protected onFieldBlur(field: 'description' | 'numberOfEmployees' | 'crunchBaseUrl'): void {
-    this.form.get(field)?.markAsTouched();
+  protected onFieldBlur(field: 'description' | 'numberOfEmployees' | 'crunchBaseUrl' | 'website'): void {
+    const control = this.form.get(field);
+    control?.markAsTouched();
+    if (field === 'website' || field === 'crunchBaseUrl') {
+      const trimmed = this.normalizeUrlField(String(control?.value ?? ''));
+      if (trimmed !== control?.value) {
+        control?.setValue(trimmed, { emitEvent: true });
+      }
+    }
     this.refreshFieldFlags();
   }
 
@@ -184,9 +191,9 @@ export class OrgProfileEditComponent implements OnInit {
   private snapshotFromRecord(record: OrgCanonicalRecord): OrgProfileEditableFields {
     return {
       description: record.description ?? '',
-      website: record.website ?? '',
+      website: this.normalizeUrlField(record.website ?? ''),
       numberOfEmployees: record.numberOfEmployees ?? null,
-      crunchBaseUrl: record.crunchBaseUrl ?? '',
+      crunchBaseUrl: this.normalizeUrlField(record.crunchBaseUrl ?? ''),
       industry: record.industry ?? '',
       sector: record.sector ?? '',
     };
@@ -208,25 +215,39 @@ export class OrgProfileEditComponent implements OnInit {
   }
 
   private computeDirty(current: OrgProfileEditableFields): boolean {
+    const normalized = this.normalizeEditableFields(current);
     return (
-      current.description !== this.original.description ||
-      current.website !== this.original.website ||
-      current.numberOfEmployees !== this.original.numberOfEmployees ||
-      current.crunchBaseUrl !== this.original.crunchBaseUrl ||
-      current.industry !== this.original.industry ||
-      current.sector !== this.original.sector
+      normalized.description !== this.original.description ||
+      normalized.website !== this.original.website ||
+      normalized.numberOfEmployees !== this.original.numberOfEmployees ||
+      normalized.crunchBaseUrl !== this.original.crunchBaseUrl ||
+      normalized.industry !== this.original.industry ||
+      normalized.sector !== this.original.sector
     );
   }
 
   /** Build partial-update payload by including only changed fields; null/empty values pass through so users can clear upstream values. */
   private buildPartialPayload(current: OrgProfileEditableFields): OrgUpdateRequest {
+    const normalized = this.normalizeEditableFields(current);
     const payload: OrgUpdateRequest = {};
-    if (current.description !== this.original.description) payload.description = current.description;
-    if (current.website !== this.original.website) payload.website = current.website;
-    if (current.numberOfEmployees !== this.original.numberOfEmployees) payload.numberOfEmployees = current.numberOfEmployees;
-    if (current.crunchBaseUrl !== this.original.crunchBaseUrl) payload.crunchBaseUrl = current.crunchBaseUrl;
-    if (current.industry !== this.original.industry) payload.industry = current.industry;
-    if (current.sector !== this.original.sector) payload.sector = current.sector;
+    if (normalized.description !== this.original.description) payload.description = normalized.description;
+    if (normalized.website !== this.original.website) payload.website = normalized.website;
+    if (normalized.numberOfEmployees !== this.original.numberOfEmployees) payload.numberOfEmployees = normalized.numberOfEmployees;
+    if (normalized.crunchBaseUrl !== this.original.crunchBaseUrl) payload.crunchBaseUrl = normalized.crunchBaseUrl;
+    if (normalized.industry !== this.original.industry) payload.industry = normalized.industry;
+    if (normalized.sector !== this.original.sector) payload.sector = normalized.sector;
     return payload;
+  }
+
+  private normalizeEditableFields(fields: OrgProfileEditableFields): OrgProfileEditableFields {
+    return {
+      ...fields,
+      website: this.normalizeUrlField(fields.website),
+      crunchBaseUrl: this.normalizeUrlField(fields.crunchBaseUrl),
+    };
+  }
+
+  private normalizeUrlField(value: string): string {
+    return value.trim();
   }
 }

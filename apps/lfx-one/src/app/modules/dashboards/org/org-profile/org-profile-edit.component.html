@@ -67,6 +67,7 @@
               formControlName="website"
               placeholder="example.com"
               class="flex-1 border-0 focus:ring-0"
+              (blur)="onFieldBlur('website')"
               data-testid="org-profile-edit-website-input" />
           </div>
         </div>
