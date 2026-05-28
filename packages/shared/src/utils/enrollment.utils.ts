@@ -1,8 +1,6 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-// Generated with [Claude Code](https://claude.ai/code)
-
 import { parseLocalDateString } from './date-time.utils';
 import { EnrollmentDisplayStatus, IndividualEnrollment } from '../interfaces/enrollment.interface';
 

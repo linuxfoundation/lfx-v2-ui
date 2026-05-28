@@ -57,5 +57,3 @@ async function globalSetup(config: FullConfig) {
 }
 
 export default globalSetup;
-
-// Generated with [Claude Code](https://claude.ai/code)

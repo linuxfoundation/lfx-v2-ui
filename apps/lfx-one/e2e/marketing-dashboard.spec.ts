@@ -700,5 +700,3 @@ test.describe('API Response Validation', () => {
     }
   });
 });
-
-// Generated with [Claude Code](https://claude.ai/code)

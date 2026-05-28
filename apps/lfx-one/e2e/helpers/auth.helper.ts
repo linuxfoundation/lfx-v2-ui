@@ -97,5 +97,3 @@ export const TEST_CREDENTIALS: AuthCredentials = {
   username: process.env.TEST_USERNAME || '',
   password: process.env.TEST_PASSWORD || '',
 };
-
-// Generated with [Claude Code](https://claude.ai/code)

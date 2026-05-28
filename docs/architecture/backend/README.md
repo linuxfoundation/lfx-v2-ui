@@ -185,8 +185,9 @@ export const getItems = async (req: Request, res: Response, next: NextFunction) 
     logger.success(req, 'get_items', startTime, { count: result.data.length });
     res.json(result);
   } catch (error) {
-    logger.error(req, 'get_items', startTime, error);
-    next(error); // Never res.status(500).json() — use next(error)
+    // Do NOT call logger.error() here — apiErrorHandler logs centrally.
+    // Use bare `next(error)`. Never `res.status(500).json()`.
+    return next(error);
   }
 };
 ```
@@ -210,7 +211,7 @@ export class ItemService {
 
 ### Logging Rules
 
-- **Controllers**: `logger.startOperation()` → `logger.success()` / `logger.error()` with `startTime`
+- **Controllers**: `logger.startOperation()` → `logger.success()` on success; bare `return next(error)` in catch blocks. Do NOT call `logger.error()` in controller catch blocks — `apiErrorHandler` logs all errors centrally (exception: SSE/streaming controllers that handle their own response, since `apiErrorHandler` is never reached).
 - **Services**: `logger.debug()` for tracing, `logger.info()` for significant operations, `logger.warning()` for graceful errors
 - **Never** import `serverLogger` directly — always use `logger` from `logger.service.ts`
 

@@ -170,5 +170,3 @@ test.describe('Identities Verify Flow', () => {
     });
   });
 });
-
-// Generated with [Claude Code](https://claude.ai/code)

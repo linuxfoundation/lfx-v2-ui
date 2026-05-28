@@ -255,7 +255,7 @@ This means: 0 INFO lines for read endpoints, 1 INFO line for write endpoints, al
 
 **When:** Critical failures requiring immediate attention
 
-- **In Controllers**: HTTP operation failures (via `logger.error()` with startTime)
+- **In Controllers**: HTTP operation failures are logged centrally by `apiErrorHandler` middleware. Controllers should NOT call `logger.error()` in catch blocks — use bare `return next(error)`. (Exception: SSE/streaming controllers that handle their own response.)
 - System failures, unhandled exceptions
 - Operations that cannot continue
 - **NOT** for validation errors (handled at WARN by `apiErrorHandler`)
@@ -319,11 +319,9 @@ export class MeetingController {
 
       res.status(201).json(meeting);
     } catch (error) {
-      // Log error — apiErrorHandler will skip if already logged here
-      logger.error(req, 'create_meeting', startTime, error, {
-        project_uid: req.body.project_uid,
-      });
-      next(error);
+      // Do NOT call logger.error() here — apiErrorHandler logs all errors centrally
+      // with full structured context. Use bare next(error).
+      return next(error);
     }
   }
 }
@@ -409,16 +407,18 @@ for (const [category, persona] of Object.entries(COMMITTEE_CATEGORY_TO_PERSONA))
 
 ### Controller-Level Error Logging
 
-Controllers log errors before passing them to middleware:
+**Standard controllers (default):** Do NOT call `logger.error()` in catch blocks. Use bare `next(error)`. The `apiErrorHandler` middleware logs all errors centrally with full structured context (error type, status code, request ID, path, method). Calling `logger.error()` before `next(error)` is a reviewer-flagged anti-pattern.
 
 ```typescript
 try {
   // ... operation
 } catch (error) {
-  logger.error(req, 'operation_name', startTime, error, metadata);
-  next(error); // Pass to error middleware
+  // Do NOT call logger.error() here — apiErrorHandler logs centrally
+  return next(error); // Pass to error middleware
 }
 ```
+
+**Exception — SSE / streaming controllers:** Controllers that handle their own response in the catch block (e.g., SSE streaming with `res.end()`) must log errors themselves since `apiErrorHandler` is never reached. The middleware's `skipIfLogged` option below exists primarily to make those legacy paths safe; it is not an invitation to log in every catch block.
 
 ### Error Middleware with Severity-Based Logging
 
@@ -478,11 +478,15 @@ export function apiErrorHandler(error: Error, req: Request, res: Response, next:
 
 ### How Duplicate Prevention Works
 
-1. Controller logs error: `logger.error(req, 'create_meeting', startTime, error, metadata)`
+Standard controllers no longer log in catch blocks, so `apiErrorHandler` is the single source of error logs. For the legacy/SSE paths where a controller does call `logger.error()` before delegating to the middleware, `skipIfLogged` prevents a double log:
+
+1. (Legacy/SSE only) Controller logs error: `logger.error(req, 'create_meeting', startTime, error, metadata)`
 2. LoggerService marks operation as "logged" in WeakMap
 3. Error middleware tries to log: `logger.error(req, operation, Date.now(), error, metadata, { skipIfLogged: true })`
 4. LoggerService checks if already logged → skips if true
 5. Result: Single error log, no duplicates
+
+For the **default** case (bare `next(error)` in catch), step 1 does not happen and step 3 is the only log emitted.
 
 ## ⏱️ Duration Tracking
 

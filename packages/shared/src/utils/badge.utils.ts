@@ -1,8 +1,6 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-// Generated with [Claude Code](https://claude.ai/code)
-
 import { BADGE_FILTER_OPTIONS } from '../constants/badge.constants';
 import { Badge, BadgeCategory } from '../interfaces/badge.interface';
 import { CredlyBadgeEntry } from '../interfaces/credly.interface';
