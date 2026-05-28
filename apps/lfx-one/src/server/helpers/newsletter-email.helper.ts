@@ -114,9 +114,11 @@ function escapeAttr(value: string): string {
 
 /**
  * Build the email's outer HTML envelope mirroring the in-app preview
- * (`newsletter-preview.component.html`): blue header banner with logo + eyebrow
- * + subject, "From <edName>" line, body cell wrapping the styled Quill HTML,
- * and a footer with sent-by + reply-to + UNSUBSCRIBE.
+ * (`newsletter-preview.component.html`): blue header banner with logo +
+ * foundation/project eyebrow + subject, then a body cell wrapping the styled
+ * Quill HTML. No From line and no footer — both were intentionally removed
+ * from the recipient-facing layout (see commit history if you're restoring
+ * the unsubscribe block for compliance reasons).
  *
  * Constraints driven by the rendering targets:
  *   - All visual styling is inline (`style="..."`). No `<style>` blocks and no
@@ -124,7 +126,7 @@ function escapeAttr(value: string): string {
  *   - Layout is table-based with a fixed `width="680"` plus inline
  *     `max-width:680px`, the standard Outlook-desktop workaround.
  *   - Chrome strings flow through escapeHtml/escapeAttr because they're
- *     user/operator-controlled (project name, subject, ED display name).
+ *     user/operator-controlled (project/foundation name and subject).
  *   - bodyHtml is processed by inlineBodyStyles + convertStandaloneCtas before
  *     interpolation — see the NewsletterEmailChrome interface for the
  *     trust-boundary contract.
