@@ -4,7 +4,6 @@
 import {
   CreateNewsletterDraftRequest,
   Newsletter,
-  NewsletterAnalytics,
   NewsletterContextType,
   NewsletterDraftListResponse,
   NewsletterListParams,
@@ -12,9 +11,6 @@ import {
   NewsletterRecipientCount,
   NewsletterRecipientCountPayload,
   NewsletterRecipientsResponse,
-  NewsletterSendPayload,
-  NewsletterSendResult,
-  NewsletterTestSendPayload,
   UpdateNewsletterDraftRequest,
 } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
@@ -55,11 +51,24 @@ export class NewsletterServiceClient {
     await this.microserviceProxy.proxyRequest<void>(req, 'LFX_V2_SERVICE', `/newsletters/drafts/${id}`, 'DELETE');
   }
 
-  public async sendDraft(req: Request, id: string, ifMatchVersion: number): Promise<NewsletterSendResult> {
-    return this.microserviceProxy.proxyRequest<NewsletterSendResult>(req, 'LFX_V2_SERVICE', `/newsletters/drafts/${id}/send`, 'POST', undefined, undefined, {
-      ...this.edNameHeader(req),
-      'If-Match': `"${ifMatchVersion}"`,
-    });
+  /**
+   * Flip a draft to `status='sent'` and persist the email-service `groupId`.
+   * Express now owns the actual fan-out to lfx-v2-email-service; the Go service
+   * only stores the resulting state.
+   */
+  public async markSent(req: Request, id: string, params: { groupId: string; ifMatchVersion: number }): Promise<Newsletter> {
+    return this.microserviceProxy.proxyRequest<Newsletter>(
+      req,
+      'LFX_V2_SERVICE',
+      `/newsletters/drafts/${id}/send`,
+      'POST',
+      undefined,
+      { groupId: params.groupId },
+      {
+        ...this.edNameHeader(req),
+        'If-Match': `"${params.ifMatchVersion}"`,
+      }
+    );
   }
 
   public async getRecipientCount(req: Request, payload: NewsletterRecipientCountPayload): Promise<NewsletterRecipientCount> {
@@ -68,30 +77,6 @@ export class NewsletterServiceClient {
 
   public async getRecipients(req: Request, payload: NewsletterRecipientCountPayload): Promise<NewsletterRecipientsResponse> {
     return this.microserviceProxy.proxyRequest<NewsletterRecipientsResponse>(req, 'LFX_V2_SERVICE', '/newsletters/recipients', 'POST', undefined, payload);
-  }
-
-  public async testSend(req: Request, payload: NewsletterTestSendPayload): Promise<{ ok: true }> {
-    return this.microserviceProxy.proxyRequest<{ ok: true }>(
-      req,
-      'LFX_V2_SERVICE',
-      '/newsletters/test-send',
-      'POST',
-      undefined,
-      payload,
-      this.edNameHeader(req)
-    );
-  }
-
-  public async send(req: Request, payload: NewsletterSendPayload): Promise<NewsletterSendResult> {
-    return this.microserviceProxy.proxyRequest<NewsletterSendResult>(
-      req,
-      'LFX_V2_SERVICE',
-      '/newsletters/send',
-      'POST',
-      undefined,
-      payload,
-      this.edNameHeader(req)
-    );
   }
 
   public async listNewsletters(req: Request, params: NewsletterListParams): Promise<NewsletterListResponse> {
@@ -106,12 +91,6 @@ export class NewsletterServiceClient {
       query['pageToken'] = params.pageToken;
     }
     return this.microserviceProxy.proxyRequest<NewsletterListResponse>(req, 'LFX_V2_SERVICE', '/newsletters', 'GET', query);
-  }
-
-  public async getAnalytics(req: Request, id: string): Promise<NewsletterAnalytics> {
-    // Path intentionally not /newsletters/{id}/analytics — Go's mux treats that
-    // as ambiguous with /newsletters/drafts/{id}.
-    return this.microserviceProxy.proxyRequest<NewsletterAnalytics>(req, 'LFX_V2_SERVICE', `/newsletter-analytics/${id}`, 'GET');
   }
 
   /**
