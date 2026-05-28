@@ -41,16 +41,16 @@ import { OpenIntercomDirective } from '@shared/directives/open-intercom.directiv
   templateUrl: './org-profile-edit.component.html',
 })
 export class OrgProfileEditComponent implements OnInit {
-  private readonly fb = inject(FormBuilder);
-  private readonly orgProfileService = inject(OrgProfileService);
-  private readonly messageService = inject(MessageService);
-  private readonly destroyRef = inject(DestroyRef);
-
   /** Emitted on successful save — parent applies the new record and exits edit mode. */
   @Output() public readonly saved = new EventEmitter<OrgCanonicalRecord>();
 
   /** Emitted on cancel — parent exits edit mode and discards changes. */
   @Output() public readonly cancelled = new EventEmitter<void>();
+
+  private readonly fb = inject(FormBuilder);
+  private readonly orgProfileService = inject(OrgProfileService);
+  private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
 
   /** Source record loaded on the read-only view; reused here to avoid re-fetching (research R4). */
   public readonly record = input.required<OrgCanonicalRecord>();
