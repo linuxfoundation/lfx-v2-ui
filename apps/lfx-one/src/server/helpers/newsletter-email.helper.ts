@@ -22,6 +22,7 @@ export interface NewsletterEmailChrome {
   contextType: 'foundation' | 'project';
 }
 
+const COLOR_WHITE = lfxColors.white;
 const COLOR_BLUE_50 = lfxColors.blue[50];
 const COLOR_BLUE_500 = lfxColors.blue[500];
 const COLOR_BLUE_600 = lfxColors.blue[600];
@@ -67,7 +68,10 @@ function inlineBodyStyles(html: string): string {
   let result = html;
   for (const tag of Object.keys(BODY_TAG_STYLES)) {
     const style = BODY_TAG_STYLES[tag];
-    const regex = new RegExp(`<${tag}(\\s[^>]*)?>`, 'gi');
+    // Allow optional trailing `/` so XHTML-style void tags like `<hr/>` also
+    // get styled — Quill emits `<hr>` today but other authoring paths /
+    // sanitizers can emit the self-closing form.
+    const regex = new RegExp(`<${tag}(\\s[^>]*)?/?>`, 'gi');
     result = result.replace(regex, (match, attrs?: string) => {
       if (attrs && /\sstyle\s*=/i.test(attrs)) {
         return match;
@@ -79,7 +83,7 @@ function inlineBodyStyles(html: string): string {
 }
 
 const CTA_BUTTON_STYLE =
-  `display:inline-block;background-color:${COLOR_BLUE_500};color:#ffffff;padding:12px 28px;` +
+  `display:inline-block;background-color:${COLOR_BLUE_500};color:${COLOR_WHITE};padding:12px 28px;` +
   `border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;letter-spacing:0.02em;`;
 
 /**
@@ -140,7 +144,7 @@ export function buildNewsletterEmailHtml(input: NewsletterEmailChrome): string {
   const logoCell = input.logoUrl
     ? `<td width="56" valign="middle" style="padding-right:16px;width:56px;">` +
       `<img src="${escapeAttr(input.logoUrl)}" alt="${displayNameSafe}" width="56" height="56" ` +
-      `style="display:block;width:56px;height:56px;border-radius:6px;background-color:#ffffff;padding:4px;object-fit:contain;border:0;" />` +
+      `style="display:block;width:56px;height:56px;border-radius:6px;background-color:${COLOR_WHITE};padding:4px;object-fit:contain;border:0;" />` +
       `</td>`
     : '';
 
@@ -160,15 +164,15 @@ export function buildNewsletterEmailHtml(input: NewsletterEmailChrome): string {
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:${COLOR_GRAY_50};padding:24px 12px;">
 <tr>
 <td align="center">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="680" style="width:680px;max-width:680px;background-color:#ffffff;border:1px solid ${COLOR_GRAY_200};border-radius:8px;overflow:hidden;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="680" style="width:680px;max-width:680px;background-color:${COLOR_WHITE};border:1px solid ${COLOR_GRAY_200};border-radius:8px;overflow:hidden;">
 <tr>
-<td style="${headerBg}color:#ffffff;padding:32px 40px;font-family:${FONT_STACK};">
+<td style="${headerBg}color:${COLOR_WHITE};padding:32px 40px;font-family:${FONT_STACK};">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
 <tr>
 ${logoCell}
 <td valign="middle">
-<div style="font-size:13px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;opacity:0.9;color:#ffffff;font-family:${FONT_STACK};">${displayNameSafe} &middot; Newsletter</div>
-<div style="font-size:22px;font-weight:700;line-height:1.3;color:#ffffff;margin-top:8px;font-family:${FONT_STACK};">${subjectSafe}</div>
+<div style="font-size:13px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;opacity:0.9;color:${COLOR_WHITE};font-family:${FONT_STACK};">${displayNameSafe} &middot; Newsletter</div>
+<div style="font-size:22px;font-weight:700;line-height:1.3;color:${COLOR_WHITE};margin-top:8px;font-family:${FONT_STACK};">${subjectSafe}</div>
 </td>
 </tr>
 </table>
