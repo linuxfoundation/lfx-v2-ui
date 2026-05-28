@@ -2,7 +2,6 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <main class="flex flex-col gap-6 p-6" data-testid="org-events-page">
-
   <!-- Page Header -->
   <header class="flex items-start justify-between" data-testid="org-events-header">
     <div class="flex flex-col gap-1">
@@ -13,9 +12,7 @@
           Events
         }
       </h1>
-      <p class="text-sm text-gray-500" data-testid="org-events-subtitle">
-        Your organization's event footprint across LF events.
-      </p>
+      <p class="text-sm text-gray-500" data-testid="org-events-subtitle">Your organization's event footprint across LF events.</p>
     </div>
     <lfx-discover-events-button testId="org-events-discover-button" />
   </header>
@@ -23,7 +20,6 @@
   <!-- Stat Strip -->
   <lfx-card styleClass="[&_.p-card-body]:p-0 [&_.p-card-content]:p-0" data-testid="org-events-stat-strip">
     <div class="grid w-full grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-200">
-
       <!-- Upcoming Events -->
       <button
         type="button"
@@ -89,7 +85,6 @@
           <p class="text-sm font-normal text-gray-900">Total Events</p>
         </div>
       </button>
-
     </div>
   </lfx-card>
 
@@ -155,11 +150,7 @@
 
   <!-- Tab Panels -->
   @if (activeTab() === 'upcoming') {
-    <section
-      role="tabpanel"
-      id="org-events-panel-upcoming"
-      aria-labelledby="org-events-tab-upcoming"
-      data-testid="org-events-panel-upcoming">
+    <section role="tabpanel" id="org-events-panel-upcoming" aria-labelledby="org-events-tab-upcoming" data-testid="org-events-panel-upcoming">
       <lfx-empty-state
         [withCard]="false"
         icon="fa-light fa-calendar-plus"
@@ -170,11 +161,7 @@
   }
 
   @if (activeTab() === 'past') {
-    <section
-      role="tabpanel"
-      id="org-events-panel-past"
-      aria-labelledby="org-events-tab-past"
-      data-testid="org-events-panel-past">
+    <section role="tabpanel" id="org-events-panel-past" aria-labelledby="org-events-tab-past" data-testid="org-events-panel-past">
       <lfx-empty-state
         [withCard]="false"
         icon="fa-light fa-calendar-check"
@@ -183,6 +170,4 @@
         data-testid="org-events-past-coming-soon" />
     </section>
   }
-
-
 </main>
