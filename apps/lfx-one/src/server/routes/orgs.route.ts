@@ -6,6 +6,7 @@ import { Router } from 'express';
 import { OrgIdentityController } from '../controllers/org-identity.controller';
 import { OrgLensBoardCommitteeController } from '../controllers/org-lens-board-committee.controller';
 import { OrgLensDocumentsController } from '../controllers/org-lens-documents.controller';
+import { OrgLensEventsController } from '../controllers/org-lens-events.controller';
 import { OrgLensFoundationsController } from '../controllers/org-lens-foundations.controller';
 import { OrgLensMembershipsController } from '../controllers/org-lens-memberships.controller';
 import { OrgLensPeopleController } from '../controllers/org-lens-people.controller';
@@ -13,6 +14,7 @@ import { OrgLensPeopleController } from '../controllers/org-lens-people.controll
 const router = Router();
 
 const orgLensFoundationsController = new OrgLensFoundationsController();
+const orgLensEventsController = new OrgLensEventsController();
 const orgLensMembershipsController = new OrgLensMembershipsController();
 const orgLensBoardCommitteeController = new OrgLensBoardCommitteeController();
 const orgLensDocumentsController = new OrgLensDocumentsController();
@@ -41,6 +43,12 @@ router.get('/sfid/:accountId', (req, res, next) => orgIdentityController.getCano
 
 // GET /api/orgs/:accountId/lens/foundations-and-projects
 router.get('/:accountId/lens/foundations-and-projects', (req, res, next) => orgLensFoundationsController.getFoundationsAndProjects(req, res, next));
+
+// GET /api/orgs/:accountId/lens/events/summary — MUST be before /:accountId/lens/events
+router.get('/:accountId/lens/events/summary', (req, res, next) => orgLensEventsController.getOrgEventsSummary(req, res, next));
+
+// GET /api/orgs/:accountId/lens/events
+router.get('/:accountId/lens/events', (req, res, next) => orgLensEventsController.getOrgEvents(req, res, next));
 
 // GET /api/orgs/:accountId/lens/memberships/active
 router.get('/:accountId/lens/memberships/active', (req, res, next) => orgLensMembershipsController.getActiveMemberships(req, res, next));
