@@ -45,4 +45,9 @@ export class OrgUpcomingEventsTableComponent {
   protected onHeaderClick(field: string): void {
     this.sortChange.emit({ field });
   }
+
+  protected getSortAriaValue(field: string): string {
+    if (this.sortField() !== field) return 'none';
+    return this.sortOrder() === 'ASC' ? 'ascending' : 'descending';
+  }
 }
