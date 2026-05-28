@@ -274,7 +274,7 @@
                   [class.cursor-pointer]="row.searchTerms.length > 0"
                   [class.hover:bg-gray-50]="row.searchTerms.length > 0"
                   role="row"
-                  [attr.data-testid]="'keyword-row-' + row.keyword"
+                  [attr.data-testid]="'keyword-row-' + kwKey"
                   [attr.aria-expanded]="row.searchTerms.length > 0 ? kwExpanded : null"
                   (click)="row.searchTerms.length > 0 && toggleKeywordExpand(kwKey)"
                   (keydown.enter)="row.searchTerms.length > 0 && toggleKeywordExpand(kwKey)"

@@ -5941,27 +5941,42 @@ export class ProjectService {
     logger.debug(undefined, 'get_keyword_performance', 'Fetching keyword performance from Snowflake', { foundation_slug: foundationSlug });
 
     try {
+      const isUmbrella = foundationSlug === 'tlf';
+      const foundationFilter = isUmbrella ? '' : 'AND FOUNDATION_SLUG = ?';
+      const foundationParams = isUmbrella ? [] : [foundationSlug];
+
       const perfQuery = `
+      WITH top_keywords AS (
+        SELECT KEYWORD_TEXT, KEYWORD_MATCH_TYPE, SUM(SPEND) AS KEYWORD_SPEND
+        FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_ADS_KEYWORD_PERFORMANCE
+        WHERE RECORD_TYPE = 'keyword'
+          AND REPORT_DATE >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
+          ${foundationFilter}
+        GROUP BY KEYWORD_TEXT, KEYWORD_MATCH_TYPE
+        ORDER BY KEYWORD_SPEND DESC
+        LIMIT 500
+      )
       SELECT
-        KEYWORD_TEXT,
-        KEYWORD_MATCH_TYPE,
-        RECORD_TYPE,
-        SEARCH_TERM,
-        SEARCH_TERM_MATCH_TYPE,
-        SUM(CLICKS) AS CLICKS,
-        SUM(SPEND) AS SPEND,
-        SUM(IMPRESSIONS) AS IMPRESSIONS,
-        SUM(CONVERSIONS) AS CONVERSIONS,
-        SUM(CONVERSIONS_VALUE) AS CONVERSIONS_VALUE,
-        CASE WHEN SUM(IMPRESSIONS) > 0 THEN SUM(CLICKS) / SUM(IMPRESSIONS) * 100 ELSE 0 END AS CTR,
-        CASE WHEN SUM(CLICKS) > 0 THEN SUM(SPEND) / SUM(CLICKS) ELSE 0 END AS CPC,
-        CASE WHEN SUM(CLICKS) > 0 THEN SUM(CONVERSIONS) / SUM(CLICKS) * 100 ELSE 0 END AS CONVERSION_RATE
-      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_ADS_KEYWORD_PERFORMANCE
-      WHERE FOUNDATION_SLUG = ?
-        AND REPORT_DATE >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
-      GROUP BY KEYWORD_TEXT, KEYWORD_MATCH_TYPE, RECORD_TYPE, SEARCH_TERM, SEARCH_TERM_MATCH_TYPE
-      ORDER BY SPEND DESC
-      LIMIT 500
+        p.KEYWORD_TEXT,
+        p.KEYWORD_MATCH_TYPE,
+        p.RECORD_TYPE,
+        p.SEARCH_TERM,
+        p.SEARCH_TERM_MATCH_TYPE,
+        SUM(p.CLICKS) AS CLICKS,
+        SUM(p.SPEND) AS SPEND,
+        SUM(p.IMPRESSIONS) AS IMPRESSIONS,
+        SUM(p.CONVERSIONS) AS CONVERSIONS,
+        SUM(p.CONVERSIONS_VALUE) AS CONVERSIONS_VALUE,
+        CASE WHEN SUM(p.IMPRESSIONS) > 0 THEN SUM(p.CLICKS) / SUM(p.IMPRESSIONS) * 100 ELSE 0 END AS CTR,
+        CASE WHEN SUM(p.CLICKS) > 0 THEN SUM(p.SPEND) / SUM(p.CLICKS) ELSE 0 END AS CPC,
+        CASE WHEN SUM(p.CLICKS) > 0 THEN SUM(p.CONVERSIONS) / SUM(p.CLICKS) * 100 ELSE 0 END AS CONVERSION_RATE
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_ADS_KEYWORD_PERFORMANCE p
+      INNER JOIN top_keywords k
+        ON p.KEYWORD_TEXT = k.KEYWORD_TEXT AND p.KEYWORD_MATCH_TYPE = k.KEYWORD_MATCH_TYPE
+      WHERE p.REPORT_DATE >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
+        ${foundationFilter}
+      GROUP BY p.KEYWORD_TEXT, p.KEYWORD_MATCH_TYPE, p.RECORD_TYPE, p.SEARCH_TERM, p.SEARCH_TERM_MATCH_TYPE
+      ORDER BY k.KEYWORD_SPEND DESC, p.RECORD_TYPE
       `;
 
       const attrQuery = `
@@ -5971,21 +5986,20 @@ export class ProjectService {
         SUM(KEYWORD_CLICKS) AS KEYWORD_CLICKS,
         SUM(KEYWORD_SPEND) AS KEYWORD_SPEND,
         SUM(KEYWORD_IMPRESSIONS) AS KEYWORD_IMPRESSIONS,
-        AVG(CLICK_SHARE_PCT) AS CLICK_SHARE_PCT,
         SUM(ATTRIBUTED_LT_REVENUE) AS ATTRIBUTED_LT_REVENUE,
         SUM(ATTRIBUTED_LT_CONVERSIONS) AS ATTRIBUTED_LT_CONVERSIONS,
         CASE WHEN SUM(KEYWORD_SPEND) > 0 THEN SUM(ATTRIBUTED_LT_REVENUE) / SUM(KEYWORD_SPEND) ELSE 0 END AS ATTRIBUTED_LT_ROAS
       FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_ADS_KEYWORD_ATTRIBUTION
-      WHERE FOUNDATION_SLUG = ?
-        AND STAT_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
+      WHERE STAT_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
+        ${foundationFilter}
       GROUP BY KEYWORD_TEXT, KEYWORD_MATCH_TYPE
       ORDER BY KEYWORD_SPEND DESC
       LIMIT 500
       `;
 
       const [perfResult, attrResult] = await Promise.all([
-        this.snowflakeService.execute<KeywordPerformanceRow>(perfQuery, [foundationSlug]),
-        this.snowflakeService.execute<KeywordAttributionRow>(attrQuery, [foundationSlug]).catch((error) => {
+        this.snowflakeService.execute<KeywordPerformanceRow>(perfQuery, [...foundationParams, ...foundationParams]),
+        this.snowflakeService.execute<KeywordAttributionRow>(attrQuery, foundationParams).catch((error) => {
           logger.warning(undefined, 'get_keyword_performance', 'Attribution query failed, degrading gracefully', {
             foundation_slug: foundationSlug,
             err: error,
@@ -6017,7 +6031,6 @@ export class ProjectService {
         const attr = attrMap.get(key);
         const attributedRevenue = attr?.ATTRIBUTED_LT_REVENUE ?? 0;
         const roas = attr?.ATTRIBUTED_LT_ROAS ?? 0;
-        const clickSharePct = attr?.CLICK_SHARE_PCT ?? 0;
 
         const summary: KeywordSummary = {
           keyword: row.KEYWORD_TEXT,
@@ -6031,7 +6044,6 @@ export class ProjectService {
           conversionRate: Math.round((row.CONVERSION_RATE ?? 0) * 100) / 100,
           attributedRevenue: Math.round(attributedRevenue * 100) / 100,
           roas: Math.round(roas * 100) / 100,
-          clickSharePct: Math.round(clickSharePct * 100) / 100,
           searchTerms: [],
         };
 

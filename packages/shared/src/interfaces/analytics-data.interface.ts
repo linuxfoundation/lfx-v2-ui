@@ -3366,7 +3366,6 @@ export interface KeywordAttributionRow {
   KEYWORD_CLICKS: number;
   KEYWORD_SPEND: number;
   KEYWORD_IMPRESSIONS: number;
-  CLICK_SHARE_PCT: number;
   ATTRIBUTED_LT_REVENUE: number;
   ATTRIBUTED_LT_CONVERSIONS: number;
   ATTRIBUTED_LT_ROAS: number;
@@ -3385,7 +3384,6 @@ export interface KeywordSummary {
   conversionRate: number;
   attributedRevenue: number;
   roas: number;
-  clickSharePct: number;
   searchTerms: SearchTermSummary[];
 }
 
