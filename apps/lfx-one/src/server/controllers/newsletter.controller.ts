@@ -18,6 +18,7 @@ import { NextFunction, Request, Response } from 'express';
 import { ServiceValidationError } from '../errors';
 import { AiService } from '../services/ai.service';
 import { logger } from '../services/logger.service';
+import { NewsletterService } from '../services/newsletter.service';
 import { NewsletterServiceClient } from '../services/newsletter-service.client';
 
 const VALID_CONTEXT_TYPES = new Set(['foundation', 'project']);
@@ -28,6 +29,7 @@ const CONTEXT_NAME_MAX_LENGTH = 200;
 
 export class NewsletterController {
   private newsletterClient: NewsletterServiceClient = new NewsletterServiceClient();
+  private newsletterService: NewsletterService = new NewsletterService(this.newsletterClient);
   private aiService: AiService = new AiService();
 
   /**
@@ -43,10 +45,10 @@ export class NewsletterController {
       const payload = req.body as NewsletterRecipientCountPayload;
       this.validateCommitteeUids(payload?.committeeUids, req.path, 'newsletter_recipient_count');
 
-      const result = await this.newsletterClient.getRecipientCount(req, payload);
+      const recipients = await this.newsletterService.resolveRecipients(req, payload.committeeUids);
 
-      logger.success(req, 'newsletter_recipient_count', startTime, { count: result.count });
-      res.json(result);
+      logger.success(req, 'newsletter_recipient_count', startTime, { count: recipients.length });
+      res.json({ count: recipients.length });
     } catch (error) {
       next(error);
     }
@@ -66,10 +68,10 @@ export class NewsletterController {
       const payload = req.body as NewsletterRecipientCountPayload;
       this.validateCommitteeUids(payload?.committeeUids, req.path, 'newsletter_recipients');
 
-      const result = await this.newsletterClient.getRecipients(req, payload);
+      const recipients = await this.newsletterService.resolveRecipients(req, payload.committeeUids);
 
-      logger.success(req, 'newsletter_recipients', startTime, { count: result.recipients.length });
-      res.json(result);
+      logger.success(req, 'newsletter_recipients', startTime, { count: recipients.length });
+      res.json({ recipients });
     } catch (error) {
       next(error);
     }
@@ -77,7 +79,12 @@ export class NewsletterController {
 
   /**
    * POST /api/newsletters/test-send
-   * Body: { subject, bodyHtml, toEmail, contextType, contextUid, edReplyEmail }
+   * Body: { subject, bodyHtml, toEmail, contextType, contextUid }
+   *
+   * Sends a single preview email via lfx-v2-email-service. No group_id is
+   * supplied — test sends auto-generate one server-side and stay out of the
+   * newsletter analytics rollup. edReplyEmail is intentionally not required
+   * here because the rendered email no longer surfaces a reply-to.
    */
   public async testSend(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'newsletter_test_send', {
@@ -87,7 +94,7 @@ export class NewsletterController {
 
     try {
       const payload = req.body as NewsletterTestSendPayload;
-      this.validateCommonPayload(payload, req.path, 'newsletter_test_send');
+      this.validateCommonPayload(payload, req.path, 'newsletter_test_send', false);
 
       if (!payload.toEmail || typeof payload.toEmail !== 'string' || !payload.toEmail.includes('@')) {
         throw ServiceValidationError.forField('toEmail', 'A valid recipient email is required', {
@@ -97,10 +104,11 @@ export class NewsletterController {
         });
       }
 
-      const result = await this.newsletterClient.testSend(req, payload);
+      await this.newsletterService.sendTest(req, payload);
 
-      logger.success(req, 'newsletter_test_send', startTime, { to: payload.toEmail });
-      res.json(result);
+      // PII (recipient email) intentionally omitted from log metadata.
+      logger.success(req, 'newsletter_test_send', startTime, {});
+      res.json({ ok: true });
     } catch (error) {
       next(error);
     }
@@ -109,6 +117,10 @@ export class NewsletterController {
   /**
    * POST /api/newsletters/send
    * Body: { subject, bodyHtml, committeeUids, contextType, contextUid, edReplyEmail }
+   *
+   * Ad-hoc send (no prior saved draft). Creates a draft record on the Go
+   * newsletter-service, fans out one email per recipient via email-service,
+   * then flips the draft to `sent` with the shared group_id.
    */
   public async send(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'newsletter_send', {
@@ -122,9 +134,23 @@ export class NewsletterController {
       this.validateCommonPayload(payload, req.path, 'newsletter_send');
       this.validateCommitteeUids(payload.committeeUids, req.path, 'newsletter_send');
 
-      const result = await this.newsletterClient.send(req, payload);
+      // Build the create-draft request explicitly so we keep type safety even
+      // if NewsletterSendPayload and CreateNewsletterDraftRequest diverge.
+      const createDraftRequest: CreateNewsletterDraftRequest = {
+        contextType: payload.contextType,
+        contextUid: payload.contextUid,
+        subject: payload.subject,
+        bodyHtml: payload.bodyHtml,
+        edReplyEmail: payload.edReplyEmail,
+        committeeUids: payload.committeeUids,
+      };
+      const draft = await this.newsletterClient.createDraft(req, createDraftRequest);
+
+      const result = await this.newsletterService.dispatchNewsletter(req, draft, 'newsletter_send');
 
       logger.success(req, 'newsletter_send', startTime, {
+        newsletter_id: draft.id,
+        group_id: result.groupId,
         total_recipients: result.totalRecipients,
         sent: result.sent,
         failed: result.failed,
@@ -258,6 +284,10 @@ export class NewsletterController {
   /**
    * POST /api/newsletters/drafts/:id/send
    * Requires If-Match header for optimistic locking.
+   *
+   * Fetches the saved draft, fans out one email per recipient via the
+   * email-service, then PATCHes the Go newsletter-service record with the
+   * shared group_id and status=sent.
    */
   public async sendDraft(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'newsletter_send_draft', { draft_id: req.params['id'] });
@@ -265,9 +295,13 @@ export class NewsletterController {
     try {
       const id = String(req.params['id'] || '');
       const version = parseIfMatch(req);
-      const result = await this.newsletterClient.sendDraft(req, id, version);
+
+      const draft = await this.newsletterClient.getDraft(req, id);
+      const result = await this.newsletterService.dispatchNewsletter(req, draft, 'newsletter_send_draft', version);
+
       logger.success(req, 'newsletter_send_draft', startTime, {
         draft_id: id,
+        group_id: result.groupId,
         total_recipients: result.totalRecipients,
         sent: result.sent,
         failed: result.failed,
@@ -320,6 +354,7 @@ export class NewsletterController {
         pageToken,
       };
       const result = await this.newsletterClient.listNewsletters(req, params);
+      result.newsletters = await this.newsletterService.enrichListWithEngagement(req, result.newsletters);
 
       logger.success(req, 'newsletter_list', startTime, {
         count: result.newsletters.length,
@@ -334,6 +369,11 @@ export class NewsletterController {
   /**
    * GET /api/newsletters/:id/analytics
    * Returns engagement analytics for a sent newsletter.
+   *
+   * Source of truth is lfx-v2-email-service: we look up the newsletter to
+   * read its `groupId`, then aggregate per-recipient EmailRecipientRecords
+   * into the existing NewsletterAnalytics shape so the frontend doesn't have
+   * to change.
    */
   public async getAnalytics(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'newsletter_analytics', { newsletter_id: req.params['id'] });
@@ -347,13 +387,17 @@ export class NewsletterController {
           path: req.path,
         });
       }
-      const result = await this.newsletterClient.getAnalytics(req, id);
+
+      const newsletter = await this.newsletterClient.getDraft(req, id);
+      const analytics = await this.newsletterService.getAnalytics(req, newsletter);
+
       logger.success(req, 'newsletter_analytics', startTime, {
         newsletter_id: id,
-        unique_opens: result.uniqueOpens,
-        total_opens: result.totalOpens,
+        group_id: newsletter.groupId,
+        unique_opens: analytics.uniqueOpens,
+        total_opens: analytics.totalOpens,
       });
-      res.json(result);
+      res.json(analytics);
     } catch (error) {
       next(error);
     }
@@ -423,10 +467,17 @@ export class NewsletterController {
     }
   }
 
+  /**
+   * `requireEdReplyEmail=false` is used by the test-send path — the rendered
+   * email no longer surfaces the reply-to address, so we don't make writers
+   * supply one to run a test. The draft / real-send paths still require it
+   * because it's persisted on the Newsletter row in lfx-v2-newsletter-service.
+   */
   private validateCommonPayload(
     payload: { subject?: string; bodyHtml?: string; contextType?: string; contextUid?: string; edReplyEmail?: string },
     path: string,
-    operation: string
+    operation: string,
+    requireEdReplyEmail: boolean = true
   ): void {
     const fieldErrors: Record<string, string> = {};
 
@@ -450,7 +501,7 @@ export class NewsletterController {
       fieldErrors['contextUid'] = 'contextUid is required';
     }
 
-    if (!payload?.edReplyEmail || typeof payload.edReplyEmail !== 'string' || !payload.edReplyEmail.includes('@')) {
+    if (requireEdReplyEmail && (!payload?.edReplyEmail || typeof payload.edReplyEmail !== 'string' || !payload.edReplyEmail.includes('@'))) {
       fieldErrors['edReplyEmail'] = 'A valid edReplyEmail is required';
     }
 

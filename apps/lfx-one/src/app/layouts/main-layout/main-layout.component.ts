@@ -55,6 +55,11 @@ export class MainLayoutComponent {
   // Active lens from service
   protected readonly activeLens = this.lensService.activeLens;
 
+  // Newsletter nav visibility: ED persona always sees it; non-ED users see it
+  // when they have writer (or owner-equivalent) permission on the currently
+  // active foundation/project. canWrite() is reactive to context changes.
+  private readonly canSeeNewsletters: Signal<boolean> = this.initCanSeeNewsletters();
+
   // Lens-aware sidebar items
   protected readonly sidebarItems = computed((): SidebarMenuItem[] => {
     switch (this.activeLens()) {
@@ -66,7 +71,7 @@ export class MainLayoutComponent {
         // edit role, remove, etc.) is enforced server-side and by per-page UI gating where
         // implemented; pre-existing gaps in those gates are tracked separately.
         const base = this.projectLensItemsWithGovernance;
-        return this.personaService.currentPersona() === 'executive-director' ? [...base, this.projectCommunicationsSection] : base;
+        return this.canSeeNewsletters() ? [...base, this.projectCommunicationsSection] : base;
       }
       case 'org':
         return this.isOrgLensEnabled() ? this.orgLensItems : this.meLensItems;
@@ -267,7 +272,7 @@ export class MainLayoutComponent {
       }
     );
 
-    if (this.personaService.currentPersona() === 'executive-director') {
+    if (this.canSeeNewsletters()) {
       items.push({
         label: 'Communications',
         isSection: true,
@@ -281,25 +286,43 @@ export class MainLayoutComponent {
           },
         ],
       });
+    }
+
+    if (this.personaService.currentPersona() === 'executive-director') {
+      const metricsItems: SidebarMenuItem[] = [
+        {
+          label: 'Health Metrics',
+          icon: 'fa-light fa-chart-line-up',
+          routerLink: '/foundation/health-metrics',
+          testId: 'sidebar-metrics-health-metrics',
+        },
+        {
+          label: 'Marketing Impact',
+          icon: 'fa-light fa-bullhorn',
+          routerLink: '/foundation/marketing-impact',
+          testId: 'sidebar-metrics-marketing-impact',
+        },
+      ];
+
+      const foundationSfid = this.projectContextService.selectedFoundationSfid();
+      if (foundationSfid) {
+        const pccBaseUrl = environment.urls.pcc;
+        const baseUrl = pccBaseUrl.endsWith('/') ? pccBaseUrl.slice(0, -1) : pccBaseUrl;
+        metricsItems.push({
+          label: 'Social Listening',
+          icon: 'fa-light fa-ear-listen',
+          url: `${baseUrl}/project/${foundationSfid}/reports/social-listening`,
+          target: '_blank',
+          rel: 'noopener noreferrer',
+          testId: 'sidebar-metrics-social-listening',
+        });
+      }
 
       items.push({
         label: 'Metrics',
         isSection: true,
         expanded: true,
-        items: [
-          {
-            label: 'Health Metrics',
-            icon: 'fa-light fa-chart-line-up',
-            routerLink: '/foundation/health-metrics',
-            testId: 'sidebar-metrics-health-metrics',
-          },
-          {
-            label: 'Marketing Impact',
-            icon: 'fa-light fa-bullhorn',
-            routerLink: '/foundation/marketing-impact',
-            testId: 'sidebar-metrics-marketing-impact',
-          },
-        ],
+        items: metricsItems,
       });
     }
 
@@ -492,6 +515,10 @@ export class MainLayoutComponent {
       .subscribe(() => {
         window.location.reload();
       });
+  }
+
+  private initCanSeeNewsletters(): Signal<boolean> {
+    return computed(() => this.personaService.currentPersona() === 'executive-director' || this.projectContextService.canWrite());
   }
 
   /**
