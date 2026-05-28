@@ -55,6 +55,11 @@ export class MainLayoutComponent {
   // Active lens from service
   protected readonly activeLens = this.lensService.activeLens;
 
+  // Newsletter nav visibility: ED persona always sees it; non-ED users see it
+  // when they have writer (or owner-equivalent) permission on the currently
+  // active foundation/project. canWrite() is reactive to context changes.
+  private readonly canSeeNewsletters: Signal<boolean> = this.initCanSeeNewsletters();
+
   // Lens-aware sidebar items
   protected readonly sidebarItems = computed((): SidebarMenuItem[] => {
     switch (this.activeLens()) {
@@ -66,7 +71,7 @@ export class MainLayoutComponent {
         // edit role, remove, etc.) is enforced server-side and by per-page UI gating where
         // implemented; pre-existing gaps in those gates are tracked separately.
         const base = this.projectLensItemsWithGovernance;
-        return this.personaService.currentPersona() === 'executive-director' ? [...base, this.projectCommunicationsSection] : base;
+        return this.canSeeNewsletters() ? [...base, this.projectCommunicationsSection] : base;
       }
       case 'org':
         return this.isOrgLensEnabled() ? this.orgLensItems : this.meLensItems;
@@ -267,6 +272,22 @@ export class MainLayoutComponent {
       }
     );
 
+    if (this.canSeeNewsletters()) {
+      items.push({
+        label: 'Communications',
+        isSection: true,
+        expanded: true,
+        items: [
+          {
+            label: 'Newsletters',
+            icon: 'fa-light fa-paper-plane',
+            routerLink: '/foundation/newsletters',
+            testId: 'sidebar-foundation-newsletters',
+          },
+        ],
+      });
+    }
+
     if (this.personaService.currentPersona() === 'executive-director') {
       const metricsItems: SidebarMenuItem[] = [
         {
@@ -296,20 +317,6 @@ export class MainLayoutComponent {
           testId: 'sidebar-metrics-social-listening',
         });
       }
-
-      items.push({
-        label: 'Communications',
-        isSection: true,
-        expanded: true,
-        items: [
-          {
-            label: 'Newsletters',
-            icon: 'fa-light fa-paper-plane',
-            routerLink: '/foundation/newsletters',
-            testId: 'sidebar-foundation-newsletters',
-          },
-        ],
-      });
 
       items.push({
         label: 'Metrics',
@@ -508,6 +515,10 @@ export class MainLayoutComponent {
       .subscribe(() => {
         window.location.reload();
       });
+  }
+
+  private initCanSeeNewsletters(): Signal<boolean> {
+    return computed(() => this.personaService.currentPersona() === 'executive-director' || this.projectContextService.canWrite());
   }
 
   /**
