@@ -3,14 +3,16 @@
 
 import { isPlatformBrowser } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, PLATFORM_ID, signal, Signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CardComponent } from '@components/card/card.component';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { DEFAULT_ORG_EVENTS_TAB_ID, ORG_EVENTS_STATUS_OPTIONS, ORG_EVENTS_TABS, VALID_ORG_EVENTS_TAB_IDS } from '@lfx-one/shared/constants';
-import type { OrgEventStatFilterId, OrgEventsTabId } from '@lfx-one/shared/interfaces';
+import type { OrgEventStatFilterId, OrgEventsSummary, OrgEventsTabId } from '@lfx-one/shared/interfaces';
 import { AccountContextService } from '@app/shared/services/account-context.service';
+import { EventsService } from '@app/shared/services/events.service';
+import { catchError, filter, of, switchMap } from 'rxjs';
 import { SelectModule } from 'primeng/select';
 import { InputTextModule } from 'primeng/inputtext';
 import { DiscoverEventsButtonComponent } from '../components/discover-events-button/discover-events-button.component';
@@ -26,6 +28,7 @@ export class OrgEventsDashboardComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly accountContext = inject(AccountContextService);
+  private readonly eventsService = inject(EventsService);
   private readonly platformId = inject(PLATFORM_ID);
 
   // === Template constants ===
@@ -40,6 +43,7 @@ export class OrgEventsDashboardComponent {
   // === Computed / toSignal ===
   protected readonly companyName = computed(() => this.accountContext.selectedAccount().accountName ?? '');
   protected readonly activeTab: Signal<OrgEventsTabId> = this.initActiveTab();
+  protected readonly eventsSummary: Signal<OrgEventsSummary | null> = this.initEventsSummary();
 
   // === Protected methods ===
   protected applyEventsStatFilter(id: OrgEventStatFilterId): void {
@@ -84,5 +88,16 @@ export class OrgEventsDashboardComponent {
       const raw = queryParamMap().get('tab');
       return raw && VALID_ORG_EVENTS_TAB_IDS.has(raw as OrgEventsTabId) ? (raw as OrgEventsTabId) : DEFAULT_ORG_EVENTS_TAB_ID;
     });
+  }
+
+  private initEventsSummary(): Signal<OrgEventsSummary | null> {
+    const accountId$ = toObservable(computed(() => this.accountContext.selectedAccount().accountId));
+    return toSignal(
+      accountId$.pipe(
+        filter((id): id is string => !!id),
+        switchMap((id) => this.eventsService.getOrgEventsSummary(id).pipe(catchError(() => of(null))))
+      ),
+      { initialValue: null }
+    );
   }
 }
