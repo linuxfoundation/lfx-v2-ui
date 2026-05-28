@@ -128,9 +128,27 @@ export class NewsletterService {
 
     const { sent, failures } = await this.fanOutEmails(req, newsletter, recipients, groupId);
 
+    let markSentFailed = false;
     if (sent > 0) {
       const versionToUse = ifMatchVersion ?? newsletter.version;
-      await this.markSentWithRetry(req, newsletter.id, groupId, versionToUse, operation, sent, failures.length);
+      try {
+        await this.markSentWithRetry(req, newsletter.id, groupId, versionToUse, operation, sent, failures.length);
+      } catch (err) {
+        // Emails went out; persistence failed. Return success with a flag
+        // so the frontend can surface "emails delivered, status update
+        // failed — contact support" instead of a generic error toast.
+        // Re-throwing here would let the operator think nothing was sent
+        // and retry, causing duplicate emails. groupId is captured in
+        // the markSentWithRetry warnings for manual recovery.
+        markSentFailed = true;
+        logger.warning(req, operation, 'send succeeded but mark-sent failed; returning partial-success', {
+          newsletter_id: newsletter.id,
+          group_id: groupId,
+          sent,
+          failed: failures.length,
+          err,
+        });
+      }
     }
 
     return {
@@ -139,6 +157,7 @@ export class NewsletterService {
       failed: failures.length,
       failures,
       groupId,
+      ...(markSentFailed && { markSentFailed: true }),
     };
   }
 

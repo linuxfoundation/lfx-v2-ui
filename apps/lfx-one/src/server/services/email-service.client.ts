@@ -131,11 +131,30 @@ export class EmailServiceClient {
     }
   }
 
+  /**
+   * Detect the email-service's error envelope. Returns true when the response
+   * is a bare object carrying an `error: string` and none of the documented
+   * success fields. Looser than "exactly one key" so the email-service can
+   * add correlation fields (request_id, code, etc.) to its error responses
+   * without us misclassifying them. Tighter than `'error' in parsed` so a
+   * legitimate per-recipient `error` field on an EmailRecipientRecord (which
+   * also carries email_id / group_id) isn't read as a full-request failure.
+   */
   private isErrorEnvelope(parsed: unknown): parsed is { error: string } {
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
       return false;
     }
     const obj = parsed as Record<string, unknown>;
-    return typeof obj['error'] === 'string' && Object.keys(obj).length === 1;
+    if (typeof obj['error'] !== 'string') {
+      return false;
+    }
+    // The documented success shapes for the three subjects we use:
+    //   send_email                       → email_id + group_id
+    //   get_email_status (by email_id)   → email_id (single record)
+    //   get_email_engagement_analytics   → total_sent + group_id
+    // A response with any of these fields is a success body and the `error`
+    // (if present) is part of that body, not a top-level envelope.
+    const successFields = ['email_id', 'total_sent', 'delivered', 'opened', 'open_count', 'opened_at_list'];
+    return !successFields.some((field) => field in obj);
   }
 }

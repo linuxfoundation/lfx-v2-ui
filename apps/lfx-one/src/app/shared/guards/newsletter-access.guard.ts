@@ -55,7 +55,6 @@ export const newsletterAccessGuard: CanActivateFn = (route: ActivatedRouteSnapsh
       // Surface the failure to Datadog RUM rather than silently bouncing —
       // a 5xx / transport error looks identical to a legitimate deny from
       // the user's perspective and we want it triageable.
-      // eslint-disable-next-line no-console
       console.error('newsletterAccessGuard: writer-permission lookup failed', { slug, error: err });
       return of(router.parseUrl('/foundation/overview'));
     })

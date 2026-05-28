@@ -5,8 +5,8 @@ import { Routes } from '@angular/router';
 
 import { authGuard } from './shared/guards/auth.guard';
 import { executiveDirectorGuard } from './shared/guards/executive-director.guard';
-import { newsletterAccessGuard } from './shared/guards/newsletter-access.guard';
 import { lensRedirectGuard } from './shared/guards/lens-redirect.guard';
+import { newsletterAccessGuard } from './shared/guards/newsletter-access.guard';
 import { orgLensEnabledGuard } from './shared/guards/org-lens-enabled.guard';
 import { projectQueryParamGuard } from './shared/guards/project-query-param.guard';
 

@@ -57,6 +57,14 @@ export interface NewsletterSendResult {
   failed: number;
   failures: NewsletterSendFailure[];
   groupId: string;
+  /**
+   * True when emails were delivered to the email-service but the follow-up
+   * PATCH to flip the newsletter to `status='sent'` exhausted its retries.
+   * The send succeeded — recipients received emails — but the newsletter row
+   * still reads as a draft. The frontend should surface this distinctly from
+   * a delivery failure so operators don't retry and cause duplicate sends.
+   */
+  markSentFailed?: boolean;
 }
 
 export type NewsletterStatus = 'draft' | 'sent';

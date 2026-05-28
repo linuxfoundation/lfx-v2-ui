@@ -321,7 +321,16 @@ export class NewsletterManageComponent {
       )
       .subscribe({
         next: (result: NewsletterSendResult) => {
-          if (result.failed > 0) {
+          if (result.markSentFailed) {
+            // Emails delivered but the newsletter row didn't flip to "sent".
+            // Tell the operator explicitly — retrying would dispatch duplicates.
+            this.messageService.add({
+              severity: 'warn',
+              summary: 'Sent — status update failed',
+              detail: `Delivered to ${result.sent} ${result.sent === 1 ? 'recipient' : 'recipients'}, but the newsletter status couldn't be updated. Don't retry — contact support to reconcile.`,
+              life: 12000,
+            });
+          } else if (result.failed > 0) {
             this.messageService.add({
               severity: 'warn',
               summary: 'Sent with errors',
