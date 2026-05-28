@@ -17,6 +17,7 @@ import { Request } from 'express';
 
 import { MicroserviceError, ServiceValidationError } from '../errors';
 import { buildNewsletterEmailHtml, buildNewsletterEmailText, NewsletterEmailChrome } from '../helpers/newsletter-email.helper';
+import { getEffectiveName, getEffectiveUsername } from '../utils/auth-helper';
 import { CommitteeService } from './committee.service';
 import { EmailServiceClient } from './email-service.client';
 import { logger } from './logger.service';
@@ -271,12 +272,16 @@ export class NewsletterService {
     payload: { subject: string; bodyHtml: string; toEmail: string; contextType: NewsletterContextType; contextUid: string }
   ): Promise<void> {
     const chrome = await this.resolveEmailChrome(req, payload.contextType, payload.contextUid);
+    // Test sends opt out of the compliance footer so the operator's preview
+    // inbox matches the writer-facing in-app preview. Real recipient-facing
+    // sends opt in below in `fanOutEmails`.
     const chromeInput: NewsletterEmailChrome = {
       subject: payload.subject,
       bodyHtml: payload.bodyHtml,
       displayName: chrome.displayName,
       logoUrl: chrome.logoUrl,
       contextType: payload.contextType,
+      includeComplianceFooter: false,
     };
 
     await this.emailServiceClient.sendEmail(req, {
@@ -295,20 +300,25 @@ export class NewsletterService {
    */
   private async fanOutEmails(
     req: Request,
-    newsletter: Pick<Newsletter, 'subject' | 'bodyHtml' | 'contextType'>,
+    newsletter: Pick<Newsletter, 'subject' | 'bodyHtml' | 'edReplyEmail' | 'contextType'>,
     recipients: NewsletterRecipient[],
     groupId: string,
-    chrome: { displayName: string; logoUrl: string | undefined }
+    chrome: { edName: string; displayName: string; logoUrl: string | undefined }
   ): Promise<{ sent: number; failures: NewsletterSendFailure[] }> {
     // Build the rendered HTML + text once; the chrome-wrapped output is the
     // same for every recipient (no personalization yet) so per-recipient
-    // re-rendering would just burn CPU.
+    // re-rendering would just burn CPU. Real recipient-facing sends opt into
+    // the compliance footer (sender attribution + reply-to + UNSUBSCRIBE) so
+    // every dispatch satisfies CAN-SPAM / GDPR opt-out requirements.
     const chromeInput: NewsletterEmailChrome = {
       subject: newsletter.subject,
       bodyHtml: newsletter.bodyHtml,
       displayName: chrome.displayName,
       logoUrl: chrome.logoUrl,
       contextType: newsletter.contextType,
+      includeComplianceFooter: true,
+      edName: chrome.edName,
+      edReplyEmail: newsletter.edReplyEmail,
     };
     const html = buildNewsletterEmailHtml(chromeInput);
     const text = buildNewsletterEmailText(chromeInput);
@@ -347,16 +357,19 @@ export class NewsletterService {
   }
 
   /**
-   * Resolve the per-send chrome (foundation/project name + logo URL) from the
-   * project service. Both foundations and projects are `Project` records
-   * upstream. Lookup failures degrade gracefully — the send is more important
+   * Resolve the per-send chrome (sender display name + foundation/project name
+   * + logo URL). `edName` matches the in-app preview's
+   * `userService.user()?.name` path; `displayName` / `logoUrl` come from the
+   * project service (both foundations and projects are `Project` records
+   * upstream). Lookup failures degrade gracefully — the send is more important
    * than a polished header.
    */
   private async resolveEmailChrome(
     req: Request,
     contextType: NewsletterContextType,
     contextUid: string
-  ): Promise<{ displayName: string; logoUrl: string | undefined }> {
+  ): Promise<{ edName: string; displayName: string; logoUrl: string | undefined }> {
+    const edName = getEffectiveName(req) || getEffectiveUsername(req) || 'Executive Director';
     let displayName = contextType === 'foundation' ? 'Foundation' : 'Project';
     let logoUrl: string | undefined;
 
@@ -372,7 +385,7 @@ export class NewsletterService {
       });
     }
 
-    return { displayName, logoUrl };
+    return { edName, displayName, logoUrl };
   }
 
   /**

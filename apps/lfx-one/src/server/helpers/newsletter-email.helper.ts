@@ -18,6 +18,17 @@ export interface NewsletterEmailChrome {
   displayName: string;
   logoUrl?: string;
   contextType: 'foundation' | 'project';
+  /**
+   * Opt-in to render the compliance footer (sender attribution, reply-to,
+   * UNSUBSCRIBE). Real recipient-facing sends MUST set this true; test
+   * sends and the in-app preview opt out so the writer-facing surface stays
+   * clean. When true, `edName` and `edReplyEmail` are required.
+   */
+  includeComplianceFooter?: boolean;
+  /** Required when `includeComplianceFooter` is true. */
+  edName?: string;
+  /** Required when `includeComplianceFooter` is true. */
+  edReplyEmail?: string;
 }
 
 const COLOR_WHITE = lfxColors.white;
@@ -26,6 +37,8 @@ const COLOR_BLUE_500 = lfxColors.blue[500];
 const COLOR_BLUE_600 = lfxColors.blue[600];
 const COLOR_GRAY_50 = lfxColors.gray[50];
 const COLOR_GRAY_200 = lfxColors.gray[200];
+const COLOR_GRAY_400 = lfxColors.gray[400];
+const COLOR_GRAY_500 = lfxColors.gray[500];
 const COLOR_GRAY_700 = lfxColors.gray[700];
 const COLOR_GRAY_800 = lfxColors.gray[800];
 const COLOR_GRAY_900 = lfxColors.gray[900];
@@ -102,6 +115,22 @@ function convertStandaloneCtas(html: string): string {
   );
 }
 
+/**
+ * Preserve `<a href="...">label</a>` destinations in the plain-text fallback
+ * by emitting `label (href)`. Skip the parenthesized URL when the label is
+ * already identical to the href (raw URL pasted as link text). Runs before
+ * stripHtml so the URL survives tag removal.
+ */
+function preserveLinkDestinations(html: string): string {
+  return html.replace(/<a\b[^>]*href=(["'])(.*?)\1[^>]*>([\s\S]*?)<\/a>/gi, (_match, _quote: string, href: string, label: string) => {
+    const trimmedLabel = label.trim();
+    if (!href || trimmedLabel === href) {
+      return label;
+    }
+    return `${label} (${href})`;
+  });
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
@@ -112,13 +141,33 @@ function escapeAttr(value: string): string {
   return escapeHtml(value);
 }
 
+function renderComplianceFooterHtml(input: NewsletterEmailChrome, displayNameSafe: string): string {
+  if (!input.includeComplianceFooter) {
+    return '';
+  }
+  const edNameSafe = escapeHtml(input.edName || 'Executive Director');
+  const replyEmailSafe = escapeAttr(input.edReplyEmail || '');
+  const replyLine = input.edReplyEmail
+    ? `<div style="margin-bottom:6px;">To reply, email <a href="mailto:${replyEmailSafe}" style="color:${COLOR_BLUE_500};text-decoration:underline;">${replyEmailSafe}</a></div>`
+    : '';
+  return `<tr>
+<td style="background-color:${COLOR_GRAY_50};border-top:1px solid ${COLOR_GRAY_200};padding:24px 40px;font-size:12px;color:${COLOR_GRAY_500};font-family:${FONT_STACK};">
+<div style="margin-bottom:6px;">Sent by <strong style="color:${COLOR_GRAY_900};">${edNameSafe}</strong> on behalf of <strong style="color:${COLOR_GRAY_900};">${displayNameSafe}</strong>.</div>
+${replyLine}
+<div style="color:${COLOR_GRAY_400};font-size:11px;">To unsubscribe from ${displayNameSafe} newsletters, reply with <strong>UNSUBSCRIBE</strong>. Delivered by <span style="font-weight:700;color:${COLOR_BLUE_500};letter-spacing:-0.02em;">LFX</span>.</div>
+</td>
+</tr>`;
+}
+
 /**
  * Build the email's outer HTML envelope mirroring the in-app preview
  * (`newsletter-preview.component.html`): blue header banner with logo +
  * foundation/project eyebrow + subject, then a body cell wrapping the styled
- * Quill HTML. No From line and no footer — both were intentionally removed
- * from the recipient-facing layout (see commit history if you're restoring
- * the unsubscribe block for compliance reasons).
+ * Quill HTML. A compliance footer (sender attribution + reply-to +
+ * UNSUBSCRIBE) is appended only when `input.includeComplianceFooter` is true
+ * — real recipient-facing sends opt in for CAN-SPAM / GDPR purposes; test
+ * sends and the in-app preview opt out to keep the writer-facing surface
+ * clean.
  *
  * Constraints driven by the rendering targets:
  *   - All visual styling is inline (`style="..."`). No `<style>` blocks and no
@@ -126,7 +175,8 @@ function escapeAttr(value: string): string {
  *   - Layout is table-based with a fixed `width="680"` plus inline
  *     `max-width:680px`, the standard Outlook-desktop workaround.
  *   - Chrome strings flow through escapeHtml/escapeAttr because they're
- *     user/operator-controlled (project/foundation name and subject).
+ *     user/operator-controlled (project/foundation name, subject, sender,
+ *     reply-to).
  *   - bodyHtml is processed by inlineBodyStyles + convertStandaloneCtas before
  *     interpolation — see the NewsletterEmailChrome interface for the
  *     trust-boundary contract.
@@ -136,6 +186,7 @@ export function buildNewsletterEmailHtml(input: NewsletterEmailChrome): string {
   const subjectSafe = escapeHtml(input.subject || 'Untitled');
   const displayNameSafe = escapeHtml(input.displayName || fallbackDisplay);
   const styledBody = convertStandaloneCtas(inlineBodyStyles(input.bodyHtml));
+  const complianceFooter = renderComplianceFooterHtml(input, displayNameSafe);
 
   const logoCell = input.logoUrl
     ? `<td width="56" valign="middle" style="padding-right:16px;width:56px;">` +
@@ -177,6 +228,7 @@ ${logoCell}
 <tr>
 <td style="padding:32px 40px;font-size:16px;color:${COLOR_GRAY_800};line-height:1.65;font-family:${FONT_STACK};">${styledBody}</td>
 </tr>
+${complianceFooter}
 </table>
 </td>
 </tr>
@@ -187,14 +239,27 @@ ${logoCell}
 
 /**
  * Plain-text counterpart of buildNewsletterEmailHtml. Mirrors the header
- * (foundation/project · Newsletter, subject) and body for clients that prefer
- * text/plain or for `View original` debugging.
+ * (foundation/project · Newsletter, subject) and body, preserving link
+ * destinations from the source HTML so text-only clients still see where
+ * each link points. The compliance block (sender / reply-to / UNSUBSCRIBE)
+ * is appended only when `input.includeComplianceFooter` is true.
  */
 export function buildNewsletterEmailText(input: NewsletterEmailChrome): string {
   const fallbackDisplay = input.contextType === 'foundation' ? 'Foundation' : 'Project';
   const displayName = input.displayName || fallbackDisplay;
   const subject = input.subject || 'Untitled';
-  const body = stripHtml(input.bodyHtml);
+  const body = stripHtml(preserveLinkDestinations(input.bodyHtml));
 
-  return [`${displayName} · Newsletter`, subject, '', body].join('\n');
+  const lines: string[] = [`${displayName} · Newsletter`, subject, '', body];
+
+  if (input.includeComplianceFooter) {
+    const edName = input.edName || 'Executive Director';
+    lines.push('', '---', `Sent by ${edName} on behalf of ${displayName}.`);
+    if (input.edReplyEmail) {
+      lines.push(`To reply, email ${input.edReplyEmail}`);
+    }
+    lines.push(`To unsubscribe from ${displayName} newsletters, reply with UNSUBSCRIBE.`, 'Delivered by LFX.');
+  }
+
+  return lines.join('\n');
 }
