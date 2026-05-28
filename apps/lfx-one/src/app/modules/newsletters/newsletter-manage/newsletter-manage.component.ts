@@ -253,8 +253,11 @@ export class NewsletterManageComponent {
   }
 
   // `['..']` on a 2-segment route resolves to `/<id>` — anchor to route.parent + explicit 'list' child.
-  private goToList(): void {
-    this.router.navigate(['list'], { relativeTo: this.route.parent });
+  private goToList(tab?: 'draft' | 'sent'): void {
+    this.router.navigate(['list'], {
+      relativeTo: this.route.parent,
+      queryParams: tab ? { tab } : undefined,
+    });
   }
 
   private computeCanProceed(step: number): boolean {
@@ -344,7 +347,10 @@ export class NewsletterManageComponent {
               detail: `Delivered to ${result.sent} ${result.sent === 1 ? 'recipient' : 'recipients'}.`,
             });
           }
-          this.goToList();
+          // Land on the Sent tab on full success; on markSentFailed the row
+          // is still a draft on the Go side, so don't mislead the operator
+          // by routing them to Sent.
+          this.goToList(result.markSentFailed ? 'draft' : 'sent');
         },
         error: (err: HttpErrorResponse) => {
           this.messageService.add({
