@@ -6,11 +6,14 @@ import { Routes } from '@angular/router';
 import { authGuard } from './shared/guards/auth.guard';
 import { executiveDirectorGuard } from './shared/guards/executive-director.guard';
 import { lensRedirectGuard } from './shared/guards/lens-redirect.guard';
+import { newsletterAccessGuard } from './shared/guards/newsletter-access.guard';
 import { orgLensEnabledGuard } from './shared/guards/org-lens-enabled.guard';
 import { projectQueryParamGuard } from './shared/guards/project-query-param.guard';
 
 const loadOrgPlaceholderPage = () =>
   import('./modules/dashboards/org/components/org-placeholder-page/org-placeholder-page.component').then((m) => m.OrgPlaceholderPageComponent);
+
+const loadOrgProfilePage = () => import('./modules/dashboards/org/org-profile/org-profile.component').then((m) => m.OrgProfileComponent);
 
 export const routes: Routes = [
   {
@@ -157,7 +160,7 @@ export const routes: Routes = [
           {
             path: 'profile',
             data: { lens: 'org', title: 'Profile', description: 'Public-facing details about your organization.', icon: 'fa-light fa-file' },
-            loadComponent: loadOrgPlaceholderPage,
+            loadComponent: loadOrgProfilePage,
           },
         ],
       },
@@ -207,7 +210,7 @@ export const routes: Routes = [
       {
         path: 'foundation/newsletters',
         data: { lens: 'foundation' },
-        canActivate: [executiveDirectorGuard, projectQueryParamGuard],
+        canActivate: [newsletterAccessGuard, projectQueryParamGuard],
         loadChildren: () => import('./modules/newsletters/newsletters.routes').then((m) => m.NEWSLETTER_ROUTES),
       },
       {
@@ -256,7 +259,7 @@ export const routes: Routes = [
       {
         path: 'project/newsletters',
         data: { lens: 'project' },
-        canActivate: [executiveDirectorGuard, projectQueryParamGuard],
+        canActivate: [newsletterAccessGuard, projectQueryParamGuard],
         loadChildren: () => import('./modules/newsletters/newsletters.routes').then((m) => m.NEWSLETTER_ROUTES),
       },
       {
@@ -292,7 +295,7 @@ export const routes: Routes = [
       },
       {
         path: 'newsletters',
-        canActivate: [executiveDirectorGuard, lensRedirectGuard],
+        canActivate: [lensRedirectGuard, newsletterAccessGuard],
         loadChildren: () => import('./modules/newsletters/newsletters.routes').then((m) => m.NEWSLETTER_ROUTES),
       },
       {
