@@ -185,15 +185,16 @@ export class OrgSelectorComponent {
     return null;
   }
 
-  /** Product-naming label per persona: direct → "Org Admin Editor / Viewer"; inherited → same plus " (inherited)" suffix (Clarifications Q2). */
+  /** Product-naming label per persona: direct → "Org Admin Editor / Viewer". Inherited rows are always view-only (FGA: writer never cascades), so both inherited variants use the "Viewer (inherited)" label to avoid implying edit capability (Clarifications Q2). */
   private personaToLabel(persona: OrgRolePersona | null): string {
     switch (persona) {
       case 'direct-writer':
         return 'Org Admin Editor';
       case 'direct-auditor':
         return 'Org Admin Viewer';
+      // inherited-writer can't occur (FGA prevents writer cascade); kept for type exhaustiveness and
+      // labeled as Viewer so the badge never implies edit access if the variant ever surfaces.
       case 'inherited-writer':
-        return 'Org Admin Editor (inherited)';
       case 'inherited-auditor':
         return 'Org Admin Viewer (inherited)';
       default:
@@ -201,10 +202,10 @@ export class OrgSelectorComponent {
     }
   }
 
-  /** Icon vocabulary unchanged from spec 020 — both direct and inherited writer use the pen icon; auditor uses the eye. */
+  /** Direct writer → pen (edit); everyone else (direct/inherited viewer + the impossible inherited-writer) → eye. Inherited rows are view-only, so they never get the edit icon. */
   private personaToIcon(persona: OrgRolePersona | null): string {
-    if (persona === 'direct-writer' || persona === 'inherited-writer') return 'fa-light fa-pen-to-square';
-    if (persona === 'direct-auditor' || persona === 'inherited-auditor') return 'fa-light fa-eye';
+    if (persona === 'direct-writer') return 'fa-light fa-pen-to-square';
+    if (persona === 'direct-auditor' || persona === 'inherited-auditor' || persona === 'inherited-writer') return 'fa-light fa-eye';
     return '';
   }
 
