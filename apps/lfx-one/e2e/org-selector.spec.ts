@@ -31,6 +31,23 @@ const DATA_LOAD_TIMEOUT = 30_000;
 
 test.setTimeout(120_000);
 
+// Hard skip when the auth-bootstrap failed — surface a clear log so CI triage doesn't
+// chase a spec-020/022 regression that's actually a credentials issue. Use hostname-exact
+// matching instead of substring `.includes('auth0.com')` so an attacker-controlled URL like
+// `https://evil.com/?ref=auth0.com` or `https://auth0.com.evil.com/` can't fool the skip
+// gate (CodeQL js/incomplete-url-substring-sanitization).
+function skipWhenAuthMissing(page: Page): void {
+  try {
+    const { hostname } = new URL(page.url());
+    if (hostname === 'auth0.com' || hostname.endsWith('.auth0.com')) {
+      test.skip(true, 'TEST_USERNAME / TEST_PASSWORD not configured — see global-setup.ts');
+    }
+  } catch {
+    // Malformed URL — keep the test running rather than silently skip; failures here are
+    // useful signal, not noise.
+  }
+}
+
 async function openSelector(page: Page) {
   // Sidebar may be tucked behind a mobile hamburger on mobile-chrome — the trigger lives
   // inside <lfx-sidebar>; the test ID is identical across desktop and mobile.
@@ -43,20 +60,7 @@ async function openSelector(page: Page) {
 test.describe('Org Selector — authorized user smoke set (S1/S2/S5)', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(APP_HOME, { waitUntil: 'domcontentloaded' });
-    // Hard skip when the auth-bootstrap failed — surface a clear log so CI triage doesn't
-    // chase a spec-020 regression that's actually a credentials issue. Use hostname-exact
-    // matching instead of substring `.includes('auth0.com')` so an attacker-controlled URL
-    // like `https://evil.com/?ref=auth0.com` or `https://auth0.com.evil.com/` can't fool
-    // the skip gate (CodeQL js/incomplete-url-substring-sanitization).
-    try {
-      const { hostname } = new URL(page.url());
-      if (hostname === 'auth0.com' || hostname.endsWith('.auth0.com')) {
-        test.skip(true, 'TEST_USERNAME / TEST_PASSWORD not configured — see global-setup.ts');
-      }
-    } catch {
-      // Malformed URL — keep the test running rather than silently skip; failures here are
-      // useful signal, not noise.
-    }
+    skipWhenAuthMissing(page);
   });
 
   // S1 — trigger renders for an authorized user
@@ -148,14 +152,7 @@ test.describe('Org Selector — authorized user smoke set (S1/S2/S5)', () => {
 test.describe('Org Selector — spec 022 cascading row decoration (S10)', () => {
   test('S10: cascading row shows "(inherited)" label suffix and tooltip carries the parent name', async ({ page }) => {
     await page.goto(APP_HOME, { waitUntil: 'domcontentloaded' });
-    try {
-      const { hostname } = new URL(page.url());
-      if (hostname === 'auth0.com' || hostname.endsWith('.auth0.com')) {
-        test.skip(true, 'TEST_USERNAME / TEST_PASSWORD not configured — see global-setup.ts');
-      }
-    } catch {
-      // ignore malformed URL
-    }
+    skipWhenAuthMissing(page);
 
     const PARENT_UID = '4c46585f-878c-8285-b2e9-2dbfc38ddd9b';
     const CHILD_UID = '4c46585f-878c-8285-b2e9-2dbfc38de012';
@@ -229,14 +226,7 @@ test.describe('Org Selector — spec 022 cascading row decoration (S10)', () => 
 test.describe('Org Selector — spec 022 no mock fallback (S11)', () => {
   test('S11: upstream failure surfaces the empty state — no fixture rows leak through', async ({ page }) => {
     await page.goto(APP_HOME, { waitUntil: 'domcontentloaded' });
-    try {
-      const { hostname } = new URL(page.url());
-      if (hostname === 'auth0.com' || hostname.endsWith('.auth0.com')) {
-        test.skip(true, 'TEST_USERNAME / TEST_PASSWORD not configured — see global-setup.ts');
-      }
-    } catch {
-      // ignore malformed URL
-    }
+    skipWhenAuthMissing(page);
 
     // Role-grants returns enough to keep the visibility gate open so the dropdown still mounts.
     await page.route('**/api/orgs/me/role-grants', (route) =>
@@ -283,14 +273,7 @@ test.describe('Org Selector — spec 022 no mock fallback (S11)', () => {
 test.describe('Org Selector — /org/overview empty state without redirect (S14)', () => {
   test('S14: empty org-items keeps the user on /org/overview and renders the empty-state section', async ({ page }) => {
     await page.goto(APP_HOME, { waitUntil: 'domcontentloaded' });
-    try {
-      const { hostname } = new URL(page.url());
-      if (hostname === 'auth0.com' || hostname.endsWith('.auth0.com')) {
-        test.skip(true, 'TEST_USERNAME / TEST_PASSWORD not configured — see global-setup.ts');
-      }
-    } catch {
-      // ignore malformed URL
-    }
+    skipWhenAuthMissing(page);
 
     await page.route('**/api/orgs/me/role-grants', (route) =>
       route.fulfill({
@@ -341,14 +324,7 @@ test.describe('Org Selector — /org/overview empty state without redirect (S14)
 test.describe('Org Selector — spec 022 accountId non-null invariant (S12)', () => {
   test('S12: every row from /api/nav/org-items has a non-null, non-empty accountId', async ({ page }) => {
     await page.goto(APP_HOME, { waitUntil: 'domcontentloaded' });
-    try {
-      const { hostname } = new URL(page.url());
-      if (hostname === 'auth0.com' || hostname.endsWith('.auth0.com')) {
-        test.skip(true, 'TEST_USERNAME / TEST_PASSWORD not configured — see global-setup.ts');
-      }
-    } catch {
-      // ignore malformed URL
-    }
+    skipWhenAuthMissing(page);
 
     const response = await page.request.get('/api/nav/org-items');
     // 401/403 surfaces when the bearer didn't survive — surface a clear skip so triage is fast.
@@ -379,14 +355,7 @@ test.describe('Org Selector — spec 022 accountId non-null invariant (S12)', ()
 test.describe('Org Selector — spec 022 Snowflake lens regression guard (S13)', () => {
   test('S13: /api/orgs/:accountId/lens/memberships/active returns 200 with a JSON array body for a real accountId', async ({ page }) => {
     await page.goto(APP_HOME, { waitUntil: 'domcontentloaded' });
-    try {
-      const { hostname } = new URL(page.url());
-      if (hostname === 'auth0.com' || hostname.endsWith('.auth0.com')) {
-        test.skip(true, 'TEST_USERNAME / TEST_PASSWORD not configured — see global-setup.ts');
-      }
-    } catch {
-      // ignore malformed URL
-    }
+    skipWhenAuthMissing(page);
 
     // Resolve an accountId from the access-aware list so the check is hermetic to the test user's grants.
     const orgItemsResponse = await page.request.get('/api/nav/org-items');
@@ -427,14 +396,7 @@ test.describe('Org Selector — zero-grants visibility gate (S9)', () => {
   test('S9: with empty role-grants AND empty persona-seeds, the slot reports data-visible="false" and the trigger is hidden', async ({ page }) => {
     // Skip when the auth fixture didn't bootstrap — same logic as the authorized suite.
     await page.goto(APP_HOME, { waitUntil: 'domcontentloaded' });
-    try {
-      const { hostname } = new URL(page.url());
-      if (hostname === 'auth0.com' || hostname.endsWith('.auth0.com')) {
-        test.skip(true, 'TEST_USERNAME / TEST_PASSWORD not configured — see global-setup.ts');
-      }
-    } catch {
-      // ignore malformed URL
-    }
+    skipWhenAuthMissing(page);
 
     // Stub the two endpoints the visibility gate reads from. Both are client-side
     // fetches (afterNextRender on the corresponding services) so a Playwright route

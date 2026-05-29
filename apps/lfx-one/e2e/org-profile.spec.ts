@@ -16,6 +16,7 @@
  * - `org-lens-enabled` LaunchDarkly flag toggled ON for the test user
  */
 
+import type { CascadingRoleGrant } from '@lfx-one/shared/interfaces';
 import { expect, Page, test } from '@playwright/test';
 
 const PROFILE_URL = '/org/profile';
@@ -74,8 +75,8 @@ function skipWhenAuthMissing(page: Page): void {
 interface StubGrantsOptions {
   writers: string[];
   auditors?: string[];
-  cascadingWriters?: { uid: string; parentUid: string; parentName: string }[];
-  cascadingAuditors?: { uid: string; parentUid: string; parentName: string }[];
+  cascadingWriters?: CascadingRoleGrant[];
+  cascadingAuditors?: CascadingRoleGrant[];
 }
 
 async function stubOrgProfileContext(page: Page, options: StubGrantsOptions): Promise<void> {

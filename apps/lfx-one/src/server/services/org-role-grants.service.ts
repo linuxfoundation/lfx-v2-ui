@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ORG_CASCADING_CHILDREN_PER_PARENT_HARD_CAP, ORG_ROLE_GRANTS_HARD_CAP } from '@lfx-one/shared/constants';
+import { ORG_CASCADING_CHILDREN_FETCH_CONCURRENCY, ORG_CASCADING_CHILDREN_PER_PARENT_HARD_CAP, ORG_ROLE_GRANTS_HARD_CAP } from '@lfx-one/shared/constants';
 import {
   AccessAwareOrgsResult,
   B2bOrgIndexedDoc,
@@ -148,61 +148,72 @@ export class OrgRoleGrantsService {
     return map;
   }
 
-  /** D-004 — parallel fetch of cascading children (one query per direct-granted parent), paginated to completion. Per-parent paginator stops at `ORG_CASCADING_CHILDREN_PER_PARENT_HARD_CAP` (FR-017). */
+  /** D-004 — fetch of cascading children (one query per direct-granted parent), paginated to completion. Per-parent paginator stops at `ORG_CASCADING_CHILDREN_PER_PARENT_HARD_CAP` (FR-017). Parents are processed through a bounded pool (`ORG_CASCADING_CHILDREN_FETCH_CONCURRENCY`) so we never burst hundreds of concurrent `/query/resources` requests. */
   private async fetchCascadingChildren(req: Request, parentUids: string[]): Promise<Map<string, B2bOrgIndexedDoc[]>> {
     const safeParentUids = this.filterSafeUids(req, parentUids, 'fetch_cascading_children');
     if (safeParentUids.length === 0) return new Map();
 
-    const perParent = await Promise.all(
-      safeParentUids.map(async (parentUid) => {
-        const children: B2bOrgIndexedDoc[] = [];
-        let pageToken: string | undefined;
-        let truncated = false;
+    const results = new Map<string, B2bOrgIndexedDoc[]>();
+    let cursor = 0;
 
-        do {
-          const query: Record<string, unknown> = {
-            type: 'b2b_org',
-            tags: [`parent_b2b_org_uid:${parentUid}`],
-            per_page: 100,
-          };
-          if (pageToken) query['page_token'] = pageToken;
+    const worker = async (): Promise<void> => {
+      while (cursor < safeParentUids.length) {
+        const parentUid = safeParentUids[cursor++];
+        results.set(parentUid, await this.fetchChildrenForParent(req, parentUid));
+      }
+    };
 
-          const response = await this.microserviceProxy.proxyRequest<QueryServiceResponse<B2bOrgIndexedDoc>>(
-            req,
-            'LFX_V2_SERVICE',
-            '/query/resources',
-            'GET',
-            query
-          );
+    const poolSize = Math.min(ORG_CASCADING_CHILDREN_FETCH_CONCURRENCY, safeParentUids.length);
+    await Promise.all(Array.from({ length: poolSize }, () => worker()));
 
-          for (const resource of response?.resources ?? []) {
-            const childUid = this.extractUid(resource.id);
-            if (childUid && resource.data) {
-              (resource.data as B2bOrgIndexedDoc & { uid?: string }).uid = childUid;
-              children.push(resource.data);
-              if (children.length >= ORG_CASCADING_CHILDREN_PER_PARENT_HARD_CAP) {
-                truncated = true;
-                break;
-              }
-            }
+    return results;
+  }
+
+  /** Paginates a single direct-granted parent's cascading children to completion (or the per-parent hard cap). */
+  private async fetchChildrenForParent(req: Request, parentUid: string): Promise<B2bOrgIndexedDoc[]> {
+    const children: B2bOrgIndexedDoc[] = [];
+    let pageToken: string | undefined;
+    let truncated = false;
+
+    do {
+      const query: Record<string, unknown> = {
+        type: 'b2b_org',
+        tags: [`parent_b2b_org_uid:${parentUid}`],
+        per_page: 100,
+      };
+      if (pageToken) query['page_token'] = pageToken;
+
+      const response = await this.microserviceProxy.proxyRequest<QueryServiceResponse<B2bOrgIndexedDoc>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        query
+      );
+
+      for (const resource of response?.resources ?? []) {
+        const childUid = this.extractUid(resource.id);
+        if (childUid && resource.data) {
+          children.push({ ...resource.data, uid: childUid } as B2bOrgIndexedDoc & { uid: string });
+          if (children.length >= ORG_CASCADING_CHILDREN_PER_PARENT_HARD_CAP) {
+            truncated = true;
+            break;
           }
-
-          if (truncated) break;
-          pageToken = response?.page_token;
-        } while (pageToken);
-
-        if (truncated) {
-          logger.warning(req, 'fetch_cascading_children', 'Per-parent children cap reached — truncating', {
-            parent_uid: parentUid,
-            cap: ORG_CASCADING_CHILDREN_PER_PARENT_HARD_CAP,
-          });
         }
+      }
 
-        return [parentUid, children] as const;
-      })
-    );
+      if (truncated) break;
+      pageToken = response?.page_token;
+    } while (pageToken);
 
-    return new Map(perParent);
+    if (truncated) {
+      logger.warning(req, 'fetch_cascading_children', 'Per-parent children cap reached — truncating', {
+        parent_uid: parentUid,
+        cap: ORG_CASCADING_CHILDREN_PER_PARENT_HARD_CAP,
+      });
+    }
+
+    return children;
   }
 
   /** D-005 — direct first (writer-wins on duplicate-direct), then cascading with highest-privilege-wins; direct-source preserved on tie to keep FR-011a's `canEdit` direct-only check intact. */

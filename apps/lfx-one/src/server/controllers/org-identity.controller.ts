@@ -209,6 +209,10 @@ export class OrgIdentityController {
       cacheHit = resolved.cacheHit;
       sfid = resolved.sfid ?? (await this.sfidResolver.resolve(uid)) ?? null;
     } catch (error) {
+      if (error instanceof ServiceValidationError) {
+        next(error);
+        return;
+      }
       logger.warning(req, 'get_org_addresses', 'Address identifier lookup failed; returning empty', { err: error, uid });
       res.setHeader('Cache-Control', 'no-store');
       res.json(emptyResponse);
@@ -242,6 +246,10 @@ export class OrgIdentityController {
       res.setHeader('Cache-Control', 'no-store');
       res.json(result);
     } catch (error) {
+      if (error instanceof ServiceValidationError) {
+        next(error);
+        return;
+      }
       logger.warning(req, 'get_org_addresses', 'Address warehouse lookup failed; returning empty', { err: error, uid, sfid });
       res.setHeader('Cache-Control', 'no-store');
       res.json(emptyResponse);

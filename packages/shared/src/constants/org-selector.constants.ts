@@ -12,6 +12,9 @@ export const ORG_ROLE_GRANTS_HARD_CAP = 500;
 /** Spec 022 (FR-017) — page-through cap per direct-granted parent when paginating cascading children. */
 export const ORG_CASCADING_CHILDREN_PER_PARENT_HARD_CAP = 500;
 
+/** Max concurrent query-service pagination loops when fetching cascading children, to avoid bursting hundreds of in-flight requests. */
+export const ORG_CASCADING_CHILDREN_FETCH_CONCURRENCY = 8;
+
 /** NATS subject used by member-service to resolve UUID→SFID. */
 export const ORG_SFID_LOOKUP_NATS_SUBJECT = 'lfx.member.uuid-to-sfid.lookup';
 
