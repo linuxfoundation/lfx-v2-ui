@@ -57,11 +57,7 @@
               </div>
             }
             @if (item.membership) {
-              <lfx-tag
-                [value]="item.displayStatus"
-                [severity]="item.severity"
-                [dot]="true"
-                data-testid="individual-enrollment-status" />
+              <lfx-tag [value]="item.displayStatus" [severity]="item.severity" [dot]="true" data-testid="individual-enrollment-status" />
             }
           </div>
 
