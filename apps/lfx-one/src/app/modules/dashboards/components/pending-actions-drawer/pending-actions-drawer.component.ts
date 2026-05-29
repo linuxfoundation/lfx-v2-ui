@@ -86,6 +86,11 @@ export class PendingActionsDrawerComponent {
     this.startCompletion(item);
   }
 
+  protected handleDismiss(item: DrawerActionRow): void {
+    this.hiddenActionsService.dismissAction(item);
+    this.startCompletion(item);
+  }
+
   protected handleRsvpSubmit(item: DrawerActionRow, rsvp: MeetingRsvp): void {
     this.messageService.add({
       key: 'pending-actions-toast',

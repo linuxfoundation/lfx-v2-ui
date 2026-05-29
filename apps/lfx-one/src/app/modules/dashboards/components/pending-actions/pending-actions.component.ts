@@ -111,6 +111,11 @@ export class PendingActionsComponent {
     this.hiddenActionsVersion.update((v) => v + 1);
   }
 
+  protected handleDismiss(item: DecoratedPendingAction): void {
+    this.hiddenActionsService.dismissAction(item);
+    this.startCompletion(item, { withSkeleton: true });
+  }
+
   // Parse the href into a UrlTree up-front so `[routerLink]` preserves query params (e.g. `?password=...`).
   // Binding a raw string with `?` to `[routerLink]` treats the entire value as a path segment and URL-encodes the query separator.
   private buildToastMeetingData(item: PendingActionItem): { meetingUrl: UrlTree; meetingTitle: string } | undefined {
