@@ -63,7 +63,13 @@ export class NewsletterServiceClient {
     );
   }
 
-  public async updateNewsletter(req: Request, projectUid: string, newsletterUid: string, ifMatchVersion: number, payload: UpdateNewsletterRequest): Promise<Newsletter> {
+  public async updateNewsletter(
+    req: Request,
+    projectUid: string,
+    newsletterUid: string,
+    ifMatchVersion: number,
+    payload: UpdateNewsletterRequest
+  ): Promise<Newsletter> {
     return this.microserviceProxy.proxyRequest<Newsletter>(
       req,
       'LFX_V2_SERVICE',

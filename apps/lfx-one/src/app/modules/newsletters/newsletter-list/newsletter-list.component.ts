@@ -12,14 +12,7 @@ import { CardComponent } from '@components/card/card.component';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
-import {
-  FilterPillOption,
-  NewsletterListItem,
-  NewsletterRow,
-  NewsletterStatus,
-  NewsletterStatusTabId,
-  ProjectContext,
-} from '@lfx-one/shared/interfaces';
+import { FilterPillOption, NewsletterListItem, NewsletterRow, NewsletterStatus, NewsletterStatusTabId, ProjectContext } from '@lfx-one/shared/interfaces';
 import { NewsletterService } from '@services/newsletter.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -193,7 +186,9 @@ export class NewsletterListComponent {
   private initLoadOnContextOrTab(): void {
     combineLatest([toObservable(this.projectUid), toObservable(this.isFoundationContext), toObservable(this.statusTab)])
       .pipe(
-        distinctUntilChanged(([prevUid, prevFoundation, prevTab], [uid, foundation, tab]) => prevUid === uid && prevFoundation === foundation && prevTab === tab),
+        distinctUntilChanged(
+          ([prevUid, prevFoundation, prevTab], [uid, foundation, tab]) => prevUid === uid && prevFoundation === foundation && prevTab === tab
+        ),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(([uid, foundation, status]) => {

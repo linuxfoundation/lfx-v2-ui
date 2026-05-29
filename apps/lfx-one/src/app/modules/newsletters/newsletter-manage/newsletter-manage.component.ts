@@ -25,7 +25,22 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { SkeletonModule } from 'primeng/skeleton';
 import { StepperModule } from 'primeng/stepper';
-import { catchError, combineLatest, concatMap, debounceTime, distinctUntilChanged, EMPTY, filter, finalize, map, of, Subject, switchMap, take } from 'rxjs';
+import {
+  catchError,
+  combineLatest,
+  concatMap,
+  debounceTime,
+  distinctUntilChanged,
+  EMPTY,
+  filter,
+  finalize,
+  map,
+  of,
+  Subject,
+  switchMap,
+  take,
+  tap,
+} from 'rxjs';
 
 import { NewsletterAudienceStepComponent } from '../components/newsletter-audience-step/newsletter-audience-step.component';
 import { NewsletterContentStepComponent } from '../components/newsletter-content-step/newsletter-content-step.component';
@@ -383,19 +398,21 @@ export class NewsletterManageComponent {
   private initLoadDraft(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) return;
-    if (!this.hasContext()) {
-      // Project context isn't ready yet — bail to the list so the user picks
-      // a project from the lens switcher rather than landing on a broken edit.
-      this.goToList();
-      return;
-    }
     this.newsletterId.set(id);
-    this.draftLoading.set(true);
-    this.newsletterService
-      .getNewsletter(this.projectUid(), id)
+
+    // Wait for ProjectContextService to hydrate before fetching the draft.
+    // A synchronous hasContext() check here would race the lens / persona
+    // resolution on hard refreshes — deep links would bounce to the list
+    // before the project becomes available. Subscribing once hasContext()
+    // turns true loads the draft as soon as context lands, whether that
+    // happens before or after the component initializes.
+    toObservable(this.hasContext)
       .pipe(
+        filter((ready) => ready),
         take(1),
-        finalize(() => this.draftLoading.set(false))
+        tap(() => this.draftLoading.set(true)),
+        switchMap(() => this.newsletterService.getNewsletter(this.projectUid(), id).pipe(finalize(() => this.draftLoading.set(false)))),
+        takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
         next: (draft) => this.populateFormFromDraft(draft),

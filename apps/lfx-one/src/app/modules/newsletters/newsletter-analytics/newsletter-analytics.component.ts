@@ -4,7 +4,7 @@
 import { DatePipe, isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, PLATFORM_ID, signal, Signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
@@ -15,7 +15,7 @@ import { NewsletterService } from '@services/newsletter.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { MessageService } from 'primeng/api';
 import { SkeletonModule } from 'primeng/skeleton';
-import { catchError, finalize, of, switchMap, take } from 'rxjs';
+import { catchError, combineLatest, EMPTY, finalize, of, switchMap, take } from 'rxjs';
 
 @Component({
   selector: 'lfx-newsletter-analytics',
@@ -50,23 +50,32 @@ export class NewsletterAnalyticsComponent {
       this.canRenderChart.set(true);
     }
 
-    this.route.paramMap
+    // Wait for both the route param and ProjectContextService to hydrate
+    // before fetching. On a deep link to `/projects/:slug/newsletters/:id/analytics`,
+    // the paramMap can fire before the lens / persona resolution lands —
+    // reading activeContextUid() synchronously inside switchMap would surface
+    // a permanent "Missing project context" because paramMap doesn't re-emit.
+    // Combining with the context signal re-runs the switchMap when context
+    // becomes available.
+    combineLatest([this.route.paramMap, toObservable(this.projectContextService.activeContextUid)])
       .pipe(
-        switchMap((params) => {
+        switchMap(([params, projectUid]) => {
           const id = params.get('id');
           if (!id) {
             this.loading.set(false);
             this.loadError.set('Missing newsletter id.');
             return of(null);
           }
+          if (!projectUid) {
+            // Keep the skeleton up while context is still pending — emitting
+            // a typed value here would set analytics to null and flash the
+            // empty-state surface.
+            this.loading.set(true);
+            this.loadError.set(null);
+            return EMPTY;
+          }
           this.loading.set(true);
           this.loadError.set(null);
-          const projectUid = this.projectContextService.activeContextUid();
-          if (!projectUid) {
-            this.loading.set(false);
-            this.loadError.set('Missing project context.');
-            return of(null);
-          }
           return this.newsletterService.getAnalytics(projectUid, id).pipe(
             take(1),
             catchError((err: HttpErrorResponse) => {

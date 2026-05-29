@@ -5,7 +5,6 @@ import {
   CreateNewsletterRequest,
   Newsletter,
   NewsletterAnalytics,
-  NewsletterListItem,
   NewsletterListParams,
   NewsletterListResponse,
   NewsletterRecipientCount,
@@ -48,7 +47,13 @@ export class NewsletterService {
     return this.newsletterClient.listNewsletters(req, projectUid, params);
   }
 
-  public updateNewsletter(req: Request, projectUid: string, newsletterUid: string, ifMatchVersion: number, payload: UpdateNewsletterRequest): Promise<Newsletter> {
+  public updateNewsletter(
+    req: Request,
+    projectUid: string,
+    newsletterUid: string,
+    ifMatchVersion: number,
+    payload: UpdateNewsletterRequest
+  ): Promise<Newsletter> {
     return this.newsletterClient.updateNewsletter(req, projectUid, newsletterUid, ifMatchVersion, payload);
   }
 
@@ -76,6 +81,3 @@ export class NewsletterService {
     return this.newsletterClient.getAnalytics(req, projectUid, newsletterUid);
   }
 }
-
-// Re-export NewsletterListItem so existing controller imports stay valid.
-export type { NewsletterListItem };

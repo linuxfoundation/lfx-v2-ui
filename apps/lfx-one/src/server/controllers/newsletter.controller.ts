@@ -272,6 +272,11 @@ export class NewsletterController {
    * middleware + rate limiting; a per-project writer check is a follow-up.
    */
   public async generate(req: Request, res: Response, next: NextFunction): Promise<void> {
+    // The AI generation route lives under /api/projects/:projectUid/newsletters/generate
+    // so the path param is part of the contract. Validate it here for consistency
+    // with the other handlers even though the LiteLLM call doesn't consume it
+    // today — a per-project writer check is a planned follow-up.
+    this.requireProjectUid(req);
     const startTime = logger.startOperation(req, 'newsletter_generate', {
       has_prompt_override: !!req.body?.systemPromptOverride,
     });

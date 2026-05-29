@@ -32,7 +32,6 @@ export interface NewsletterTestSendPayload {
   subject: string;
   body_html: string;
   to_email: string;
-  ed_reply_email?: string;
 }
 
 export interface NewsletterSendFailure {
