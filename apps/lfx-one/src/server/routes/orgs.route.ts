@@ -34,6 +34,7 @@ router.get('/uid/:uid', (req, res, next) => orgIdentityController.getCanonicalRe
 router.put('/uid/:uid', (req, res, next) => orgIdentityController.updateOrg(req, res, next));
 
 // Spec 023 — GET /api/orgs/uid/:uid/addresses — primary + billing addresses (Snowflake-backed, fail-soft on lookup misses)
+// Access: auth-gated, NOT org-membership-gated (deliberate — mirrors the canonical-record route; see getOrgAddresses doc).
 router.get('/uid/:uid/addresses', (req, res, next) => orgIdentityController.getOrgAddresses(req, res, next));
 
 // GET /api/orgs/sfid/:accountId — canonical record by legacy Salesforce account id

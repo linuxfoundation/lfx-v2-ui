@@ -135,7 +135,9 @@ export class OrgRoleGrantsService {
     const response = await this.microserviceProxy.proxyRequest<QueryServiceResponse<B2bOrgIndexedDoc>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
       type: 'b2b_org',
       tags: safeUids.map((uid) => `b2b_org_uid:${uid}`),
-      per_page: safeUids.length + 10,
+      // +10 buffer for safety, capped at the hard cap so we never request a page larger than
+      // the upstream max-page-size (safeUids is already bounded by ORG_ROLE_GRANTS_HARD_CAP).
+      per_page: Math.min(safeUids.length + 10, ORG_ROLE_GRANTS_HARD_CAP),
     });
 
     const map = new Map<string, B2bOrgIndexedDoc>();
@@ -304,6 +306,8 @@ export class OrgRoleGrantsService {
           auditors.push(uid);
           break;
         case 'inherited-writer':
+          // Dead branch — the FGA model prevents writer from cascading (buildResolvedMap hard-codes
+          // 'inherited-auditor' for all cascading children); kept for OrgRolePersona exhaustiveness.
           cascadingWriters.push({ uid, parentUid: role.parentUid ?? '', parentName: role.parentName ?? '' });
           break;
         case 'inherited-auditor':

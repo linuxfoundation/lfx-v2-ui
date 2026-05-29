@@ -180,7 +180,11 @@ export class OrgIdentityController {
     }
   }
 
-  /** Spec 023 — `GET /api/orgs/uid/:uid/addresses`. Resolves UID→SFID via OrgIdentityResolver, queries Snowflake platinum table, maps SHIPPING→primaryAddress and BILLING→billingAddress. Returns 200 with nulls for lookup/data failures; validation errors still propagate. */
+  /**
+   * Spec 023 — `GET /api/orgs/uid/:uid/addresses`. Resolves UID→SFID via OrgIdentityResolver, queries Snowflake platinum table, maps SHIPPING→primaryAddress and BILLING→billingAddress. Returns 200 with nulls for lookup/data failures; validation errors still propagate.
+   *
+   * Access model: auth-gated, NOT org-membership-gated. Any authenticated LFX user can fetch any org's addresses by uid — deliberately matching the canonical-record route (`GET /api/orgs/uid/:uid`), since org profile/address data is treated as non-secret among authenticated LFX users. Do not add an FGA grant check here without a product decision.
+   */
   public async getOrgAddresses(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_org_addresses');
     const emptyResponse = { primaryAddress: null, billingAddress: null };
