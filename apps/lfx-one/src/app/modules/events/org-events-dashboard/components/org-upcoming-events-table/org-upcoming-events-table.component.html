@@ -55,7 +55,7 @@
       </th>
       <th scope="col" class="text-xs font-medium">
         <span class="text-gray-500">Event Attendees</span>
-        <span class="block text-gray-400 font-normal">My Org / Total</span>
+        <span class="block text-gray-400 font-normal">My Org / Goal</span>
       </th>
       <th scope="col" class="text-xs font-medium">
         <span class="text-gray-500">Event Speakers</span>
@@ -104,18 +104,18 @@
         }
       </td>
 
-      <!-- Event Attendees: My Org / Total -->
+      <!-- Event Attendees: My Org / Goal -->
       <td [attr.data-testid]="'org-upcoming-event-attendees-' + event.eventId">
         @if (event.orgAttendeeCount > 0) {
           <button
             type="button"
             class="text-sm text-gray-900 whitespace-nowrap hover:underline focus-visible:underline focus-visible:outline-none"
             (click)="attendeesClick.emit(event)">
-            {{ event.orgAttendeeCount | number }}<span class="text-gray-400"> / {{ event.totalAttendeeCount | number }}</span>
+            {{ event.orgAttendeeCount | number }}@if (event.totalAttendeeCount !== null) {<span class="text-gray-400"> / {{ event.totalAttendeeCount | number }}</span>}
           </button>
         } @else {
           <span class="text-sm text-gray-900 whitespace-nowrap">
-            {{ event.orgAttendeeCount | number }}<span class="text-gray-400"> / {{ event.totalAttendeeCount | number }}</span>
+            {{ event.orgAttendeeCount | number }}@if (event.totalAttendeeCount !== null) {<span class="text-gray-400"> / {{ event.totalAttendeeCount | number }}</span>}
           </span>
         }
       </td>

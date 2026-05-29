@@ -29,7 +29,7 @@ export interface OrgEvent {
   readonly eventUrl: string | null;
   readonly eventRegistrationUrl: string | null;
   readonly orgAttendeeCount: number;
-  readonly totalAttendeeCount: number;
+  readonly totalAttendeeCount: number | null;
   readonly orgSpeakerAcceptedCount: number;
   readonly orgSpeakerSubmittedCount: number;
   readonly isOrgSponsor: boolean;

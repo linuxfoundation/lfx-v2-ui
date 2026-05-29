@@ -21,7 +21,7 @@ interface OrgEventRow {
   EVENT_URL: string | null;
   EVENT_REGISTRATION_URL: string | null;
   ORG_ATTENDEE_COUNT: number;
-  TOTAL_ATTENDEE_COUNT: number;
+  TOTAL_ATTENDEE_COUNT: number | null;
   ORG_SPEAKER_ACCEPTED_COUNT: number;
   ORG_SPEAKER_SUBMITTED_COUNT: number;
   IS_ORG_SPONSOR: boolean;
@@ -92,14 +92,6 @@ export class OrgLensEventsService {
           er.EVENT_LOCATION, er.EVENT_CITY, er.EVENT_COUNTRY,
           er.EVENT_URL, er.EVENT_REGISTRATION_URL
       ),
-      total_event_attendees AS (
-        SELECT EVENT_ID, COUNT(DISTINCT USER_EMAIL) AS TOTAL_ATTENDEE_COUNT
-        FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS
-        WHERE IS_PAST_EVENT = ${isPastCondition}
-          AND REGISTRATION_STATUS = 'Accepted'
-          AND EVENT_ID IN (SELECT EVENT_ID FROM org_events)
-        GROUP BY EVENT_ID
-      ),
       org_speaker_submissions AS (
         SELECT er.EVENT_ID, COUNT(DISTINCT er.USER_EMAIL) AS ORG_SPEAKER_SUBMITTED_COUNT
         FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
@@ -128,14 +120,14 @@ export class OrgLensEventsService {
         o.EVENT_URL,
         o.EVENT_REGISTRATION_URL,
         o.ORG_ATTENDEE_COUNT,
-        COALESCE(tea.TOTAL_ATTENDEE_COUNT, 0) AS TOTAL_ATTENDEE_COUNT,
+        NULLIF(ph.EVENT_REGISTRATIONS_GOAL, 0) AS TOTAL_ATTENDEE_COUNT,
         o.ORG_SPEAKER_ACCEPTED_COUNT,
         COALESCE(oss.ORG_SPEAKER_SUBMITTED_COUNT, 0) AS ORG_SPEAKER_SUBMITTED_COUNT,
         (o.IS_ORG_SPONSOR = 1) AS IS_ORG_SPONSOR,
         (u.EVENT_ID IS NOT NULL) AS IS_REGISTERED,
         COUNT(*) OVER() AS TOTAL_RECORDS
       FROM org_events o
-      LEFT JOIN total_event_attendees tea ON o.EVENT_ID = tea.EVENT_ID
+      LEFT JOIN ANALYTICS.GOLD_REPORTING.PROJECT_HEALTH_EVENTS ph ON o.EVENT_ID = ph.EVENT_ID
       LEFT JOIN org_speaker_submissions oss ON o.EVENT_ID = oss.EVENT_ID
       LEFT JOIN user_reg u ON o.EVENT_ID = u.EVENT_ID
       WHERE 1=1
@@ -376,7 +368,7 @@ export class OrgLensEventsService {
       eventUrl: row.EVENT_URL ?? null,
       eventRegistrationUrl: row.EVENT_REGISTRATION_URL ?? null,
       orgAttendeeCount: row.ORG_ATTENDEE_COUNT || 0,
-      totalAttendeeCount: row.TOTAL_ATTENDEE_COUNT || 0,
+      totalAttendeeCount: row.TOTAL_ATTENDEE_COUNT ?? null,
       orgSpeakerAcceptedCount: row.ORG_SPEAKER_ACCEPTED_COUNT || 0,
       orgSpeakerSubmittedCount: row.ORG_SPEAKER_SUBMITTED_COUNT || 0,
       isOrgSponsor: !!row.IS_ORG_SPONSOR,
