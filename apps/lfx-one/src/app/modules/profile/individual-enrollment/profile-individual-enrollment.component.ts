@@ -6,12 +6,10 @@
 import { DatePipe, formatDate } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, Signal, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
 import { DisplayEnrollment, EnrollmentsState } from '@lfx-one/shared/interfaces';
 import { deriveEnrollmentStatus, enrollmentStatusSeverity } from '@lfx-one/shared/utils';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { ToastModule } from 'primeng/toast';
 import { finalize, take } from 'rxjs';
 
@@ -24,7 +22,7 @@ import { EnrollmentService } from '@services/enrollment.service';
 
 @Component({
   selector: 'lfx-profile-individual-enrollment',
-  imports: [ButtonComponent, CardComponent, ConfirmDialogModule, DatePipe, EmptyStateComponent, FormsModule, TagComponent, ToggleSwitchModule, ToastModule],
+  imports: [ButtonComponent, CardComponent, ConfirmDialogModule, DatePipe, EmptyStateComponent, TagComponent, ToastModule],
   templateUrl: './profile-individual-enrollment.component.html',
   styleUrl: './profile-individual-enrollment.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -96,9 +94,9 @@ export class ProfileIndividualEnrollmentComponent {
       : `This will Disable auto renew for your membership, your current membership will expire on ${endDate}.`;
 
     this.confirmationService.confirm({
-      header: 'Update Membership',
+      header: newValue ? 'Enable auto-renew' : 'Disable auto-renew',
       message,
-      acceptLabel: newValue ? 'Enable' : 'Disable',
+      acceptLabel: newValue ? 'Enable auto-renew' : 'Disable auto-renew',
       rejectLabel: 'Cancel',
       acceptButtonStyleClass: 'p-button-primary p-button-sm',
       rejectButtonStyleClass: 'p-button-text p-button-sm',

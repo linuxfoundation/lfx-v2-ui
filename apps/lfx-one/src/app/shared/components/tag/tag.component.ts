@@ -16,4 +16,6 @@ export class TagComponent {
   public readonly icon = input<TagProps['icon']>();
   public readonly rounded = input<TagProps['rounded']>(false);
   public readonly styleClass = input<TagProps['styleClass']>('');
+  /** Renders a small filled circle dot before the label using the severity text colour. */
+  public readonly dot = input<boolean>(false);
 }
