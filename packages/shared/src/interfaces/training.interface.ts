@@ -1,6 +1,9 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+/** Active tab on the org training & certifications page */
+export type OrgTrainingTabId = 'certifications' | 'trainings';
+
 /**
  * Certification status derived from expiration date
  */
