@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import type { GetOrgEventsOptions, OrgEvent, OrgEventsResponse, OrgEventsSummary } from '@lfx-one/shared/interfaces';
+import type { GetOrgEventsOptions, OrgEvent, OrgEventAttendee, OrgEventAttendeesResponse, OrgEventSpeaker, OrgEventSpeakersResponse, OrgEventsResponse, OrgEventsSummary } from '@lfx-one/shared/interfaces';
 import { formatDateToUTC } from '@lfx-one/shared/utils';
 import type { Request } from 'express';
 
@@ -229,6 +229,138 @@ export class OrgLensEventsService {
     logger.debug(req, 'get_org_lens_events_summary', 'Fetched org events summary', { ...summary });
 
     return summary;
+  }
+
+  /** GET /api/orgs/:accountId/lens/events/:eventId/attendees — org employees registered for a specific event. */
+  public async getEventAttendees(req: Request, accountId: string, eventId: string, searchQuery?: string): Promise<OrgEventAttendeesResponse> {
+    logger.debug(req, 'get_event_attendees', 'Fetching event attendees', { account_id: accountId, event_id: eventId });
+
+    const searchFilter = searchQuery ? 'AND (UPPER(COALESCE(p.NAME, pe.EMAIL)) LIKE UPPER(?) OR UPPER(pe.EMAIL) LIKE UPPER(?))' : '';
+
+    const sql = `
+      SELECT
+        pe.PERSON_KEY                              AS CONTACT_ID,
+        COALESCE(p.NAME, pe.EMAIL)                 AS NAME,
+        p.TITLE                                    AS JOB_TITLE,
+        MAX(COALESCE(er.EVENT_NAME, pe.EVENT_NAME)) AS EVENT_NAME
+      FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_PEOPLE_EVENTS pe
+      JOIN ANALYTICS.PLATINUM_LFX_ONE.ORG_PEOPLE_ALL p
+        ON p.ACCOUNT_ID = pe.ACCOUNT_ID AND p.PERSON_KEY = pe.PERSON_KEY
+      LEFT JOIN ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
+        ON UPPER(er.USER_EMAIL) = UPPER(p.EMAIL) AND er.EVENT_ID = pe.EVENT_ID
+      WHERE pe.ACCOUNT_ID = ?
+        AND pe.EVENT_ID = ?
+        ${searchFilter}
+      GROUP BY pe.PERSON_KEY, COALESCE(p.NAME, pe.EMAIL), p.TITLE
+      ORDER BY NAME ASC NULLS LAST
+    `;
+
+    const binds: string[] = [accountId, eventId];
+    if (searchQuery) {
+      binds.push(`%${searchQuery}%`, `%${searchQuery}%`);
+    }
+
+    interface AttendeeRow {
+      CONTACT_ID: string;
+      NAME: string | null;
+      JOB_TITLE: string | null;
+      EVENT_NAME: string | null;
+    }
+
+    let result;
+    try {
+      result = await this.snowflakeService.execute<AttendeeRow>(sql, binds);
+    } catch (error) {
+      logger.warning(req, 'get_event_attendees', 'Snowflake query failed, returning empty attendees', {
+        error: error instanceof Error ? error.message : String(error),
+        account_id: accountId,
+        event_id: eventId,
+      });
+      return { eventId, eventName: '', total: 0, data: [] };
+    }
+
+    const eventName = result.rows[0]?.EVENT_NAME ?? '';
+    const data: OrgEventAttendee[] = result.rows.map((row) => ({
+      contactId: row.CONTACT_ID,
+      name: row.NAME ?? row.CONTACT_ID,
+      jobTitle: row.JOB_TITLE ?? null,
+    }));
+
+    logger.debug(req, 'get_event_attendees', 'Fetched event attendees', { count: data.length, event_id: eventId });
+
+    return { eventId, eventName, total: data.length, data };
+  }
+
+  /** GET /api/orgs/:accountId/lens/events/:eventId/speakers — org speakers (accepted + submitted) for a specific event. */
+  public async getEventSpeakers(req: Request, accountId: string, eventId: string, searchQuery?: string): Promise<OrgEventSpeakersResponse> {
+    logger.debug(req, 'get_event_speakers', 'Fetching event speakers', { account_id: accountId, event_id: eventId });
+
+    const searchFilter = searchQuery ? 'AND (UPPER(COALESCE(p.NAME, er.USER_EMAIL)) LIKE UPPER(?) OR UPPER(er.USER_EMAIL) LIKE UPPER(?))' : '';
+
+    const sql = `
+      WITH account AS (
+        SELECT ACCOUNT_NAME
+        FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_LENS_ACCOUNT_CONTEXT
+        WHERE ACCOUNT_ID = ?
+        LIMIT 1
+      )
+      SELECT
+        er.USER_EMAIL                                          AS CONTACT_ID,
+        COALESCE(p.NAME, er.USER_EMAIL)                       AS NAME,
+        p.TITLE                                               AS JOB_TITLE,
+        CASE WHEN er.REGISTRATION_STATUS = 'Accepted'
+             THEN 'ACCEPTED' ELSE 'SUBMITTED' END             AS STATUS,
+        MAX(er.EVENT_NAME)                                    AS EVENT_NAME
+      FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
+      JOIN account a ON UPPER(er.ACCOUNT_NAME) = UPPER(a.ACCOUNT_NAME)
+      LEFT JOIN ANALYTICS.PLATINUM_LFX_ONE.ORG_PEOPLE_ALL p
+        ON UPPER(p.EMAIL) = UPPER(er.USER_EMAIL) AND p.ACCOUNT_ID = ?
+      WHERE er.EVENT_ID = ?
+        AND er.USER_ROLE = 'Speaker'
+        ${searchFilter}
+      GROUP BY er.USER_EMAIL, COALESCE(p.NAME, er.USER_EMAIL), p.TITLE, er.REGISTRATION_STATUS
+      ORDER BY NAME ASC NULLS LAST
+    `;
+
+    const binds: string[] = [accountId, accountId, eventId];
+    if (searchQuery) {
+      binds.push(`%${searchQuery}%`, `%${searchQuery}%`);
+    }
+
+    interface SpeakerRow {
+      CONTACT_ID: string;
+      NAME: string | null;
+      JOB_TITLE: string | null;
+      STATUS: string;
+      EVENT_NAME: string | null;
+    }
+
+    let result;
+    try {
+      result = await this.snowflakeService.execute<SpeakerRow>(sql, binds);
+    } catch (error) {
+      logger.warning(req, 'get_event_speakers', 'Snowflake query failed, returning empty speakers', {
+        error: error instanceof Error ? error.message : String(error),
+        account_id: accountId,
+        event_id: eventId,
+      });
+      return { eventId, eventName: '', acceptedCount: 0, submittedCount: 0, data: [] };
+    }
+
+    const eventName = result.rows[0]?.EVENT_NAME ?? '';
+    const data: OrgEventSpeaker[] = result.rows.map((row) => ({
+      contactId: row.CONTACT_ID,
+      name: row.NAME ?? row.CONTACT_ID,
+      jobTitle: row.JOB_TITLE ?? null,
+      status: row.STATUS === 'ACCEPTED' ? 'ACCEPTED' : 'SUBMITTED',
+    }));
+
+    const acceptedCount = data.filter((s) => s.status === 'ACCEPTED').length;
+    const submittedCount = data.length;
+
+    logger.debug(req, 'get_event_speakers', 'Fetched event speakers', { accepted: acceptedCount, submitted: submittedCount, event_id: eventId });
+
+    return { eventId, eventName, acceptedCount, submittedCount, data };
   }
 
   private mapRowToOrgEvent(row: OrgEventRow): OrgEvent {

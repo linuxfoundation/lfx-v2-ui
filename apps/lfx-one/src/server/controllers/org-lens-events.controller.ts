@@ -92,6 +92,56 @@ export class OrgLensEventsController {
     }
   }
 
+  /** GET /api/orgs/:accountId/lens/events/:eventId/attendees */
+  public async getEventAttendees(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const accountId = req.params['accountId'];
+    const eventId = req.params['eventId'];
+    const startTime = logger.startOperation(req, 'get_event_attendees', { account_id: accountId, event_id: eventId });
+
+    try {
+      this.assertAccountId(accountId, 'get_event_attendees');
+
+      if (!eventId || typeof eventId !== 'string') {
+        throw ServiceValidationError.forField('eventId', 'eventId path parameter is required', { operation: 'get_event_attendees' });
+      }
+
+      const searchQuery = getStringQueryParam(req, 'searchQuery');
+      const response = await this.service.getEventAttendees(req, accountId, eventId, searchQuery ?? undefined);
+
+      logger.success(req, 'get_event_attendees', startTime, { account_id: accountId, event_id: eventId, count: response.total });
+
+      res.setHeader('Cache-Control', 'no-store');
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /** GET /api/orgs/:accountId/lens/events/:eventId/speakers */
+  public async getEventSpeakers(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const accountId = req.params['accountId'];
+    const eventId = req.params['eventId'];
+    const startTime = logger.startOperation(req, 'get_event_speakers', { account_id: accountId, event_id: eventId });
+
+    try {
+      this.assertAccountId(accountId, 'get_event_speakers');
+
+      if (!eventId || typeof eventId !== 'string') {
+        throw ServiceValidationError.forField('eventId', 'eventId path parameter is required', { operation: 'get_event_speakers' });
+      }
+
+      const searchQuery = getStringQueryParam(req, 'searchQuery');
+      const response = await this.service.getEventSpeakers(req, accountId, eventId, searchQuery ?? undefined);
+
+      logger.success(req, 'get_event_speakers', startTime, { account_id: accountId, event_id: eventId, accepted: response.acceptedCount, submitted: response.submittedCount });
+
+      res.setHeader('Cache-Control', 'no-store');
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   private assertAccountId(accountId: string | undefined, operation: string): asserts accountId is string {
     if (!accountId || typeof accountId !== 'string') {
       throw ServiceValidationError.forField('accountId', 'accountId path parameter is required', { operation });

@@ -168,6 +168,8 @@
         [sortOrder]="upcomingSortOrder()"
         (pageChange)="onUpcomingPageChange($event)"
         (sortChange)="onUpcomingSortChange($event)"
+        (attendeesClick)="onAttendeesClick($event)"
+        (speakersClick)="onSpeakersClick($event)"
         data-testid="org-events-upcoming-table" />
     </section>
   }
@@ -181,5 +183,22 @@
         subtitle="Past events for your organization are being built. Check back later."
         data-testid="org-events-past-coming-soon" />
     </section>
+  }
+
+  <!-- Drawers -->
+  @if (activeDrawerEvent()) {
+    <lfx-event-attendees-drawer
+      [(visible)]="attendeesDrawerVisible"
+      [eventId]="activeDrawerEvent()!.eventId"
+      [eventName]="activeDrawerEvent()!.eventName"
+      [attendeeCount]="activeDrawerEvent()!.orgAttendeeCount"
+      data-testid="org-events-attendees-drawer" />
+    <lfx-event-speakers-drawer
+      [(visible)]="speakersDrawerVisible"
+      [eventId]="activeDrawerEvent()!.eventId"
+      [eventName]="activeDrawerEvent()!.eventName"
+      [acceptedCount]="activeDrawerEvent()!.orgSpeakerAcceptedCount"
+      [submittedCount]="activeDrawerEvent()!.orgSpeakerSubmittedCount"
+      data-testid="org-events-speakers-drawer" />
   }
 </main>

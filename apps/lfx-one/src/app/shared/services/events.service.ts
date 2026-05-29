@@ -16,6 +16,8 @@ import {
   GetUpcomingCountriesResponse,
   MyEventOrganizationsResponse,
   MyEventsResponse,
+  OrgEventAttendeesResponse,
+  OrgEventSpeakersResponse,
   OrgEventsResponse,
   OrgEventsSummary,
   OrgSearchResponse,
@@ -133,6 +135,18 @@ export class EventsService {
 
   public getOrgEventsSummary(accountId: string): Observable<OrgEventsSummary> {
     return this.http.get<OrgEventsSummary>(`/api/orgs/${encodeURIComponent(accountId)}/lens/events/summary`);
+  }
+
+  public getEventAttendees(accountId: string, eventId: string, searchQuery?: string): Observable<OrgEventAttendeesResponse> {
+    let httpParams = new HttpParams();
+    if (searchQuery) httpParams = httpParams.set('searchQuery', searchQuery);
+    return this.http.get<OrgEventAttendeesResponse>(`/api/orgs/${encodeURIComponent(accountId)}/lens/events/${encodeURIComponent(eventId)}/attendees`, { params: httpParams });
+  }
+
+  public getEventSpeakers(accountId: string, eventId: string, searchQuery?: string): Observable<OrgEventSpeakersResponse> {
+    let httpParams = new HttpParams();
+    if (searchQuery) httpParams = httpParams.set('searchQuery', searchQuery);
+    return this.http.get<OrgEventSpeakersResponse>(`/api/orgs/${encodeURIComponent(accountId)}/lens/events/${encodeURIComponent(eventId)}/speakers`, { params: httpParams });
   }
 
   public getOrgEvents(accountId: string, params: GetOrgEventsParams = {}): Observable<OrgEventsResponse> {

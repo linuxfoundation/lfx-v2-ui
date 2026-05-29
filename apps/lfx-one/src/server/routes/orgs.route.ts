@@ -47,6 +47,12 @@ router.get('/:accountId/lens/foundations-and-projects', (req, res, next) => orgL
 // GET /api/orgs/:accountId/lens/events/summary — MUST be before /:accountId/lens/events
 router.get('/:accountId/lens/events/summary', (req, res, next) => orgLensEventsController.getOrgEventsSummary(req, res, next));
 
+// GET /api/orgs/:accountId/lens/events/:eventId/attendees — MUST be before /:accountId/lens/events
+router.get('/:accountId/lens/events/:eventId/attendees', (req, res, next) => orgLensEventsController.getEventAttendees(req, res, next));
+
+// GET /api/orgs/:accountId/lens/events/:eventId/speakers — MUST be before /:accountId/lens/events
+router.get('/:accountId/lens/events/:eventId/speakers', (req, res, next) => orgLensEventsController.getEventSpeakers(req, res, next));
+
 // GET /api/orgs/:accountId/lens/events
 router.get('/:accountId/lens/events', (req, res, next) => orgLensEventsController.getOrgEvents(req, res, next));
 

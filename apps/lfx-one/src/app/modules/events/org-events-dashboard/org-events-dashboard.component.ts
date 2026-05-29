@@ -9,7 +9,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { CardComponent } from '@components/card/card.component';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { DEFAULT_EVENTS_PAGE_SIZE, DEFAULT_ORG_EVENTS_TAB_ID, EMPTY_ORG_EVENTS_RESPONSE, ORG_EVENTS_STATUS_OPTIONS, ORG_EVENTS_TABS, VALID_ORG_EVENTS_TAB_IDS } from '@lfx-one/shared/constants';
-import type { OrgEventStatFilterId, OrgEventsResponse, OrgEventsSummary, OrgEventsTabId, PageChangeEvent, SortChangeEvent } from '@lfx-one/shared/interfaces';
+import type { OrgEvent, OrgEventStatFilterId, OrgEventsResponse, OrgEventsSummary, OrgEventsTabId, PageChangeEvent, SortChangeEvent } from '@lfx-one/shared/interfaces';
 import { AccountContextService } from '@app/shared/services/account-context.service';
 import { EventsService } from '@app/shared/services/events.service';
 import { MessageService } from 'primeng/api';
@@ -17,11 +17,13 @@ import { SelectModule } from 'primeng/select';
 import { InputTextModule } from 'primeng/inputtext';
 import { catchError, combineLatest, debounceTime, filter, finalize, of, skip, switchMap, tap } from 'rxjs';
 import { DiscoverEventsButtonComponent } from '../components/discover-events-button/discover-events-button.component';
+import { EventAttendeesDrawerComponent } from './components/event-attendees-drawer/event-attendees-drawer.component';
+import { EventSpeakersDrawerComponent } from './components/event-speakers-drawer/event-speakers-drawer.component';
 import { OrgUpcomingEventsTableComponent } from './components/org-upcoming-events-table/org-upcoming-events-table.component';
 
 @Component({
   selector: 'lfx-org-events-dashboard',
-  imports: [FormsModule, CardComponent, EmptyStateComponent, SelectModule, InputTextModule, DiscoverEventsButtonComponent, OrgUpcomingEventsTableComponent],
+  imports: [FormsModule, CardComponent, EmptyStateComponent, SelectModule, InputTextModule, DiscoverEventsButtonComponent, EventAttendeesDrawerComponent, EventSpeakersDrawerComponent, OrgUpcomingEventsTableComponent],
   templateUrl: './org-events-dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -40,6 +42,9 @@ export class OrgEventsDashboardComponent {
 
   // === WritableSignals ===
   protected readonly activeStatFilter = signal<OrgEventStatFilterId | null>(null);
+  protected readonly attendeesDrawerVisible = signal(false);
+  protected readonly speakersDrawerVisible = signal(false);
+  protected readonly activeDrawerEvent = signal<OrgEvent | null>(null);
   protected readonly searchTerm = signal('');
   protected readonly selectedStatus = signal<string | null>(null);
   protected readonly upcomingEventsLoading = signal(true);
@@ -93,6 +98,18 @@ export class OrgEventsDashboardComponent {
         (document.getElementById(`org-events-tab-${ids[next]}`) as HTMLElement | null)?.focus();
       }
     }
+  }
+
+  protected onAttendeesClick(event: OrgEvent): void {
+    this.activeDrawerEvent.set(event);
+    this.speakersDrawerVisible.set(false);
+    this.attendeesDrawerVisible.set(true);
+  }
+
+  protected onSpeakersClick(event: OrgEvent): void {
+    this.activeDrawerEvent.set(event);
+    this.attendeesDrawerVisible.set(false);
+    this.speakersDrawerVisible.set(true);
   }
 
   protected onUpcomingPageChange(event: PageChangeEvent): void {

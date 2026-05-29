@@ -106,20 +106,34 @@
 
       <!-- Event Attendees: My Org / Total -->
       <td [attr.data-testid]="'org-upcoming-event-attendees-' + event.eventId">
-        <span class="text-sm text-gray-900 whitespace-nowrap">
-          {{ event.orgAttendeeCount | number }}
-          <span class="text-gray-400"> / {{ event.totalAttendeeCount | number }}</span>
-        </span>
+        @if (event.orgAttendeeCount > 0) {
+          <button
+            type="button"
+            class="text-sm text-gray-900 whitespace-nowrap hover:underline focus-visible:underline focus-visible:outline-none"
+            (click)="attendeesClick.emit(event)">
+            {{ event.orgAttendeeCount | number }}<span class="text-gray-400"> / {{ event.totalAttendeeCount | number }}</span>
+          </button>
+        } @else {
+          <span class="text-sm text-gray-900 whitespace-nowrap">
+            {{ event.orgAttendeeCount | number }}<span class="text-gray-400"> / {{ event.totalAttendeeCount | number }}</span>
+          </span>
+        }
       </td>
 
       <!-- Event Speakers: Accepted / Submitted -->
       <td [attr.data-testid]="'org-upcoming-event-speakers-' + event.eventId">
-        <span class="text-sm whitespace-nowrap">
-          <span [class.text-gray-400]="event.orgSpeakerAcceptedCount === 0" [class.text-gray-900]="event.orgSpeakerAcceptedCount > 0">
-            {{ event.orgSpeakerAcceptedCount }}
+        @if (event.orgSpeakerSubmittedCount > 0) {
+          <button
+            type="button"
+            class="text-sm whitespace-nowrap hover:underline focus-visible:underline focus-visible:outline-none"
+            (click)="speakersClick.emit(event)">
+            <span [class.text-gray-400]="event.orgSpeakerAcceptedCount === 0" [class.text-gray-900]="event.orgSpeakerAcceptedCount > 0">{{ event.orgSpeakerAcceptedCount }}</span><span class="text-gray-400"> / {{ event.orgSpeakerSubmittedCount }}</span>
+          </button>
+        } @else {
+          <span class="text-sm whitespace-nowrap">
+            <span class="text-gray-400">{{ event.orgSpeakerAcceptedCount }} / {{ event.orgSpeakerSubmittedCount }}</span>
           </span>
-          <span class="text-gray-400"> / {{ event.orgSpeakerSubmittedCount }}</span>
-        </span>
+        }
       </td>
 
       <!-- Event Sponsor -->

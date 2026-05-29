@@ -66,3 +66,35 @@ export interface GetOrgEventsOptions {
   readonly offset: number;
   readonly sortOrder: 'ASC' | 'DESC';
 }
+
+/** A single org employee in the per-event attendees drawer. */
+export interface OrgEventAttendee {
+  readonly contactId: string;
+  readonly name: string;
+  readonly jobTitle: string | null;
+}
+
+/** Response for GET /api/orgs/:accountId/lens/events/:eventId/attendees */
+export interface OrgEventAttendeesResponse {
+  readonly eventId: string;
+  readonly eventName: string;
+  readonly total: number;
+  readonly data: readonly OrgEventAttendee[];
+}
+
+/** A single org employee in the per-event speakers drawer. */
+export interface OrgEventSpeaker {
+  readonly contactId: string;
+  readonly name: string;
+  readonly jobTitle: string | null;
+  readonly status: 'ACCEPTED' | 'SUBMITTED';
+}
+
+/** Response for GET /api/orgs/:accountId/lens/events/:eventId/speakers */
+export interface OrgEventSpeakersResponse {
+  readonly eventId: string;
+  readonly eventName: string;
+  readonly acceptedCount: number;
+  readonly submittedCount: number;
+  readonly data: readonly OrgEventSpeaker[];
+}
