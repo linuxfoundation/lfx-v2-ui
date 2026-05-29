@@ -104,8 +104,6 @@
                   </div>
                   <span class="text-sm font-normal text-gray-900">{{ item.membership.AutoRenew ? 'Enabled' : 'Disabled' }}</span>
                 </div>
-              }
-              @if (item.membership.ExtPaymentType === 'stripe' && item.displayStatus !== 'Expired') {
                 @if (item.membership.AutoRenew) {
                   <lfx-button
                     class="-ml-6"
