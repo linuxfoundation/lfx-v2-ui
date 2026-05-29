@@ -69,6 +69,15 @@
           @if (item.membership) {
             <hr class="border-gray-200" />
             <div class="flex flex-wrap items-center gap-12" data-testid="individual-enrollment-details">
+              @if (item.price !== null && item.price !== undefined) {
+                <div class="flex flex-col gap-1" data-testid="individual-enrollment-price">
+                  <div class="flex items-center gap-1.5 text-xs text-gray-400">
+                    <i class="fa-light fa-tag"></i>
+                    <span>Price</span>
+                  </div>
+                  <span class="text-sm font-normal text-gray-900">${{ item.price }}/year</span>
+                </div>
+              }
               @if (item.membership.PurchaseDate) {
                 <div class="flex flex-col gap-1" data-testid="individual-enrollment-purchase-date">
                   <div class="flex items-center gap-1.5 text-xs text-gray-400">
