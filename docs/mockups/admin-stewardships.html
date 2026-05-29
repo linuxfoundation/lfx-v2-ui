@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Osprey Program — Admin Dashboard Mockup</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif; color: #0f172a; font-size: 14px; line-height: 1.5; overflow: hidden; height: 100vh; background: #f8fafc; }
+
+  .shell { display: flex; height: 100vh; }
+
+  /* ── Lens Rail (L1) ── */
+  .rail { width: 64px; background: #1e3a5f; display: flex; flex-direction: column; align-items: center; padding: 24px 0; flex-shrink: 0; }
+  .rail-logo { width: 32px; height: 32px; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; }
+  .rail-logo svg { width: 28px; height: 28px; }
+  .rail-divider { width: 24px; border-top: 1px solid rgba(255,255,255,0.35); margin-bottom: 12px; }
+  .rail-buttons { display: flex; flex-direction: column; align-items: center; gap: 12px; flex: 1; }
+  .rail-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; cursor: pointer; transition: color 0.15s; color: rgba(191,219,254,0.75); background: none; border: none; font-family: inherit; padding: 0; }
+  .rail-btn:hover { color: white; }
+  .rail-btn.active { color: white; }
+  .rail-btn-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: background 0.15s; }
+  .rail-btn.active .rail-btn-icon { background: #3b82f6; }
+  .rail-btn:hover:not(.active) .rail-btn-icon { background: rgba(255,255,255,0.1); }
+  .rail-btn-label { font-size: 10px; font-weight: 500; line-height: 1; }
+  .rail-footer { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: auto; }
+  .rail-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #f97316, #ea580c); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: 600; cursor: pointer; border: 2px solid rgba(255,255,255,0.2); }
+
+  /* ── Nav Panel (L2) ── */
+  .nav-panel { width: 280px; background: white; border-right: 1px solid #e5e7eb; display: flex; flex-direction: column; flex-shrink: 0; }
+  .nav-scroll { display: flex; flex-direction: column; padding: 16px 0; height: 100%; min-height: 0; overflow-y: auto; }
+  .me-selector { padding: 0 16px; margin-bottom: 24px; }
+  .me-selector-inner { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 8px; }
+  .me-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #f97316, #ea580c); display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; font-weight: 600; flex-shrink: 0; }
+  .me-name { font-size: 16px; font-weight: 600; color: #111827; line-height: 1.25; letter-spacing: -0.01em; }
+  .me-role { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 10px; background: #fef3c7; color: #92400e; margin-top: 4px; }
+  .me-role i { font-size: 9px; }
+  .nav-items { display: flex; flex-direction: column; gap: 4px; padding: 0 16px; }
+  .nav-section { width: 100%; margin-top: 8px; }
+  .nav-section-header { display: flex; align-items: center; gap: 8px; padding: 6px 8px; }
+  .nav-section-label { font-size: 12px; font-weight: 500; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+  .nav-section-line { flex: 1; height: 1px; background: #e5e7eb; }
+  .nav-section-items { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
+  .nav-item { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 8px; cursor: pointer; transition: all 0.12s; font-size: 16px; color: #4b5563; font-weight: 400; text-decoration: none; border: none; background: none; width: 100%; text-align: left; font-family: inherit; }
+  .nav-item:hover { background: #f9fafb; }
+  .nav-item.active { background: #dbeafe; font-weight: 500; color: #030712; }
+  .nav-item-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 15px; }
+  .nav-item .badge { margin-left: auto; font-size: 12px; font-weight: 500; color: #3b82f6; background: #eff6ff; padding: 1px 8px; border-radius: 10px; }
+  /* Admin-highlighted nav item */
+  .nav-item.admin-active { background: #fef3c7; font-weight: 500; color: #78350f; }
+  .nav-item .admin-badge { margin-left: auto; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 6px; border-radius: 3px; background: rgba(146,64,14,0.12); color: #92400e; }
+
+  /* ── Main Content ── */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+  .topbar { height: 48px; background: white; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; padding: 0 24px; flex-shrink: 0; gap: 12px; }
+  .topbar-breadcrumb { font-size: 13px; color: #9ca3af; }
+  .topbar-breadcrumb span { color: #0f172a; font-weight: 500; }
+  .topbar-spacer { flex: 1; }
+  .topbar-action { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px; color: #4b5563; cursor: pointer; background: white; transition: all 0.12s; }
+  .topbar-action:hover { background: #f9fafb; border-color: #d1d5db; }
+  .topbar-action-primary { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; color: white; background: #3b82f6; cursor: pointer; transition: all 0.12s; font-family: inherit; }
+  .topbar-action-primary:hover { background: #2563eb; }
+
+  .page { flex: 1; overflow-y: auto; padding: 24px; }
+  .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
+  .page-title { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 4px; }
+  .page-subtitle { font-size: 13px; color: #9ca3af; }
+  .page-title-row { display: flex; align-items: center; gap: 10px; }
+  .program-badge { font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 4px; background: #fef3c7; color: #92400e; display: inline-flex; align-items: center; gap: 4px; }
+
+  /* ── Stats (coverage-oriented) ── */
+  .stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 24px; }
+  .stat-card { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 16px; cursor: pointer; transition: all 0.15s; }
+  .stat-card:hover { border-color: #d1d5db; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+  .stat-card.hero { background: #0f172a; border-color: #0f172a; color: white; }
+  .stat-card.hero .stat-label { color: #94a3b8; }
+  .stat-card.hero .stat-value { color: white; }
+  .stat-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #9ca3af; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+  .stat-label i { font-size: 11px; }
+  .stat-value { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+  .stat-delta { font-size: 11px; font-weight: 500; margin-top: 2px; }
+  .stat-delta.up { color: #059669; }
+
+  /* ── Toolbar ── */
+  .toolbar { background: white; border: 1px solid #e5e7eb; border-radius: 8px 8px 0 0; border-bottom: none; }
+  .tabs { display: flex; border-bottom: 1px solid #e5e7eb; padding: 0 16px; }
+  .tab { padding: 10px 16px; font-size: 13px; font-weight: 500; color: #9ca3af; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.12s; display: flex; align-items: center; gap: 6px; }
+  .tab:hover { color: #4b5563; }
+  .tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+  .tab-count { font-size: 11px; font-weight: 600; background: #f8fafc; padding: 1px 7px; border-radius: 10px; color: #9ca3af; }
+  .tab.active .tab-count { background: #eff6ff; color: #3b82f6; }
+  .tab-dot { width: 6px; height: 6px; border-radius: 50%; background: #dc2626; }
+
+  .filters { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #e5e7eb; }
+  .search-input { flex: 1; max-width: 280px; height: 32px; border: 1px solid #e5e7eb; border-radius: 6px; padding: 0 10px 0 32px; font-size: 13px; color: #0f172a; outline: none; background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") 10px center no-repeat; }
+  .search-input:focus { border-color: #3b82f6; }
+  .search-input::placeholder { color: #9ca3af; }
+  .filter-select { height: 32px; border: 1px solid #e5e7eb; border-radius: 6px; padding: 0 28px 0 10px; font-size: 13px; color: #4b5563; background: white; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; cursor: pointer; outline: none; }
+  .filters-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .sort-btn { height: 32px; padding: 0 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 12px; color: #9ca3af; background: white; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+
+  .bulk-bar { display: flex; align-items: center; gap: 10px; padding: 8px 16px; background: #eff6ff; border-bottom: 1px solid #3b82f6; font-size: 13px; }
+  .bulk-bar-count { font-weight: 600; color: #3b82f6; }
+  .bulk-btn { height: 28px; padding: 0 10px; border-radius: 4px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid; transition: all 0.12s; display: inline-flex; align-items: center; gap: 4px; font-family: inherit; }
+  .bulk-btn-primary { background: #3b82f6; color: white; border-color: #3b82f6; }
+  .bulk-btn-outline { background: white; color: #3b82f6; border-color: #3b82f6; }
+  .bulk-btn-clear { background: none; color: #9ca3af; border: none; margin-left: auto; font-size: 12px; cursor: pointer; font-family: inherit; }
+
+  /* ── Table ── */
+  .table-container { background: white; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #9ca3af; background: #f8fafc; border-bottom: 1px solid #e5e7eb; white-space: nowrap; cursor: pointer; user-select: none; }
+  thead th.th-checkbox { width: 40px; cursor: default; }
+  tbody tr { cursor: pointer; transition: background 0.1s; }
+  tbody tr:hover { background: #eff6ff; }
+  tbody tr.selected { background: #dbeafe; }
+  tbody td { padding: 11px 14px; border-bottom: 1px solid #f1f5f9; font-size: 13px; vertical-align: middle; white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .checkbox { width: 16px; height: 16px; border: 1.5px solid #d1d5db; border-radius: 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.12s; background: white; }
+  .checkbox:hover { border-color: #3b82f6; }
+  .checkbox.checked { background: #3b82f6; border-color: #3b82f6; color: white; font-size: 10px; }
+  .checkbox.indeterminate { background: #3b82f6; border-color: #3b82f6; }
+  .checkbox.indeterminate::after { content: ''; display: block; width: 8px; height: 2px; background: white; border-radius: 1px; }
+
+  .pkg-name { font-weight: 600; color: #0f172a; }
+  .pkg-purl { font-size: 11px; color: #9ca3af; font-family: 'SF Mono', 'Fira Code', monospace; }
+  .tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .tag-neutral { background: #f8fafc; color: #9ca3af; border: 1px solid #e5e7eb; }
+  .tag-info { background: #f0f9ff; color: #0284c7; }
+  .tag-warning { background: #fffbeb; color: #d97706; }
+  .tag-danger { background: #fef2f2; color: #dc2626; }
+  .tag-success { background: #ecfdf5; color: #059669; }
+  .ecosystem-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #4b5563; font-weight: 500; }
+  .ecosystem-tag .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .dot-npm { background: #cb3837; }
+  .dot-maven { background: #c71a36; }
+
+  .health-cell { display: flex; align-items: center; gap: 6px; }
+  .health-score { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .health-score.excellent { color: #059669; }
+  .health-score.healthy { color: #059669; }
+  .health-score.fair { color: #d97706; }
+  .health-score.concerning { color: #d97706; }
+  .health-score.critical { color: #dc2626; }
+  .lifecycle-tag { display: inline-flex; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+  .lifecycle-active { background: #ecfdf5; color: #059669; }
+  .lifecycle-stable { background: #f0f9ff; color: #0284c7; }
+  .lifecycle-declining { background: #fffbeb; color: #d97706; }
+  .lifecycle-abandoned { background: #fef2f2; color: #dc2626; }
+
+  .owner-cell { display: flex; align-items: center; gap: 6px; }
+  .owner-avatar { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: white; }
+  .owner-unassigned { color: #9ca3af; font-style: italic; }
+  .activity-text { font-size: 12px; color: #9ca3af; }
+  .activity-text strong { color: #4b5563; font-weight: 500; }
+
+  .table-footer { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; background: white; }
+  .pagination { display: flex; align-items: center; gap: 4px; }
+  .page-btn { width: 28px; height: 28px; border: 1px solid #e5e7eb; border-radius: 4px; background: white; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; color: #4b5563; }
+  .page-btn:hover { background: #f8fafc; }
+  .page-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; }
+
+  /* ── Drawer ── */
+  .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.2); z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .drawer-overlay.open { opacity: 1; pointer-events: auto; }
+  .drawer { position: fixed; top: 0; right: 0; width: 520px; height: 100vh; background: white; box-shadow: -4px 0 24px rgba(0,0,0,0.12); z-index: 101; transform: translateX(100%); transition: transform 0.25s ease; display: flex; flex-direction: column; }
+  .drawer.open { transform: translateX(0); }
+  .drawer-header { padding: 20px 20px 0; flex-shrink: 0; }
+  .drawer-header-row { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 4px; }
+  .drawer-title { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+  .drawer-close { width: 28px; height: 28px; border: none; background: none; color: #9ca3af; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .drawer-close:hover { background: #f8fafc; color: #0f172a; }
+  .drawer-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 12px; color: #9ca3af; flex-wrap: wrap; }
+  .drawer-meta code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; background: #f8fafc; padding: 2px 6px; border-radius: 3px; }
+  .drawer-tabs { display: flex; border-bottom: 1px solid #e5e7eb; padding: 0; }
+  .drawer-tab { padding: 10px 16px; font-size: 13px; font-weight: 500; color: #9ca3af; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.12s; }
+  .drawer-tab:hover { color: #4b5563; }
+  .drawer-tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+  .drawer-body { flex: 1; overflow-y: auto; padding: 20px; }
+  .drawer-section { margin-bottom: 24px; }
+  .drawer-section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #9ca3af; margin-bottom: 10px; }
+  .drawer-field { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 13px; }
+  .drawer-field-label { color: #9ca3af; }
+  .drawer-field-value { font-weight: 500; color: #0f172a; text-align: right; }
+
+  .drawer-footer { padding: 12px 20px; border-top: 1px solid #e5e7eb; display: flex; gap: 8px; flex-shrink: 0; background: white; }
+  .btn { height: 34px; padding: 0 14px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.12s; border: none; font-family: inherit; }
+  .btn-primary { background: #3b82f6; color: white; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-outline { background: white; color: #4b5563; border: 1px solid #e5e7eb; }
+  .btn-outline:hover { background: #f8fafc; border-color: #d1d5db; }
+  .btn-ghost { background: none; color: #9ca3af; border: none; margin-left: auto; }
+  .btn-ghost:hover { color: #4b5563; }
+
+  .mockup-badge { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #e2e8f0; padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 500; z-index: 200; display: flex; align-items: center; gap: 8px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08); }
+  .mockup-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: #f59e0b; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- ── Lens Rail ── -->
+  <nav class="rail">
+    <div class="rail-logo">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="rail-divider"></div>
+    <div class="rail-buttons">
+      <button class="rail-btn active">
+        <div class="rail-btn-icon"><i class="fa-solid fa-user"></i></div>
+        <span class="rail-btn-label">Me</span>
+      </button>
+      <button class="rail-btn">
+        <div class="rail-btn-icon"><i class="fa-regular fa-building"></i></div>
+        <span class="rail-btn-label">Org</span>
+      </button>
+      <button class="rail-btn">
+        <div class="rail-btn-icon"><i class="fa-regular fa-layer-group"></i></div>
+        <span class="rail-btn-label">Fdn</span>
+      </button>
+      <button class="rail-btn">
+        <div class="rail-btn-icon"><i class="fa-regular fa-diagram-project"></i></div>
+        <span class="rail-btn-label">Prj</span>
+      </button>
+    </div>
+    <div class="rail-footer">
+      <div class="rail-divider" style="margin-bottom:0;margin-top:0;"></div>
+      <div class="rail-avatar">SK</div>
+    </div>
+  </nav>
+
+  <!-- ── Nav Panel ── -->
+  <nav class="nav-panel">
+    <div class="nav-scroll">
+      <div class="me-selector">
+        <div class="me-selector-inner">
+          <div class="me-avatar">SK</div>
+          <div>
+            <div class="me-name">Sarah Kim</div>
+            <div class="me-role"><i class="fa-solid fa-shield-halved"></i> Osprey Admin</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-items">
+        <a class="nav-item" href="#"><div class="nav-item-icon"><i class="fa-light fa-gauge"></i></div> My Dashboard</a>
+
+        <div class="nav-section">
+          <div class="nav-section-header">
+            <span class="nav-section-label">My Engagement</span>
+            <div class="nav-section-line"></div>
+          </div>
+          <div class="nav-section-items">
+            <a class="nav-item" href="#"><div class="nav-item-icon"><i class="fa-light fa-calendar"></i></div> Meetings</a>
+          </div>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-section-header">
+            <span class="nav-section-label">Security</span>
+            <div class="nav-section-line"></div>
+          </div>
+          <div class="nav-section-items">
+            <a class="nav-item" href="#"><div class="nav-item-icon"><i class="fa-light fa-shield-halved"></i></div> My Stewardships <span class="badge">5</span></a>
+            <a class="nav-item admin-active" href="#"><div class="nav-item-icon"><i class="fa-light fa-shield"></i></div> Osprey Program <span class="admin-badge">Admin</span></a>
+          </div>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-section-header">
+            <span class="nav-section-label">My Account</span>
+            <div class="nav-section-line"></div>
+          </div>
+          <div class="nav-section-items">
+            <a class="nav-item" href="#"><div class="nav-item-icon"><i class="fa-light fa-user-pen"></i></div> Profile</a>
+            <a class="nav-item" href="#"><div class="nav-item-icon"><i class="fa-light fa-gear"></i></div> Settings</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Main Content ── -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-breadcrumb">Me &rsaquo; <span>Osprey Program</span></div>
+      <div class="topbar-spacer"></div>
+      <div class="topbar-action"><i class="fa-light fa-arrow-up-right-from-square"></i> Open in Insights</div>
+      <button class="topbar-action-primary"><i class="fa-solid fa-plus"></i> Assign steward</button>
+    </div>
+
+    <div class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title-row">
+            <div class="page-title">Osprey Program</div>
+            <div class="program-badge"><i class="fa-solid fa-shield-halved"></i> OpenSSF</div>
+          </div>
+          <div class="page-subtitle">Coverage and stewardship across npm and Maven ecosystems.</div>
+        </div>
+      </div>
+
+      <!-- Coverage-oriented stats -->
+      <div class="stats">
+        <div class="stat-card hero">
+          <div class="stat-label"><i class="fa-solid fa-cube"></i> Critical packages</div>
+          <div class="stat-value">1,842</div>
+        </div>
+        <div class="stat-card hero">
+          <div class="stat-label"><i class="fa-solid fa-shield-check"></i> Coverage</div>
+          <div class="stat-value">33.2%</div>
+          <div class="stat-delta up">+4.1% this month</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label"><i class="fa-solid fa-user-check"></i> Active stewards</div>
+          <div class="stat-value" style="color:#059669">612</div>
+        </div>
+        <div class="stat-card" style="border-left: 3px solid #dc2626;">
+          <div class="stat-label"><i class="fa-solid fa-circle-exclamation"></i> Unassigned (crit)</div>
+          <div class="stat-value" style="color:#dc2626">1,230</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label"><i class="fa-solid fa-triangle-exclamation"></i> Needs attention</div>
+          <div class="stat-value" style="color:#d97706">47</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label"><i class="fa-solid fa-arrow-up-from-bracket"></i> Escalated</div>
+          <div class="stat-value" style="color:#dc2626">8</div>
+        </div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="tabs">
+          <div class="tab">All <span class="tab-count">1,842</span></div>
+          <div class="tab active">Unassigned <span class="tab-count">1,230</span></div>
+          <div class="tab">Open <span class="tab-count">94</span></div>
+          <div class="tab">Assessing <span class="tab-count">127</span></div>
+          <div class="tab">Active <span class="tab-count">612</span></div>
+          <div class="tab">Needs attention <span class="tab-dot"></span> <span class="tab-count">47</span></div>
+          <div class="tab">Escalated <span class="tab-count">8</span></div>
+        </div>
+        <div class="filters">
+          <input type="text" class="search-input" placeholder="Search packages, purl, or steward...">
+          <select class="filter-select">
+            <option>All ecosystems</option>
+            <option>npm</option>
+            <option>Maven</option>
+          </select>
+          <select class="filter-select">
+            <option>All lifecycle</option>
+            <option>Active</option>
+            <option>Stable</option>
+            <option>Declining</option>
+            <option>Abandoned</option>
+          </select>
+          <select class="filter-select">
+            <option>All health</option>
+            <option selected>Critical</option>
+            <option>Concerning</option>
+            <option>Fair</option>
+            <option>Healthy</option>
+          </select>
+          <div class="filters-right">
+            <div class="sort-btn"><i class="fa-solid fa-arrow-down-wide-short"></i> Risk priority</div>
+          </div>
+        </div>
+        <div class="bulk-bar">
+          <span class="bulk-bar-count">3 selected</span>
+          <button class="bulk-btn bulk-btn-primary"><i class="fa-solid fa-folder-open"></i> Open for stewardship</button>
+          <button class="bulk-btn bulk-btn-outline"><i class="fa-solid fa-user-plus"></i> Assign steward</button>
+          <button class="bulk-btn-clear">Clear selection</button>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th class="th-checkbox"><div class="checkbox indeterminate"></div></th>
+              <th>Package</th>
+              <th>Ecosystem</th>
+              <th>Lifecycle</th>
+              <th>Health</th>
+              <th>Impact</th>
+              <th>Steward</th>
+              <th>Stewardship</th>
+              <th>Last activity</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="selected" onclick="openDrawer()">
+              <td><div class="checkbox checked"><i class="fa-solid fa-check"></i></div></td>
+              <td><div class="pkg-name">lodash</div><div class="pkg-purl">pkg:npm/lodash</div></td>
+              <td><span class="ecosystem-tag"><span class="dot dot-npm"></span> npm</span></td>
+              <td><span class="lifecycle-tag lifecycle-declining">Declining</span></td>
+              <td><span class="health-score fair">52 Fair</span></td>
+              <td><span style="font-variant-numeric:tabular-nums;">94</span></td>
+              <td><span class="owner-unassigned">&mdash;</span></td>
+              <td><span class="tag tag-neutral">Unassigned</span></td>
+              <td><span class="activity-text">Synced May 28</span></td>
+            </tr>
+            <tr class="selected">
+              <td><div class="checkbox checked"><i class="fa-solid fa-check"></i></div></td>
+              <td><div class="pkg-name">chalk</div><div class="pkg-purl">pkg:npm/chalk</div></td>
+              <td><span class="ecosystem-tag"><span class="dot dot-npm"></span> npm</span></td>
+              <td><span class="lifecycle-tag lifecycle-stable">Stable</span></td>
+              <td><span class="health-score healthy">72 Healthy</span></td>
+              <td><span style="font-variant-numeric:tabular-nums;">76</span></td>
+              <td><span class="owner-unassigned">&mdash;</span></td>
+              <td><span class="tag tag-neutral">Unassigned</span></td>
+              <td><span class="activity-text">Synced May 28</span></td>
+            </tr>
+            <tr class="selected">
+              <td><div class="checkbox checked"><i class="fa-solid fa-check"></i></div></td>
+              <td><div class="pkg-name">debug</div><div class="pkg-purl">pkg:npm/debug</div></td>
+              <td><span class="ecosystem-tag"><span class="dot dot-npm"></span> npm</span></td>
+              <td><span class="lifecycle-tag lifecycle-declining">Declining</span></td>
+              <td><span class="health-score concerning">42 Concerning</span></td>
+              <td><span style="font-variant-numeric:tabular-nums;">96</span></td>
+              <td><span class="owner-unassigned">&mdash;</span></td>
+              <td><span class="tag tag-neutral">Unassigned</span></td>
+              <td><span class="activity-text">Synced May 28</span></td>
+            </tr>
+            <tr onclick="openDrawer()">
+              <td><div class="checkbox"></div></td>
+              <td><div class="pkg-name">minimist</div><div class="pkg-purl">pkg:npm/minimist</div></td>
+              <td><span class="ecosystem-tag"><span class="dot dot-npm"></span> npm</span></td>
+              <td><span class="lifecycle-tag lifecycle-abandoned">Abandoned</span></td>
+              <td><span class="health-score critical">18 Critical</span></td>
+              <td><span style="font-variant-numeric:tabular-nums;">71</span></td>
+              <td><div class="owner-cell"><div class="owner-avatar" style="background: linear-gradient(135deg, #818cf8, #6366f1)">JR</div> Jonathan R.</div></td>
+              <td><span class="tag tag-danger"><i class="fa-solid fa-circle" style="font-size:6px"></i> Escalated</span></td>
+              <td><span class="activity-text"><strong>Escalated</strong> &middot; 1d</span></td>
+            </tr>
+            <tr onclick="openDrawer()">
+              <td><div class="checkbox"></div></td>
+              <td><div class="pkg-name">express</div><div class="pkg-purl">pkg:npm/express</div></td>
+              <td><span class="ecosystem-tag"><span class="dot dot-npm"></span> npm</span></td>
+              <td><span class="lifecycle-tag lifecycle-active">Active</span></td>
+              <td><span class="health-score healthy">78 Healthy</span></td>
+              <td><span style="font-variant-numeric:tabular-nums;">88</span></td>
+              <td><div class="owner-cell"><div class="owner-avatar" style="background: linear-gradient(135deg, #34d399, #059669)">LP</div> Lee Park</div></td>
+              <td><span class="tag tag-success"><i class="fa-solid fa-circle" style="font-size:6px"></i> Active</span></td>
+              <td><span class="activity-text"><strong>Logged progress</strong> &middot; 4h</span></td>
+            </tr>
+            <tr onclick="openDrawer()">
+              <td><div class="checkbox"></div></td>
+              <td><div class="pkg-name">org.slf4j:slf4j-api</div><div class="pkg-purl">pkg:maven/org.slf4j/slf4j-api</div></td>
+              <td><span class="ecosystem-tag"><span class="dot dot-maven"></span> Maven</span></td>
+              <td><span class="lifecycle-tag lifecycle-active">Active</span></td>
+              <td><span class="health-score healthy">71 Healthy</span></td>
+              <td><span style="font-variant-numeric:tabular-nums;">82</span></td>
+              <td><div class="owner-cell"><div class="owner-avatar" style="background: linear-gradient(135deg, #f97316, #ea580c)">MC</div> Maya Chen</div></td>
+              <td><span class="tag tag-warning"><i class="fa-solid fa-circle" style="font-size:6px"></i> Assessing</span></td>
+              <td><span class="activity-text"><strong>Assessment started</strong> &middot; 2h</span></td>
+            </tr>
+            <tr onclick="openDrawer()">
+              <td><div class="checkbox"></div></td>
+              <td><div class="pkg-name">jackson-databind</div><div class="pkg-purl">pkg:maven/com.fasterxml.jackson.core/jackson-databind</div></td>
+              <td><span class="ecosystem-tag"><span class="dot dot-maven"></span> Maven</span></td>
+              <td><span class="lifecycle-tag lifecycle-active">Active</span></td>
+              <td><span class="health-score fair">64 Fair</span></td>
+              <td><span style="font-variant-numeric:tabular-nums;">89</span></td>
+              <td><div class="owner-cell"><div class="owner-avatar" style="background: linear-gradient(135deg, #818cf8, #6366f1)">JR</div> Jonathan R.</div></td>
+              <td><span class="tag tag-danger"><i class="fa-solid fa-circle" style="font-size:6px"></i> Needs attention</span></td>
+              <td><span class="activity-text"><strong>New advisory</strong> &middot; 3h</span></td>
+            </tr>
+            <tr onclick="openDrawer()">
+              <td><div class="checkbox"></div></td>
+              <td><div class="pkg-name">glob</div><div class="pkg-purl">pkg:npm/glob</div></td>
+              <td><span class="ecosystem-tag"><span class="dot dot-npm"></span> npm</span></td>
+              <td><span class="lifecycle-tag lifecycle-declining">Declining</span></td>
+              <td><span class="health-score concerning">38 Concerning</span></td>
+              <td><span style="font-variant-numeric:tabular-nums;">74</span></td>
+              <td><span class="owner-unassigned">&mdash;</span></td>
+              <td><span class="tag tag-info"><i class="fa-solid fa-circle" style="font-size:6px"></i> Open</span></td>
+              <td><span class="activity-text">Opened &middot; 3d</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="table-footer">
+          <span>Showing 1&ndash;8 of 1,230 unassigned critical packages</span>
+          <div class="pagination">
+            <button class="page-btn" disabled><i class="fa-solid fa-chevron-left" style="font-size:10px"></i></button>
+            <button class="page-btn active">1</button>
+            <button class="page-btn">2</button>
+            <button class="page-btn">3</button>
+            <span style="color:#9ca3af">...</span>
+            <button class="page-btn">154</button>
+            <button class="page-btn"><i class="fa-solid fa-chevron-right" style="font-size:10px"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Drawer Overlay -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+
+<!-- Package drawer (unassigned package - admin triage) -->
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div class="drawer-header-row">
+      <div class="drawer-title">lodash</div>
+      <button class="drawer-close" onclick="closeDrawer()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="drawer-meta">
+      <code>pkg:npm/lodash</code>
+      <span class="ecosystem-tag"><span class="dot dot-npm"></span> npm</span>
+      <span class="lifecycle-tag lifecycle-declining">Declining</span>
+      <span style="font-size:12px; color:#d97706; font-weight:600;">Health 52</span>
+      <span style="font-size:12px; color:#0f172a; font-weight:600;">Impact 94</span>
+      <span class="tag tag-neutral">Unassigned</span>
+    </div>
+    <div class="drawer-tabs">
+      <div class="drawer-tab active">Overview</div>
+      <div class="drawer-tab">Assessment</div>
+      <div class="drawer-tab">Security</div>
+      <div class="drawer-tab">Provenance</div>
+    </div>
+  </div>
+
+  <div class="drawer-body">
+    <div class="drawer-section">
+      <div class="drawer-section-title">Health Score Breakdown</div>
+      <div class="drawer-field">
+        <span class="drawer-field-label">Maintainer Health</span>
+        <span class="drawer-field-value">15 / 40</span>
+      </div>
+      <div class="drawer-field">
+        <span class="drawer-field-label">Security &amp; Supply Chain</span>
+        <span class="drawer-field-value">22 / 35</span>
+      </div>
+      <div class="drawer-field">
+        <span class="drawer-field-label">Development Activity</span>
+        <span class="drawer-field-value">15 / 25</span>
+      </div>
+      <div class="drawer-field" style="border-top:1px solid #e5e7eb; padding-top:8px; margin-top:4px;">
+        <span class="drawer-field-label" style="font-weight:600; color:#0f172a;">Total</span>
+        <span class="drawer-field-value" style="font-size:16px;">52 / 100 <span class="tag tag-warning" style="margin-left:4px;">Fair</span></span>
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-title">Impact Score</div>
+      <div class="drawer-field">
+        <span class="drawer-field-label">Impact Score</span>
+        <span class="drawer-field-value" style="font-size:16px;">94 / 100</span>
+      </div>
+      <div class="drawer-field">
+        <span class="drawer-field-label">Downloads (last month)</span>
+        <span class="drawer-field-value">52,142,891</span>
+      </div>
+      <div class="drawer-field">
+        <span class="drawer-field-label">Dependent packages</span>
+        <span class="drawer-field-value">142,312</span>
+      </div>
+      <div class="drawer-field">
+        <span class="drawer-field-label">Dependent repos</span>
+        <span class="drawer-field-value">39,104</span>
+      </div>
+      <div class="drawer-field">
+        <span class="drawer-field-label">Transitive reach</span>
+        <span class="drawer-field-value">Top 0.01%</span>
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-title">Key Risk Signals</div>
+      <div class="drawer-field">
+        <span class="drawer-field-label">Maintainer bus factor</span>
+        <span class="drawer-field-value" style="color:#dc2626">1 (single maintainer)</span>
+      </div>
+      <div class="drawer-field">
+        <span class="drawer-field-label">Last release</span>
+        <span class="drawer-field-value" style="color:#dc2626">2021-02-20 (5y ago)</span>
+      </div>
+      <div class="drawer-field">
+        <span class="drawer-field-label">SECURITY.md</span>
+        <span class="drawer-field-value" style="color:#dc2626">Missing</span>
+      </div>
+      <div class="drawer-field">
+        <span class="drawer-field-label">Open advisories</span>
+        <span class="drawer-field-value" style="color:#059669">0</span>
+      </div>
+      <div class="drawer-field">
+        <span class="drawer-field-label">OpenSSF Scorecard</span>
+        <span class="drawer-field-value">5.2 / 10</span>
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-title">Repository</div>
+      <div class="drawer-field">
+        <span class="drawer-field-label">Repo</span>
+        <span class="drawer-field-value" style="color:#3b82f6">github.com/lodash/lodash</span>
+      </div>
+      <div class="drawer-field">
+        <span class="drawer-field-label">Mapping confidence</span>
+        <span class="drawer-field-value"><span class="tag tag-success">High</span></span>
+      </div>
+      <div class="drawer-field">
+        <span class="drawer-field-label">Last commit</span>
+        <span class="drawer-field-value">2024-09-14</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="drawer-footer">
+    <button class="btn btn-outline"><i class="fa-solid fa-folder-open"></i> Open for stewardship</button>
+    <button class="btn btn-primary"><i class="fa-solid fa-user-plus"></i> Assign steward</button>
+    <button class="btn btn-ghost"><i class="fa-light fa-arrow-up-right-from-square"></i> Insights</button>
+  </div>
+</div>
+
+<div class="mockup-badge"><span class="dot"></span> UI Mockup &mdash; Me Lens / Osprey Program (Admin)</div>
+
+<script>
+function openDrawer() {
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawerOverlay').classList.add('open');
+}
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+}
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
+</script>
+
+</body>
+</html>
