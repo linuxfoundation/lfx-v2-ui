@@ -62,57 +62,59 @@ export class OrgLensEventsService {
       statusFilter = 'AND o.IS_ORG_SPONSOR = 1';
     }
 
-    const isPastCondition = isPast ? 'TRUE' : 'FALSE';
+    // Use date comparison for ORG_PEOPLE_EVENTS (which has no IS_PAST_EVENT column)
+    const eventDateCondition = isPast ? 'ope.EVENT_END_DATE < CURRENT_DATE()' : 'ope.EVENT_END_DATE >= CURRENT_DATE()';
 
     const sql = `
-      WITH account AS (
-        SELECT ACCOUNT_NAME
-        FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_LENS_ACCOUNT_CONTEXT
-        WHERE ACCOUNT_ID = ?
+      WITH
+      -- Primary event discovery: ACCOUNT_ID-based via ORG_PEOPLE_EVENTS (same source as myorg)
+      org_pe AS (
+        SELECT DISTINCT ope.EVENT_ID
+        FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_PEOPLE_EVENTS ope
+        WHERE ope.ACCOUNT_ID = ?
+          AND ${eventDateCondition}
       ),
+      -- Org employee emails for org-specific attendee/speaker counting
       org_emails AS (
         SELECT DISTINCT UPPER(EMAIL) AS EMAIL
         FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_PEOPLE_ALL
         WHERE ACCOUNT_ID = ?
       ),
+      -- Canonical account names for sponsor detection fallback
+      account AS (
+        SELECT ACCOUNT_NAME
+        FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_LENS_ACCOUNT_CONTEXT
+        WHERE ACCOUNT_ID = ?
+      ),
+      -- Event metrics from EVENT_REGISTRATIONS scoped to org's event IDs
       org_events AS (
         SELECT
           er.EVENT_ID,
-          er.EVENT_NAME,
-          er.PROJECT_NAME AS FOUNDATION,
-          er.EVENT_START_DATE,
-          er.EVENT_END_DATE,
-          er.EVENT_LOCATION,
-          er.EVENT_CITY,
-          er.EVENT_COUNTRY,
-          er.EVENT_URL,
-          er.EVENT_REGISTRATION_URL,
-          COUNT(DISTINCT CASE WHEN er.REGISTRATION_STATUS = 'Accepted' THEN er.USER_EMAIL END) AS ORG_ATTENDEE_COUNT,
-          COUNT(DISTINCT CASE WHEN er.USER_ROLE = 'Speaker' AND er.REGISTRATION_STATUS = 'Accepted' THEN er.USER_EMAIL END) AS ORG_SPEAKER_ACCEPTED_COUNT,
-          MAX(CASE WHEN er.USER_ROLE = 'Sponsor' THEN 1 ELSE 0 END) AS IS_ORG_SPONSOR
+          MAX(er.EVENT_NAME) AS EVENT_NAME,
+          MAX(er.PROJECT_NAME) AS FOUNDATION,
+          MAX(er.EVENT_START_DATE) AS EVENT_START_DATE,
+          MAX(er.EVENT_END_DATE) AS EVENT_END_DATE,
+          MAX(er.EVENT_LOCATION) AS EVENT_LOCATION,
+          MAX(er.EVENT_CITY) AS EVENT_CITY,
+          MAX(er.EVENT_COUNTRY) AS EVENT_COUNTRY,
+          MAX(er.EVENT_URL) AS EVENT_URL,
+          MAX(er.EVENT_REGISTRATION_URL) AS EVENT_REGISTRATION_URL,
+          COUNT(DISTINCT CASE WHEN UPPER(er.USER_EMAIL) IN (SELECT EMAIL FROM org_emails) AND er.REGISTRATION_STATUS = 'Accepted' THEN er.USER_EMAIL END) AS ORG_ATTENDEE_COUNT,
+          COUNT(DISTINCT CASE WHEN UPPER(er.USER_EMAIL) IN (SELECT EMAIL FROM org_emails) AND er.USER_ROLE = 'Speaker' AND er.REGISTRATION_STATUS = 'Accepted' THEN er.USER_EMAIL END) AS ORG_SPEAKER_ACCEPTED_COUNT,
+          MAX(CASE WHEN er.USER_ROLE = 'Sponsor' AND er.REGISTRATION_STATUS NOT IN ('Cancelled', 'Declined', 'Rejected') AND (UPPER(er.USER_EMAIL) IN (SELECT EMAIL FROM org_emails) OR UPPER(er.ACCOUNT_NAME) IN (SELECT UPPER(a.ACCOUNT_NAME) FROM account a)) THEN 1 ELSE 0 END) AS IS_ORG_SPONSOR
         FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
-        WHERE er.IS_PAST_EVENT = ${isPastCondition}
-          AND er.REGISTRATION_STATUS NOT IN ('Cancelled', 'Declined', 'Rejected')
-          AND (
-            UPPER(er.ACCOUNT_NAME) IN (SELECT UPPER(a.ACCOUNT_NAME) FROM account a)
-            OR UPPER(er.USER_EMAIL) IN (SELECT oe.EMAIL FROM org_emails oe)
-          )
-        GROUP BY
-          er.EVENT_ID, er.EVENT_NAME, er.PROJECT_NAME,
-          er.EVENT_START_DATE, er.EVENT_END_DATE,
-          er.EVENT_LOCATION, er.EVENT_CITY, er.EVENT_COUNTRY,
-          er.EVENT_URL, er.EVENT_REGISTRATION_URL
+        WHERE er.EVENT_ID IN (SELECT EVENT_ID FROM org_pe)
+        GROUP BY er.EVENT_ID
       ),
       org_speaker_submissions AS (
         SELECT er.EVENT_ID, COUNT(DISTINCT er.USER_EMAIL) AS ORG_SPEAKER_SUBMITTED_COUNT
         FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
-        WHERE er.IS_PAST_EVENT = ${isPastCondition}
+        WHERE er.EVENT_ID IN (SELECT EVENT_ID FROM org_pe)
           AND er.USER_ROLE = 'Speaker'
           AND er.REGISTRATION_STATUS NOT IN ('Cancelled', 'Declined', 'Rejected')
-          AND er.EVENT_ID IN (SELECT EVENT_ID FROM org_events)
           AND (
-            UPPER(er.ACCOUNT_NAME) IN (SELECT UPPER(a.ACCOUNT_NAME) FROM account a)
-            OR UPPER(er.USER_EMAIL) IN (SELECT oe.EMAIL FROM org_emails oe)
+            UPPER(er.USER_EMAIL) IN (SELECT EMAIL FROM org_emails)
+            OR UPPER(er.ACCOUNT_NAME) IN (SELECT UPPER(a.ACCOUNT_NAME) FROM account a)
           )
         GROUP BY er.EVENT_ID
       ),
@@ -120,8 +122,8 @@ export class OrgLensEventsService {
         SELECT EVENT_ID
         FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS
         WHERE USER_EMAIL = ?
-          AND IS_PAST_EVENT = ${isPastCondition}
           AND REGISTRATION_STATUS = 'Accepted'
+          AND EVENT_ID IN (SELECT EVENT_ID FROM org_pe)
       )
       SELECT
         o.EVENT_ID,
@@ -152,7 +154,7 @@ export class OrgLensEventsService {
       LIMIT ${pageSize} OFFSET ${offset}
     `;
 
-    const binds: string[] = [accountId, accountId, userEmail];
+    const binds: string[] = [accountId, accountId, accountId, userEmail];
     if (searchQuery) binds.push(`%${searchQuery}%`);
 
     let result;
@@ -179,37 +181,27 @@ export class OrgLensEventsService {
     logger.debug(req, 'get_org_lens_events_summary', 'Building org events summary query', { account_id: accountId });
 
     const sql = `
-      WITH account AS (
-        SELECT ACCOUNT_NAME
-        FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_LENS_ACCOUNT_CONTEXT
-        WHERE ACCOUNT_ID = ?
-      ),
-      org_emails AS (
-        SELECT DISTINCT UPPER(EMAIL) AS EMAIL
-        FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_PEOPLE_ALL
-        WHERE ACCOUNT_ID = ?
-      ),
+      WITH
+      -- Use ORG_PEOPLE_EVENTS (ACCOUNT_ID-based) for consistent event counts across all views
       org_events AS (
-        SELECT DISTINCT er.EVENT_ID, er.IS_PAST_EVENT
-        FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
-        WHERE er.REGISTRATION_STATUS NOT IN ('Cancelled', 'Declined', 'Rejected')
-          AND (
-            UPPER(er.ACCOUNT_NAME) IN (SELECT UPPER(a.ACCOUNT_NAME) FROM account a)
-            OR UPPER(er.USER_EMAIL) IN (SELECT oe.EMAIL FROM org_emails oe)
-          )
+        SELECT DISTINCT
+          ope.EVENT_ID,
+          CASE WHEN ope.EVENT_END_DATE < CURRENT_DATE() THEN TRUE ELSE FALSE END AS IS_PAST_EVENT
+        FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_PEOPLE_EVENTS ope
+        WHERE ope.ACCOUNT_ID = ?
       ),
       user_upcoming_regs AS (
-        SELECT DISTINCT EVENT_ID
-        FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS
-        WHERE USER_EMAIL = ?
-          AND IS_PAST_EVENT = FALSE
-          AND REGISTRATION_STATUS = 'Accepted'
+        SELECT DISTINCT er.EVENT_ID
+        FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
+        WHERE er.USER_EMAIL = ?
+          AND er.REGISTRATION_STATUS = 'Accepted'
+          AND er.EVENT_ID IN (SELECT EVENT_ID FROM org_events WHERE IS_PAST_EVENT = FALSE)
       )
       SELECT
-        COUNT(DISTINCT oe.EVENT_ID)                                                                                        AS TOTAL_EVENTS,
-        COUNT(DISTINCT CASE WHEN oe.IS_PAST_EVENT = TRUE  THEN oe.EVENT_ID END)                                           AS PAST_EVENTS,
-        COUNT(DISTINCT CASE WHEN oe.IS_PAST_EVENT = FALSE THEN oe.EVENT_ID END)                                           AS UPCOMING_EVENTS,
-        COUNT(DISTINCT CASE WHEN oe.IS_PAST_EVENT = FALSE AND uur.EVENT_ID IS NOT NULL THEN oe.EVENT_ID END)              AS REGISTERED_EVENTS
+        COUNT(DISTINCT oe.EVENT_ID)                                                                               AS TOTAL_EVENTS,
+        COUNT(DISTINCT CASE WHEN oe.IS_PAST_EVENT = TRUE  THEN oe.EVENT_ID END)                                  AS PAST_EVENTS,
+        COUNT(DISTINCT CASE WHEN oe.IS_PAST_EVENT = FALSE THEN oe.EVENT_ID END)                                  AS UPCOMING_EVENTS,
+        COUNT(DISTINCT CASE WHEN oe.IS_PAST_EVENT = FALSE AND uur.EVENT_ID IS NOT NULL THEN oe.EVENT_ID END)     AS REGISTERED_EVENTS
       FROM org_events oe
       LEFT JOIN user_upcoming_regs uur ON oe.EVENT_ID = uur.EVENT_ID
     `;
@@ -223,7 +215,7 @@ export class OrgLensEventsService {
 
     let result;
     try {
-      result = await this.snowflakeService.execute<SummaryRow>(sql, [accountId, accountId, userEmail]);
+      result = await this.snowflakeService.execute<SummaryRow>(sql, [accountId, userEmail]);
     } catch (error) {
       logger.warning(req, 'get_org_lens_events_summary', 'Snowflake query failed, returning zero counts', {
         error: error instanceof Error ? error.message : String(error),
