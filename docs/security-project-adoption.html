@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Osprey Package Stewardship — Self Serve Integration</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a2e;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --accent: #2563eb;
+    --accent-light: #eff6ff;
+    --success: #059669;
+    --success-bg: #ecfdf5;
+    --warning: #d97706;
+    --warning-bg: #fffbeb;
+    --danger: #dc2626;
+    --danger-bg: #fef2f2;
+    --info: #0284c7;
+    --info-bg: #f0f9ff;
+    --neutral-bg: #f8fafc;
+    --code-bg: #f1f5f9;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+    color: var(--fg);
+    line-height: 1.6;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+    background: var(--bg);
+  }
+
+  h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.02em; }
+  h2 { font-size: 1.25rem; font-weight: 700; margin-top: 48px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+  h3 { font-size: 1.05rem; font-weight: 600; margin-top: 32px; margin-bottom: 12px; }
+  p { margin-bottom: 12px; }
+  .subtitle { color: var(--muted); font-size: 0.95rem; margin-bottom: 32px; }
+
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.9rem; }
+  th { text-align: left; padding: 10px 12px; background: var(--neutral-bg); border-bottom: 2px solid var(--border); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+
+  code { font-family: 'SF Mono', 'Fira Code', Consolas, monospace; background: var(--code-bg); padding: 2px 6px; border-radius: 4px; font-size: 0.85em; }
+  pre { background: var(--code-bg); padding: 16px 20px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 0.85rem; line-height: 1.5; border: 1px solid var(--border); }
+  pre code { background: none; padding: 0; }
+
+  ul, ol { margin-bottom: 12px; padding-left: 24px; }
+  li { margin-bottom: 6px; }
+
+  .tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 600; }
+  .tag-neutral { background: var(--neutral-bg); color: var(--muted); border: 1px solid var(--border); }
+  .tag-info { background: var(--info-bg); color: var(--info); }
+  .tag-warning { background: var(--warning-bg); color: var(--warning); }
+  .tag-danger { background: var(--danger-bg); color: var(--danger); }
+  .tag-success { background: var(--success-bg); color: var(--success); }
+
+  .callout { padding: 16px 20px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem; border-left: 4px solid; }
+  .callout-info { background: var(--info-bg); border-color: var(--info); }
+  .callout-deferred { background: var(--neutral-bg); border-color: var(--border); color: var(--muted); }
+  .callout-key { background: var(--accent-light); border-color: var(--accent); }
+  .callout strong { display: block; margin-bottom: 4px; }
+
+  .mermaid-container { margin: 20px 0; padding: 24px; background: var(--neutral-bg); border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .card { padding: 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); }
+  .card-title { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 4px; }
+  .card-value { font-size: 1.1rem; font-weight: 700; }
+
+  .section-anchor { scroll-margin-top: 24px; }
+
+  .toc { background: var(--neutral-bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px 24px; margin-bottom: 32px; }
+  .toc-title { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 12px; }
+  .toc ul { list-style: none; padding: 0; columns: 2; column-gap: 32px; }
+  .toc li { margin-bottom: 6px; }
+  .toc a { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+  .toc a:hover { text-decoration: underline; }
+
+  .vs { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+  .vs-card { padding: 16px; border-radius: 8px; border: 1px solid var(--border); }
+  .vs-card.old { background: var(--danger-bg); border-color: #fecaca; }
+  .vs-card.new { background: var(--success-bg); border-color: #a7f3d0; }
+  .vs-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .vs-card.old .vs-label { color: var(--danger); }
+  .vs-card.new .vs-label { color: var(--success); }
+
+  @media (max-width: 640px) {
+    .grid-2, .grid-3, .vs { grid-template-columns: 1fr; }
+    .toc ul { columns: 1; }
+    body { padding: 24px 16px 64px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Osprey Package Stewardship</h1>
+<p class="subtitle">Self Serve Integration Spec &mdash; v1</p>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ul>
+    <li><a href="#context">Context</a></li>
+    <li><a href="#what-stewardship-means">What Stewardship Means</a></li>
+    <li><a href="#actors">Actors</a></li>
+    <li><a href="#entry-points">Entry Points</a></li>
+    <li><a href="#flow">End-to-End Flow</a></li>
+    <li><a href="#state-machine">Stewardship Lifecycle</a></li>
+    <li><a href="#assessment">Assessment Framework</a></li>
+    <li><a href="#steward-flow">Steward Flow</a></li>
+    <li><a href="#admin-flow">Admin Flow</a></li>
+    <li><a href="#role-matrix">Role &amp; Action Matrix</a></li>
+    <li><a href="#drawer">Package Detail Drawer</a></li>
+    <li><a href="#notifications">Notifications</a></li>
+    <li><a href="#permissions">Permissions Model</a></li>
+    <li><a href="#api">API Contract</a></li>
+    <li><a href="#design">Design Direction</a></li>
+    <li><a href="#gaps">Data Pipeline Gaps</a></li>
+    <li><a href="#open">Open Decisions</a></li>
+    <li><a href="#pr-sequence">PR Sequence</a></li>
+    <li><a href="#v2">v2 Roadmap</a></li>
+  </ul>
+</nav>
+
+<!-- ───── Context ───── -->
+<h2 id="context" class="section-anchor">Context</h2>
+
+<p>Project Osprey is an OpenSSF-coordinated effort to harden the world's most critical open source packages before AI-assisted vulnerability discovery makes them easy targets. The first phase covers <strong>npm</strong> and <strong>Maven Central</strong>.</p>
+
+<p>Insights/CDP provides the data layer: package identity, risk signals, maintainer info, repository mapping, and criticality scoring. Self Serve owns the <strong>stewardship workflow</strong>: who is responsible for which packages, what is the security posture of each package, what needs to be remediated, and what is the ongoing status.</p>
+
+<!-- ───── What Stewardship Means ───── -->
+<h2 id="what-stewardship-means" class="section-anchor">What Stewardship Means</h2>
+
+<div class="callout callout-key">
+  <strong>Stewardship is ongoing responsibility, not a one-time review.</strong>
+  A steward becomes the security point person for a critical package. They assess its security posture, drive remediation of gaps, engage with upstream maintainers, and monitor for new threats. Stewardship doesn't "complete" &mdash; it's active for as long as the package is critical.
+</div>
+
+<div class="vs">
+  <div class="vs-card old">
+    <div class="vs-label">Not this (data verification)</div>
+    <ul style="margin:0; padding-left: 18px; font-size: 0.9rem;">
+      <li>Verify upstream repo URL is correct</li>
+      <li>Confirm download counts match</li>
+      <li>Check metadata accuracy</li>
+      <li>Submit checklist &rarr; admin approves &rarr; done</li>
+    </ul>
+  </div>
+  <div class="vs-card new">
+    <div class="vs-label">This (security stewardship)</div>
+    <ul style="margin:0; padding-left: 18px; font-size: 0.9rem;">
+      <li>Assess security posture of the package</li>
+      <li>File issues/PRs for security gaps upstream</li>
+      <li>Engage with maintainers on remediation</li>
+      <li>Monitor for new advisories, respond when they appear</li>
+    </ul>
+  </div>
+</div>
+
+<p>A steward's work has two phases:</p>
+<ol>
+  <li><strong>Initial assessment</strong> &mdash; evaluate the package's security posture across a standard framework, identify gaps, and create a remediation plan.</li>
+  <li><strong>Ongoing stewardship</strong> &mdash; drive remediation, engage with maintainers, monitor for new threats, and escalate packages that need direct intervention (engineering help, funding, or forking).</li>
+</ol>
+
+<!-- ───── Actors ───── -->
+<h2 id="actors" class="section-anchor">Actors</h2>
+
+<table>
+  <thead>
+    <tr><th>Actor</th><th>Who</th><th>Responsibilities</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Osprey Admin</strong></td>
+      <td>OpenSSF staff coordinating the program</td>
+      <td>Triage the package queue, assign stewards, handle escalations, spot-check assessment quality, track coverage across the critical package set</td>
+    </tr>
+    <tr>
+      <td><strong>Steward</strong></td>
+      <td>Any authenticated LFX user</td>
+      <td>Claim packages, perform initial security assessment, drive remediation upstream, engage maintainers, monitor ongoing threats, escalate when needed</td>
+    </tr>
+    <tr>
+      <td><strong>Maintainer</strong> <em>(v2)</em></td>
+      <td>Verified upstream package maintainer</td>
+      <td>Submit their own package for stewardship, collaborate with steward on remediation, verify security contacts</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ───── Entry Points ───── -->
+<h2 id="entry-points" class="section-anchor">Entry Points</h2>
+
+<h3>v1 (ship first)</h3>
+
+<table>
+  <thead>
+    <tr><th>Lens</th><th>Tab</th><th>Who sees it</th><th>Purpose</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Me</strong></td>
+      <td>My Stewardships</td>
+      <td>Any authenticated user</td>
+      <td>Browse available packages, claim stewardship, manage your active stewardships. The contributor workspace.</td>
+    </tr>
+    <tr>
+      <td><strong>Me</strong></td>
+      <td>Osprey Program (admin only)</td>
+      <td>Osprey program admins</td>
+      <td>Admin dashboard: full package queue, coverage metrics, assignments, escalation management, spot-check quality.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>v2 (deferred)</h3>
+
+<table>
+  <thead>
+    <tr><th>Lens</th><th>Tab</th><th>Who sees it</th><th>Purpose</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Project</strong></td>
+      <td>Project Stewardship</td>
+      <td>Maintainers + anyone viewing the project</td>
+      <td>Maintainer submits their project for stewardship. Depends on registry API verification.</td>
+    </tr>
+    <tr>
+      <td><strong>Organization</strong></td>
+      <td>Organization Stewardships</td>
+      <td>Org members</td>
+      <td>Read-only visibility into stewardships involving the organization's members.</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ───── Flow ───── -->
+<h2 id="flow" class="section-anchor">End-to-End Flow</h2>
+
+<div class="mermaid-container">
+  <pre class="mermaid">
+flowchart TD
+  source["Insights / CDP\nnpm + Maven Tier 2 package data"] --> api["Stewardship API\npackages, risk signals"]
+
+  api --> admin["Osprey Program\nadmin dashboard (Me lens)"]
+  api --> me["My Stewardships\ncontributor workspace"]
+
+  admin --> triage["Triage package queue\nidentify coverage gaps"]
+  triage --> detail["Open package detail"]
+  detail --> assign{"Assign or open?"}
+  assign --> direct["Assign steward directly"]
+  assign --> open["Open for stewardship"]
+
+  direct --> assess["Steward performs\ninitial security assessment"]
+  open --> claim["Steward claims package"]
+  me --> claim
+  claim --> assess
+
+  assess --> active["Active stewardship\n(ongoing responsibility)"]
+
+  active --> remediate["Drive remediation upstream\nengage maintainers, file PRs"]
+  active --> monitor["Monitor for new advisories\nrespond to threats"]
+  active --> escalate["Escalate if needed\nengineering help, funding, fork"]
+  escalate --> admin
+  </pre>
+</div>
+
+<!-- ───── State Machine ───── -->
+<h2 id="state-machine" class="section-anchor">Stewardship Lifecycle</h2>
+
+<div class="mermaid-container">
+  <pre class="mermaid">
+stateDiagram-v2
+  [*] --> Unassigned
+  Unassigned --> Open : admin opens for stewardship
+  Unassigned --> Assessing : admin assigns steward directly
+  Open --> Assessing : steward claims package
+  Assessing --> Active : steward completes assessment
+  Assessing --> Blocked : steward flags blocker
+  Active --> Escalated : steward or admin escalates
+  Active --> NeedsAttention : new advisory or maintainer change
+  NeedsAttention --> Active : steward addresses issue
+  NeedsAttention --> Escalated : requires intervention
+  Escalated --> Active : resolved
+  Blocked --> Assessing : blocker resolved
+  Active --> Inactive : package no longer critical or steward steps down
+  </pre>
+</div>
+
+<h3>Canonical Status Mapping</h3>
+
+<table>
+  <thead>
+    <tr><th>Persisted state</th><th>UI label</th><th style="width:50%">Meaning</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>unassigned</code></td>
+      <td><span class="tag tag-neutral">Unassigned</span></td>
+      <td>Package is critical but has no steward. The primary coverage gap.</td>
+    </tr>
+    <tr>
+      <td><code>open</code></td>
+      <td><span class="tag tag-info">Open</span></td>
+      <td>Package is available for a steward to claim.</td>
+    </tr>
+    <tr>
+      <td><code>assessing</code></td>
+      <td><span class="tag tag-warning">Assessing</span></td>
+      <td>Steward is performing the initial security assessment.</td>
+    </tr>
+    <tr>
+      <td><code>active</code></td>
+      <td><span class="tag tag-success">Active</span></td>
+      <td>Steward is actively responsible for this package. The steady state.</td>
+    </tr>
+    <tr>
+      <td><code>needs_attention</code></td>
+      <td><span class="tag tag-danger">Needs attention</span></td>
+      <td>New advisory, maintainer change, or other event requires steward response.</td>
+    </tr>
+    <tr>
+      <td><code>escalated</code></td>
+      <td><span class="tag tag-danger">Escalated</span></td>
+      <td>Package needs intervention beyond the steward's scope: engineering help, funding, or a fork.</td>
+    </tr>
+    <tr>
+      <td><code>blocked</code></td>
+      <td><span class="tag tag-danger">Blocked</span></td>
+      <td>Assessment cannot proceed (e.g., maintainer unresponsive, repo inaccessible).</td>
+    </tr>
+    <tr>
+      <td><code>inactive</code></td>
+      <td><span class="tag tag-neutral">Inactive</span></td>
+      <td>Package is no longer critical, steward stepped down, or stewardship is paused.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The key difference from a task queue: <strong>most packages should end up in <code>active</code> and stay there.</strong> "Active" is the success state, not a waypoint. The admin dashboard's primary metric is coverage &mdash; what percentage of critical packages have an active steward.</p>
+
+<!-- ───── Assessment Framework ───── -->
+<h2 id="assessment" class="section-anchor">Security Assessment Framework</h2>
+
+<p>The initial assessment is a structured evaluation of a package's security posture, not a metadata verification checklist. The steward evaluates each dimension, documents findings, and proposes a remediation plan for gaps.</p>
+
+<h3>Assessment Dimensions</h3>
+
+<table>
+  <thead>
+    <tr><th>Dimension</th><th>What the steward evaluates</th><th>Example findings</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Maintainer health</strong></td>
+      <td>Is anyone responsive? How fast would a critical CVE get patched? Bus factor?</td>
+      <td>"Single maintainer, last active 8 months ago. No response to security issue filed 3 weeks ago."</td>
+    </tr>
+    <tr>
+      <td><strong>Security posture</strong></td>
+      <td>Does the project have a vulnerability disclosure process? SECURITY.md? 2FA on maintainer accounts? Signed releases?</td>
+      <td>"No SECURITY.md. No disclosure process. Releases are unsigned."</td>
+    </tr>
+    <tr>
+      <td><strong>Vulnerability exposure</strong></td>
+      <td>Open advisories? History of security issues? Known attack surface?</td>
+      <td>"4 historical CVEs, all patched. Prototype pollution surface in utility functions."</td>
+    </tr>
+    <tr>
+      <td><strong>Dependency risk</strong></td>
+      <td>What does this package depend on? Are those dependencies healthy?</td>
+      <td>"12 direct deps, 2 are unmaintained. Transitive dep on vulnerable version of minimist."</td>
+    </tr>
+    <tr>
+      <td><strong>Supply chain integrity</strong></td>
+      <td>Build reproducibility? Provenance attestation? Gap between repo and published artifact?</td>
+      <td>"Published artifact includes code not in the repo. No build provenance."</td>
+    </tr>
+    <tr>
+      <td><strong>Release health</strong></td>
+      <td>Release cadence? Stale? Deprecated? Active development?</td>
+      <td>"Last release 5 years ago. 200+ open issues. Active forks exist."</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Assessment Output</h3>
+
+<p>The steward produces:</p>
+<ol>
+  <li><strong>Posture summary</strong> &mdash; overall risk level (Critical / High / Medium / Low) with narrative justification.</li>
+  <li><strong>Findings</strong> &mdash; specific gaps or risks identified, each with severity and evidence.</li>
+  <li><strong>Remediation plan</strong> &mdash; concrete actions to improve the package's security posture:
+    <ul>
+      <li>File upstream issues/PRs (e.g., add SECURITY.md, enable branch protection)</li>
+      <li>Engage maintainers (e.g., establish contact, propose disclosure process)</li>
+      <li>Escalate (e.g., recommend funding, engineering help, or fork)</li>
+    </ul>
+  </li>
+  <li><strong>Monitoring plan</strong> &mdash; what to watch for going forward (advisories, maintainer activity, dependency changes).</li>
+</ol>
+
+<div class="callout callout-info">
+  <strong>The assessment is the steward's first act, not a gate.</strong>
+  Completing the assessment moves the steward directly to active stewardship &mdash; there is no admin review bottleneck. Admins spot-check quality and can flag issues, but do not gate every assessment. The assessment exists to structure the steward's thinking and create an auditable record, not to create a queue for admin approval.
+</div>
+
+<!-- ───── Steward Flow ───── -->
+<h2 id="steward-flow" class="section-anchor">Steward Flow</h2>
+
+<h3>Phase 1: Claim &amp; Assess</h3>
+<ol>
+  <li>Steward opens Me &rarr; My Stewardships.</li>
+  <li>Browses available packages (ranked by criticality and coverage gaps).</li>
+  <li>Claims a package &rarr; moves to <code>assessing</code>.</li>
+  <li>Performs security assessment across the six dimensions.</li>
+  <li>Documents findings, posture summary, and remediation plan.</li>
+  <li>Completes assessment &rarr; moves directly to <code>active</code>.</li>
+</ol>
+
+<h3>Phase 2: Active Stewardship (ongoing)</h3>
+<ol>
+  <li>Executes remediation plan:
+    <ul>
+      <li>Files upstream issues and PRs for identified gaps</li>
+      <li>Engages maintainers on security improvements</li>
+      <li>Tracks remediation progress</li>
+    </ul>
+  </li>
+  <li>Monitors for new threats:
+    <ul>
+      <li>New advisories trigger <code>needs_attention</code></li>
+      <li>Maintainer changes, ownership transfers, repo archival</li>
+    </ul>
+  </li>
+  <li>Escalates when needed:
+    <ul>
+      <li>Maintainer unresponsive after repeated outreach</li>
+      <li>Critical vulnerability with no path to upstream fix</li>
+      <li>Package needs engineering resources or funding</li>
+    </ul>
+  </li>
+  <li>Updates stewardship status periodically (admin can set cadence).</li>
+</ol>
+
+<!-- ───── Admin Flow ───── -->
+<h2 id="admin-flow" class="section-anchor">Admin Flow</h2>
+
+<p>The admin's primary concern is <strong>coverage</strong>: are the most critical packages being stewarded? Secondary concern is <strong>quality</strong>: are stewards actually driving remediation, not just documenting problems?</p>
+
+<ol>
+  <li>Osprey admin opens Me &rarr; Osprey Program.</li>
+  <li>Sees coverage metrics:</li>
+</ol>
+
+<div class="grid-3">
+  <div class="card"><div class="card-title">Critical packages</div><div class="card-value">1,842</div></div>
+  <div class="card"><div class="card-title">Active stewards</div><div class="card-value" style="color: #059669">612</div></div>
+  <div class="card"><div class="card-title">Coverage</div><div class="card-value">33.2%</div></div>
+  <div class="card"><div class="card-title">Unassigned (critical)</div><div class="card-value" style="color: #dc2626">1,230</div></div>
+  <div class="card"><div class="card-title">Needs attention</div><div class="card-value" style="color: #d97706">47</div></div>
+  <div class="card"><div class="card-title">Escalated</div><div class="card-value" style="color: #dc2626">8</div></div>
+</div>
+
+<ol start="3">
+  <li>Identifies coverage gaps: which critical packages have no steward?</li>
+  <li>Opens packages for stewardship or assigns stewards directly.</li>
+  <li>Spot-checks assessment quality: flags incomplete or low-effort assessments for steward follow-up.</li>
+  <li>Handles escalations: allocate engineering resources, approve funding, decide on forks.</li>
+  <li>Monitors steward activity: are active stewards driving remediation or going quiet?</li>
+  <li>Uses bulk actions for high-volume queue management.</li>
+</ol>
+
+<!-- ───── Role Matrix ───── -->
+<h2 id="role-matrix" class="section-anchor">Role &amp; Action Matrix</h2>
+
+<table>
+  <thead>
+    <tr><th>State</th><th>Steward</th><th>Osprey Admin</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>unassigned</code></td>
+      <td>View</td>
+      <td>Open for stewardship, assign steward, bulk assign</td>
+    </tr>
+    <tr>
+      <td><code>open</code></td>
+      <td>Claim package</td>
+      <td>Assign steward, close availability</td>
+    </tr>
+    <tr>
+      <td><code>assessing</code></td>
+      <td>Document findings, complete assessment, flag blocker</td>
+      <td>Reassign, flag blocker, spot-check</td>
+    </tr>
+    <tr>
+      <td><code>active</code></td>
+      <td>Update status, log remediation progress, escalate</td>
+      <td>Review activity, reassign, escalate</td>
+    </tr>
+    <tr>
+      <td><code>needs_attention</code></td>
+      <td>Investigate and respond, escalate if needed</td>
+      <td>Reassign, escalate</td>
+    </tr>
+    <tr>
+      <td><code>escalated</code></td>
+      <td>Provide context, continue monitoring</td>
+      <td>Allocate resources, approve funding, decide on fork, resolve</td>
+    </tr>
+    <tr>
+      <td><code>blocked</code></td>
+      <td>Add blocker details, resolve if able</td>
+      <td>Resolve, reassign</td>
+    </tr>
+    <tr>
+      <td><code>inactive</code></td>
+      <td>View history</td>
+      <td>Reactivate, reassign</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ───── Drawer ───── -->
+<h2 id="drawer" class="section-anchor">Package Detail Drawer</h2>
+
+<h3>Tabs</h3>
+<ul>
+  <li><strong>Overview</strong>: package identity, purl, ecosystem, criticality score, downloads, dependents, latest release, repository summary.</li>
+  <li><strong>Assessment</strong>: posture summary, findings by dimension, remediation plan, monitoring plan. For <code>active</code> packages: remediation progress and status updates.</li>
+  <li><strong>Security</strong>: OSV/GHSA advisories, critical vulnerability flag, security contact links, vulnerability policy links.</li>
+  <li><strong>Provenance</strong>: declared repository URL, normalized URL, mapping source, confidence level, build provenance status.</li>
+</ul>
+
+<h3>History Timeline</h3>
+<p>Always visible below the active tab content. Includes: status changes, assessment submissions, admin reviews, remediation actions logged, escalation notes, advisory alerts, steward activity updates.</p>
+
+<h3>Sticky Footer Actions</h3>
+<p>Context-dependent based on role and current state:</p>
+<ul>
+  <li>Claim package / Assign steward</li>
+  <li>Complete assessment</li>
+  <li>Log remediation progress</li>
+  <li>Escalate / Mark blocked</li>
+  <li>Open in Insights</li>
+</ul>
+
+<!-- ───── Notifications ───── -->
+<h2 id="notifications" class="section-anchor">Notifications (v1)</h2>
+
+<ul>
+  <li>In-app and email when a package is assigned to me.</li>
+  <li>In-app and email when an admin flags my assessment for follow-up.</li>
+  <li>In-app and email when a new advisory hits a package I steward.</li>
+  <li>In-app and email when an escalation is resolved.</li>
+  <li>Admin: when a steward completes an assessment (for spot-check queue).</li>
+  <li>Admin: when a steward escalates a package.</li>
+</ul>
+
+<div class="callout callout-deferred">
+  <strong>Deferred to v2:</strong> admin digests, activity reminders for inactive stewards, notification grouping.
+</div>
+
+<!-- ───── Permissions ───── -->
+<h2 id="permissions" class="section-anchor">Permissions Model</h2>
+
+<table>
+  <thead>
+    <tr><th>Role</th><th>How determined</th><th>Scope</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Osprey Admin</strong></td>
+      <td>OpenSSF program-level admin role</td>
+      <td>All packages in the Osprey program</td>
+    </tr>
+    <tr>
+      <td><strong>Steward</strong></td>
+      <td>Any authenticated LFX user</td>
+      <td>Packages they've claimed or been assigned</td>
+    </tr>
+    <tr>
+      <td><strong>Maintainer</strong> <em>(v2)</em></td>
+      <td>Registry API verification (npm/Maven)</td>
+      <td>Their own packages</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ───── API ───── -->
+<h2 id="api" class="section-anchor">API Contract</h2>
+
+<p>Minimum API surface:</p>
+
+<table>
+  <thead>
+    <tr><th>Method</th><th>Endpoint</th><th>Purpose</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>GET</code></td><td><code>/api/stewardship/packages</code></td><td>List packages (filters, cursor pagination, sort)</td></tr>
+    <tr><td><code>GET</code></td><td><code>/api/stewardship/packages/:id</code></td><td>Get package detail</td></tr>
+    <tr><td><code>PATCH</code></td><td><code>/api/stewardship/packages/:id</code></td><td>Admin overrides (repo mapping, etc.)</td></tr>
+    <tr><td><code>POST</code></td><td><code>/api/stewardship/packages/:id/stewardships</code></td><td>Create stewardship (claim or assign)</td></tr>
+    <tr><td><code>GET</code></td><td><code>/api/stewardship/stewardships/:id</code></td><td>Get stewardship detail (assessment, history)</td></tr>
+    <tr><td><code>PATCH</code></td><td><code>/api/stewardship/stewardships/:id</code></td><td>Update state, assessment, or status</td></tr>
+    <tr><td><code>POST</code></td><td><code>/api/stewardship/stewardships/:id/complete-assessment</code></td><td>Complete assessment, move to active</td></tr>
+    <tr><td><code>POST</code></td><td><code>/api/stewardship/stewardships/:id/flag</code></td><td>Admin flags assessment for steward follow-up</td></tr>
+    <tr><td><code>POST</code></td><td><code>/api/stewardship/stewardships/:id/escalate</code></td><td>Escalate for intervention</td></tr>
+    <tr><td><code>POST</code></td><td><code>/api/stewardship/stewardships/:id/activity</code></td><td>Log remediation progress or status update</td></tr>
+    <tr><td><code>GET</code></td><td><code>/api/stewardship/my-work</code></td><td>Current user's stewardships</td></tr>
+    <tr><td><code>GET</code></td><td><code>/api/stewardship/summary</code></td><td>Coverage metrics for dashboard</td></tr>
+    <tr style="opacity: 0.5"><td><code>GET</code></td><td><code>/api/stewardship/org/:orgId/stewardships</code></td><td>Organization's stewardships <em>(v2)</em></td></tr>
+    <tr style="opacity: 0.5"><td><code>POST</code></td><td><code>/api/stewardship/packages/:id/submit-for-stewardship</code></td><td>Maintainer submission <em>(v2)</em></td></tr>
+  </tbody>
+</table>
+
+<p>No <code>DELETE</code> endpoints &mdash; all state transitions are patches that preserve history.</p>
+
+<h3>Example Stewardship Record</h3>
+
+<pre><code>{
+  "id": "stw_123",
+  "package_id": "pkg_npm_lodash",
+  "program_id": "osprey",
+  "state": "active",
+  "state_version": 12,
+  "origin": "self_claimed",
+  "owner": {
+    "uid": "user_123",
+    "name": "Maya Chen"
+  },
+  "assessment": {
+    "posture": "high",
+    "summary": "Single maintainer, no security disclosure process, no signed releases. 4 historical CVEs all patched. Prototype pollution attack surface remains.",
+    "findings": [
+      {
+        "dimension": "maintainer_health",
+        "severity": "high",
+        "finding": "Single maintainer (jdalton). Last commit 2024-09. No response to issues in 3+ months.",
+        "evidence": "GitHub activity timeline, npm maintainers list"
+      },
+      {
+        "dimension": "security_posture",
+        "severity": "high",
+        "finding": "No SECURITY.md, no vulnerability disclosure process, unsigned releases.",
+        "evidence": "Repository scan"
+      }
+    ],
+    "remediation_plan": [
+      { "action": "File PR to add SECURITY.md with disclosure process", "status": "done", "url": "https://github.com/lodash/lodash/pull/5678" },
+      { "action": "Contact maintainer re: 2FA and signed releases", "status": "in_progress" },
+      { "action": "Evaluate if fork is needed given maintainer responsiveness", "status": "pending" }
+    ],
+    "completed_at": "2026-05-25T18:30:00Z"
+  },
+  "activity": [
+    {
+      "id": "act_456",
+      "type": "remediation_update",
+      "content": "SECURITY.md PR merged. Maintainer responded to 2FA request, says he'll enable it.",
+      "created_at": "2026-05-28T14:00:00Z"
+    }
+  ],
+  "history": [
+    {
+      "id": "event_789",
+      "type": "state_changed",
+      "from_state": "assessing",
+      "to_state": "active",
+      "actor_uid": "user_123",
+      "created_at": "2026-05-25T18:30:00Z"
+    }
+  ],
+  "created_at": "2026-05-22T09:00:00Z",
+  "updated_at": "2026-05-28T14:00:00Z"
+}</code></pre>
+
+<h3>Concurrency</h3>
+<p>Every stewardship mutation must include <code>state_version</code> for optimistic locking. On conflict, the API returns the latest state so the UI can refresh.</p>
+
+<!-- ───── Design ───── -->
+<h2 id="design" class="section-anchor">Design Direction</h2>
+
+<p>Dense operational layout consistent with existing LFX One dashboards. The admin dashboard is <strong>coverage-oriented</strong>, not throughput-oriented &mdash; the primary visualization is "how much of the critical package set is covered" rather than "how many items were processed this week."</p>
+
+<h3>Visual System</h3>
+<ul>
+  <li>Use existing Tailwind/LFX tokens only. No hard-coded hex values.</li>
+  <li>Tags:
+    <span class="tag tag-neutral">Unassigned</span>
+    <span class="tag tag-info">Open</span>
+    <span class="tag tag-warning">Assessing</span>
+    <span class="tag tag-success">Active</span>
+    <span class="tag tag-danger">Needs attention</span>
+    <span class="tag tag-danger">Escalated</span>
+    <span class="tag tag-danger">Blocked</span>
+    <span class="tag tag-neutral">Inactive</span>
+  </li>
+  <li>Table is the primary surface. Row click opens the detail drawer.</li>
+</ul>
+
+<!-- ───── Gaps ───── -->
+<h2 id="gaps" class="section-anchor">Data Pipeline Gap Analysis</h2>
+
+<div class="callout callout-info">
+  <strong>Covered by CDP Pipeline</strong>
+  Package identity, downloads/dependents, latest version/release, repo mapping, OpenSSF Scorecard, advisories, repo stars/forks/last commit, maintainer info, licenses.
+</div>
+
+<table>
+  <thead>
+    <tr><th>Gap</th><th>Priority</th><th>Detail</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Composite risk score</td>
+      <td><span class="tag tag-danger">High</span></td>
+      <td>Raw signals exist but no composite tier (Critical/High/Medium/Low). Primary sort/filter axis.</td>
+    </tr>
+    <tr>
+      <td>Repo mapping confidence</td>
+      <td><span class="tag tag-danger">High</span></td>
+      <td>deps.dev has the mapping but no confidence signal. Need to derive from source.</td>
+    </tr>
+    <tr>
+      <td>Security contact / policy</td>
+      <td><span class="tag tag-danger">High</span></td>
+      <td>Critical for assessment. Pipeline has maintainers but not SECURITY.md presence or dedicated security contact.</td>
+    </tr>
+    <tr>
+      <td>Build provenance</td>
+      <td><span class="tag tag-warning">Medium</span></td>
+      <td>Supply chain integrity assessment needs provenance attestation data. Not currently collected.</td>
+    </tr>
+    <tr>
+      <td>Maintainer activity recency</td>
+      <td><span class="tag tag-warning">Medium</span></td>
+      <td>Last commit is collected but maintainer-specific response time (to issues, PRs) is not.</td>
+    </tr>
+    <tr>
+      <td>Package deprecation status</td>
+      <td><span class="tag tag-warning">Medium</span></td>
+      <td>npm deprecation flags and Maven relocation. Needed for <code>inactive</code> state.</td>
+    </tr>
+    <tr>
+      <td>Monorepo awareness</td>
+      <td><span class="tag tag-warning">Medium</span></td>
+      <td>Many npm packages map to the same repo. Need grouping to avoid duplicate stewardships.</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ───── Open Decisions ───── -->
+<h2 id="open" class="section-anchor">Open Decisions</h2>
+
+<ul>
+  <li><strong>Which upstream service owns stewardship state?</strong> Leaning: dedicated Osprey workflow service, with Insights/CDP as source-data providers.</li>
+  <li><strong>Who computes composite risk scores?</strong> CDP provides raw signals. Either CDP exposes pre-computed tiers, or the stewardship service computes them.</li>
+  <li><strong>How does the package list sync from CDP?</strong> Batch import, real-time feed, or API pull? Refresh cadence?</li>
+  <li><strong>What triggers <code>needs_attention</code>?</strong> New advisory is clear. What about: maintainer account changes, repo archival, significant dependency changes? Define the event set.</li>
+  <li><strong>How do we track remediation actions across external systems?</strong> Stewards file PRs on GitHub, issues on registries. Do we just log URLs, or do we pull status from those systems?</li>
+  <li><strong>What's the expected steward-to-package ratio?</strong> One steward per package? Or can a steward manage a cluster of related packages (e.g., all of lodash's ecosystem)?</li>
+  <li><strong>How often should active stewards report status?</strong> Monthly? Quarterly? Triggered by events? This affects the <code>inactive</code> detection logic.</li>
+</ul>
+
+<!-- ───── PR Sequence ───── -->
+<h2 id="pr-sequence" class="section-anchor">Suggested PR Sequence</h2>
+
+<ol>
+  <li>Shared types + backend proxy/controller/service once upstream API contract is confirmed.</li>
+  <li>Admin package queue page (Me lens, admin-gated) with coverage metrics and filters/table/drawer in read-only mode.</li>
+  <li>Stewardship lifecycle: claim, assessment, activate.</li>
+  <li>My Stewardships (Me lens): contributor workspace with active stewardship management.</li>
+  <li>Activity logging: remediation progress, status updates, escalations.</li>
+</ol>
+
+<!-- ───── v2 ───── -->
+<h2 id="v2" class="section-anchor">v2 Roadmap</h2>
+
+<div class="callout callout-deferred">
+  <strong>Features explicitly deferred from v1:</strong>
+  <ul style="margin-top:8px; margin-bottom:0;">
+    <li><strong>Project Stewardship</strong> (Project lens) &mdash; maintainer submission flow with registry API verification</li>
+    <li><strong>Organization Stewardships</strong> (Org lens) &mdash; read-only org-wide visibility</li>
+    <li>Automated <code>needs_attention</code> triggers from advisory feeds</li>
+    <li>Steward activity scoring / engagement metrics</li>
+    <li>Remediation tracking with GitHub PR/issue status sync</li>
+    <li>Assignment pool routing and round-robin</li>
+    <li>Saved views (per-user, shareable)</li>
+    <li>Notification digests and activity reminders</li>
+    <li>Package clustering (steward manages related packages together)</li>
+  </ul>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'neutral',
+    flowchart: { useMaxWidth: true, htmlLabels: true },
+    themeVariables: {
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif',
+      fontSize: '14px'
+    }
+  });
+</script>
+
+</body>
+</html>
