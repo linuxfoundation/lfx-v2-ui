@@ -122,45 +122,16 @@
     </div>
   </div>
 
-  <!-- Tab Strip -->
-  <div
-    role="tablist"
-    aria-label="Events sections"
-    class="flex items-center gap-1 border-b border-gray-200 overflow-x-auto"
-    data-testid="org-events-tab-bar"
-    (keydown)="onTabKeydown($event)">
-    @for (tab of tabs; track tab.id) {
-      <button
-        type="button"
-        role="tab"
-        class="flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
-        [id]="'org-events-tab-' + tab.id"
-        [attr.aria-selected]="activeTab() === tab.id"
-        [attr.aria-controls]="'org-events-panel-' + tab.id"
-        [attr.tabindex]="activeTab() === tab.id ? 0 : -1"
-        [attr.data-testid]="'org-events-tab-' + tab.id"
-        [class.border-blue-600]="activeTab() === tab.id"
-        [class.text-blue-600]="activeTab() === tab.id"
-        [class.border-transparent]="activeTab() !== tab.id"
-        [class.text-gray-500]="activeTab() !== tab.id"
-        [class.hover:text-gray-700]="activeTab() !== tab.id"
-        (click)="switchTab(tab.id)">
-        <i [class]="tab.icon" aria-hidden="true"></i>
-        {{ tab.label }}
-        @if (tab.id === 'upcoming' && eventsSummary() !== null) {
-          ({{ eventsSummary()!.upcomingEvents }})
-        }
-      </button>
-    }
-  </div>
+  <!-- Tab Pills -->
+  <lfx-filter-pills
+    [options]="tabPillOptions()"
+    [selectedFilter]="activeTab()"
+    (filterChange)="switchTab($event)"
+    data-testid="org-events-tab-pills" />
 
   <!-- Tab Panels -->
   @if (activeTab() === 'upcoming') {
-    <section
-      role="tabpanel"
-      id="org-events-panel-upcoming"
-      aria-labelledby="org-events-tab-upcoming"
-      data-testid="org-events-panel-upcoming">
+    <section id="org-events-panel-upcoming" data-testid="org-events-panel-upcoming">
       <lfx-org-upcoming-events-table
         [eventsResponse]="upcomingEvents()"
         [loading]="upcomingEventsLoading()"
@@ -175,7 +146,7 @@
   }
 
   @if (activeTab() === 'past') {
-    <section role="tabpanel" id="org-events-panel-past" aria-labelledby="org-events-tab-past" data-testid="org-events-panel-past">
+    <section id="org-events-panel-past" data-testid="org-events-panel-past">
       <lfx-empty-state
         [withCard]="false"
         icon="fa-light fa-calendar-check"

@@ -1,21 +1,21 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, PLATFORM_ID, signal, Signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, Signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CardComponent } from '@components/card/card.component';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { DEFAULT_EVENTS_PAGE_SIZE, DEFAULT_ORG_EVENTS_TAB_ID, EMPTY_ORG_EVENTS_RESPONSE, ORG_EVENTS_STATUS_OPTIONS, ORG_EVENTS_TABS, VALID_ORG_EVENTS_TAB_IDS } from '@lfx-one/shared/constants';
-import type { OrgEvent, OrgEventStatFilterId, OrgEventsResponse, OrgEventsSummary, OrgEventsTabId, PageChangeEvent, SortChangeEvent } from '@lfx-one/shared/interfaces';
+import type { FilterPillOption, OrgEvent, OrgEventStatFilterId, OrgEventsResponse, OrgEventsSummary, OrgEventsTabId, PageChangeEvent, SortChangeEvent } from '@lfx-one/shared/interfaces';
 import { AccountContextService } from '@app/shared/services/account-context.service';
 import { EventsService } from '@app/shared/services/events.service';
 import { MessageService } from 'primeng/api';
 import { SelectModule } from 'primeng/select';
 import { InputTextModule } from 'primeng/inputtext';
 import { catchError, combineLatest, debounceTime, filter, finalize, of, skip, switchMap, tap } from 'rxjs';
+import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { DiscoverEventsButtonComponent } from '../components/discover-events-button/discover-events-button.component';
 import { EventAttendeesDrawerComponent } from './components/event-attendees-drawer/event-attendees-drawer.component';
 import { EventSpeakersDrawerComponent } from './components/event-speakers-drawer/event-speakers-drawer.component';
@@ -23,7 +23,7 @@ import { OrgUpcomingEventsTableComponent } from './components/org-upcoming-event
 
 @Component({
   selector: 'lfx-org-events-dashboard',
-  imports: [FormsModule, CardComponent, EmptyStateComponent, SelectModule, InputTextModule, DiscoverEventsButtonComponent, EventAttendeesDrawerComponent, EventSpeakersDrawerComponent, OrgUpcomingEventsTableComponent],
+  imports: [FormsModule, CardComponent, EmptyStateComponent, SelectModule, InputTextModule, FilterPillsComponent, DiscoverEventsButtonComponent, EventAttendeesDrawerComponent, EventSpeakersDrawerComponent, OrgUpcomingEventsTableComponent],
   templateUrl: './org-events-dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -34,10 +34,8 @@ export class OrgEventsDashboardComponent {
   private readonly accountContext = inject(AccountContextService);
   private readonly eventsService = inject(EventsService);
   private readonly messageService = inject(MessageService);
-  private readonly platformId = inject(PLATFORM_ID);
 
   // === Template constants ===
-  protected readonly tabs = ORG_EVENTS_TABS;
   protected readonly statusOptions = ORG_EVENTS_STATUS_OPTIONS;
 
   // === WritableSignals ===
@@ -57,6 +55,13 @@ export class OrgEventsDashboardComponent {
   protected readonly activeTab: Signal<OrgEventsTabId> = this.initActiveTab();
   protected readonly eventsSummary: Signal<OrgEventsSummary | null> = this.initEventsSummary();
   protected readonly upcomingEvents: Signal<OrgEventsResponse> = this.initUpcomingEvents();
+  protected readonly tabPillOptions = computed<FilterPillOption[]>(() => {
+    const summary = this.eventsSummary();
+    return ORG_EVENTS_TABS.map((tab) => {
+      const count = summary !== null ? (tab.id === 'upcoming' ? summary.upcomingEvents : summary.pastEvents) : null;
+      return { id: tab.id, label: count !== null ? `${tab.label} (${count})` : tab.label };
+    });
+  });
 
   public constructor() {
     combineLatest([toObservable(this.searchTerm), toObservable(this.selectedStatus)])
@@ -71,7 +76,7 @@ export class OrgEventsDashboardComponent {
     this.activeStatFilter.set(this.activeStatFilter() === id ? null : id);
   }
 
-  protected switchTab(tabId: OrgEventsTabId): void {
+  protected switchTab(tabId: string): void {
     if (tabId === this.activeTab()) {
       return;
     }
@@ -81,23 +86,6 @@ export class OrgEventsDashboardComponent {
       queryParamsHandling: 'merge',
       replaceUrl: true,
     });
-  }
-
-  protected onTabKeydown(event: KeyboardEvent): void {
-    const ids = this.tabs.map((t) => t.id);
-    const idx = ids.indexOf(this.activeTab());
-    let next: number | null = null;
-    if (event.key === 'ArrowRight') next = (idx + 1) % ids.length;
-    else if (event.key === 'ArrowLeft') next = (idx - 1 + ids.length) % ids.length;
-    else if (event.key === 'Home') next = 0;
-    else if (event.key === 'End') next = ids.length - 1;
-    if (next !== null) {
-      event.preventDefault();
-      this.switchTab(ids[next]);
-      if (isPlatformBrowser(this.platformId)) {
-        (document.getElementById(`org-events-tab-${ids[next]}`) as HTMLElement | null)?.focus();
-      }
-    }
   }
 
   protected onAttendeesClick(event: OrgEvent): void {
