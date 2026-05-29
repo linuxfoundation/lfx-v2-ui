@@ -103,7 +103,7 @@ export class OrgIdentityController {
         return;
       }
 
-      const response = await this.toCanonicalRecord(record);
+      const response = await this.toCanonicalRecord(record, req);
 
       logger.success(req, 'get_org_canonical_record', startTime, {
         identifier_kind: identifierKind,
@@ -156,7 +156,7 @@ export class OrgIdentityController {
         update
       );
 
-      const response = await this.toCanonicalRecord(raw);
+      const response = await this.toCanonicalRecord(raw, req);
 
       logger.success(req, 'update_org_canonical_record', startTime, { uid, field_count: Object.keys(update).length });
       res.setHeader('Cache-Control', 'no-store');
@@ -314,10 +314,12 @@ export class OrgIdentityController {
   }
 
   /** Transforms member-service snake_case response to the BFF camelCase contract. */
-  private async toCanonicalRecord(raw: MemberServiceB2bOrgResponse): Promise<OrgCanonicalRecord> {
-    // member-service tags sfid as `json:"-"` so it's absent from the response.
-    // Resolve via NATS RPC `lfx.member.uuid-to-sfid.lookup` (returns null on failure).
-    const accountId = raw.sfid ?? (await this.sfidResolver.resolve(raw.uid)) ?? null;
+  private async toCanonicalRecord(raw: MemberServiceB2bOrgResponse, req: Request): Promise<OrgCanonicalRecord> {
+    // member-service tags sfid as `json:"-"` so it's absent from the response. Prefer the
+    // query-service-backed OrgIdentityResolver (uid→sfid LRU/TTL cache) and only fall back to the
+    // NATS RPC `lfx.member.uuid-to-sfid.lookup` on a cache+query-service miss. Both lookups are
+    // fail-soft — a missing sfid must never fail an otherwise-successful canonical record.
+    const accountId = (await this.resolveAccountId(raw, req)) ?? null;
     return {
       uid: raw.uid,
       accountId,
@@ -334,5 +336,19 @@ export class OrgIdentityController {
       parentUid: raw.parent_uid ?? null,
       isMember: raw.is_member ?? false,
     };
+  }
+
+  /** uid→sfid for the canonical record: cache-backed resolver first, NATS RPC fallback. Fail-soft — returns null rather than throwing so the canonical record still renders. */
+  private async resolveAccountId(raw: MemberServiceB2bOrgResponse, req: Request): Promise<string | null> {
+    if (raw.sfid) return raw.sfid;
+
+    try {
+      const resolved = await this.orgIdentityResolver.getSfidByUid(raw.uid, req);
+      if (resolved.sfid) return resolved.sfid;
+    } catch (error) {
+      logger.debug(req, 'to_canonical_record', 'Resolver uid→sfid lookup failed; falling back to NATS', { err: error, uid: raw.uid });
+    }
+
+    return (await this.sfidResolver.resolve(raw.uid)) ?? null;
   }
 }

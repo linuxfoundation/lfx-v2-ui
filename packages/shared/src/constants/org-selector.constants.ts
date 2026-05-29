@@ -32,3 +32,9 @@ export const ORG_IDENTITY_CACHE_MAX_ENTRIES = 10_000;
 
 /** TTL for uid↔sfid resolver cache entries — org renames are rare so 24h is safe. */
 export const ORG_IDENTITY_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+/** Short TTL for the per-username access-aware org-universe memo — keeps typeahead requests off query-service/NATS while staying fresh enough for grant changes. */
+export const ORG_ACCESS_AWARE_CACHE_TTL_MS = 30 * 1000;
+
+/** Process-wide cap on cached access-aware resolutions (one entry per active user). */
+export const ORG_ACCESS_AWARE_CACHE_MAX_ENTRIES = 2_000;

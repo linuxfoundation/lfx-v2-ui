@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import {
+  ORG_IDENTITY_CACHE_MAX_ENTRIES,
+  ORG_IDENTITY_CACHE_TTL_MS,
   ORG_SFID_LOOKUP_BATCH_CONCURRENCY,
   ORG_SFID_LOOKUP_NATS_SUBJECT,
   ORG_SFID_LOOKUP_NATS_TIMEOUT_MS,
@@ -29,6 +31,9 @@ function sfid15To18(id15: string): string {
 
 /** Resolves UUID v8 org uids to 18-char Salesforce IDs via the member-service NATS RPC `lfx.member.uuid-to-sfid.lookup`. */
 export class SfidResolverService {
+  /** Process-wide uid→sfid memo (sfids are stable; org renames don't change them). Spares typeahead `resolveBatch` from re-hitting NATS on every keystroke. Only successful resolutions are cached. */
+  private static readonly sfidCache = new Map<string, { sfid: string; expiresAt: number }>();
+
   private readonly natsService: NatsService;
 
   public constructor() {
@@ -61,6 +66,9 @@ export class SfidResolverService {
   }
 
   private async resolveViaNats(uid: string): Promise<string | null> {
+    const cached = SfidResolverService.getCached(uid);
+    if (cached) return cached;
+
     try {
       const codec = this.natsService.getCodec();
       const payload = JSON.stringify({ uuid: uid });
@@ -74,7 +82,9 @@ export class SfidResolverService {
         return null;
       }
 
-      return sfid15To18(parsed.sfid);
+      const sfid = sfid15To18(parsed.sfid);
+      SfidResolverService.setCached(uid, sfid);
+      return sfid;
     } catch (error) {
       logger.debug(undefined, 'sfid_resolver', 'NATS uuid-to-sfid lookup failed', {
         uid,
@@ -82,5 +92,26 @@ export class SfidResolverService {
       });
       return null;
     }
+  }
+
+  /** Returns the cached sfid for a uid, or null on miss/expiry (lazy TTL eviction). */
+  private static getCached(uid: string): string | null {
+    const entry = SfidResolverService.sfidCache.get(uid);
+    if (!entry) return null;
+    if (Date.now() > entry.expiresAt) {
+      SfidResolverService.sfidCache.delete(uid);
+      return null;
+    }
+    return entry.sfid;
+  }
+
+  /** Stores a uid→sfid mapping, evicting the oldest entry (insertion order) when over the cap. */
+  private static setCached(uid: string, sfid: string): void {
+    const cache = SfidResolverService.sfidCache;
+    if (!cache.has(uid) && cache.size >= ORG_IDENTITY_CACHE_MAX_ENTRIES) {
+      const oldest = cache.keys().next();
+      if (!oldest.done) cache.delete(oldest.value);
+    }
+    cache.set(uid, { sfid, expiresAt: Date.now() + ORG_IDENTITY_CACHE_TTL_MS });
   }
 }
