@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import typography from '@tailwindcss/typography';
 import { lfxColors, lfxFontSizes } from '@lfx-one/shared';
 import PrimeUI from 'tailwindcss-primeui';
 
@@ -64,6 +65,11 @@ export default {
         normal: 1.5,
         relaxed: 1.75,
       },
+      typography: {
+        lfx: {
+          css: {},
+        },
+      },
     },
     fontSize: lfxFontSizes,
     fontFamily: {
@@ -73,5 +79,5 @@ export default {
       mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace'],
     },
   },
-  plugins: [PrimeUI],
+  plugins: [PrimeUI, typography],
 };
