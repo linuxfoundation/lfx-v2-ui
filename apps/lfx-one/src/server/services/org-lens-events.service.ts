@@ -80,7 +80,6 @@ export class OrgLensEventsService {
           er.EVENT_URL,
           er.EVENT_REGISTRATION_URL,
           COUNT(DISTINCT er.USER_EMAIL) AS ORG_ATTENDEE_COUNT,
-          COUNT(DISTINCT CASE WHEN er.USER_ROLE = 'Speaker' THEN er.USER_EMAIL END) AS ORG_SPEAKER_ACCEPTED_COUNT,
           MAX(CASE WHEN er.USER_ROLE = 'Sponsor' THEN 1 ELSE 0 END) AS IS_ORG_SPONSOR
         FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
         JOIN account a ON UPPER(er.ACCOUNT_NAME) = UPPER(a.ACCOUNT_NAME)
@@ -92,14 +91,16 @@ export class OrgLensEventsService {
           er.EVENT_LOCATION, er.EVENT_CITY, er.EVENT_COUNTRY,
           er.EVENT_URL, er.EVENT_REGISTRATION_URL
       ),
-      org_speaker_submissions AS (
-        SELECT er.EVENT_ID, COUNT(DISTINCT er.USER_EMAIL) AS ORG_SPEAKER_SUBMITTED_COUNT
-        FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
-        JOIN account a ON UPPER(er.ACCOUNT_NAME) = UPPER(a.ACCOUNT_NAME)
-        WHERE er.IS_PAST_EVENT = ${isPastCondition}
-          AND er.USER_ROLE = 'Speaker'
-          AND er.EVENT_ID IN (SELECT EVENT_ID FROM org_events)
-        GROUP BY er.EVENT_ID
+      org_speakers AS (
+        SELECT
+          es.EVENT_ID,
+          COUNT(DISTINCT CASE WHEN es.SPEAKER_STATUS = 'Accepted' THEN es.SPEAKER_EMAIL END)                              AS ORG_SPEAKER_ACCEPTED_COUNT,
+          COUNT(DISTINCT CASE WHEN es.SPEAKER_STATUS IN ('Accepted', 'In Review') THEN es.SPEAKER_EMAIL END)             AS ORG_SPEAKER_SUBMITTED_COUNT
+        FROM ANALYTICS.GOLD_FACT.EVENT_SPEAKERS es
+        JOIN account a ON UPPER(es.ACCOUNT_NAME) = UPPER(a.ACCOUNT_NAME)
+        WHERE es.EVENT_IS_PAST = ${isPastCondition}
+          AND es.EVENT_ID IN (SELECT EVENT_ID FROM org_events)
+        GROUP BY es.EVENT_ID
       ),
       user_reg AS (
         SELECT EVENT_ID
@@ -121,14 +122,14 @@ export class OrgLensEventsService {
         o.EVENT_REGISTRATION_URL,
         o.ORG_ATTENDEE_COUNT,
         NULLIF(ph.EVENT_REGISTRATIONS_GOAL, 0) AS TOTAL_ATTENDEE_COUNT,
-        o.ORG_SPEAKER_ACCEPTED_COUNT,
-        COALESCE(oss.ORG_SPEAKER_SUBMITTED_COUNT, 0) AS ORG_SPEAKER_SUBMITTED_COUNT,
+        COALESCE(os.ORG_SPEAKER_ACCEPTED_COUNT, 0) AS ORG_SPEAKER_ACCEPTED_COUNT,
+        COALESCE(os.ORG_SPEAKER_SUBMITTED_COUNT, 0) AS ORG_SPEAKER_SUBMITTED_COUNT,
         (o.IS_ORG_SPONSOR = 1) AS IS_ORG_SPONSOR,
         (u.EVENT_ID IS NOT NULL) AS IS_REGISTERED,
         COUNT(*) OVER() AS TOTAL_RECORDS
       FROM org_events o
       LEFT JOIN ANALYTICS.GOLD_REPORTING.PROJECT_HEALTH_EVENTS ph ON o.EVENT_ID = ph.EVENT_ID
-      LEFT JOIN org_speaker_submissions oss ON o.EVENT_ID = oss.EVENT_ID
+      LEFT JOIN org_speakers os ON o.EVENT_ID = os.EVENT_ID
       LEFT JOIN user_reg u ON o.EVENT_ID = u.EVENT_ID
       WHERE 1=1
         ${searchQueryFilter}
@@ -292,7 +293,7 @@ export class OrgLensEventsService {
   public async getEventSpeakers(req: Request, accountId: string, eventId: string, searchQuery?: string): Promise<OrgEventSpeakersResponse> {
     logger.debug(req, 'get_event_speakers', 'Fetching event speakers', { account_id: accountId, event_id: eventId });
 
-    const searchFilter = searchQuery ? 'AND (UPPER(COALESCE(p.NAME, er.USER_EMAIL)) LIKE UPPER(?) OR UPPER(er.USER_EMAIL) LIKE UPPER(?))' : '';
+    const searchFilter = searchQuery ? 'AND (UPPER(COALESCE(p.NAME, es.SPEAKER_EMAIL)) LIKE UPPER(?) OR UPPER(es.SPEAKER_EMAIL) LIKE UPPER(?))' : '';
 
     const sql = `
       WITH account AS (
@@ -302,20 +303,27 @@ export class OrgLensEventsService {
         LIMIT 1
       )
       SELECT
-        er.USER_EMAIL                                          AS CONTACT_ID,
-        COALESCE(p.NAME, er.USER_EMAIL)                       AS NAME,
-        p.TITLE                                               AS JOB_TITLE,
-        CASE WHEN er.REGISTRATION_STATUS = 'Accepted'
-             THEN 'ACCEPTED' ELSE 'SUBMITTED' END             AS STATUS,
-        MAX(er.EVENT_NAME)                                    AS EVENT_NAME
-      FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
-      JOIN account a ON UPPER(er.ACCOUNT_NAME) = UPPER(a.ACCOUNT_NAME)
+        es.SPEAKER_EMAIL                                                                                          AS CONTACT_ID,
+        COALESCE(
+          p.NAME,
+          NULLIF(TRIM(COALESCE(es.SPEAKER_FIRST_NAME, '') || ' ' || COALESCE(es.SPEAKER_LAST_NAME, '')), ''),
+          es.SPEAKER_EMAIL
+        )                                                                                                         AS NAME,
+        COALESCE(p.TITLE, es.JOB_TITLE)                                                                          AS JOB_TITLE,
+        es.SPEAKER_STATUS                                                                                         AS STATUS,
+        MAX(es.EVENT_NAME)                                                                                        AS EVENT_NAME
+      FROM ANALYTICS.GOLD_FACT.EVENT_SPEAKERS es
+      JOIN account a ON UPPER(es.ACCOUNT_NAME) = UPPER(a.ACCOUNT_NAME)
       LEFT JOIN ANALYTICS.PLATINUM_LFX_ONE.ORG_PEOPLE_ALL p
-        ON UPPER(p.EMAIL) = UPPER(er.USER_EMAIL) AND p.ACCOUNT_ID = ?
-      WHERE er.EVENT_ID = ?
-        AND er.USER_ROLE = 'Speaker'
+        ON UPPER(p.EMAIL) = UPPER(es.SPEAKER_EMAIL) AND p.ACCOUNT_ID = ?
+      WHERE es.EVENT_ID = ?
+        AND es.SPEAKER_STATUS IN ('Accepted', 'In Review')
         ${searchFilter}
-      GROUP BY er.USER_EMAIL, COALESCE(p.NAME, er.USER_EMAIL), p.TITLE, er.REGISTRATION_STATUS
+      GROUP BY
+        es.SPEAKER_EMAIL,
+        COALESCE(p.NAME, NULLIF(TRIM(COALESCE(es.SPEAKER_FIRST_NAME, '') || ' ' || COALESCE(es.SPEAKER_LAST_NAME, '')), ''), es.SPEAKER_EMAIL),
+        COALESCE(p.TITLE, es.JOB_TITLE),
+        es.SPEAKER_STATUS
       ORDER BY NAME ASC NULLS LAST
     `;
 
@@ -349,7 +357,7 @@ export class OrgLensEventsService {
       contactId: row.CONTACT_ID,
       name: row.NAME ?? row.CONTACT_ID,
       jobTitle: row.JOB_TITLE ?? null,
-      status: row.STATUS === 'ACCEPTED' ? 'ACCEPTED' : 'SUBMITTED',
+      status: row.STATUS === 'Accepted' ? 'ACCEPTED' : 'SUBMITTED',
     }));
 
     const acceptedCount = data.filter((s) => s.status === 'ACCEPTED').length;
