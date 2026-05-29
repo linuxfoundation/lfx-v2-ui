@@ -110,7 +110,9 @@
               @if (displayItem.roleLabel) {
                 <span
                   class="inline-flex items-center gap-1.5 mt-1 max-w-full px-2 py-0.5 rounded-full bg-white border border-gray-200 text-gray-700 text-xs font-medium leading-tight truncate"
-                  [attr.aria-label]="displayItem.roleTooltip ? 'Role: ' + displayItem.roleLabel + '; ' + displayItem.roleTooltip : 'Role: ' + displayItem.roleLabel"
+                  [attr.aria-label]="
+                    displayItem.roleTooltip ? 'Role: ' + displayItem.roleLabel + '; ' + displayItem.roleTooltip : 'Role: ' + displayItem.roleLabel
+                  "
                   [attr.data-testid]="'org-item-' + displayItem.item.uid + '-role-badge'"
                   [attr.data-role-label]="displayItem.roleLabel"
                   [attr.data-role-tooltip]="displayItem.roleTooltip || null"
