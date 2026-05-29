@@ -64,6 +64,7 @@ export class ProfileIndividualEnrollmentComponent {
                 severity: enrollmentStatusSeverity(displayStatus),
                 enrollHref: `${base}${item.ctaPath}`,
                 renewHref: `${base}${item.ctaPath}&renew=true`,
+                pending: false,
               };
             })
           );
@@ -168,16 +169,18 @@ export class ProfileIndividualEnrollmentComponent {
     return computed(() => {
       const list = this.enrollments();
       const overrides = this.autoRenewOverrides();
+      const pending = this.pendingIds();
       if (!list) return list;
       return list.map((item) => {
         const membershipId = item.membership?.ID;
+        const isPending = membershipId ? pending.has(membershipId) : false;
         if (membershipId && overrides.has(membershipId)) {
           const autoRenew = overrides.get(membershipId)!;
           const updatedMembership = { ...item.membership!, AutoRenew: autoRenew };
           const displayStatus = deriveEnrollmentStatus({ ...item, membership: updatedMembership });
-          return { ...item, membership: updatedMembership, displayStatus, severity: enrollmentStatusSeverity(displayStatus) };
+          return { ...item, membership: updatedMembership, displayStatus, severity: enrollmentStatusSeverity(displayStatus), pending: isPending };
         }
-        return item;
+        return { ...item, pending: isPending };
       });
     });
   }

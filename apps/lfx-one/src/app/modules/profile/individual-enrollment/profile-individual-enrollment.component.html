@@ -112,7 +112,7 @@
                     label="Disable auto-renew"
                     severity="secondary"
                     size="small"
-                    [disabled]="isPending(item)"
+                    [disabled]="item.pending"
                     (onClick)="onToggleAutoRenew(item, false)"
                     data-testid="individual-enrollment-auto-renew-toggle" />
                 } @else {
@@ -122,7 +122,7 @@
                     icon="fa-light fa-arrow-rotate-right"
                     severity="secondary"
                     size="small"
-                    [disabled]="isPending(item)"
+                    [disabled]="item.pending"
                     (onClick)="onToggleAutoRenew(item, true)"
                     data-testid="individual-enrollment-auto-renew-toggle" />
                 }
