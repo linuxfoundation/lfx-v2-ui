@@ -108,6 +108,7 @@ export class AppComponent {
     const { intercomAppId } = getRuntimeConfig(this.transferState);
 
     if (!intercomAppId) {
+      console.warn('Intercom: boot skipped — no app ID in runtime config');
       return;
     }
 
@@ -118,6 +119,13 @@ export class AppComponent {
       });
       return;
     }
+
+    console.info('Intercom: dispatching boot', {
+      has_jwt: !!intercomJwt,
+      has_user_id: !!userId,
+      has_name: !!user.name,
+      has_email: !!user.email,
+    });
 
     this.intercomService.boot({
       app_id: intercomAppId,

@@ -17,17 +17,24 @@ export class IntercomService {
 
   private readonly dataDogRumService = inject(DataDogRumService);
 
-  private isLoaded = false;
-
   // Fire-and-forget: stub queue absorbs calls before the script loads and replays them on load.
   public boot(options: IntercomBootOptions): void {
-    if (typeof window === 'undefined' || !options.app_id || this.isBootRequested) {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    if (!options.app_id) {
+      console.warn('Intercom: boot called without app_id');
+      return;
+    }
+    if (this.isBootRequested) {
+      console.info('Intercom: boot ignored — already booted');
       return;
     }
 
     this.loadIntercomScript(options.app_id, options.api_base);
     window.Intercom!('boot', options);
     this.isBootRequested = true;
+    console.info('Intercom: boot command dispatched to widget');
   }
 
   public show(): void {
@@ -49,7 +56,7 @@ export class IntercomService {
   }
 
   private loadIntercomScript(appId: string, apiBase?: string): void {
-    if (this.isLoaded || typeof window === 'undefined') {
+    if (typeof window === 'undefined') {
       return;
     }
 
@@ -66,12 +73,12 @@ export class IntercomService {
     script.src = `https://widget.intercom.io/widget/${appId}`;
 
     script.onload = () => {
-      this.isLoaded = true;
+      console.info('Intercom: widget script loaded');
     };
 
     script.onerror = (error) => {
       this.isBootRequested = false;
-      console.error('IntercomService: Failed to load script', error);
+      console.error('Intercom: failed to load widget script', error);
       // Surface to RUM so "users stuck in Jira fallback" is dashboardable.
       this.dataDogRumService.addError(new Error('Intercom script failed to load'), { context: 'intercom_load' });
     };
