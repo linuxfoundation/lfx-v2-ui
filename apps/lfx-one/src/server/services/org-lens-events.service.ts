@@ -82,13 +82,13 @@ export class OrgLensEventsService {
           er.EVENT_COUNTRY,
           er.EVENT_URL,
           er.EVENT_REGISTRATION_URL,
-          COUNT(DISTINCT er.USER_EMAIL) AS ORG_ATTENDEE_COUNT,
-          COUNT(DISTINCT CASE WHEN er.USER_ROLE = 'Speaker' THEN er.USER_EMAIL END) AS ORG_SPEAKER_ACCEPTED_COUNT,
+          COUNT(DISTINCT CASE WHEN er.REGISTRATION_STATUS = 'Accepted' THEN er.USER_EMAIL END) AS ORG_ATTENDEE_COUNT,
+          COUNT(DISTINCT CASE WHEN er.USER_ROLE = 'Speaker' AND er.REGISTRATION_STATUS = 'Accepted' THEN er.USER_EMAIL END) AS ORG_SPEAKER_ACCEPTED_COUNT,
           MAX(CASE WHEN er.USER_ROLE = 'Sponsor' THEN 1 ELSE 0 END) AS IS_ORG_SPONSOR
         FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
         JOIN account a ON UPPER(er.ACCOUNT_NAME) = UPPER(a.ACCOUNT_NAME)
         WHERE er.IS_PAST_EVENT = ${isPastCondition}
-          AND er.REGISTRATION_STATUS = 'Accepted'
+          AND er.REGISTRATION_STATUS NOT IN ('Cancelled', 'Declined', 'Rejected')
         GROUP BY
           er.EVENT_ID, er.EVENT_NAME, er.PROJECT_NAME,
           er.EVENT_START_DATE, er.EVENT_END_DATE,
@@ -101,6 +101,7 @@ export class OrgLensEventsService {
         JOIN account a ON UPPER(er.ACCOUNT_NAME) = UPPER(a.ACCOUNT_NAME)
         WHERE er.IS_PAST_EVENT = ${isPastCondition}
           AND er.USER_ROLE = 'Speaker'
+          AND er.REGISTRATION_STATUS NOT IN ('Cancelled', 'Declined', 'Rejected')
           AND er.EVENT_ID IN (SELECT EVENT_ID FROM org_events)
         GROUP BY er.EVENT_ID
       ),
@@ -176,7 +177,7 @@ export class OrgLensEventsService {
         SELECT DISTINCT er.EVENT_ID, er.IS_PAST_EVENT
         FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
         JOIN account a ON UPPER(er.ACCOUNT_NAME) = UPPER(a.ACCOUNT_NAME)
-        WHERE er.REGISTRATION_STATUS = 'Accepted'
+        WHERE er.REGISTRATION_STATUS NOT IN ('Cancelled', 'Declined', 'Rejected')
       ),
       user_upcoming_regs AS (
         SELECT DISTINCT EVENT_ID
