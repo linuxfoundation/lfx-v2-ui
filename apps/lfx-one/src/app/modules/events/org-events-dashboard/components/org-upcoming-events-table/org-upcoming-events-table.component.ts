@@ -31,7 +31,7 @@ export class OrgUpcomingEventsTableComponent {
     const field = this.sortField();
     const order = this.sortOrder();
     const getIcon = (f: string): string => {
-      if (field !== f) return '';
+      if (field !== f) return 'fa-light fa-sort text-gray-300';
       return order === 'ASC' ? 'fa-solid fa-caret-up text-blue-500' : 'fa-solid fa-caret-down text-blue-500';
     };
     return {
