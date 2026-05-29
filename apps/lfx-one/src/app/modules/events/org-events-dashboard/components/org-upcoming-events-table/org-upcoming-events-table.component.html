@@ -59,7 +59,7 @@
       </th>
       <th scope="col" class="text-xs font-medium">
         <span class="text-gray-500">Event Speakers</span>
-        <span class="block text-gray-400 font-normal">Accepted / Submitted</span>
+        <span class="block text-gray-400 font-normal">Accepted</span>
       </th>
       <th scope="col" class="text-xs text-gray-500 font-medium">Event Sponsor</th>
     </tr>
@@ -120,19 +120,17 @@
         }
       </td>
 
-      <!-- Event Speakers: Accepted / Submitted -->
+      <!-- Event Speakers: Accepted -->
       <td [attr.data-testid]="'org-upcoming-event-speakers-' + event.eventId">
-        @if (event.orgSpeakerSubmittedCount > 0) {
+        @if (event.orgSpeakerAcceptedCount > 0) {
           <button
             type="button"
-            class="text-sm whitespace-nowrap hover:underline focus-visible:underline focus-visible:outline-none"
+            class="text-sm text-gray-900 whitespace-nowrap hover:underline focus-visible:underline focus-visible:outline-none"
             (click)="speakersClick.emit(event)">
-            <span [class.text-gray-400]="event.orgSpeakerAcceptedCount === 0" [class.text-gray-900]="event.orgSpeakerAcceptedCount > 0">{{ event.orgSpeakerAcceptedCount }}</span><span class="text-gray-400"> / {{ event.orgSpeakerSubmittedCount }}</span>
+            {{ event.orgSpeakerAcceptedCount }}
           </button>
         } @else {
-          <span class="text-sm whitespace-nowrap">
-            <span class="text-gray-400">{{ event.orgSpeakerAcceptedCount }} / {{ event.orgSpeakerSubmittedCount }}</span>
-          </span>
+          <span class="text-sm text-gray-400 whitespace-nowrap">{{ event.orgSpeakerAcceptedCount }}</span>
         }
       </td>
 
