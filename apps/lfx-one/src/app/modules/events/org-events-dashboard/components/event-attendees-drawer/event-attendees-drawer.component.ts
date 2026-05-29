@@ -39,9 +39,9 @@ export class EventAttendeesDrawerComponent {
   private readonly accountContext = inject(AccountContextService);
 
   public readonly visible = model<boolean>(false);
-  public readonly eventId = input.required<string>();
-  public readonly eventName = input.required<string>();
-  public readonly attendeeCount = input.required<number>();
+  public readonly eventId = input<string>('');
+  public readonly eventName = input<string>('');
+  public readonly attendeeCount = input<number>(0);
 
   protected readonly companyName = computed(() => this.accountContext.selectedAccount().accountName ?? '');
   protected readonly searchTerm = signal('');
@@ -72,7 +72,7 @@ export class EventAttendeesDrawerComponent {
     return toSignal(
       toObservable(this.visible).pipe(
         switchMap((isVisible) => {
-          if (!isVisible) return of(null);
+          if (!isVisible || !this.eventId()) return of(null);
           const accountId = this.accountContext.selectedAccount().accountId;
           if (!accountId) return of(null);
           this.searchTerm.set('');

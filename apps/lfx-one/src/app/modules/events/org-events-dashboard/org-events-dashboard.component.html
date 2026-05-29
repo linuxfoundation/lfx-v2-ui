@@ -186,19 +186,17 @@
   }
 
   <!-- Drawers -->
-  @if (activeDrawerEvent()) {
-    <lfx-event-attendees-drawer
-      [(visible)]="attendeesDrawerVisible"
-      [eventId]="activeDrawerEvent()!.eventId"
-      [eventName]="activeDrawerEvent()!.eventName"
-      [attendeeCount]="activeDrawerEvent()!.orgAttendeeCount"
-      data-testid="org-events-attendees-drawer" />
-    <lfx-event-speakers-drawer
-      [(visible)]="speakersDrawerVisible"
-      [eventId]="activeDrawerEvent()!.eventId"
-      [eventName]="activeDrawerEvent()!.eventName"
-      [acceptedCount]="activeDrawerEvent()!.orgSpeakerAcceptedCount"
-      [submittedCount]="activeDrawerEvent()!.orgSpeakerSubmittedCount"
-      data-testid="org-events-speakers-drawer" />
-  }
+  <lfx-event-attendees-drawer
+    [(visible)]="attendeesDrawerVisible"
+    [eventId]="activeDrawerEvent()?.eventId ?? ''"
+    [eventName]="activeDrawerEvent()?.eventName ?? ''"
+    [attendeeCount]="activeDrawerEvent()?.orgAttendeeCount ?? 0"
+    data-testid="org-events-attendees-drawer" />
+  <lfx-event-speakers-drawer
+    [(visible)]="speakersDrawerVisible"
+    [eventId]="activeDrawerEvent()?.eventId ?? ''"
+    [eventName]="activeDrawerEvent()?.eventName ?? ''"
+    [acceptedCount]="activeDrawerEvent()?.orgSpeakerAcceptedCount ?? 0"
+    [submittedCount]="activeDrawerEvent()?.orgSpeakerSubmittedCount ?? 0"
+    data-testid="org-events-speakers-drawer" />
 </main>
