@@ -121,10 +121,10 @@ export class AppComponent {
     }
 
     console.info('Intercom: dispatching boot', {
-      has_jwt: !!intercomJwt,
-      has_user_id: !!userId,
-      has_name: !!user.name,
-      has_email: !!user.email,
+      hasJwt: !!intercomJwt,
+      hasUserId: !!userId,
+      hasName: !!user.name,
+      hasEmail: !!user.email,
     });
 
     this.intercomService.boot({

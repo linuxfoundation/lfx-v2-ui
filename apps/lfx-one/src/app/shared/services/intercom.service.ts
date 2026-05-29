@@ -19,6 +19,8 @@ export class IntercomService {
 
   private isLoaded = false;
 
+  private scriptElement: HTMLScriptElement | null = null;
+
   // Fire-and-forget: stub queue absorbs calls before the script loads and replays them on load.
   public boot(options: IntercomBootOptions): void {
     if (typeof window === 'undefined') {
@@ -29,7 +31,7 @@ export class IntercomService {
       return;
     }
     if (this.isBootRequested) {
-      console.info('Intercom: boot ignored — already booted');
+      console.info('Intercom: boot ignored — already requested');
       return;
     }
 
@@ -62,6 +64,11 @@ export class IntercomService {
       return;
     }
 
+    const scriptSrc = `https://widget.intercom.io/widget/${appId}`;
+    if (this.scriptElement?.isConnected || document.querySelector(`script[src="${scriptSrc}"]`)) {
+      return;
+    }
+
     window.intercomSettings = {
       api_base: apiBase || 'https://api-iam.intercom.io',
       app_id: appId,
@@ -72,7 +79,8 @@ export class IntercomService {
     const script = document.createElement('script');
     script.type = 'text/javascript';
     script.async = true;
-    script.src = `https://widget.intercom.io/widget/${appId}`;
+    script.src = scriptSrc;
+    this.scriptElement = script;
 
     script.onload = () => {
       this.isLoaded = true;
@@ -81,6 +89,8 @@ export class IntercomService {
 
     script.onerror = (error) => {
       this.isBootRequested = false;
+      script.remove();
+      this.scriptElement = null;
       console.error('Intercom: failed to load widget script', error);
       // Surface to RUM so "users stuck in Jira fallback" is dashboardable.
       this.dataDogRumService.addError(new Error('Intercom script failed to load'), { context: 'intercom_load' });
