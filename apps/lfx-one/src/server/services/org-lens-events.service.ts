@@ -69,7 +69,6 @@ export class OrgLensEventsService {
         SELECT ACCOUNT_NAME
         FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_LENS_ACCOUNT_CONTEXT
         WHERE ACCOUNT_ID = ?
-        LIMIT 1
       ),
       org_events AS (
         SELECT
@@ -172,7 +171,6 @@ export class OrgLensEventsService {
         SELECT ACCOUNT_NAME
         FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_LENS_ACCOUNT_CONTEXT
         WHERE ACCOUNT_ID = ?
-        LIMIT 1
       ),
       org_events AS (
         SELECT DISTINCT er.EVENT_ID, er.IS_PAST_EVENT
@@ -238,7 +236,6 @@ export class OrgLensEventsService {
         SELECT ACCOUNT_NAME
         FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_LENS_ACCOUNT_CONTEXT
         WHERE ACCOUNT_ID = ?
-        LIMIT 1
       )
       SELECT
         er.USER_EMAIL                         AS CONTACT_ID,
@@ -303,7 +300,6 @@ export class OrgLensEventsService {
         SELECT ACCOUNT_NAME
         FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_LENS_ACCOUNT_CONTEXT
         WHERE ACCOUNT_ID = ?
-        LIMIT 1
       )
       SELECT
         es.SPEAKER_EMAIL                                                                                          AS CONTACT_ID,
