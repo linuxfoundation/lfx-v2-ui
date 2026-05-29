@@ -54,8 +54,12 @@ export class OrgLensEventsService {
     let statusFilter = '';
     if (status === 'registered') {
       statusFilter = 'AND u.EVENT_ID IS NOT NULL';
-    } else if (status === 'not-registered') {
-      statusFilter = 'AND u.EVENT_ID IS NULL';
+    } else if (status === 'speaker-submitted') {
+      statusFilter = 'AND COALESCE(oss.ORG_SPEAKER_SUBMITTED_COUNT, 0) > 0';
+    } else if (status === 'speaker-accepted') {
+      statusFilter = 'AND o.ORG_SPEAKER_ACCEPTED_COUNT > 0';
+    } else if (status === 'event-sponsor') {
+      statusFilter = 'AND o.IS_ORG_SPONSOR = 1';
     }
 
     const isPastCondition = isPast ? 'TRUE' : 'FALSE';

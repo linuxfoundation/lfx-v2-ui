@@ -23,9 +23,11 @@ export const EMPTY_ORG_EVENTS_RESPONSE: OrgEventsResponse = { data: [], total: 0
 /** Status filter options for the Org Events filter bar. */
 export const ORG_EVENTS_STATUS_OPTIONS: FilterOption[] = [
   { label: 'All Statuses', value: null },
-  { label: 'Not Registered', value: 'not-registered' },
   { label: 'Registered', value: 'registered' },
+  { label: 'Speaker Submitted', value: 'speaker-submitted' },
+  { label: 'Speaker Accepted', value: 'speaker-accepted' },
+  { label: 'Event Sponsor', value: 'event-sponsor' },
 ];
 
 /** Valid org event status values for server-side validation. */
-export const VALID_ORG_EVENT_STATUS_VALUES: ReadonlySet<string> = new Set(['registered', 'not-registered']);
+export const VALID_ORG_EVENT_STATUS_VALUES: ReadonlySet<string> = new Set(['registered', 'speaker-submitted', 'speaker-accepted', 'event-sponsor']);
