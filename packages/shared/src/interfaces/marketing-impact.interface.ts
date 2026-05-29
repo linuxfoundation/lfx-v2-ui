@@ -23,8 +23,8 @@ export interface MarketingImpactTabOption {
   label: string;
 }
 
-/** Focus program identifiers for the Marketing Impact FOCUS filter bar. */
-export type MarketingImpactFocusProgram = 'all' | 'events' | 'newsletters' | 'surveys' | 'trainings';
+/** Focus program identifiers for the Marketing Impact FOCUS filter bar. Values map to Snowflake LF_SUB_DOMAIN_CLASSIFICATION via FOCUS_TO_CLASSIFICATION. */
+export type MarketingImpactFocusProgram = 'all' | 'lfCorporate' | 'lfEvents' | 'lfTraining' | 'lfxPlatform' | 'projectWebsites';
 
 /** Tab identifiers for the Marketing Impact section tabs. */
 export type MarketingImpactTab = 'overview' | 'attribution' | 'performance-marketing' | 'email' | 'web-activity' | 'social-accounts' | 'social-listening';
@@ -179,4 +179,32 @@ export interface PlatformCampaignRow {
   clicks: string;
   /** Pre-formatted number string, e.g. "12,345" */
   impressions: string;
+}
+
+/** View-model row for the keyword performance table. */
+export interface KeywordRow {
+  keyword: string;
+  matchType: string;
+  clicks: string;
+  spend: string;
+  impressions: string;
+  ctr: string;
+  cpc: string;
+  conversions: string;
+  convRate: string;
+  revenue: string;
+  roas: string;
+  searchTerms: SearchTermRow[];
+}
+
+/** View-model row for a nested search term under a keyword. */
+export interface SearchTermRow {
+  searchTerm: string;
+  matchType: string;
+  clicks: string;
+  spend: string;
+  impressions: string;
+  ctr: string;
+  cpc: string;
+  conversions: string;
 }
