@@ -187,13 +187,15 @@
 
   <!-- Drawers -->
   <lfx-event-attendees-drawer
-    [(visible)]="attendeesDrawerVisible"
+    [visible]="attendeesDrawerVisible()"
+    (visibleChange)="attendeesDrawerVisible.set($event)"
     [eventId]="activeDrawerEvent()?.eventId ?? ''"
     [eventName]="activeDrawerEvent()?.eventName ?? ''"
     [attendeeCount]="activeDrawerEvent()?.orgAttendeeCount ?? 0"
     data-testid="org-events-attendees-drawer" />
   <lfx-event-speakers-drawer
-    [(visible)]="speakersDrawerVisible"
+    [visible]="speakersDrawerVisible()"
+    (visibleChange)="speakersDrawerVisible.set($event)"
     [eventId]="activeDrawerEvent()?.eventId ?? ''"
     [eventName]="activeDrawerEvent()?.eventName ?? ''"
     [acceptedCount]="activeDrawerEvent()?.orgSpeakerAcceptedCount ?? 0"

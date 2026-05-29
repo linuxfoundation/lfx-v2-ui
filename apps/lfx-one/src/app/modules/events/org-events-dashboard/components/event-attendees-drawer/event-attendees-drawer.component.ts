@@ -10,7 +10,7 @@ import { AccountContextService } from '@app/shared/services/account-context.serv
 import { EventsService } from '@app/shared/services/events.service';
 import { InputTextModule } from 'primeng/inputtext';
 import { DrawerModule } from 'primeng/drawer';
-import { catchError, finalize, of, switchMap } from 'rxjs';
+import { catchError, finalize, of, skip, switchMap } from 'rxjs';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 
 const AVATAR_COLORS = ['bg-blue-600', 'bg-purple-600', 'bg-emerald-600', 'bg-orange-500', 'bg-red-500', 'bg-teal-600', 'bg-indigo-600', 'bg-amber-500'];
@@ -71,6 +71,7 @@ export class EventAttendeesDrawerComponent {
   private initAttendeesData() {
     return toSignal(
       toObservable(this.visible).pipe(
+        skip(1),
         switchMap((isVisible) => {
           if (!isVisible || !this.eventId()) return of(null);
           const accountId = this.accountContext.selectedAccount().accountId;
