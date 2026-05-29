@@ -13,11 +13,11 @@ Generate Angular 20 frontend code that is PR-ready. Use these conventions for co
 
 Before generating any code, verify the task context includes:
 
-| Required | If Missing |
-|----------|------------|
-| Specific task (what to build/modify) | Stop and ask — do not guess |
-| Which module (committees, meetings, etc.) | Infer from context or ask |
-| Type definitions being used | Must be found in this repo or in the owning upstream contract before writing code |
+| Required                                  | If Missing                                                                        |
+| ----------------------------------------- | --------------------------------------------------------------------------------- |
+| Specific task (what to build/modify)      | Stop and ask — do not guess                                                       |
+| Which module (committees, meetings, etc.) | Infer from context or ask                                                         |
+| Type definitions being used               | Must be found in this repo or in the owning upstream contract before writing code |
 
 ## Read Before Generating — MANDATORY
 
@@ -35,18 +35,21 @@ Do NOT generate code from memory alone. The codebase may have evolved since your
 Every new `.ts`, `.html`, and `.scss` file MUST start with the appropriate license header:
 
 **TypeScript (`.ts`):**
+
 ```typescript
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 ```
 
 **HTML (`.html`):**
+
 ```html
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 ```
 
 **SCSS (`.scss`):**
+
 ```scss
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
@@ -200,17 +203,17 @@ export class LfxMyWrapperComponent {
 
 ### Common Anti-Patterns — DO NOT DO THESE
 
-| Anti-Pattern | Correct Pattern |
-|-------------|-----------------|
-| `*ngIf="condition"` | `@if (condition()) { ... }` |
-| `*ngFor="let item of items"` | `@for (item of items(); track item.id) { ... }` |
-| `class="space-y-4"` | `class="flex flex-col gap-4"` |
-| `{{ getLabel() }}` (method in template) | `{{ label \| myPipe }}` (use pipe) |
-| `constructor(private svc: MyService)` | `private readonly svc = inject(MyService);` |
-| `@Input() name: string` | `public readonly name = input<string>()` |
-| `@Output() save = new EventEmitter()` | `public save = output<Item>()` |
-| Importing from barrel `index.ts` | Direct import from the component file |
-| `condition ? (a ? b : c) : d` | Break into computed signals or @if blocks |
+| Anti-Pattern                            | Correct Pattern                                 |
+| --------------------------------------- | ----------------------------------------------- |
+| `*ngIf="condition"`                     | `@if (condition()) { ... }`                     |
+| `*ngFor="let item of items"`            | `@for (item of items(); track item.id) { ... }` |
+| `class="space-y-4"`                     | `class="flex flex-col gap-4"`                   |
+| `{{ getLabel() }}` (method in template) | `{{ label \| myPipe }}` (use pipe)              |
+| `constructor(private svc: MyService)`   | `private readonly svc = inject(MyService);`     |
+| `@Input() name: string`                 | `public readonly name = input<string>()`        |
+| `@Output() save = new EventEmitter()`   | `public save = output<Item>()`                  |
+| Importing from barrel `index.ts`        | Direct import from the component file           |
+| `condition ? (a ? b : c) : d`           | Break into computed signals or @if blocks       |
 
 ## 2. Service Generation
 
@@ -427,12 +430,14 @@ private initItems(): Signal<Item[]> {
 ## Scope Boundaries
 
 **This reference covers:**
+
 - Generate/modify Angular components, services, templates, styles
 - Follow all frontend conventions (signals, standalone, PrimeNG wrappers)
 - Run `yarn format` after changes
 
 **This reference does not cover:**
+
 - Generate backend code; route service implementation work to the owning backend repo.
 - Modify shared API or service contracts without reading the owning contract docs.
 - Make architectural decisions without following the repo's architecture docs and code-owner guidance.
-- Modify protected files (`app.routes.ts`, `apps/lfx-one/angular.json`) — flag for code owner
+- Modify routing or build config (`app.routes.ts` for route registration, the hook-protected `apps/lfx-one/angular.json`) — flag for code owner

@@ -278,9 +278,8 @@ gh api repos/linuxfoundation/<repo>/contents/gen/http/openapi3.yaml --jq '.conte
 Broad categories the hook protects (non-exhaustive, see the hook for the authoritative list):
 
 - **Server core:** `server.ts`, `server-logger.ts`, `middleware/*`
-- **Singleton services:** `logger.service.ts`, `microservice-proxy.service.ts`, `nats.service.ts`, `snowflake.service.ts`, `supabase.service.ts`, `ai.service.ts`, `project.service.ts`, `etag.service.ts`
+- **Singleton services:** `logger.service.ts`, `microservice-proxy.service.ts`, `nats.service.ts`, `snowflake.service.ts`, `supabase.service.ts`, `ai.service.ts`, `etag.service.ts`
 - **Helpers:** `helpers/error-serializer.ts`
-- **Frontend config:** `app.routes.ts`
 - **Git hooks / lint / format:** `.husky/*`, `eslint.config.*`, `.prettierrc*`, `check-headers.sh`
 - **Build config:** `turbo.json`, `angular.json`
 - **Package files:** `package.json`, `yarn.lock`

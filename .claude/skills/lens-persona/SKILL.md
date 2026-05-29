@@ -12,7 +12,7 @@ You are working on code that depends on the Self Serve lens/persona system: dash
 
 - The user mentions "lens", "persona", "PCC", "ED mode", "Admin Mode", "Maintainer view", or any persona variant.
 - A change touches `dashboards/` modules.
-- A component needs to gate UI behind persona checks (`isED`, `isMaintainer`, `isVisitor`, `canEdit`, `hasPMOAccess`).
+- A component needs to gate UI behind persona checks (`isMaintainer`, `isVisitor`, `canEdit`, `hasPMOAccess`, or an ED check via `PersonaService` / `executiveDirectorGuard`).
 - A change touches `LensService`, `ProjectContextService`, or persona helpers.
 - A change touches `apps/lfx-one/src/server/utils/persona-helper` or `auth-helper`.
 

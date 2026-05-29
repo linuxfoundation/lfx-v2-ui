@@ -89,7 +89,7 @@ lfx-self-serve/
 │       │   ├── controllers/  # Route controllers
 │       │   ├── errors/       # Custom error classes (base, authentication, microservice, service-validation)
 │       │   ├── helpers/      # Server helpers (api-gateway, error-serializer, http-status, ics, meeting, poll-endpoint, query-service, url-validation, validation)
-│       │   ├── middleware/   # Express middleware (auth, error-handler, rate-limit)
+│       │   ├── middleware/   # Express middleware (auth, error-handler, rate-limit, require-executive-director)
 │       │   ├── pdf-templates/ # PDF generation templates (e.g., visa-letter-manual)
 │       │   ├── routes/       # API route definitions
 │       │   ├── services/     # Backend services (api-client, microservice-proxy, nats, snowflake, etc.)
@@ -131,8 +131,10 @@ The application is organized into feature modules under `apps/lfx-one/src/app/mo
 | **dashboards**    | Lens-based dashboards (Me, Foundation, Project, Org) and supporting drawers      |
 | **documents**     | Document management — browse and manage project documents                        |
 | **events**        | Events — browse LFX events and manage attendance                                 |
+| **invite**        | Invite acceptance — token-based invite landing and error pages                   |
 | **mailing-lists** | Mailing list management — subscribe, unsubscribe, and manage lists               |
 | **meetings**      | Meeting scheduling — create, manage, and join meetings with calendar integration |
+| **newsletters**   | Newsletter management — list, manage, and view newsletter analytics              |
 | **profile**       | User profile — profile management and account settings                           |
 | **settings**      | Application settings — preferences and configuration                             |
 | **surveys**       | Survey management — create surveys, collect responses, view NPS analytics        |
@@ -177,7 +179,7 @@ For missing sign-off recovery (single-commit amend, or older commits / cherry-pi
 
 - Always reference PrimeNG's component interface when defining types — all PrimeNG components are wrapped in LFX components for UI library independence.
 - Use direct imports for standalone components (no barrel exports).
-- Authentication is selective: public routes (`/meeting`, `/public/api`) bypass auth, protected routes require it. Auth0/Authelia via express-openid-connect; custom `/login` handler with URL validation. Prefer user bearer tokens over M2M tokens except in genuinely public endpoints — see `.claude/rules/development-rules.md` for the M2M usage rules.
+- Authentication is selective: public routes (`/meetings/` SSR pages, `/public/api`) allow anonymous access (optional auth), protected routes require it. Auth0/Authelia via express-openid-connect; custom `/login` handler with URL validation. Prefer user bearer tokens over M2M tokens except in genuinely public endpoints — see `.claude/rules/development-rules.md` for the M2M usage rules.
 
 ### Dev server
 
