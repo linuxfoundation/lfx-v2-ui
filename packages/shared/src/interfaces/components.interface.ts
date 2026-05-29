@@ -152,6 +152,8 @@ export interface TagProps {
   rounded?: boolean;
   /** Additional CSS classes */
   styleClass?: string;
+  /** Renders a small filled circle dot before the label, inheriting the severity colour */
+  dot?: boolean;
 }
 
 /**

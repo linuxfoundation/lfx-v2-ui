@@ -90,8 +90,8 @@ export class ProfileIndividualEnrollmentComponent {
 
     const endDate = item.membership.EndDate ? formatDate(item.membership.EndDate, 'mediumDate', 'en-US', 'UTC') : '';
     const message = newValue
-      ? `This will Enable auto renew for your membership, your next payment will be charged on ${endDate}.`
-      : `This will Disable auto renew for your membership, your current membership will expire on ${endDate}.`;
+      ? `This will enable auto-renew for your membership; your next payment will be charged on ${endDate}.`
+      : `This will disable auto-renew for your membership; your current membership will expire on ${endDate}.`;
 
     this.confirmationService.confirm({
       header: newValue ? 'Enable auto-renew' : 'Disable auto-renew',
