@@ -58,7 +58,7 @@
             }
             @if (item.membership) {
               <lfx-tag
-                [value]="item.displayStatus === 'Active' ? 'Enrolled' : item.displayStatus"
+                [value]="item.displayStatus"
                 [severity]="item.severity"
                 [dot]="true"
                 data-testid="individual-enrollment-status" />

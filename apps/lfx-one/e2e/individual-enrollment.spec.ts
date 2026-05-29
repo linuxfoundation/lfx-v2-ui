@@ -315,11 +315,11 @@ test.describe('Individual Enrollment — Content Tests', () => {
       }
     });
 
-    test('status chip shows Enrolled', async ({ page }) => {
+    test('status chip shows Active', async ({ page }) => {
       await setupStripeEnrollmentMock(page);
       await gotoAndWaitForCard(page);
 
-      await expect(page.getByTestId('individual-enrollment-status')).toContainText('Enrolled');
+      await expect(page.getByTestId('individual-enrollment-status')).toContainText('Active');
     });
   });
 
