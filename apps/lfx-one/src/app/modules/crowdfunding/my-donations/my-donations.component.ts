@@ -33,6 +33,7 @@ export class MyDonationsComponent {
   // ─── Simple WritableSignals ───────────────────────────────────────────────
   // TODO: derive from API response once cancelled-recurring concept is implemented
   protected readonly cancelledCount = signal(0);
+  private readonly addedPaymentMethods = signal<PaymentMethod[]>([]);
 
   // ─── Pagination Driver ────────────────────────────────────────────────────
   private readonly loadMore$ = new Subject<void>();
@@ -41,7 +42,6 @@ export class MyDonationsComponent {
   protected readonly stats: Signal<DonationStats> = this.initStats();
   protected readonly recurringDonations: Signal<RecurringDonation[]> = this.initRecurringDonations();
   private readonly fetchedPaymentMethods: Signal<PaymentMethod[]> = this.initPaymentMethods();
-  private readonly addedPaymentMethods = signal<PaymentMethod[]>([]);
   protected readonly paymentMethods = computed(() => [...this.fetchedPaymentMethods(), ...this.addedPaymentMethods()]);
   private readonly donationHistoryState: Signal<{ items: MyDonation[]; hasMore: boolean }> = this.initDonationHistory();
   protected readonly donationHistory = computed(() => this.donationHistoryState().items);

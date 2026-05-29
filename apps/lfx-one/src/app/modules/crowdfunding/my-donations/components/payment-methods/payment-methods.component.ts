@@ -4,6 +4,7 @@
 import { Component, DestroyRef, inject, input, output } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AddPaymentCardResult, PaymentMethod } from '@lfx-one/shared/interfaces';
+import { take } from 'rxjs/operators';
 import { DialogService } from 'primeng/dynamicdialog';
 import { AddPaymentCardDialogComponent } from '../add-payment-card-dialog/add-payment-card-dialog.component';
 import { PaymentMethodCardComponent } from '../payment-method-card/payment-method-card.component';
@@ -37,7 +38,7 @@ export class PaymentMethodsComponent {
       return;
     }
 
-    ref.onClose.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((result: AddPaymentCardResult | undefined) => {
+    ref.onClose.pipe(take(1), takeUntilDestroyed(this.destroyRef)).subscribe((result: AddPaymentCardResult | undefined) => {
       if (result?.added && result.paymentMethod) {
         this.cardAdded.emit(result.paymentMethod);
       }
