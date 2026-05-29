@@ -113,7 +113,8 @@ export class PendingActionsComponent {
 
   protected handleDismiss(item: DecoratedPendingAction): void {
     this.hiddenActionsService.dismissAction(item);
-    this.startCompletion(item, { withSkeleton: true });
+    // skipHide: the permanent dismiss cookie already hides the row; a 24h hideAction cookie would be redundant.
+    this.startCompletion(item, { withSkeleton: true, skipHide: true });
   }
 
   // Parse the href into a UrlTree up-front so `[routerLink]` preserves query params (e.g. `?password=...`).
@@ -153,9 +154,11 @@ export class PendingActionsComponent {
   }
 
   // Persist the hide synchronously (so an unmount within the animation window can't cancel the cookie write), then drive the fade → drop → skeleton-arrival animation through two timers.
-  private startCompletion(item: PendingActionItem, options: { withSkeleton: boolean }): void {
+  private startCompletion(item: PendingActionItem, options: { withSkeleton: boolean; skipHide?: boolean }): void {
     const rowKey = this.getRowKey(item);
-    this.hiddenActionsService.hideAction(item);
+    if (!options.skipHide) {
+      this.hiddenActionsService.hideAction(item);
+    }
 
     this.completingRowKeys.update((keys) => new Set(keys).add(rowKey));
     timer(PENDING_ACTION_FADE_OUT_MS)
