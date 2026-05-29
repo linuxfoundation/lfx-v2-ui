@@ -435,17 +435,48 @@ function makeAuthDecision(result: AuthMiddlewareResult, req: Request): AuthDecis
   return { action: 'allow' };
 }
 
+const INVITE_TOKEN_COOKIE = 'lfx-invite-token';
+
 /**
  * Executes the authentication decision
  */
 async function executeAuthDecision(decision: AuthDecision, req: Request, res: Response, next: NextFunction): Promise<void> {
   switch (decision.action) {
-    case 'allow':
+    case 'allow': {
+      // After OAuth completes, if an invite token cookie exists and we're not already
+      // on /invite, the email-verification redirect lost the OAuth state — recover by
+      // redirecting to the invite URL and consuming the cookie.
+      const pendingInviteToken = req.cookies?.[INVITE_TOKEN_COOKIE] as string | undefined;
+      if (pendingInviteToken && !req.path.startsWith('/invite')) {
+        res.clearCookie(INVITE_TOKEN_COOKIE, { path: '/' });
+        res.redirect(`/invite?token=${encodeURIComponent(pendingInviteToken)}`);
+        return;
+      }
+      // State was preserved — already landing on /invite with token in URL; clear the cookie.
+      if (pendingInviteToken && req.path.startsWith('/invite')) {
+        res.clearCookie(INVITE_TOKEN_COOKIE, { path: '/' });
+      }
       next();
       break;
+    }
 
     case 'redirect':
       if (decision.redirectUrl) {
+        // Persist the invite token in a short-lived cookie before the OAuth redirect so
+        // it survives Auth0's email-verification flow, which opens in a new context and
+        // loses the OAuth state parameter (and therefore the returnTo URL).
+        if (req.path.startsWith('/invite') && !req.path.startsWith('/invite/error')) {
+          const inviteToken = req.query['token'];
+          if (typeof inviteToken === 'string' && inviteToken.split('.').length === 3) {
+            res.cookie(INVITE_TOKEN_COOKIE, inviteToken, {
+              httpOnly: true,
+              secure: process.env['NODE_ENV'] === 'production',
+              sameSite: 'lax',
+              maxAge: 15 * 60 * 1000, // 15 minutes — enough to complete signup + email verification
+              path: '/',
+            });
+          }
+        }
         // Use OIDC login method which handles the redirect properly
         res.oidc.login({ returnTo: req.originalUrl });
       } else {
