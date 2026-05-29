@@ -9,3 +9,29 @@
  * from a Salesforce-style ID before handing the value to downstream lookups.
  */
 export const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Salesforce Account ID — "001" prefix + 12 (15-char form) or 15 (18-char form) alphanumeric chars. */
+export const SALESFORCE_ACCOUNT_ID_PATTERN = /^001[A-Za-z0-9]{12,15}$/;
+
+/**
+ * General-purpose SSR path parameter validator — mixed-case alphanumerics + hyphens, length 1-64.
+ * Currently used to validate `foundationId` path parameters on the Org Lens membership
+ * and Board & Committee SSR endpoints.
+ *
+ * Allowed values intentionally span three legitimate id shapes the SSR layer sees:
+ *   1. Salesforce 18-char custom-object IDs (e.g. "a0941000002wBz2AAE") — the
+ *      PRODUCTION foundationId shape, mixed case base32+checksum
+ *   2. Synthetic v1 mock IDs (e.g. "agl-001", "agl-board-1") — kebab-case lowercase
+ *   3. Future UUID v8 shape from `lfx-v2-member-service` (hex + hyphens, 36 chars)
+ *
+ * Defense-in-depth at the SSR boundary; caps payload size to 64 chars (DoS guard)
+ * and rejects everything outside the alphanumeric + hyphen character class
+ * (whitespace, punctuation, control bytes, XSS/SQLi probes).
+ */
+export const FOUNDATION_ID_PATTERN = /^[A-Za-z0-9-]{1,64}$/;
+
+/** Basic email-format regex for client-side blur validation (FR-017a). */
+export const EMAIL_REGEX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+/** Org People `person_key` — LFID or opaque `cdp:`-prefixed id; 4–128 URL-safe chars (request-boundary bound, not a schema). */
+export const PERSON_KEY_PATTERN = /^(cdp:)?[A-Za-z0-9_-]{4,128}$/;

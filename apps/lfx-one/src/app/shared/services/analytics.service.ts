@@ -4,6 +4,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import {
+  OrgLensAccountContextResponse,
   ActiveWeeksStreakResponse,
   CertifiedEmployeesResponse,
   CodeCommitsDailyResponse,
@@ -60,6 +61,7 @@ import {
   TrainingCertificationSummaryResponse,
   CodeContributionSummaryResponse,
   BoardMeetingParticipationSummaryResponse,
+  KeywordPerformanceResponse,
   SocialMediaResponse,
   SocialReachResponse,
   WebActivitiesSummaryResponse,
@@ -70,6 +72,7 @@ import {
   MarketingAttributionResponse,
   MultiFoundationSummaryResponse,
 } from '@lfx-one/shared/interfaces';
+import { HEALTH_METRICS_NPS_DEFAULT_SUMMARY } from '@lfx-one/shared/constants';
 import { catchError, Observable, of, shareReplay } from 'rxjs';
 
 /**
@@ -204,6 +207,17 @@ export class AnalyticsService {
         });
       })
     );
+  }
+
+  /** Resolve display attributes + tier for the persona-authorised account IDs (drives selector + header badge). */
+  public getOrgLensAccountContext(accountIds: string[]): Observable<OrgLensAccountContextResponse[]> {
+    if (accountIds.length === 0) {
+      return of([]);
+    }
+    const params = { accountIds: accountIds.join(',') };
+    return this.http
+      .get<OrgLensAccountContextResponse[]>('/api/analytics/org-lens-account-context', { params })
+      .pipe(catchError(() => of([] as OrgLensAccountContextResponse[])));
   }
 
   /**
@@ -400,16 +414,13 @@ export class AnalyticsService {
     );
   }
 
-  /**
-   * Get foundation maintainers data from Snowflake
-   * @param foundationSlug - Required foundation slug to filter by (e.g., 'tlf', 'cncf')
-   * @returns Observable of foundation maintainers response with average and daily trend data
-   */
+  /** Latest-day distinct-maintainer snapshot + daily trend for a foundation. */
   public getFoundationMaintainers(foundationSlug: string): Observable<FoundationMaintainersResponse> {
     return this.http.get<FoundationMaintainersResponse>('/api/analytics/foundation-maintainers', { params: { foundationSlug } }).pipe(
       catchError(() => {
         return of({
-          avgMaintainers: 0,
+          currentMaintainers: 0,
+          asOfDate: null,
           trendData: [],
           trendLabels: [],
         });
@@ -821,29 +832,33 @@ export class AnalyticsService {
   /**
    * Get web activities summary grouped by domain category
    * @param foundationSlug - Foundation slug to filter by (e.g., 'tlf', 'cncf')
+   * @param classification - Optional LF_SUB_DOMAIN_CLASSIFICATION filter (e.g., 'LF Events', 'LF Corporate')
    * @returns Observable of web activities summary response
    */
-  public getWebActivitiesSummary(foundationSlug: string): Observable<WebActivitiesSummaryResponse> {
-    return this.http.get<WebActivitiesSummaryResponse>('/api/analytics/web-activities-summary', { params: { foundationSlug } }).pipe(
-      catchError(() => {
-        return of({
-          totalSessions: 0,
-          totalPageViews: 0,
-          domainGroups: [],
-          dailyData: [],
-          dailyLabels: [],
-        });
-      })
-    );
+  public getWebActivitiesSummary(foundationSlug: string, classification?: string): Observable<WebActivitiesSummaryResponse> {
+    return this.http
+      .get<WebActivitiesSummaryResponse>('/api/analytics/web-activities-summary', { params: this.buildFoundationParams(foundationSlug, classification) })
+      .pipe(
+        catchError(() => {
+          return of({
+            totalSessions: 0,
+            totalPageViews: 0,
+            domainGroups: [],
+            dailyData: [],
+            dailyLabels: [],
+          });
+        })
+      );
   }
 
   /**
    * Get email click-through rate data
    * @param foundationSlug - Foundation slug to filter by
+   * @param classification - Optional LF_SUB_DOMAIN_CLASSIFICATION filter (e.g., 'LF Events', 'LF Corporate')
    * @returns Observable of email CTR response
    */
-  public getEmailCtr(foundationSlug: string): Observable<EmailCtrResponse> {
-    return this.http.get<EmailCtrResponse>('/api/analytics/email-ctr', { params: { foundationSlug } }).pipe(
+  public getEmailCtr(foundationSlug: string, classification?: string): Observable<EmailCtrResponse> {
+    return this.http.get<EmailCtrResponse>('/api/analytics/email-ctr', { params: this.buildFoundationParams(foundationSlug, classification) }).pipe(
       catchError(() => {
         return of({
           currentCtr: 0,
@@ -883,10 +898,11 @@ export class AnalyticsService {
   /**
    * Get paid social reach metrics
    * @param foundationSlug - Foundation slug used to filter metrics
+   * @param classification - Optional LF_SUB_DOMAIN_CLASSIFICATION filter (e.g., 'LF Events', 'LF Corporate')
    * @returns Social reach response with ROAS, impressions, and monthly trends
    */
-  public getSocialReach(foundationSlug: string): Observable<SocialReachResponse> {
-    return this.http.get<SocialReachResponse>('/api/analytics/social-reach', { params: { foundationSlug } }).pipe(
+  public getSocialReach(foundationSlug: string, classification?: string): Observable<SocialReachResponse> {
+    return this.http.get<SocialReachResponse>('/api/analytics/social-reach', { params: this.buildFoundationParams(foundationSlug, classification) }).pipe(
       catchError(() => {
         return of({
           totalReach: 0,
@@ -899,6 +915,17 @@ export class AnalyticsService {
           monthlyLabels: [],
           monthlyRoas: [],
           channelGroups: [],
+        });
+      })
+    );
+  }
+
+  public getKeywordPerformance(foundationSlug: string): Observable<KeywordPerformanceResponse> {
+    return this.http.get<KeywordPerformanceResponse>('/api/analytics/keyword-performance', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          keywords: [],
+          totals: { clicks: 0, spend: 0, impressions: 0, conversions: 0, attributedRevenue: 0 },
         });
       })
     );
@@ -987,20 +1014,7 @@ export class AnalyticsService {
     if (range && range !== 'YTD') {
       params['range'] = range;
     }
-    return this.http.get<NpsSummaryResponse>('/api/analytics/nps-summary', { params }).pipe(
-      catchError(() => {
-        return of({
-          projectId: '',
-          npsScore: 0,
-          promoters: 0,
-          passives: 0,
-          detractors: 0,
-          nonResponses: 0,
-          responses: 0,
-          lastUpdatedLabel: 'N/A',
-        });
-      })
-    );
+    return this.http.get<NpsSummaryResponse>('/api/analytics/nps-summary', { params }).pipe(catchError(() => of(HEALTH_METRICS_NPS_DEFAULT_SUMMARY)));
   }
 
   /**
@@ -1190,10 +1204,11 @@ export class AnalyticsService {
   /**
    * Get brand reach metrics for the ED dashboard (social followers + web sessions).
    * @param foundationSlug Foundation slug used to filter Snowflake queries
+   * @param classification Optional LF_SUB_DOMAIN_CLASSIFICATION filter (e.g., 'LF Events', 'LF Corporate')
    * @returns Observable emitting reach totals, platform breakdowns, and weekly trend (or zeroed defaults on error)
    */
-  public getBrandReach(foundationSlug: string): Observable<BrandReachResponse> {
-    return this.http.get<BrandReachResponse>('/api/analytics/brand-reach', { params: { foundationSlug } }).pipe(
+  public getBrandReach(foundationSlug: string, classification?: string): Observable<BrandReachResponse> {
+    return this.http.get<BrandReachResponse>('/api/analytics/brand-reach', { params: this.buildFoundationParams(foundationSlug, classification) }).pipe(
       catchError(() =>
         of({
           totalSocialFollowers: 0,
@@ -1238,10 +1253,11 @@ export class AnalyticsService {
   /**
    * Get revenue impact metrics for the ED dashboard (attribution + paid media + event registration).
    * @param foundationSlug Foundation slug used to filter Snowflake queries
+   * @param classification Optional LF_SUB_DOMAIN_CLASSIFICATION filter (e.g., 'LF Events', 'LF Corporate')
    * @returns Observable emitting pipeline/revenue totals, attribution breakdowns, and event registration data (or zeroed defaults on error)
    */
-  public getRevenueImpact(foundationSlug: string): Observable<RevenueImpactResponse> {
-    return this.http.get<RevenueImpactResponse>('/api/analytics/revenue-impact', { params: { foundationSlug } }).pipe(
+  public getRevenueImpact(foundationSlug: string, classification?: string): Observable<RevenueImpactResponse> {
+    return this.http.get<RevenueImpactResponse>('/api/analytics/revenue-impact', { params: this.buildFoundationParams(foundationSlug, classification) }).pipe(
       catchError(() =>
         of({
           pipelineInfluenced: 0,
@@ -1263,11 +1279,12 @@ export class AnalyticsService {
   /**
    * Get marketing attribution data by channel with multi-touch revenue models.
    * @param foundationSlug Foundation slug used to filter Snowflake queries
+   * @param classification Optional LF_SUB_DOMAIN_CLASSIFICATION filter (e.g., 'LF Events', 'LF Corporate')
    * @returns Observable emitting channel summary + project drill-down (or empty defaults on error)
    */
-  public getMarketingAttribution(foundationSlug: string): Observable<MarketingAttributionResponse> {
+  public getMarketingAttribution(foundationSlug: string, classification?: string): Observable<MarketingAttributionResponse> {
     return this.http
-      .get<MarketingAttributionResponse>('/api/analytics/marketing-attribution', { params: { foundationSlug } })
+      .get<MarketingAttributionResponse>('/api/analytics/marketing-attribution', { params: this.buildFoundationParams(foundationSlug, classification) })
       .pipe(catchError(() => of({ channels: [], projects: [] })));
   }
 
@@ -1289,5 +1306,11 @@ export class AnalyticsService {
           });
         })
       );
+  }
+
+  private buildFoundationParams(foundationSlug: string, classification?: string): Record<string, string> {
+    const params: Record<string, string> = { foundationSlug };
+    if (classification) params['classification'] = classification;
+    return params;
   }
 }

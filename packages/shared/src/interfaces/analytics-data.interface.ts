@@ -854,41 +854,19 @@ export interface FoundationValueConcentrationResponse {
   allOtherPercentage: number;
 }
 
-/**
- * Foundation maintainers daily row from Snowflake
- * Raw response from FOUNDATION_MAINTAINERS_YEARLY table (despite name, contains daily data)
- */
+/** Full schema of ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_MAINTAINERS_DAILY. */
 export interface FoundationMaintainersDailyRow {
-  /**
-   * Foundation ID
-   */
   FOUNDATION_ID: string;
-
-  /**
-   * Foundation name
-   */
   FOUNDATION_NAME: string;
-
-  /**
-   * Foundation URL slug
-   */
   FOUNDATION_SLUG: string;
-
-  /**
-   * Metric date (daily granularity)
-   */
-  METRIC_DATE: string;
-
-  /**
-   * Number of active maintainers on this date
-   */
+  /** Snowflake Node SDK returns DATE columns as JS Date; some paths parse strings. */
+  METRIC_DATE: Date | string;
   ACTIVE_MAINTAINERS: number;
-
-  /**
-   * Average maintainers yearly (calculated aggregate)
-   */
   AVG_MAINTAINERS_YEARLY: number;
 }
+
+/** Projection used by getFoundationMaintainers (METRIC_DATE + ACTIVE_MAINTAINERS only) — LFXV2-1625. */
+export type FoundationMaintainersDailySnapshotRow = Pick<FoundationMaintainersDailyRow, 'METRIC_DATE' | 'ACTIVE_MAINTAINERS'>;
 
 /**
  * Weekly aggregated maintainers result from Snowflake query
@@ -910,25 +888,15 @@ export interface WeeklyMaintainersRow {
   AVG_MAINTAINERS_YEARLY: number;
 }
 
-/**
- * API response for foundation maintainers query
- * Contains average maintainers and weekly trend data
- */
+/** Latest-day distinct-maintainer snapshot + daily trend for a foundation. */
 export interface FoundationMaintainersResponse {
-  /**
-   * Average number of maintainers (from AVG_MAINTAINERS_YEARLY)
-   */
-  avgMaintainers: number;
-
-  /**
-   * Daily or aggregated maintainer count data for trend visualization
-   */
+  /** Distinct active maintainers as of asOfDate (latest row of FOUNDATION_MAINTAINERS_DAILY). */
+  currentMaintainers: number;
+  /** ISO yyyy-mm-dd, or null when no rows returned. */
+  asOfDate: string | null;
+  /** Daily maintainer count data for trend visualization. */
   trendData: number[];
-
-  /**
-   * Date labels for chart visualization
-   * Array of date strings matching trendData
-   */
+  /** Date labels matching trendData (UTC-anchored, formatted server-side). */
   trendLabels: string[];
 }
 
@@ -2252,6 +2220,7 @@ export interface FoundationProjectsDetailRow {
   CONTRIBUTORS_12M_COUNT: number;
   MAINTAINERS_YTD_COUNT: number;
   MAINTAINERS_12M_COUNT: number;
+  MAINTAINERS_CURRENT_COUNT: number;
   STARS_YTD_COUNT: number;
   STARS_12M_COUNT: number;
   LAST_UPDATED_TS: Date | string | null;
@@ -2708,6 +2677,7 @@ export interface PaidPlatformBreakdown {
   convRate: number;
   conversions: number;
   performance: PaidProjectPerformance;
+  campaigns: PaidCampaignPerformance[];
 }
 
 /**
@@ -3360,4 +3330,83 @@ export interface EdEvolutionData {
   emailCtr: EmailCtrResponse;
   paidCampaign: SocialReachResponse;
   attribution?: MarketingAttributionResponse;
+}
+
+// ============================================
+// Keyword Performance (Marketing Impact Dashboard)
+// ============================================
+
+/**
+ * Row from ANALYTICS.PLATINUM_LFX_ONE.PAID_ADS_KEYWORD_PERFORMANCE (daily grain).
+ * One row per keyword/search-term per day.
+ */
+export interface KeywordPerformanceRow {
+  RECORD_TYPE: 'keyword' | 'search_term';
+  KEYWORD_TEXT: string;
+  KEYWORD_MATCH_TYPE: string;
+  SEARCH_TERM: string | null;
+  SEARCH_TERM_MATCH_TYPE: string | null;
+  CLICKS: number;
+  SPEND: number;
+  IMPRESSIONS: number;
+  CONVERSIONS: number;
+  CONVERSIONS_VALUE: number;
+  CTR: number;
+  CPC: number;
+  CONVERSION_RATE: number;
+}
+
+/**
+ * Row from ANALYTICS.PLATINUM_LFX_ONE.PAID_ADS_KEYWORD_ATTRIBUTION (monthly grain).
+ * One row per keyword per month with attributed revenue.
+ */
+export interface KeywordAttributionRow {
+  KEYWORD_TEXT: string;
+  KEYWORD_MATCH_TYPE: string;
+  KEYWORD_CLICKS: number;
+  KEYWORD_SPEND: number;
+  KEYWORD_IMPRESSIONS: number;
+  ATTRIBUTED_LT_REVENUE: number;
+  ATTRIBUTED_LT_CONVERSIONS: number;
+  ATTRIBUTED_LT_ROAS: number;
+}
+
+/** Aggregated keyword row for the UI table. */
+export interface KeywordSummary {
+  keyword: string;
+  matchType: string;
+  clicks: number;
+  spend: number;
+  impressions: number;
+  ctr: number;
+  cpc: number;
+  conversions: number;
+  conversionRate: number;
+  attributedRevenue: number;
+  roas: number;
+  searchTerms: SearchTermSummary[];
+}
+
+/** Aggregated search term row nested under a keyword. */
+export interface SearchTermSummary {
+  searchTerm: string;
+  matchType: string;
+  clicks: number;
+  spend: number;
+  impressions: number;
+  ctr: number;
+  cpc: number;
+  conversions: number;
+}
+
+/** API response for the keyword performance endpoint. */
+export interface KeywordPerformanceResponse {
+  keywords: KeywordSummary[];
+  totals: {
+    clicks: number;
+    spend: number;
+    impressions: number;
+    conversions: number;
+    attributedRevenue: number;
+  };
 }
