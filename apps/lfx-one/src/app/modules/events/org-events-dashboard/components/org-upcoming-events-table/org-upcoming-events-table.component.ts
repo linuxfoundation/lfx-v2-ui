@@ -1,16 +1,17 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { DatePipe } from '@angular/common';
+// Generated with [Claude Code](https://claude.ai/code)
+
+import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
-import { ButtonComponent } from '@components/button/button.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
 import type { OrgEventsResponse, PageChangeEvent, SortChangeEvent } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-org-upcoming-events-table',
-  imports: [TableComponent, TagComponent, ButtonComponent, DatePipe],
+  imports: [TableComponent, TagComponent, DecimalPipe],
   templateUrl: './org-upcoming-events-table.component.html',
 })
 export class OrgUpcomingEventsTableComponent {
@@ -28,7 +29,7 @@ export class OrgUpcomingEventsTableComponent {
     const field = this.sortField();
     const order = this.sortOrder();
     const getIcon = (f: string): string => {
-      if (field !== f) return 'fa-light fa-sort text-gray-300';
+      if (field !== f) return '';
       return order === 'ASC' ? 'fa-solid fa-caret-up text-blue-500' : 'fa-solid fa-caret-down text-blue-500';
     };
     return {
@@ -49,5 +50,22 @@ export class OrgUpcomingEventsTableComponent {
   protected getSortAriaValue(field: string): string {
     if (this.sortField() !== field) return 'none';
     return this.sortOrder() === 'ASC' ? 'ascending' : 'descending';
+  }
+
+  protected formatDateRange(start: string | null, end: string | null): string {
+    if (!start) return '—';
+    const startDate = new Date(start);
+    const singleFormat = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (!end) return singleFormat;
+    const endDate = new Date(end);
+    if (startDate.toDateString() === endDate.toDateString()) return singleFormat;
+    const sameMonthYear = startDate.getMonth() === endDate.getMonth() && startDate.getFullYear() === endDate.getFullYear();
+    if (sameMonthYear) {
+      const month = startDate.toLocaleDateString('en-US', { month: 'short' });
+      return `${month} ${startDate.getDate()} – ${endDate.getDate()}, ${startDate.getFullYear()}`;
+    }
+    const startStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const endStr = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return `${startStr} – ${endStr}`;
   }
 }

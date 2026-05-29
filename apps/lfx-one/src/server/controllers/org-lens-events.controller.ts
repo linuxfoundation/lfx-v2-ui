@@ -27,11 +27,12 @@ export class OrgLensEventsController {
     try {
       this.assertAccountId(accountId, 'get_org_lens_events_summary');
 
-      if (!getEffectiveEmail(req)) {
+      const userEmail = getEffectiveEmail(req);
+      if (!userEmail) {
         throw new AuthenticationError('User authentication required', { operation: 'get_org_lens_events_summary' });
       }
 
-      const summary = await this.service.getOrgEventsSummary(req, accountId);
+      const summary = await this.service.getOrgEventsSummary(req, accountId, userEmail);
 
       logger.success(req, 'get_org_lens_events_summary', startTime, { account_id: accountId });
 

@@ -29,6 +29,10 @@ export interface OrgEvent {
   readonly eventUrl: string | null;
   readonly eventRegistrationUrl: string | null;
   readonly orgAttendeeCount: number;
+  readonly totalAttendeeCount: number;
+  readonly orgSpeakerAcceptedCount: number;
+  readonly orgSpeakerSubmittedCount: number;
+  readonly isOrgSponsor: boolean;
   readonly isRegistered: boolean;
 }
 
@@ -50,6 +54,7 @@ export interface OrgEventsSummary {
   readonly totalEvents: number;
   readonly pastEvents: number;
   readonly upcomingEvents: number;
+  readonly registeredEvents: number;
 }
 
 /** Backend options for OrgLensEventsService.getOrgEvents. */

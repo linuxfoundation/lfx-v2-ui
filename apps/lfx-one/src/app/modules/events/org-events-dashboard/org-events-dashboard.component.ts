@@ -9,7 +9,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { CardComponent } from '@components/card/card.component';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { DEFAULT_EVENTS_PAGE_SIZE, DEFAULT_ORG_EVENTS_TAB_ID, EMPTY_ORG_EVENTS_RESPONSE, ORG_EVENTS_STATUS_OPTIONS, ORG_EVENTS_TABS, VALID_ORG_EVENTS_TAB_IDS } from '@lfx-one/shared/constants';
-import type { OrgEventStatFilterId, OrgEventsResponse, OrgEventsSummary, OrgEventsTabId, PageChangeEvent, SortChangeEvent } from '@lfx-one/shared/interfaces';
+import type { OrgEventsResponse, OrgEventsSummary, OrgEventsTabId, PageChangeEvent, SortChangeEvent } from '@lfx-one/shared/interfaces';
 import { AccountContextService } from '@app/shared/services/account-context.service';
 import { EventsService } from '@app/shared/services/events.service';
 import { MessageService } from 'primeng/api';
@@ -39,7 +39,6 @@ export class OrgEventsDashboardComponent {
   protected readonly statusOptions = ORG_EVENTS_STATUS_OPTIONS;
 
   // === WritableSignals ===
-  protected readonly activeStatFilter = signal<OrgEventStatFilterId | null>(null);
   protected readonly searchTerm = signal('');
   protected readonly selectedStatus = signal<string | null>(null);
   protected readonly upcomingEventsLoading = signal(true);
@@ -62,10 +61,6 @@ export class OrgEventsDashboardComponent {
   }
 
   // === Protected methods ===
-  protected applyEventsStatFilter(id: OrgEventStatFilterId): void {
-    this.activeStatFilter.set(this.activeStatFilter() === id ? null : id);
-  }
-
   protected switchTab(tabId: OrgEventsTabId): void {
     if (tabId === this.activeTab()) {
       return;

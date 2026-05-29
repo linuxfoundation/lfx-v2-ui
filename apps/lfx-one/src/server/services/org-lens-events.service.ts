@@ -21,6 +21,10 @@ interface OrgEventRow {
   EVENT_URL: string | null;
   EVENT_REGISTRATION_URL: string | null;
   ORG_ATTENDEE_COUNT: number;
+  TOTAL_ATTENDEE_COUNT: number;
+  ORG_SPEAKER_ACCEPTED_COUNT: number;
+  ORG_SPEAKER_SUBMITTED_COUNT: number;
+  IS_ORG_SPONSOR: boolean;
   IS_REGISTERED: boolean;
   TOTAL_RECORDS: number;
 }
@@ -75,7 +79,9 @@ export class OrgLensEventsService {
           er.EVENT_COUNTRY,
           er.EVENT_URL,
           er.EVENT_REGISTRATION_URL,
-          COUNT(DISTINCT er.USER_EMAIL) AS ORG_ATTENDEE_COUNT
+          COUNT(DISTINCT er.USER_EMAIL) AS ORG_ATTENDEE_COUNT,
+          COUNT(DISTINCT CASE WHEN er.USER_ROLE = 'Speaker' THEN er.USER_EMAIL END) AS ORG_SPEAKER_ACCEPTED_COUNT,
+          MAX(CASE WHEN er.USER_ROLE = 'Sponsor' THEN 1 ELSE 0 END) AS IS_ORG_SPONSOR
         FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
         JOIN account a ON UPPER(er.ACCOUNT_NAME) = UPPER(a.ACCOUNT_NAME)
         WHERE er.IS_PAST_EVENT = ${isPastCondition}
@@ -85,6 +91,23 @@ export class OrgLensEventsService {
           er.EVENT_START_DATE, er.EVENT_END_DATE,
           er.EVENT_LOCATION, er.EVENT_CITY, er.EVENT_COUNTRY,
           er.EVENT_URL, er.EVENT_REGISTRATION_URL
+      ),
+      total_event_attendees AS (
+        SELECT EVENT_ID, COUNT(DISTINCT USER_EMAIL) AS TOTAL_ATTENDEE_COUNT
+        FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS
+        WHERE IS_PAST_EVENT = ${isPastCondition}
+          AND REGISTRATION_STATUS = 'Accepted'
+          AND EVENT_ID IN (SELECT EVENT_ID FROM org_events)
+        GROUP BY EVENT_ID
+      ),
+      org_speaker_submissions AS (
+        SELECT er.EVENT_ID, COUNT(DISTINCT er.USER_EMAIL) AS ORG_SPEAKER_SUBMITTED_COUNT
+        FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
+        JOIN account a ON UPPER(er.ACCOUNT_NAME) = UPPER(a.ACCOUNT_NAME)
+        WHERE er.IS_PAST_EVENT = ${isPastCondition}
+          AND er.USER_ROLE = 'Speaker'
+          AND er.EVENT_ID IN (SELECT EVENT_ID FROM org_events)
+        GROUP BY er.EVENT_ID
       ),
       user_reg AS (
         SELECT EVENT_ID
@@ -105,9 +128,15 @@ export class OrgLensEventsService {
         o.EVENT_URL,
         o.EVENT_REGISTRATION_URL,
         o.ORG_ATTENDEE_COUNT,
+        COALESCE(tea.TOTAL_ATTENDEE_COUNT, 0) AS TOTAL_ATTENDEE_COUNT,
+        o.ORG_SPEAKER_ACCEPTED_COUNT,
+        COALESCE(oss.ORG_SPEAKER_SUBMITTED_COUNT, 0) AS ORG_SPEAKER_SUBMITTED_COUNT,
+        (o.IS_ORG_SPONSOR = 1) AS IS_ORG_SPONSOR,
         (u.EVENT_ID IS NOT NULL) AS IS_REGISTERED,
         COUNT(*) OVER() AS TOTAL_RECORDS
       FROM org_events o
+      LEFT JOIN total_event_attendees tea ON o.EVENT_ID = tea.EVENT_ID
+      LEFT JOIN org_speaker_submissions oss ON o.EVENT_ID = oss.EVENT_ID
       LEFT JOIN user_reg u ON o.EVENT_ID = u.EVENT_ID
       WHERE 1=1
         ${searchQueryFilter}
@@ -138,8 +167,8 @@ export class OrgLensEventsService {
     return { data, total, pageSize, offset };
   }
 
-  /** GET /api/orgs/:accountId/lens/events/summary — org-wide total / past / upcoming counts for the stat strip. */
-  public async getOrgEventsSummary(req: Request, accountId: string): Promise<OrgEventsSummary> {
+  /** GET /api/orgs/:accountId/lens/events/summary — org-wide total / past / upcoming / registered counts for the stat strip. */
+  public async getOrgEventsSummary(req: Request, accountId: string, userEmail: string): Promise<OrgEventsSummary> {
     logger.debug(req, 'get_org_lens_events_summary', 'Building org events summary query', { account_id: accountId });
 
     const sql = `
@@ -148,31 +177,45 @@ export class OrgLensEventsService {
         FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_LENS_ACCOUNT_CONTEXT
         WHERE ACCOUNT_ID = ?
         LIMIT 1
+      ),
+      org_events AS (
+        SELECT DISTINCT er.EVENT_ID, er.IS_PAST_EVENT
+        FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
+        JOIN account a ON UPPER(er.ACCOUNT_NAME) = UPPER(a.ACCOUNT_NAME)
+        WHERE er.REGISTRATION_STATUS = 'Accepted'
+      ),
+      user_upcoming_regs AS (
+        SELECT DISTINCT EVENT_ID
+        FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS
+        WHERE USER_EMAIL = ?
+          AND IS_PAST_EVENT = FALSE
+          AND REGISTRATION_STATUS = 'Accepted'
       )
       SELECT
-        COUNT(DISTINCT er.EVENT_ID)                                               AS TOTAL_EVENTS,
-        COUNT(DISTINCT CASE WHEN er.IS_PAST_EVENT = TRUE  THEN er.EVENT_ID END)  AS PAST_EVENTS,
-        COUNT(DISTINCT CASE WHEN er.IS_PAST_EVENT = FALSE THEN er.EVENT_ID END)  AS UPCOMING_EVENTS
-      FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
-      JOIN account a ON UPPER(er.ACCOUNT_NAME) = UPPER(a.ACCOUNT_NAME)
-      WHERE er.REGISTRATION_STATUS = 'Accepted'
+        COUNT(DISTINCT oe.EVENT_ID)                                                                                        AS TOTAL_EVENTS,
+        COUNT(DISTINCT CASE WHEN oe.IS_PAST_EVENT = TRUE  THEN oe.EVENT_ID END)                                           AS PAST_EVENTS,
+        COUNT(DISTINCT CASE WHEN oe.IS_PAST_EVENT = FALSE THEN oe.EVENT_ID END)                                           AS UPCOMING_EVENTS,
+        COUNT(DISTINCT CASE WHEN oe.IS_PAST_EVENT = FALSE AND uur.EVENT_ID IS NOT NULL THEN oe.EVENT_ID END)              AS REGISTERED_EVENTS
+      FROM org_events oe
+      LEFT JOIN user_upcoming_regs uur ON oe.EVENT_ID = uur.EVENT_ID
     `;
 
     interface SummaryRow {
       TOTAL_EVENTS: number;
       PAST_EVENTS: number;
       UPCOMING_EVENTS: number;
+      REGISTERED_EVENTS: number;
     }
 
     let result;
     try {
-      result = await this.snowflakeService.execute<SummaryRow>(sql, [accountId]);
+      result = await this.snowflakeService.execute<SummaryRow>(sql, [accountId, userEmail]);
     } catch (error) {
       logger.warning(req, 'get_org_lens_events_summary', 'Snowflake query failed, returning zero counts', {
         error: error instanceof Error ? error.message : String(error),
         account_id: accountId,
       });
-      return { totalEvents: 0, pastEvents: 0, upcomingEvents: 0 };
+      return { totalEvents: 0, pastEvents: 0, upcomingEvents: 0, registeredEvents: 0 };
     }
 
     const row = result.rows[0];
@@ -180,6 +223,7 @@ export class OrgLensEventsService {
       totalEvents: row?.TOTAL_EVENTS ?? 0,
       pastEvents: row?.PAST_EVENTS ?? 0,
       upcomingEvents: row?.UPCOMING_EVENTS ?? 0,
+      registeredEvents: row?.REGISTERED_EVENTS ?? 0,
     };
 
     logger.debug(req, 'get_org_lens_events_summary', 'Fetched org events summary', { ...summary });
@@ -200,6 +244,10 @@ export class OrgLensEventsService {
       eventUrl: row.EVENT_URL ?? null,
       eventRegistrationUrl: row.EVENT_REGISTRATION_URL ?? null,
       orgAttendeeCount: row.ORG_ATTENDEE_COUNT || 0,
+      totalAttendeeCount: row.TOTAL_ATTENDEE_COUNT || 0,
+      orgSpeakerAcceptedCount: row.ORG_SPEAKER_ACCEPTED_COUNT || 0,
+      orgSpeakerSubmittedCount: row.ORG_SPEAKER_SUBMITTED_COUNT || 0,
+      isOrgSponsor: !!row.IS_ORG_SPONSOR,
       isRegistered: !!row.IS_REGISTERED,
     };
   }
