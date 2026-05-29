@@ -227,27 +227,32 @@ export class OrgLensEventsService {
   public async getEventAttendees(req: Request, accountId: string, eventId: string, searchQuery?: string): Promise<OrgEventAttendeesResponse> {
     logger.debug(req, 'get_event_attendees', 'Fetching event attendees', { account_id: accountId, event_id: eventId });
 
-    const searchFilter = searchQuery ? 'AND (UPPER(COALESCE(p.NAME, pe.EMAIL)) LIKE UPPER(?) OR UPPER(pe.EMAIL) LIKE UPPER(?))' : '';
+    const searchFilter = searchQuery ? 'AND (UPPER(COALESCE(p.NAME, er.FULL_NAME, er.USER_EMAIL)) LIKE UPPER(?) OR UPPER(er.USER_EMAIL) LIKE UPPER(?))' : '';
 
     const sql = `
+      WITH account AS (
+        SELECT ACCOUNT_NAME
+        FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_LENS_ACCOUNT_CONTEXT
+        WHERE ACCOUNT_ID = ?
+        LIMIT 1
+      )
       SELECT
-        pe.PERSON_KEY                              AS CONTACT_ID,
-        COALESCE(p.NAME, pe.EMAIL)                 AS NAME,
-        p.TITLE                                    AS JOB_TITLE,
-        MAX(COALESCE(er.EVENT_NAME, pe.EVENT_NAME)) AS EVENT_NAME
-      FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_PEOPLE_EVENTS pe
-      JOIN ANALYTICS.PLATINUM_LFX_ONE.ORG_PEOPLE_ALL p
-        ON p.ACCOUNT_ID = pe.ACCOUNT_ID AND p.PERSON_KEY = pe.PERSON_KEY
-      LEFT JOIN ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
-        ON UPPER(er.USER_EMAIL) = UPPER(p.EMAIL) AND er.EVENT_ID = pe.EVENT_ID
-      WHERE pe.ACCOUNT_ID = ?
-        AND pe.EVENT_ID = ?
+        er.USER_EMAIL                                          AS CONTACT_ID,
+        COALESCE(p.NAME, er.FULL_NAME, er.USER_EMAIL)         AS NAME,
+        COALESCE(p.TITLE, er.JOB_TITLE)                       AS JOB_TITLE,
+        MAX(er.EVENT_NAME)                                     AS EVENT_NAME
+      FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
+      JOIN account a ON UPPER(er.ACCOUNT_NAME) = UPPER(a.ACCOUNT_NAME)
+      LEFT JOIN ANALYTICS.PLATINUM_LFX_ONE.ORG_PEOPLE_ALL p
+        ON UPPER(p.EMAIL) = UPPER(er.USER_EMAIL) AND p.ACCOUNT_ID = ?
+      WHERE er.EVENT_ID = ?
+        AND er.REGISTRATION_STATUS = 'Accepted'
         ${searchFilter}
-      GROUP BY pe.PERSON_KEY, COALESCE(p.NAME, pe.EMAIL), p.TITLE
+      GROUP BY er.USER_EMAIL, COALESCE(p.NAME, er.FULL_NAME, er.USER_EMAIL), COALESCE(p.TITLE, er.JOB_TITLE)
       ORDER BY NAME ASC NULLS LAST
     `;
 
-    const binds: string[] = [accountId, eventId];
+    const binds: string[] = [accountId, accountId, eventId];
     if (searchQuery) {
       binds.push(`%${searchQuery}%`, `%${searchQuery}%`);
     }
