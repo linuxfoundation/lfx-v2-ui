@@ -54,6 +54,7 @@ export class HiddenActionsService {
       expires: this.permanentExpireDays,
       path: '/',
       sameSite: 'Strict',
+      secure: process.env['NODE_ENV'] === 'production',
     });
     this.cookieRegistry.registerCookie(cookieName);
   }
@@ -67,10 +68,7 @@ export class HiddenActionsService {
   public isActionHidden(item: PendingActionItem): boolean {
     const identifier = this.getActionIdentifier(item);
     const hash = this.hashString(identifier);
-    return (
-      this.cookieService.check(`${this.cookiePrefix}${hash}`) ||
-      this.cookieService.check(`${this.dismissCookiePrefix}${hash}`)
-    );
+    return this.cookieService.check(`${this.cookiePrefix}${hash}`) || this.cookieService.check(`${this.dismissCookiePrefix}${hash}`);
   }
 
   // Prefer intrinsic IDs (meetingUid, voteUid) so same-text siblings never collide; fall back to type+badge+text+buttonLink for legacy action shapes without one.

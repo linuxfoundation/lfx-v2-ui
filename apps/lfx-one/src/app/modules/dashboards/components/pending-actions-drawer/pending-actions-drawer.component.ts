@@ -141,7 +141,7 @@ export class PendingActionsDrawerComponent {
       });
   }
 
-  // Persist the hide synchronously, then drive the fade animation through a single timer.
+  // Persist the hide synchronously unless `skipHide` is set (Dismiss already wrote a permanent cookie), then drive the fade animation through a single timer.
   private startCompletion(item: PendingActionItem, skipHide = false): void {
     const rowKey = this.getRowKey(item);
     if (!skipHide) {

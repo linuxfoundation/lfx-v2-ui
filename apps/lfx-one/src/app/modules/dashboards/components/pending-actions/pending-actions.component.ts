@@ -153,7 +153,7 @@ export class PendingActionsComponent {
       });
   }
 
-  // Persist the hide synchronously (so an unmount within the animation window can't cancel the cookie write), then drive the fade → drop → skeleton-arrival animation through two timers.
+  // Persist the hide synchronously unless `skipHide` is set (Dismiss already wrote a permanent cookie), so an unmount within the animation window can't cancel the cookie write, then drive the fade → drop → skeleton-arrival animation through two timers.
   private startCompletion(item: PendingActionItem, options: { withSkeleton: boolean; skipHide?: boolean }): void {
     const rowKey = this.getRowKey(item);
     if (!options.skipHide) {
