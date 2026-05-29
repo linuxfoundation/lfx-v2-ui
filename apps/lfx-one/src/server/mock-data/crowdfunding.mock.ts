@@ -170,13 +170,22 @@ export const MOCK_INITIATIVES: BackendInitiative[] = [
   },
 ];
 
-export const MOCK_PAYMENT_METHOD: PaymentMethod = {
-  paymentMethodId: 'pm_mock_1',
-  brand: 'Visa',
-  lastFour: '4567',
-  expiryMonth: 4,
-  expiryYear: 2026,
-};
+export const MOCK_PAYMENT_METHODS: PaymentMethod[] = [
+  {
+    paymentMethodId: 'pm_mock_1',
+    brand: 'Visa',
+    lastFour: '4567',
+    expiryMonth: 4,
+    expiryYear: 2026,
+  },
+  {
+    paymentMethodId: 'pm_mock_2',
+    brand: 'Mastercard',
+    lastFour: '8901',
+    expiryMonth: 9,
+    expiryYear: 2027,
+  },
+];
 
 export const MOCK_DONATION_STATS: DonationStats = {
   totalDonated: 1450,

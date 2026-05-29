@@ -72,29 +72,24 @@ export class CrowdfundingController {
   }
 
   // GET /api/crowdfunding/payment-method
-  public async getMyPaymentMethod(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const startTime = logger.startOperation(req, 'get_my_payment_method');
+  public async getMyPaymentMethods(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_my_payment_methods');
 
     try {
       const rawUsername = await getUsernameFromAuth(req);
 
       if (!rawUsername) {
         throw new AuthenticationError('User authentication required', {
-          operation: 'get_my_payment_method',
+          operation: 'get_my_payment_methods',
         });
       }
 
       const username = stripAuthPrefix(rawUsername);
-      const paymentMethod = await this.crowdfundingService.getMyPaymentMethod(req, username);
+      const paymentMethods = await this.crowdfundingService.getMyPaymentMethods(req, username);
 
-      if (!paymentMethod) {
-        res.status(404).json({ message: 'No payment method found' });
-        return;
-      }
+      logger.success(req, 'get_my_payment_methods', startTime, { count: paymentMethods.length });
 
-      logger.success(req, 'get_my_payment_method', startTime);
-
-      res.json(paymentMethod);
+      res.json(paymentMethods);
     } catch (error) {
       next(error);
     }

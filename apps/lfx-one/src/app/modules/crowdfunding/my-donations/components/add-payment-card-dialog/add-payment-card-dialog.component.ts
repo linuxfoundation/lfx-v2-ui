@@ -9,6 +9,7 @@ import type { StripeCardCvcElement, StripeCardExpiryElement, StripeCardNumberEle
 
 import { ButtonComponent } from '@components/button/button.component';
 import { STRIPE_ELEMENT_STYLE } from '@lfx-one/shared/constants';
+import { AddPaymentCardResult } from '@lfx-one/shared/interfaces';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
 import { CrowdfundingService } from '@services/crowdfunding.service';
 import { StripeService } from '@services/stripe.service';
@@ -102,7 +103,7 @@ export class AddPaymentCardDialogComponent implements OnDestroy {
 
       const saved = await firstValueFrom(this.crowdfundingService.savePaymentMethod(paymentMethod.id));
 
-      this.dialogRef.close({ added: true, paymentMethod: saved });
+      this.dialogRef.close({ added: true, paymentMethod: saved } satisfies AddPaymentCardResult);
     } catch (err) {
       this.stripeError.set(extractErrorMessage(err, 'Failed to save payment method. Please try again.'));
     } finally {

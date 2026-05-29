@@ -39,5 +39,5 @@
   </div>
 
   <!-- Payment methods -->
-  <lfx-payment-methods [methods]="paymentMethods()" (removeCard)="onRemoveCard($event)" />
+  <lfx-payment-methods [methods]="paymentMethods()" (cardAdded)="onCardAdded($event)" (removeCard)="onRemoveCard($event)" />
 </div>

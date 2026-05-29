@@ -5,7 +5,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, Signal, signal } 
 import { toSignal } from '@angular/core/rxjs-interop';
 import { environment } from '@environments/environment';
 import { MyDonation, DonationStats, PaymentMethod, RecurringDonation, RecurringDonationsResponse } from '@lfx-one/shared/interfaces';
-import { DEFAULT_CROWDFUNDING_PAGE_SIZE, EMPTY_DONATION_STATS } from '@lfx-one/shared/constants';
+import { DEFAULT_CROWDFUNDING_PAGE_SIZE, EMPTY_DONATION_STATS, EMPTY_PAYMENT_METHODS } from '@lfx-one/shared/constants';
 import { CrowdfundingService } from '@app/shared/services/crowdfunding.service';
 import { DonationsStatsBarComponent } from './components/donations-stats-bar/donations-stats-bar.component';
 import { DonationHistoryTableComponent } from './components/donation-history-table/donation-history-table.component';
@@ -40,8 +40,9 @@ export class MyDonationsComponent {
   // ─── Complex Signals ──────────────────────────────────────────────────────
   protected readonly stats: Signal<DonationStats> = this.initStats();
   protected readonly recurringDonations: Signal<RecurringDonation[]> = this.initRecurringDonations();
-  private readonly paymentMethod: Signal<PaymentMethod | null> = this.initPaymentMethod();
-  protected readonly paymentMethods = computed(() => (this.paymentMethod() ? [this.paymentMethod()!] : []));
+  private readonly fetchedPaymentMethods: Signal<PaymentMethod[]> = this.initPaymentMethods();
+  private readonly addedPaymentMethods = signal<PaymentMethod[]>([]);
+  protected readonly paymentMethods = computed(() => [...this.fetchedPaymentMethods(), ...this.addedPaymentMethods()]);
   private readonly donationHistoryState: Signal<{ items: MyDonation[]; hasMore: boolean }> = this.initDonationHistory();
   protected readonly donationHistory = computed(() => this.donationHistoryState().items);
   protected readonly donationHistoryHasMore = computed(() => this.donationHistoryState().hasMore);
@@ -75,14 +76,18 @@ export class MyDonationsComponent {
     void donation;
   }
 
+  protected onCardAdded(card: PaymentMethod): void {
+    this.addedPaymentMethods.update((list) => [...list, card]);
+  }
+
   protected onRemoveCard(card: PaymentMethod): void {
     // TODO: call remove card API
     void card;
   }
 
   // ─── Private Initializers ─────────────────────────────────────────────────
-  private initPaymentMethod(): Signal<PaymentMethod | null> {
-    return toSignal(this.crowdfundingService.getMyPaymentMethod(), { initialValue: null });
+  private initPaymentMethods(): Signal<PaymentMethod[]> {
+    return toSignal(this.crowdfundingService.getMyPaymentMethods(), { initialValue: EMPTY_PAYMENT_METHODS });
   }
 
   private initStats(): Signal<DonationStats> {

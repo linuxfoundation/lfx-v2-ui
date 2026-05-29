@@ -21,7 +21,7 @@ import {
   MOCK_DONATION_HISTORY,
   MOCK_DONATION_STATS,
   MOCK_INITIATIVES,
-  MOCK_PAYMENT_METHOD,
+  MOCK_PAYMENT_METHODS,
   MOCK_RECURRING_DONATIONS,
   MOCK_TRANSACTIONS,
 } from '../mock-data/crowdfunding.mock';
@@ -77,15 +77,12 @@ export class CrowdfundingService {
     return mapToInitiativeDetail(initiative);
   }
 
-  public async getMyPaymentMethod(req: Request, username: string): Promise<PaymentMethod | null> {
-    logger.debug(req, 'get_my_payment_method', 'Fetching payment method for user', { username });
+  public async getMyPaymentMethods(req: Request, username: string): Promise<PaymentMethod[]> {
+    logger.debug(req, 'get_my_payment_methods', 'Fetching payment methods for user', { username });
 
-    logger.debug(req, 'get_my_payment_method', 'Returning payment method', {
-      paymentMethodId: MOCK_PAYMENT_METHOD.paymentMethodId,
-      brand: MOCK_PAYMENT_METHOD.brand,
-    });
+    logger.debug(req, 'get_my_payment_methods', 'Returning payment methods', { count: MOCK_PAYMENT_METHODS.length });
 
-    return MOCK_PAYMENT_METHOD;
+    return MOCK_PAYMENT_METHODS;
   }
 
   // Mock for POST /api/crowdfunding/payment-method — replace with upstream proxy once the payment-method service is live.

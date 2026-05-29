@@ -10,6 +10,7 @@ import {
   EMPTY_CROWDFUNDING_STATS,
   EMPTY_INITIATIVES_RESPONSE,
   EMPTY_MY_DONATIONS,
+  EMPTY_PAYMENT_METHODS,
   EMPTY_RECURRING_DONATIONS,
   EMPTY_TRANSACTION_LIST,
   EMPTY_DONATION_STATS,
@@ -59,8 +60,8 @@ export class CrowdfundingService {
     );
   }
 
-  public getMyPaymentMethod(): Observable<PaymentMethod | null> {
-    return this.http.get<PaymentMethod>('/api/crowdfunding/payment-method').pipe(catchError(() => of(null)));
+  public getMyPaymentMethods(): Observable<PaymentMethod[]> {
+    return this.http.get<PaymentMethod[]>('/api/crowdfunding/payment-method').pipe(catchError(() => of(EMPTY_PAYMENT_METHODS)));
   }
 
   // POST /api/crowdfunding/payment-method — mirrors the crowdfunding-app BFF payload: { paymentMethodId }.

@@ -250,6 +250,12 @@ export interface PaymentMethod {
   expiryYear: number;
 }
 
+/** Result emitted when AddPaymentCardDialogComponent closes after a successful add. */
+export interface AddPaymentCardResult {
+  added: boolean;
+  paymentMethod: PaymentMethod;
+}
+
 export interface InitiativeMenuItem {
   label?: string;
   icon?: string;
