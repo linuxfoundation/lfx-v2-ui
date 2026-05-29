@@ -81,13 +81,6 @@ export class ProfileIndividualEnrollmentComponent {
 
     const membershipId = item.membership.ID;
 
-    // Optimistically apply new value so the toggle does not flicker back
-    this.autoRenewOverrides.update((m) => {
-      const next = new Map(m);
-      next.set(membershipId, newValue);
-      return next;
-    });
-
     const endDate = item.membership.EndDate ? formatDate(item.membership.EndDate, 'mediumDate', 'en-US', 'UTC') : '';
     const message = newValue
       ? `This will enable auto-renew for your membership; your next payment will be charged on ${endDate}.`
@@ -100,13 +93,20 @@ export class ProfileIndividualEnrollmentComponent {
       rejectLabel: 'Cancel',
       acceptButtonStyleClass: 'p-button-primary p-button-sm',
       rejectButtonStyleClass: 'p-button-text p-button-sm',
+      // Apply the change only once the user confirms — nothing happens on reject.
       accept: () => void this.performAutoRenewUpdate(membershipId, newValue),
-      reject: () => this.clearAutoRenewOverride(membershipId),
     });
   }
 
   private performAutoRenewUpdate(membershipId: string, newValue: boolean): void {
     this.pendingIds.update((s) => new Set([...s, membershipId]));
+
+    // Optimistically reflect the confirmed value while the PATCH is in flight.
+    this.autoRenewOverrides.update((m) => {
+      const next = new Map(m);
+      next.set(membershipId, newValue);
+      return next;
+    });
 
     this.enrollmentService
       .updateAutoRenew(membershipId, newValue)

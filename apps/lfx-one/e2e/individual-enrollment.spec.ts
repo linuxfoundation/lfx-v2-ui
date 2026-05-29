@@ -215,15 +215,16 @@ test.describe('Individual Enrollment — Content Tests', () => {
       await expect(page.locator('.p-toast')).not.toBeVisible();
     });
 
-    test('cancelling reverts the button to its original label', async ({ page }) => {
+    test('the card does not change until the dialog is confirmed', async ({ page }) => {
       await setupStripeEnrollmentMock(page, true); // AutoRenew: true → "Disable auto-renew"
       await gotoAndWaitForCard(page);
 
       await expect(autoRenewControl(page)).toContainText('Disable auto-renew');
 
-      await autoRenewControl(page).click(); // optimistic flip → "Enable auto-renew"
+      await autoRenewControl(page).click();
       await expect(page.locator('.p-confirmdialog')).toBeVisible({ timeout: 5000 });
-      await expect(autoRenewControl(page)).toContainText('Enable auto-renew');
+      // While the dialog is open, the card must NOT reflect the pending change
+      await expect(autoRenewControl(page)).toContainText('Disable auto-renew');
 
       await page
         .locator('.p-confirmdialog')
@@ -231,7 +232,7 @@ test.describe('Individual Enrollment — Content Tests', () => {
         .click();
       await expect(page.locator('.p-confirmdialog')).not.toBeVisible({ timeout: 5000 });
 
-      // After cancel, the button reverts to "Disable auto-renew"
+      // After cancel, nothing changed
       await expect(autoRenewControl(page)).toContainText('Disable auto-renew');
     });
   });
