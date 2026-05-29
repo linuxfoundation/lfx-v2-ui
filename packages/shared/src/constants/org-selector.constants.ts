@@ -21,6 +21,9 @@ export const ORG_SFID_LOOKUP_NATS_SUBJECT = 'lfx.member.uuid-to-sfid.lookup';
 /** Timeout budget for a single UUID→SFID NATS request. */
 export const ORG_SFID_LOOKUP_NATS_TIMEOUT_MS = 3000;
 
+/** Max concurrent UUID→SFID NATS RPCs when batch-resolving, to keep a predictable upper bound on in-flight requests against member-service/NATS. */
+export const ORG_SFID_LOOKUP_BATCH_CONCURRENCY = 10;
+
 /** Case-encoding suffix alphabet used by Salesforce 15→18 id conversion. */
 export const SALESFORCE_ID_SUFFIX_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ012345';
 

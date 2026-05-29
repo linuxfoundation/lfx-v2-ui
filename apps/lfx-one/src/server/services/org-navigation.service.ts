@@ -9,7 +9,7 @@ import { logger } from './logger.service';
 import { OrgRoleGrantsService } from './org-role-grants.service';
 import { SfidResolverService } from './sfid-resolver.service';
 
-/** Spec 022 — server-side org-selector data source. Renders the access-aware list per `01-my-orgs-by-access.ipynb` (data-model.md D-001…D-005). Typeahead filters the resolved set in-process since it's bounded (≤500 per user). */
+/** Spec 022 — server-side org-selector data source. Renders the access-aware list per `01-my-orgs-by-access.ipynb` (data-model.md D-001…D-005). Typeahead filters the resolved set in-process: the set is direct grants (≤ ORG_ROLE_GRANTS_HARD_CAP) plus their cascading children (≤ ORG_CASCADING_CHILDREN_PER_PARENT_HARD_CAP per direct parent), so it is finite but not strictly ≤500 — in practice it stays small enough for in-memory filter/sort. */
 export class OrgNavigationService {
   private readonly orgRoleGrants: OrgRoleGrantsService;
   private readonly sfidResolver: SfidResolverService;

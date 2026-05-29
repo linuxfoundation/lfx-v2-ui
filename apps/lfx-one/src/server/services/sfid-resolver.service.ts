@@ -1,7 +1,12 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ORG_SFID_LOOKUP_NATS_SUBJECT, ORG_SFID_LOOKUP_NATS_TIMEOUT_MS, SALESFORCE_ID_SUFFIX_CHARS } from '@lfx-one/shared/constants';
+import {
+  ORG_SFID_LOOKUP_BATCH_CONCURRENCY,
+  ORG_SFID_LOOKUP_NATS_SUBJECT,
+  ORG_SFID_LOOKUP_NATS_TIMEOUT_MS,
+  SALESFORCE_ID_SUFFIX_CHARS,
+} from '@lfx-one/shared/constants';
 import { UuidToSfidNatsResponse } from '@lfx-one/shared/interfaces';
 
 import { logger } from './logger.service';
@@ -35,18 +40,22 @@ export class SfidResolverService {
     return this.resolveViaNats(uid);
   }
 
-  /** Resolve a batch of uids in parallel via NATS RPC. */
+  /** Resolve a batch of uids via NATS RPC through a bounded worker pool (`ORG_SFID_LOOKUP_BATCH_CONCURRENCY`) so a large cascading set never bursts thousands of concurrent RPCs. Returns a uid→sfid lookup (failed/empty resolutions are omitted). */
   public async resolveBatch(uids: string[]): Promise<Map<string, string>> {
     const results = new Map<string, string>();
     if (uids.length === 0) return results;
 
-    const settled = await Promise.allSettled(uids.map(async (uid) => ({ uid, sfid: await this.resolveViaNats(uid) })));
-
-    for (const entry of settled) {
-      if (entry.status === 'fulfilled' && entry.value.sfid) {
-        results.set(entry.value.uid, entry.value.sfid);
+    let cursor = 0;
+    const worker = async (): Promise<void> => {
+      while (cursor < uids.length) {
+        const uid = uids[cursor++];
+        const sfid = await this.resolveViaNats(uid);
+        if (sfid) results.set(uid, sfid);
       }
-    }
+    };
+
+    const poolSize = Math.min(ORG_SFID_LOOKUP_BATCH_CONCURRENCY, uids.length);
+    await Promise.all(Array.from({ length: poolSize }, () => worker()));
 
     return results;
   }

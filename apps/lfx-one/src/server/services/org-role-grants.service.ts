@@ -153,18 +153,25 @@ export class OrgRoleGrantsService {
     const safeParentUids = this.filterSafeUids(req, parentUids, 'fetch_cascading_children');
     if (safeParentUids.length === 0) return new Map();
 
-    const results = new Map<string, B2bOrgIndexedDoc[]>();
+    // Collect by original index so the materialised Map preserves parentUids order
+    // (direct-first, then cascading per parent) regardless of worker completion order.
+    const childrenByIndex: B2bOrgIndexedDoc[][] = new Array(safeParentUids.length);
     let cursor = 0;
 
     const worker = async (): Promise<void> => {
       while (cursor < safeParentUids.length) {
-        const parentUid = safeParentUids[cursor++];
-        results.set(parentUid, await this.fetchChildrenForParent(req, parentUid));
+        const index = cursor++;
+        childrenByIndex[index] = await this.fetchChildrenForParent(req, safeParentUids[index]);
       }
     };
 
     const poolSize = Math.min(ORG_CASCADING_CHILDREN_FETCH_CONCURRENCY, safeParentUids.length);
     await Promise.all(Array.from({ length: poolSize }, () => worker()));
+
+    const results = new Map<string, B2bOrgIndexedDoc[]>();
+    for (let i = 0; i < safeParentUids.length; i++) {
+      results.set(safeParentUids[i], childrenByIndex[i]);
+    }
 
     return results;
   }
