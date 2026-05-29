@@ -70,6 +70,11 @@ export class OrgLensEventsService {
         FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_LENS_ACCOUNT_CONTEXT
         WHERE ACCOUNT_ID = ?
       ),
+      org_emails AS (
+        SELECT DISTINCT UPPER(EMAIL) AS EMAIL
+        FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_PEOPLE_ALL
+        WHERE ACCOUNT_ID = ?
+      ),
       org_events AS (
         SELECT
           er.EVENT_ID,
@@ -86,9 +91,12 @@ export class OrgLensEventsService {
           COUNT(DISTINCT CASE WHEN er.USER_ROLE = 'Speaker' AND er.REGISTRATION_STATUS = 'Accepted' THEN er.USER_EMAIL END) AS ORG_SPEAKER_ACCEPTED_COUNT,
           MAX(CASE WHEN er.USER_ROLE = 'Sponsor' THEN 1 ELSE 0 END) AS IS_ORG_SPONSOR
         FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
-        JOIN account a ON UPPER(er.ACCOUNT_NAME) = UPPER(a.ACCOUNT_NAME)
         WHERE er.IS_PAST_EVENT = ${isPastCondition}
           AND er.REGISTRATION_STATUS NOT IN ('Cancelled', 'Declined', 'Rejected')
+          AND (
+            UPPER(er.ACCOUNT_NAME) IN (SELECT UPPER(a.ACCOUNT_NAME) FROM account a)
+            OR UPPER(er.USER_EMAIL) IN (SELECT oe.EMAIL FROM org_emails oe)
+          )
         GROUP BY
           er.EVENT_ID, er.EVENT_NAME, er.PROJECT_NAME,
           er.EVENT_START_DATE, er.EVENT_END_DATE,
@@ -98,11 +106,14 @@ export class OrgLensEventsService {
       org_speaker_submissions AS (
         SELECT er.EVENT_ID, COUNT(DISTINCT er.USER_EMAIL) AS ORG_SPEAKER_SUBMITTED_COUNT
         FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
-        JOIN account a ON UPPER(er.ACCOUNT_NAME) = UPPER(a.ACCOUNT_NAME)
         WHERE er.IS_PAST_EVENT = ${isPastCondition}
           AND er.USER_ROLE = 'Speaker'
           AND er.REGISTRATION_STATUS NOT IN ('Cancelled', 'Declined', 'Rejected')
           AND er.EVENT_ID IN (SELECT EVENT_ID FROM org_events)
+          AND (
+            UPPER(er.ACCOUNT_NAME) IN (SELECT UPPER(a.ACCOUNT_NAME) FROM account a)
+            OR UPPER(er.USER_EMAIL) IN (SELECT oe.EMAIL FROM org_emails oe)
+          )
         GROUP BY er.EVENT_ID
       ),
       user_reg AS (
@@ -141,7 +152,7 @@ export class OrgLensEventsService {
       LIMIT ${pageSize} OFFSET ${offset}
     `;
 
-    const binds: string[] = [accountId, userEmail];
+    const binds: string[] = [accountId, accountId, userEmail];
     if (searchQuery) binds.push(`%${searchQuery}%`);
 
     let result;
@@ -173,11 +184,19 @@ export class OrgLensEventsService {
         FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_LENS_ACCOUNT_CONTEXT
         WHERE ACCOUNT_ID = ?
       ),
+      org_emails AS (
+        SELECT DISTINCT UPPER(EMAIL) AS EMAIL
+        FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_PEOPLE_ALL
+        WHERE ACCOUNT_ID = ?
+      ),
       org_events AS (
         SELECT DISTINCT er.EVENT_ID, er.IS_PAST_EVENT
         FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
-        JOIN account a ON UPPER(er.ACCOUNT_NAME) = UPPER(a.ACCOUNT_NAME)
         WHERE er.REGISTRATION_STATUS NOT IN ('Cancelled', 'Declined', 'Rejected')
+          AND (
+            UPPER(er.ACCOUNT_NAME) IN (SELECT UPPER(a.ACCOUNT_NAME) FROM account a)
+            OR UPPER(er.USER_EMAIL) IN (SELECT oe.EMAIL FROM org_emails oe)
+          )
       ),
       user_upcoming_regs AS (
         SELECT DISTINCT EVENT_ID
@@ -204,7 +223,7 @@ export class OrgLensEventsService {
 
     let result;
     try {
-      result = await this.snowflakeService.execute<SummaryRow>(sql, [accountId, userEmail]);
+      result = await this.snowflakeService.execute<SummaryRow>(sql, [accountId, accountId, userEmail]);
     } catch (error) {
       logger.warning(req, 'get_org_lens_events_summary', 'Snowflake query failed, returning zero counts', {
         error: error instanceof Error ? error.message : String(error),
