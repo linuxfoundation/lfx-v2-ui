@@ -4,8 +4,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, Signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { Subject } from 'rxjs';
-import { concatMap, filter, map, scan, startWith, switchMap } from 'rxjs/operators';
+import { concatMap, filter, map, scan, startWith, Subject, switchMap } from 'rxjs';
 
 import { CrowdfundingTransaction, RecurringDonation, RecurringDonationsResponse } from '@lfx-one/shared/interfaces';
 import { DEFAULT_CROWDFUNDING_PAGE_SIZE, EMPTY_CHARGE_HISTORY_STATE } from '@lfx-one/shared/constants';
