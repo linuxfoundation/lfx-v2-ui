@@ -70,9 +70,20 @@
 
       <!-- Event Name -->
       <td>
-        <span class="text-sm font-medium text-gray-900" [attr.data-testid]="'org-upcoming-event-name-' + event.eventId">
-          {{ event.eventName }}
-        </span>
+        @if (event.eventUrl) {
+          <a
+            [href]="event.eventUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-sm font-medium text-gray-900"
+            [attr.data-testid]="'org-upcoming-event-name-' + event.eventId">
+            {{ event.eventName }}
+          </a>
+        } @else {
+          <span class="text-sm font-medium text-gray-900" [attr.data-testid]="'org-upcoming-event-name-' + event.eventId">
+            {{ event.eventName }}
+          </span>
+        }
       </td>
 
       <!-- Foundation -->
