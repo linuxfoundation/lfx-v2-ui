@@ -80,7 +80,9 @@ export class EventSpeakersDrawerComponent {
           this.searchTerm.set('');
           this.loading.set(true);
           return this.eventsService.getEventSpeakers(accountId, this.eventId()).pipe(
-            catchError(() => of({ eventId: this.eventId(), eventName: this.eventName(), acceptedCount: 0, submittedCount: 0, data: [] } as OrgEventSpeakersResponse)),
+            catchError(() =>
+              of({ eventId: this.eventId(), eventName: this.eventName(), acceptedCount: 0, submittedCount: 0, data: [] } as OrgEventSpeakersResponse)
+            ),
             finalize(() => this.loading.set(false))
           );
         })

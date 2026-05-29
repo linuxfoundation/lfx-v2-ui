@@ -1,7 +1,16 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import type { GetOrgEventsOptions, OrgEvent, OrgEventAttendee, OrgEventAttendeesResponse, OrgEventSpeaker, OrgEventSpeakersResponse, OrgEventsResponse, OrgEventsSummary } from '@lfx-one/shared/interfaces';
+import type {
+  GetOrgEventsOptions,
+  OrgEvent,
+  OrgEventAttendee,
+  OrgEventAttendeesResponse,
+  OrgEventSpeaker,
+  OrgEventSpeakersResponse,
+  OrgEventsResponse,
+  OrgEventsSummary,
+} from '@lfx-one/shared/interfaces';
 import { formatDateToUTC } from '@lfx-one/shared/utils';
 import type { Request } from 'express';
 

@@ -133,7 +133,12 @@ export class OrgLensEventsController {
       const searchQuery = getStringQueryParam(req, 'searchQuery');
       const response = await this.service.getEventSpeakers(req, accountId, eventId, searchQuery ?? undefined);
 
-      logger.success(req, 'get_event_speakers', startTime, { account_id: accountId, event_id: eventId, accepted: response.acceptedCount, submitted: response.submittedCount });
+      logger.success(req, 'get_event_speakers', startTime, {
+        account_id: accountId,
+        event_id: eventId,
+        accepted: response.acceptedCount,
+        submitted: response.submittedCount,
+      });
 
       res.setHeader('Cache-Control', 'no-store');
       res.json(response);

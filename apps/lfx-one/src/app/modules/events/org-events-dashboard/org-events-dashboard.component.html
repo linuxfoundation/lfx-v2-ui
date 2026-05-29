@@ -123,11 +123,7 @@
   </div>
 
   <!-- Tab Pills -->
-  <lfx-filter-pills
-    [options]="tabPillOptions()"
-    [selectedFilter]="activeTab()"
-    (filterChange)="switchTab($event)"
-    data-testid="org-events-tab-pills" />
+  <lfx-filter-pills [options]="tabPillOptions()" [selectedFilter]="activeTab()" (filterChange)="switchTab($event)" data-testid="org-events-tab-pills" />
 
   <!-- Tab Panels -->
   @if (activeTab() === 'upcoming') {

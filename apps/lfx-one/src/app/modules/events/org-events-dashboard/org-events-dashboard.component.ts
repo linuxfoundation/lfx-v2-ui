@@ -7,8 +7,24 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CardComponent } from '@components/card/card.component';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
-import { DEFAULT_EVENTS_PAGE_SIZE, DEFAULT_ORG_EVENTS_TAB_ID, EMPTY_ORG_EVENTS_RESPONSE, ORG_EVENTS_STATUS_OPTIONS, ORG_EVENTS_TABS, VALID_ORG_EVENTS_TAB_IDS } from '@lfx-one/shared/constants';
-import type { FilterPillOption, OrgEvent, OrgEventStatFilterId, OrgEventsResponse, OrgEventsSummary, OrgEventsTabId, PageChangeEvent, SortChangeEvent } from '@lfx-one/shared/interfaces';
+import {
+  DEFAULT_EVENTS_PAGE_SIZE,
+  DEFAULT_ORG_EVENTS_TAB_ID,
+  EMPTY_ORG_EVENTS_RESPONSE,
+  ORG_EVENTS_STATUS_OPTIONS,
+  ORG_EVENTS_TABS,
+  VALID_ORG_EVENTS_TAB_IDS,
+} from '@lfx-one/shared/constants';
+import type {
+  FilterPillOption,
+  OrgEvent,
+  OrgEventStatFilterId,
+  OrgEventsResponse,
+  OrgEventsSummary,
+  OrgEventsTabId,
+  PageChangeEvent,
+  SortChangeEvent,
+} from '@lfx-one/shared/interfaces';
 import { AccountContextService } from '@app/shared/services/account-context.service';
 import { EventsService } from '@app/shared/services/events.service';
 import { MessageService } from 'primeng/api';
@@ -23,7 +39,18 @@ import { OrgUpcomingEventsTableComponent } from './components/org-upcoming-event
 
 @Component({
   selector: 'lfx-org-events-dashboard',
-  imports: [FormsModule, CardComponent, EmptyStateComponent, SelectModule, InputTextModule, FilterPillsComponent, DiscoverEventsButtonComponent, EventAttendeesDrawerComponent, EventSpeakersDrawerComponent, OrgUpcomingEventsTableComponent],
+  imports: [
+    FormsModule,
+    CardComponent,
+    EmptyStateComponent,
+    SelectModule,
+    InputTextModule,
+    FilterPillsComponent,
+    DiscoverEventsButtonComponent,
+    EventAttendeesDrawerComponent,
+    EventSpeakersDrawerComponent,
+    OrgUpcomingEventsTableComponent,
+  ],
   templateUrl: './org-events-dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -58,7 +85,10 @@ export class OrgEventsDashboardComponent {
   protected readonly tabPillOptions = computed<FilterPillOption[]>(() => {
     const summary = this.eventsSummary();
     return ORG_EVENTS_TABS.map((tab) => {
-      const count = summary !== null ? (tab.id === 'upcoming' ? summary.upcomingEvents : summary.pastEvents) : null;
+      let count: number | null = null;
+      if (summary !== null) {
+        count = tab.id === 'upcoming' ? summary.upcomingEvents : summary.pastEvents;
+      }
       return { id: tab.id, label: count !== null ? `${tab.label} (${count})` : tab.label };
     });
   });

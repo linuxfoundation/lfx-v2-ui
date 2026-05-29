@@ -140,13 +140,17 @@ export class EventsService {
   public getEventAttendees(accountId: string, eventId: string, searchQuery?: string): Observable<OrgEventAttendeesResponse> {
     let httpParams = new HttpParams();
     if (searchQuery) httpParams = httpParams.set('searchQuery', searchQuery);
-    return this.http.get<OrgEventAttendeesResponse>(`/api/orgs/${encodeURIComponent(accountId)}/lens/events/${encodeURIComponent(eventId)}/attendees`, { params: httpParams });
+    return this.http.get<OrgEventAttendeesResponse>(`/api/orgs/${encodeURIComponent(accountId)}/lens/events/${encodeURIComponent(eventId)}/attendees`, {
+      params: httpParams,
+    });
   }
 
   public getEventSpeakers(accountId: string, eventId: string, searchQuery?: string): Observable<OrgEventSpeakersResponse> {
     let httpParams = new HttpParams();
     if (searchQuery) httpParams = httpParams.set('searchQuery', searchQuery);
-    return this.http.get<OrgEventSpeakersResponse>(`/api/orgs/${encodeURIComponent(accountId)}/lens/events/${encodeURIComponent(eventId)}/speakers`, { params: httpParams });
+    return this.http.get<OrgEventSpeakersResponse>(`/api/orgs/${encodeURIComponent(accountId)}/lens/events/${encodeURIComponent(eventId)}/speakers`, {
+      params: httpParams,
+    });
   }
 
   public getOrgEvents(accountId: string, params: GetOrgEventsParams = {}): Observable<OrgEventsResponse> {
