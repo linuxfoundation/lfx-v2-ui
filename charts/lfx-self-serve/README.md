@@ -178,8 +178,8 @@ environment:
 
 #### Runtime Client Configuration
 
-| Parameter                      | Description                                                                                                                                                                              | Required | Default              |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | -------------------- |
+| Parameter                     | Description                                                                                                                                                             | Required | Default           |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ----------------- |
 | `environment.INTERCOM_APP_ID` | Public Intercom Messenger workspace App ID. Messenger loads only when set; identity verification uses the `http://lfx.dev/claims/intercom` Auth0 claim, not this value. | No       | - (Messenger off) |
 
 #### Snowflake Analytics Configuration
