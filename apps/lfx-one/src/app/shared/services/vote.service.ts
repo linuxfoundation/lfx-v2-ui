@@ -3,6 +3,7 @@
 
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
+import { INVITATION_NOT_FOUND } from '@lfx-one/shared/constants';
 import {
   CreateVoteRequest,
   CreateVoteResponseRequest,
@@ -15,9 +16,6 @@ import {
   VoteResultsResponse,
 } from '@lfx-one/shared/interfaces';
 import { catchError, map, Observable, of, switchMap, take, tap, throwError } from 'rxjs';
-
-/** Sentinel thrown by `submitMyResponse` when the user has no pre-allocated vote_response row. */
-export const INVITATION_NOT_FOUND = 'INVITATION_NOT_FOUND';
 
 @Injectable({
   providedIn: 'root',

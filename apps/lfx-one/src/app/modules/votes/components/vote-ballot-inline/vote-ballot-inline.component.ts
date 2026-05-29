@@ -7,8 +7,9 @@ import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-i
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { RadioButtonComponent } from '@components/radio-button/radio-button.component';
+import { INVITATION_NOT_FOUND } from '@lfx-one/shared/constants';
 import { PollQuestion, Vote, VoteAnswerInput } from '@lfx-one/shared/interfaces';
-import { INVITATION_NOT_FOUND, VoteService } from '@services/vote.service';
+import { VoteService } from '@services/vote.service';
 import { MessageService } from 'primeng/api';
 import { CheckboxModule } from 'primeng/checkbox';
 import { finalize } from 'rxjs';
