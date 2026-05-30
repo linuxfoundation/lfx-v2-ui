@@ -80,10 +80,17 @@ test.describe('Docs portal — public access (US1)', () => {
     await page.goto('/docs/meetings', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('docs-article-body')).toBeVisible({ timeout: DATA_LOAD_TIMEOUT });
 
-    const internalLink = page.locator('[data-testid="docs-article-body"] a[href^="/docs/"]').first();
-    const internalCount = await internalLink.count();
+    // Count the collection on the parent locator first; calling
+    // `.count()` on a `.first()` locator returns 0 or 1 (the existence
+    // of the first match) rather than the true collection size, which
+    // is misleading and would silently misbehave under any predicate
+    // other than `=== 0`. We then derive the first element only after
+    // the skip check.
+    const internalLinks = page.locator('[data-testid="docs-article-body"] a[href^="/docs/"]');
+    const internalCount = await internalLinks.count();
     test.skip(internalCount === 0, 'No internal /docs/* anchors in this fixture article');
 
+    const internalLink = internalLinks.first();
     const href = await internalLink.getAttribute('href');
     expect(href).toMatch(/^\/docs\//);
     await internalLink.click();
