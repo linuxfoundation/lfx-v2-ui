@@ -134,8 +134,11 @@ export interface DocsArticle {
 
 /**
  * A grouping of related articles, corresponding to a top-level subdirectory
- * of `docs/user/`. The display order is fixed by `DOCS_TAXONOMY_ORDER` in the
- * shared constants and overrides any per-topic front-matter ordering.
+ * of `docs/user/`. The display order is determined by the docs build
+ * pipeline using the canonical list in `DOCS_TAXONOMY_ORDER` (shared
+ * constants); the constant and the build script keep synchronized copies
+ * for ESM-resolution reasons (see `DOCS_TAXONOMY_ORDER`'s JSDoc) and
+ * `docs:check-coverage` catches drift.
  */
 export interface DocsTopic {
   /** Topic slug — equal to the top-level subdirectory name. Example: 'meetings'. */
@@ -153,7 +156,13 @@ export interface DocsTopic {
    */
   description: string;
 
-  /** Display order on the landing page. From `DOCS_TAXONOMY_ORDER`. */
+  /**
+   * Display order on the landing page. Assigned by the docs build pipeline
+   * from each topic's index in `DOCS_TAXONOMY_ORDER` (shared constants);
+   * topics outside that list are appended alphabetically. Consumers should
+   * read this field directly rather than recomputing from the constant at
+   * runtime.
+   */
   displayOrder: number;
 
   /** Optional FontAwesome icon class for the topic tile. */

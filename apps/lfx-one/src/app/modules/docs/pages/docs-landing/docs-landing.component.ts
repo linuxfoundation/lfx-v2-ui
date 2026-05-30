@@ -23,8 +23,11 @@ const LANDING_DESCRIPTION = 'Browse user guides, FAQs, and how-tos for the LFX S
  * `features:` block in `docs/user/index.md`; the canonical landing UX is the
  * topic grid (research R8).
  *
- * Search wiring is deferred to Phase 5 / US3 (T039); the placeholder slot
- * below documents the contract.
+ * Search is wired in via `DocsSearchComponent` above the topic grid (US3 /
+ * T039) so visitors can full-text-search the entire docs corpus from the
+ * landing page without first picking a topic. The component fetches the
+ * MiniSearch index lazily on first focus to keep SSR and initial paint
+ * cheap.
  *
  * SEO: title, description, OpenGraph and Twitter-card meta tags are wired in
  * `ngOnInit` for discoverability (FR-013, FR-023). A `<link rel="canonical">`

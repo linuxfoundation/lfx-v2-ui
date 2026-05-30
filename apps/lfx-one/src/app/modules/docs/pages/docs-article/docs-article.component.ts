@@ -7,13 +7,13 @@ import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-i
 import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type { DocsArticle } from '@lfx-one/shared/interfaces';
+import { isDocsPath } from '@lfx-one/shared/utils';
 import { map } from 'rxjs/operators';
 
 import { DocsSearchComponent } from '../../components/docs-search/docs-search.component';
 import { DocsManifestService } from '../../services/docs-manifest.service';
 
 const DOCS_CANONICAL_ORIGIN = 'https://app.lfx.dev';
-const DOCS_LINK_PREFIX = '/docs/';
 
 /**
  * Renders one documentation article.
@@ -103,7 +103,12 @@ export class DocsArticleComponent {
     }
 
     const href = anchor.getAttribute('href');
-    if (!href || !href.startsWith(DOCS_LINK_PREFIX)) {
+    // Use the shared `isDocsPath` predicate so the SPA-navigation contract
+    // here, the auth middleware's public-route regex, and the active-state
+    // checks in lens-switcher / docs-sidebar-nav all agree on what counts
+    // as a docs URL. A bare `[Docs home](/docs)` from authored markdown is
+    // intercepted; non-docs prefixes like `/docs-admin` or `/docsx` are not.
+    if (!href || !isDocsPath(href)) {
       return;
     }
     if (anchor.target && anchor.target !== '_self') {

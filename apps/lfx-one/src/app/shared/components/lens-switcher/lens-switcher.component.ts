@@ -11,7 +11,7 @@ import { ChangelogDrawerComponent } from '@components/changelog-drawer/changelog
 import { ImpersonationDialogComponent } from '@components/impersonation-dialog/impersonation-dialog.component';
 import { LENS_DEFAULT_ROUTES } from '@lfx-one/shared/constants';
 import { Lens } from '@lfx-one/shared/interfaces';
-import { buildInsightsUrl } from '@lfx-one/shared/utils';
+import { buildInsightsUrl, isDocsPath } from '@lfx-one/shared/utils';
 import { ChangelogService } from '@services/changelog.service';
 import { LensService } from '@services/lens.service';
 import { UserService } from '@services/user.service';
@@ -112,8 +112,8 @@ export class LensSwitcherComponent {
     return toSignal(
       this.router.events.pipe(
         filter((event): event is NavigationEnd => event instanceof NavigationEnd),
-        map((event) => event.urlAfterRedirects.startsWith('/docs')),
-        startWith(this.router.url.startsWith('/docs'))
+        map((event) => isDocsPath(event.urlAfterRedirects)),
+        startWith(isDocsPath(this.router.url))
       ),
       { requireSync: true }
     );

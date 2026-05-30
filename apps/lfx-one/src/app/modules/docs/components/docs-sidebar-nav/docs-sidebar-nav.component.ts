@@ -5,6 +5,7 @@ import { NgClass } from '@angular/common';
 import { Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
+import { isDocsPath } from '@lfx-one/shared/utils';
 import { TooltipModule } from 'primeng/tooltip';
 import { filter, map, startWith } from 'rxjs';
 
@@ -51,8 +52,8 @@ export class DocsSidebarNavComponent {
     return toSignal(
       this.router.events.pipe(
         filter((event): event is NavigationEnd => event instanceof NavigationEnd),
-        map((event) => event.urlAfterRedirects.startsWith('/docs')),
-        startWith(this.router.url.startsWith('/docs'))
+        map((event) => isDocsPath(event.urlAfterRedirects)),
+        startWith(isDocsPath(this.router.url))
       ),
       { requireSync: true }
     );
