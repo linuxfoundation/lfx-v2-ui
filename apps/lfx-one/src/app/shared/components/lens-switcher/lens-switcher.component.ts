@@ -59,9 +59,9 @@ export class LensSwitcherComponent {
     this.router.events.pipe(
       filter((event): event is NavigationEnd => event instanceof NavigationEnd),
       map((event) => event.urlAfterRedirects.startsWith('/docs')),
-      startWith(this.router.url.startsWith('/docs')),
+      startWith(this.router.url.startsWith('/docs'))
     ),
-    { initialValue: this.router.url.startsWith('/docs') },
+    { initialValue: this.router.url.startsWith('/docs') }
   );
 
   protected readonly userInitials = this.userService.userInitials;

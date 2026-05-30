@@ -25,20 +25,11 @@
   </div>
 
   @if (panelOpen() && hasQuery()) {
-    <div
-      class="absolute z-30 mt-2 w-full overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg"
-      data-testid="docs-search-panel">
+    <div class="absolute z-30 mt-2 w-full overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg" data-testid="docs-search-panel">
       @if (searching()) {
-        <p class="px-4 py-3 text-sm text-gray-500" data-testid="docs-search-loading">
-          Searching…
-        </p>
+        <p class="px-4 py-3 text-sm text-gray-500" data-testid="docs-search-loading">Searching…</p>
       } @else if (hasResults()) {
-        <ul
-          [id]="listboxId"
-          role="listbox"
-          aria-label="Search results"
-          class="max-h-80 overflow-y-auto"
-          data-testid="docs-search-results">
+        <ul [id]="listboxId" role="listbox" aria-label="Search results" class="max-h-80 overflow-y-auto" data-testid="docs-search-results">
           @for (hit of hits(); track hit.id; let i = $index) {
             <li role="presentation">
               <a

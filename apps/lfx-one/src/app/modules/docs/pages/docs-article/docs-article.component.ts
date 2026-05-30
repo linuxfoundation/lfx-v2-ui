@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { DOCUMENT } from '@angular/common';
+import { DatePipe, DOCUMENT } from '@angular/common';
 import { Component, computed, ElementRef, HostListener, inject, OnInit } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Meta, Title } from '@angular/platform-browser';
@@ -39,7 +39,7 @@ const DOCS_LINK_PREFIX = '/docs/';
 @Component({
   selector: 'lfx-docs-article',
   standalone: true,
-  imports: [RouterLink, DocsSearchComponent],
+  imports: [RouterLink, DatePipe, DocsSearchComponent],
   templateUrl: './docs-article.component.html',
 })
 export class DocsArticleComponent implements OnInit {
@@ -52,18 +52,15 @@ export class DocsArticleComponent implements OnInit {
   private readonly host = inject(ElementRef<HTMLElement>);
 
   /** Article resolved by `docsArticleResolver` — guaranteed non-null on a successful navigation. */
-  protected readonly article = toSignal<DocsArticle | undefined>(
-    this.route.data.pipe(map((d): DocsArticle | undefined => d['article'])),
-    { initialValue: undefined },
-  );
+  protected readonly article = toSignal<DocsArticle | undefined>(this.route.data.pipe(map((d): DocsArticle | undefined => d['article'])), {
+    initialValue: undefined,
+  });
 
   /** Sibling articles in the same topic, denormalized for cheap renders. */
   protected readonly siblings = computed(() => {
     const a = this.article();
     if (!a) return [];
-    return a.siblings
-      .map((slug) => this.docsManifest.getArticle(slug))
-      .filter((s): s is DocsArticle => Boolean(s));
+    return a.siblings.map((slug) => this.docsManifest.getArticle(slug)).filter((s): s is DocsArticle => Boolean(s));
   });
 
   public ngOnInit(): void {

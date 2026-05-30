@@ -52,9 +52,19 @@
     "DocsArticle": {
       "type": "object",
       "required": [
-        "slug", "url", "sourcePath", "topic", "title", "description",
-        "bodyHtml", "headings", "bodyText", "lastUpdated", "breadcrumb",
-        "siblings", "isTopicLanding"
+        "slug",
+        "url",
+        "sourcePath",
+        "topic",
+        "title",
+        "description",
+        "bodyHtml",
+        "headings",
+        "bodyText",
+        "lastUpdated",
+        "breadcrumb",
+        "siblings",
+        "isTopicLanding"
       ],
       "additionalProperties": false,
       "properties": {

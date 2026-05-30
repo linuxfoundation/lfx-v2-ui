@@ -56,19 +56,17 @@ test.describe('Docs portal — accessibility (US5)', () => {
     await page.goto('/docs', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('docs-landing')).toBeVisible({ timeout: DATA_LOAD_TIMEOUT });
 
-    const namelessLinks = await page
-      .locator('main a:visible')
-      .evaluateAll((links) =>
-        links
-          .filter((link) => {
-            const text = (link.textContent ?? '').trim();
-            const ariaLabel = link.getAttribute('aria-label')?.trim() ?? '';
-            const ariaLabelledBy = link.getAttribute('aria-labelledby')?.trim() ?? '';
-            const title = link.getAttribute('title')?.trim() ?? '';
-            return !text && !ariaLabel && !ariaLabelledBy && !title;
-          })
-          .map((link) => link.outerHTML),
-      );
+    const namelessLinks = await page.locator('main a:visible').evaluateAll((links) =>
+      links
+        .filter((link) => {
+          const text = (link.textContent ?? '').trim();
+          const ariaLabel = link.getAttribute('aria-label')?.trim() ?? '';
+          const ariaLabelledBy = link.getAttribute('aria-labelledby')?.trim() ?? '';
+          const title = link.getAttribute('title')?.trim() ?? '';
+          return !text && !ariaLabel && !ariaLabelledBy && !title;
+        })
+        .map((link) => link.outerHTML)
+    );
 
     expect(namelessLinks, 'links missing accessible name').toEqual([]);
   });

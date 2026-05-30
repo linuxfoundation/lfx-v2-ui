@@ -40,9 +40,9 @@ export class DocsSidebarNavComponent {
     this.router.events.pipe(
       filter((event): event is NavigationEnd => event instanceof NavigationEnd),
       map((event) => event.urlAfterRedirects.startsWith('/docs')),
-      startWith(this.router.url.startsWith('/docs')),
+      startWith(this.router.url.startsWith('/docs'))
     ),
-    { initialValue: this.router.url.startsWith('/docs') },
+    { initialValue: this.router.url.startsWith('/docs') }
   );
 
   /**
@@ -54,9 +54,9 @@ export class DocsSidebarNavComponent {
     this.router.events.pipe(
       filter((event): event is NavigationEnd => event instanceof NavigationEnd),
       map(() => this.buildLoginHref()),
-      startWith(this.buildLoginHref()),
+      startWith(this.buildLoginHref())
     ),
-    { initialValue: this.buildLoginHref() },
+    { initialValue: this.buildLoginHref() }
   );
 
   protected readonly whatsNewHref = computed(() => this.signInUrl());

@@ -60,7 +60,11 @@ test.describe('Docs portal — public access (US1)', () => {
     expect(xRobots.toLowerCase()).not.toContain('noindex');
 
     await page.goto('/docs/meetings', { waitUntil: 'domcontentloaded' });
-    const robotsMeta = await page.locator('meta[name="robots"]').first().getAttribute('content').catch(() => null);
+    const robotsMeta = await page
+      .locator('meta[name="robots"]')
+      .first()
+      .getAttribute('content')
+      .catch(() => null);
     if (robotsMeta) {
       expect(robotsMeta.toLowerCase()).not.toContain('noindex');
     }

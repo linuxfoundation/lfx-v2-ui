@@ -74,7 +74,7 @@ export class DocsSearchComponent {
           this.panelOpen.set(true);
           return this.searchService.search(trimmed);
         }),
-        takeUntilDestroyed(),
+        takeUntilDestroyed()
       )
       .subscribe((results) => {
         this.hits.set(results);
