@@ -217,13 +217,13 @@
       "26": [
         3,
         18,
-        128,
+        129,
         4
       ],
       "27": [
         2,
         35,
-        128,
+        129,
         5
       ],
       "28": [
@@ -270,20 +270,20 @@
       ],
       "35": [
         2,
-        15,
-        110,
+        16,
+        111,
         5
       ],
       "36": [
         2,
         40,
-        131,
+        132,
         4
       ],
       "37": [
         2,
         19,
-        114,
+        115,
         4
       ],
       "38": [
@@ -331,8 +331,8 @@
     },
     "averageFieldLength": [
       2.088888888888888,
-      21.88888888888889,
-      117.88888888888889,
+      21.91111111111111,
+      118,
       4.177777777777778
     ],
     "storedFields": {
@@ -595,15 +595,6 @@
             "27": 1,
             "30": 1,
             "33": 1
-          }
-        }
-      ],
-      [
-        ">",
-        {
-          "2": {
-            "26": 5,
-            "27": 5
           }
         }
       ],
@@ -4100,6 +4091,15 @@
           "2": {
             "15": 1,
             "20": 1
+          }
+        }
+      ],
+      [
+        "gt",
+        {
+          "2": {
+            "26": 5,
+            "27": 5
           }
         }
       ],
@@ -9767,6 +9767,21 @@
         }
       ],
       [
+        "amp",
+        {
+          "1": {
+            "35": 1
+          },
+          "2": {
+            "26": 2,
+            "27": 1,
+            "35": 3,
+            "36": 2,
+            "37": 2
+          }
+        }
+      ],
+      [
         "audience",
         {
           "2": {
@@ -13343,7 +13358,7 @@
       "id": "profile/edit-profile",
       "title": "Edit Your Profile",
       "headings": "Edit Your Profile Profile tabs Edit your personal details Manage affiliations Manage email addresses Change your password Developer settings (API token) Related",
-      "body": "Edit Your Profile\nUse the Profile section to keep your account information current. Your profile is visible to other community members and is used in communications from the Linux Foundation.\n\nProfile tabs\nThe Profile page (/profile) has three tabs:\n\nWork history & Affiliations — your work history and project affiliations\n\nIdentities — connected accounts used to identify you and attribute contributions\n\nIndividual Enrollment — enroll in the Linux Foundation Individual Supporter plan\n\nEdit your personal details\n\nSign in to app.lfx.dev.\n\nSelect Profile from the left navigation sidebar.\n\nUpdate your fields:\nFirst name and last name\n\nProfile photo — upload a new image\n\nSave your changes.\n\nManage affiliations\n\nGo to Profile (/profile) and select the Work history & Affiliations tab.\n\nView your current project affiliations.\n\nManage email addresses\nEmail address management is in Settings (/settings), not on the Profile page.\n\nGo to Settings (/settings) > Email Settings > Add New Email Address.\n\nA 6-digit verification code will be sent to the new address.\n\nEnter the code to confirm the new address.\n\nChange your password\nPassword management is in Settings (/settings), not on the Profile page.\n\nGo to Settings (/settings) > Password > Change Password.\n\nFill in Current Password, New Password, and Confirm New Password.\n\nSelect Change Password to apply.\n\nDeveloper settings (API token)\nDeveloper settings are in Settings (/settings), not on the Profile page.\n\nGo to Settings (/settings) > Developer Settings.\n\nYour Personal Access Token is listed here.\n\nUse the Show button to reveal it and the Copy button to copy it.\n\nNever share this token publicly.\n\nRelated\n\nProfile overview — an overview of the Profile section\n\nSettings — email, password, and API token management",
+      "body": "Edit Your Profile\nUse the Profile section to keep your account information current. Your profile is visible to other community members and is used in communications from the Linux Foundation.\n\nProfile tabs\nThe Profile page (/profile) has three tabs:\n\nWork history &amp; Affiliations — your work history and project affiliations\n\nIdentities — connected accounts used to identify you and attribute contributions\n\nIndividual Enrollment — enroll in the Linux Foundation Individual Supporter plan\n\nEdit your personal details\n\nSign in to app.lfx.dev.\n\nSelect Profile from the left navigation sidebar.\n\nUpdate your fields:\nFirst name and last name\n\nProfile photo — upload a new image\n\nSave your changes.\n\nManage affiliations\n\nGo to Profile (/profile) and select the Work history &amp; Affiliations tab.\n\nView your current project affiliations.\n\nManage email addresses\nEmail address management is in Settings (/settings), not on the Profile page.\n\nGo to Settings (/settings) &gt; Email Settings &gt; Add New Email Address.\n\nA 6-digit verification code will be sent to the new address.\n\nEnter the code to confirm the new address.\n\nChange your password\nPassword management is in Settings (/settings), not on the Profile page.\n\nGo to Settings (/settings) &gt; Password &gt; Change Password.\n\nFill in Current Password, New Password, and Confirm New Password.\n\nSelect Change Password to apply.\n\nDeveloper settings (API token)\nDeveloper settings are in Settings (/settings), not on the Profile page.\n\nGo to Settings (/settings) &gt; Developer Settings.\n\nYour Personal Access Token is listed here.\n\nUse the Show button to reveal it and the Copy button to copy it.\n\nNever share this token publicly.\n\nRelated\n\nProfile overview — an overview of the Profile section\n\nSettings — email, password, and API token management",
       "tags": "profile edit affiliations identities",
       "url": "/docs/profile/edit-profile",
       "topic": "profile"
@@ -13352,7 +13367,7 @@
       "id": "profile/faq",
       "title": "Profile FAQ",
       "headings": "Profile FAQ How do I change my email address? How do I change my password? How do I update my profile photo? What are affiliations? Where are developer settings (API token)? My name is displaying incorrectly. How do I fix it? Who do I contact if I cannot access my account?",
-      "body": "Profile FAQ\nHow do I change my email address?\nEmail addresses are managed in Settings (/settings), not on the Profile page. Go to Settings > Email Settings > Add New Email Address. A 6-digit verification code will be sent to the new address to confirm it.\n\nHow do I change my password?\nGo to Settings (/settings) > Password > Change Password. Fill in Current Password, New Password, and Confirm New Password, then select Change Password.\n\nHow do I update my profile photo?\nTo update your profile photo, look for the photo area on your Profile page and select it to upload a new image.\n\nWhat are affiliations?\nAffiliations are the Linux Foundation projects you are associated with. They appear on your profile and may affect your persona and the lenses available to you. Go to Profile and select the Work history & Affiliations tab to view and manage them.\n\nWhere are developer settings (API token)?\nDeveloper settings (API token) are in Settings (/settings) > Developer Settings. Use the Show button to reveal your Personal Access Token and the Copy button to copy it.\n\nMy name is displaying incorrectly. How do I fix it?\nGo to Profile (/profile) and update your first and last name fields and save your changes.\n\nWho do I contact if I cannot access my account?\nContact LFX support through the Help Center. If you cannot sign in at all, use the login page's help or forgotten password link.",
+      "body": "Profile FAQ\nHow do I change my email address?\nEmail addresses are managed in Settings (/settings), not on the Profile page. Go to Settings &gt; Email Settings &gt; Add New Email Address. A 6-digit verification code will be sent to the new address to confirm it.\n\nHow do I change my password?\nGo to Settings (/settings) &gt; Password &gt; Change Password. Fill in Current Password, New Password, and Confirm New Password, then select Change Password.\n\nHow do I update my profile photo?\nTo update your profile photo, look for the photo area on your Profile page and select it to upload a new image.\n\nWhat are affiliations?\nAffiliations are the Linux Foundation projects you are associated with. They appear on your profile and may affect your persona and the lenses available to you. Go to Profile and select the Work history &amp; Affiliations tab to view and manage them.\n\nWhere are developer settings (API token)?\nDeveloper settings (API token) are in Settings (/settings) &gt; Developer Settings. Use the Show button to reveal your Personal Access Token and the Copy button to copy it.\n\nMy name is displaying incorrectly. How do I fix it?\nGo to Profile (/profile) and update your first and last name fields and save your changes.\n\nWho do I contact if I cannot access my account?\nContact LFX support through the Help Center. If you cannot sign in at all, use the login page's help or forgotten password link.",
       "tags": "profile faq email password affiliations",
       "url": "/docs/profile/faq",
       "topic": "profile"
@@ -13423,8 +13438,8 @@
     "trainings": {
       "id": "trainings",
       "title": "Training & Certifications",
-      "headings": "Training & Certifications What you can do Who this applies to Navigation Relationship to badges Related sections",
-      "body": "Training & Certifications\nThe Training & Certifications section shows your Linux Foundation training enrollments and certifications. Training programs are offered through the Linux Foundation's learning platform and help you develop skills recognized by the open source community.\n\nWhat you can do\n\nView your enrolled training courses\n\nCheck your enrollment and completion status\n\nAccess your earned certifications and rewards\n\nTraining enrollment is handled on the Linux Foundation training platform. LFX Self Serve displays your enrolled courses and certifications in read-only view. Use the LF Training Portal link on the Useful links tab to access your courses.\n\nWho this applies to\nAll authenticated users can view their training enrollments.\n\nNavigation\nGo to app.lfx.dev and select Training & Certifications from the left navigation sidebar (route: /me/training). The page shows tabs for Certifications, Enrolled Trainings, Rewards, and Useful links.\n\nRelationship to badges\nCompleting certain training programs qualifies you for LFX badges. After you complete a qualifying course, the badge appears automatically in your Badges section.\n\nRelated sections\n\nBadges — credentials earned from completed training programs\n\nTransactions — training purchases appear in your transaction history",
+      "headings": "Training &amp; Certifications What you can do Who this applies to Navigation Relationship to badges Related sections",
+      "body": "Training &amp; Certifications\nThe Training &amp; Certifications section shows your Linux Foundation training enrollments and certifications. Training programs are offered through the Linux Foundation's learning platform and help you develop skills recognized by the open source community.\n\nWhat you can do\n\nView your enrolled training courses\n\nCheck your enrollment and completion status\n\nAccess your earned certifications and rewards\n\nTraining enrollment is handled on the Linux Foundation training platform. LFX Self Serve displays your enrolled courses and certifications in read-only view. Use the LF Training Portal link on the Useful links tab to access your courses.\n\nWho this applies to\nAll authenticated users can view their training enrollments.\n\nNavigation\nGo to app.lfx.dev and select Training &amp; Certifications from the left navigation sidebar (route: /me/training). The page shows tabs for Certifications, Enrolled Trainings, Rewards, and Useful links.\n\nRelationship to badges\nCompleting certain training programs qualifies you for LFX badges. After you complete a qualifying course, the badge appears automatically in your Badges section.\n\nRelated sections\n\nBadges — credentials earned from completed training programs\n\nTransactions — training purchases appear in your transaction history",
       "tags": "trainings courses enrollments certifications learning",
       "url": "/docs/trainings",
       "topic": "trainings"
@@ -13433,7 +13448,7 @@
       "id": "trainings/faq",
       "title": "Trainings FAQ",
       "headings": "Trainings FAQ How do I enroll in a training course? Why don't I see a training I enrolled in? How do I see my training completion certificates? Do training enrollments expire? Can I earn a badge by completing a training course? Who do I contact if my training status is incorrect? Where can I find a list of available training courses?",
-      "body": "Trainings FAQ\nHow do I enroll in a training course?\nEnrollment is handled on the Linux Foundation training platform (training.linuxfoundation.org). LFX Self Serve shows your enrolled courses in read-only view. Go to the Useful links tab on the Training & Certifications page and select LF Training Portal to access the training catalog.\n\nWhy don't I see a training I enrolled in?\nThere may be a delay of up to 24 hours between enrolling on the training platform and the enrollment appearing in LFX Self Serve. If a course is still missing after 24 hours, contact LFX support.\n\nHow do I see my training completion certificates?\nCertificates earned through Linux Foundation training appear on the Certifications tab in LFX Self Serve. You can also access them directly from the LF Training Portal.\n\nDo training enrollments expire?\nTraining enrollment expiry, if applicable, is shown in the LF Training Portal. Check your course details there for any time limits.\n\nCan I earn a badge by completing a training course?\nYes. Completing certain Linux Foundation training programs qualifies you for LFX badges. The badge appears automatically in your Badges section after you complete a qualifying course.\n\nWho do I contact if my training status is incorrect?\nContact LFX support through the Help Center. Include the course name and your expected completion status.\n\nWhere can I find a list of available training courses?\nVisit the Linux Foundation training catalog at https://training.linuxfoundation.org. You can also use the LF Training Portal link on the Useful links tab of the Training & Certifications page.",
+      "body": "Trainings FAQ\nHow do I enroll in a training course?\nEnrollment is handled on the Linux Foundation training platform (training.linuxfoundation.org). LFX Self Serve shows your enrolled courses in read-only view. Go to the Useful links tab on the Training &amp; Certifications page and select LF Training Portal to access the training catalog.\n\nWhy don't I see a training I enrolled in?\nThere may be a delay of up to 24 hours between enrolling on the training platform and the enrollment appearing in LFX Self Serve. If a course is still missing after 24 hours, contact LFX support.\n\nHow do I see my training completion certificates?\nCertificates earned through Linux Foundation training appear on the Certifications tab in LFX Self Serve. You can also access them directly from the LF Training Portal.\n\nDo training enrollments expire?\nTraining enrollment expiry, if applicable, is shown in the LF Training Portal. Check your course details there for any time limits.\n\nCan I earn a badge by completing a training course?\nYes. Completing certain Linux Foundation training programs qualifies you for LFX badges. The badge appears automatically in your Badges section after you complete a qualifying course.\n\nWho do I contact if my training status is incorrect?\nContact LFX support through the Help Center. Include the course name and your expected completion status.\n\nWhere can I find a list of available training courses?\nVisit the Linux Foundation training catalog at https://training.linuxfoundation.org. You can also use the LF Training Portal link on the Useful links tab of the Training &amp; Certifications page.",
       "tags": "trainings faq certifications enrollments",
       "url": "/docs/trainings/faq",
       "topic": "trainings"
@@ -13442,7 +13457,7 @@
       "id": "trainings/manage-trainings",
       "title": "Manage Trainings",
       "headings": "Manage Trainings View your training enrollments What the trainings page shows Resume or enroll in a training Empty state Related",
-      "body": "Manage Trainings\nUse the Trainings section to view your Linux Foundation training enrollments and track your progress.\n\nView your training enrollments\n\nSign in to app.lfx.dev.\n\nSelect Training & Certifications from the left navigation sidebar (route: /me/training).\n\nYour enrolled training courses appear under the Enrolled Trainings tab.\n\nSelect a training to view its details.\n\nWhat the trainings page shows\nStats displayed at the top: Certificates Earned, Enrolled Trainings, Completed Trainings.\n\nTabs:\n\nCertifications — certifications you have earned\n\nEnrolled Trainings — courses you are currently enrolled in\n\nRewards — rewards associated with your learning activity\n\nUseful links — links to the LF Training Portal, LF Education & Certification, and Certification Verification Tool\n\nResume or enroll in a training\nEnrollment in new training courses is handled on the Linux Foundation training platform, not within LFX Self Serve. To resume a course or enroll in a new one, go to the Useful links tab and select LF Training Portal to open https://training.linuxfoundation.org.\n\nEmpty state\nIf you have no training enrollments, the page shows a message indicating no trainings are available. To enroll in courses, visit https://training.linuxfoundation.org.\n\nRelated\n\nBadges — training completions can earn you LFX badges\n\nTransactions — training purchases appear in your billing history",
+      "body": "Manage Trainings\nUse the Trainings section to view your Linux Foundation training enrollments and track your progress.\n\nView your training enrollments\n\nSign in to app.lfx.dev.\n\nSelect Training &amp; Certifications from the left navigation sidebar (route: /me/training).\n\nYour enrolled training courses appear under the Enrolled Trainings tab.\n\nSelect a training to view its details.\n\nWhat the trainings page shows\nStats displayed at the top: Certificates Earned, Enrolled Trainings, Completed Trainings.\n\nTabs:\n\nCertifications — certifications you have earned\n\nEnrolled Trainings — courses you are currently enrolled in\n\nRewards — rewards associated with your learning activity\n\nUseful links — links to the LF Training Portal, LF Education &amp; Certification, and Certification Verification Tool\n\nResume or enroll in a training\nEnrollment in new training courses is handled on the Linux Foundation training platform, not within LFX Self Serve. To resume a course or enroll in a new one, go to the Useful links tab and select LF Training Portal to open https://training.linuxfoundation.org.\n\nEmpty state\nIf you have no training enrollments, the page shows a message indicating no trainings are available. To enroll in courses, visit https://training.linuxfoundation.org.\n\nRelated\n\nBadges — training completions can earn you LFX badges\n\nTransactions — training purchases appear in your billing history",
       "tags": "trainings enrollments manage status",
       "url": "/docs/trainings/manage-trainings",
       "topic": "trainings"

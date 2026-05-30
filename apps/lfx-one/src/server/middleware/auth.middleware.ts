@@ -58,9 +58,11 @@ const DEFAULT_ROUTE_CONFIG: RouteAuthConfig[] = [
 
   // Sitemap and robots are public, served by dedicated handlers (sitemap by a route handler in server.ts,
   // robots from apps/lfx-one/public/robots.txt via the static-asset pipeline). The auth row is here as a
-  // belt-and-suspenders fallback if either ever falls through to the SSR catch-all.
-  { pattern: '/sitemap.xml', type: 'ssr', auth: 'public' },
-  { pattern: '/robots.txt', type: 'ssr', auth: 'public' },
+  // belt-and-suspenders fallback if either ever falls through to the SSR catch-all. Regex patterns
+  // anchor the match to the exact path so a string-prefix `startsWith` cannot fail-open on `/sitemap.xml-foo`
+  // or `/robots.txt-foo` (per `classifyRoute`'s string-pattern semantics on Line 84).
+  { pattern: /^\/sitemap\.xml$/, type: 'ssr', auth: 'public' },
+  { pattern: /^\/robots\.txt$/, type: 'ssr', auth: 'public' },
 
   // All other routes - Angular SSR routes requiring authentication
   { pattern: '/', type: 'ssr', auth: 'required' },

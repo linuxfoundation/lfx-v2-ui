@@ -4,6 +4,7 @@
 import { posix } from 'node:path';
 
 import { Marked } from 'marked';
+import sanitizeHtml from 'sanitize-html';
 
 /**
  * @typedef {Object} BuildContext
@@ -214,9 +215,18 @@ function escapeAttr(value) {
     .replace(/>/g, '&gt;');
 }
 
-/** @param {string} html */
+/**
+ * Strips HTML tags from a string and returns the plain-text content.
+ * Backed by `sanitize-html` (a real HTML parser) rather than a regex,
+ * so adversarial inputs like `<<script>` or nested tags can't slip
+ * through partial matching — closes CodeQL "incomplete multi-character
+ * sanitization" alert. Used at build time on heading text for slug
+ * generation; not user-facing input.
+ *
+ * @param {string} html
+ */
 function stripHtml(html) {
-  return html.replace(/<[^>]+>/g, '').trim();
+  return sanitizeHtml(html, { allowedTags: [], allowedAttributes: {} }).trim();
 }
 
 /**

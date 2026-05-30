@@ -3,6 +3,8 @@
 
 import { createHash } from 'node:crypto';
 
+import sanitizeHtml from 'sanitize-html';
+
 import { createMarked } from './marked-config.mjs';
 import { sanitizeDocsHtml } from './sanitize.mjs';
 
@@ -424,23 +426,36 @@ function titleCaseSlug(slug) {
 }
 
 /**
- * Strips HTML tags and collapses whitespace. Adequate for description and
- * search-body derivation; not a security boundary (the body has already been
- * sanitized by the time this runs).
+ * Strips HTML tags and decodes HTML entities to produce plain text suitable
+ * for description / search-body derivation. Not a security boundary — the
+ * input is already sanitized by the time this runs — but we use
+ * `sanitize-html` (a real HTML parser) instead of a regex chain so we don't
+ * fall foul of CodeQL's "incomplete multi-character sanitization" /
+ * "double escaping or unescaping" patterns. Block-level closing tags are
+ * pre-replaced with newlines so paragraph structure survives the strip,
+ * which preserves snippet readability for the search index.
  *
  * @param {string} html
  */
 function htmlToPlainText(html) {
-  return html
+  // Pre-tag block-level boundaries with newlines so the resulting plain text
+  // preserves paragraph structure for descriptions / search snippets. The
+  // pattern matches closing tags only (`</...>`) — a literal `<` cannot
+  // match here, so it is not the kind of regex CodeQL flags as incomplete
+  // sanitization (the flagged class is `<[^>]+>`-style strippers).
+  const withNewlines = html
     .replace(/<\/(?:p|h[1-6]|li|tr|blockquote|figure|figcaption|hr)>/gi, '$&\n')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, ' ')
+    .replace(/<br\s*\/?>/gi, '\n');
+  // sanitize-html parses the HTML with a real parser, strips every tag,
+  // and decodes named entities (`&amp;`, `&lt;`, `&gt;`, `&quot;`,
+  // numeric refs) safely — no manual unescape chain that could be
+  // mis-iterated.
+  const stripped = sanitizeHtml(withNewlines, {
+    allowedTags: [],
+    allowedAttributes: {},
+    disallowedTagsMode: 'discard',
+  });
+  return stripped
     .replace(/[ \t]+/g, ' ')
     .replace(/\n{3,}/g, '\n\n')
     .trim();

@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "predev": "yarn docs:build",
+    "prestart": "yarn docs:build",
     "start": "ng serve",
     "prebuild": "yarn docs:build",
     "build": "ng build && cp -r src/server/pdf-templates dist/lfx-one/server/",

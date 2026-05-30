@@ -113,7 +113,7 @@ export class DocsSearchComponent {
         const list = this.hits();
         if (idx >= 0 && idx < list.length) {
           event.preventDefault();
-          this.activate(list[idx]);
+          this.activateFromKeyboard(list[idx]);
         }
         break;
       }
@@ -125,10 +125,27 @@ export class DocsSearchComponent {
     }
   }
 
-  protected activate(hit: DocsSearchHit): void {
+  /**
+   * Cleanup invoked from the result link's `(click)` handler. The `<a>`
+   * carries `[routerLink]` already, so the Angular router handles SPA
+   * navigation, modifier-click new-tab semantics, and the `href`
+   * attribute. Calling `router.navigateByUrl(...)` here would issue a
+   * second, redundant navigation and emit an extra `NavigationEnd`. This
+   * function therefore only resets the panel state.
+   */
+  protected onResultClick(): void {
     this.panelOpen.set(false);
     this.query.setValue('', { emitEvent: false });
     this.hits.set([]);
+  }
+
+  /**
+   * Keyboard activation path (Enter key). The active list item does not
+   * receive the synthetic click that `routerLink` listens for, so we
+   * navigate explicitly here in addition to clearing the panel state.
+   */
+  protected activateFromKeyboard(hit: DocsSearchHit): void {
+    this.onResultClick();
     void this.router.navigateByUrl(hit.url);
   }
 

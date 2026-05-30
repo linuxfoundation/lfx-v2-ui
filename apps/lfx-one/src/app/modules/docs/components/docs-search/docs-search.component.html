@@ -37,7 +37,7 @@
                 [routerLink]="hit.url"
                 role="option"
                 [attr.aria-selected]="i === activeIndex()"
-                (click)="activate(hit)"
+                (click)="onResultClick()"
                 class="flex flex-col gap-1 px-4 py-3 text-sm transition-colors hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 [class.bg-gray-50]="i === activeIndex()"
                 data-testid="docs-search-result">
