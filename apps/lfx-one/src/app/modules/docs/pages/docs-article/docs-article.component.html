@@ -12,7 +12,7 @@
           @for (item of a.breadcrumb; let last = $last; track item.slug) {
             <li class="flex items-center gap-2">
               @if (!last) {
-                <a [routerLink]="item.url" class="hover:text-primary hover:underline">
+                <a [routerLink]="item.url" class="hover:text-primary hover:underline" data-testid="docs-breadcrumb-link">
                   {{ item.title }}
                 </a>
                 <span aria-hidden="true">/</span>
@@ -55,7 +55,8 @@
             <li>
               <a
                 [routerLink]="sibling.url"
-                class="block rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:border-primary hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+                class="block rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:border-primary hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                data-testid="docs-article-sibling-link">
                 {{ sibling.title }}
               </a>
             </li>

@@ -11,6 +11,9 @@ import { Marked } from 'marked';
  * @property {Record<string, string>} sourcePathToSlug  Source path → slug, for the link rewriter.
  * @property {string[]} warnings  Build warnings accumulated during rendering.
  * @property {{ level: number, text: string, id: string }[]} headings  Captured during rendering.
+ * @property {Map<string, number>} [seenHeadingIds]  Per-article counter for duplicate
+ *   slugs, used by `heading()` to suffix collisions. Optional in the typedef so call
+ *   sites can leave it unset; the renderer initializes a fresh map on first use.
  */
 
 /**
@@ -89,7 +92,7 @@ export function createMarked(ctx) {
           renderedText = String(rawTokenOrText);
           depth = rawDepth ?? 1;
         }
-        const id = slugify(plainText);
+        const id = uniqueHeadingId(slugify(plainText), ctx);
         ctx.headings.push({ level: Number(depth), text: plainText, id });
         return `<h${depth} id="${escapeAttr(id)}">${renderedText}</h${depth}>`;
       },
@@ -229,4 +232,28 @@ export function slugify(text) {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Returns a per-article-unique heading id by appending `-N` (N starting at 1)
+ * to collisions. Two `## Overview` sub-headings in one article would otherwise
+ * emit duplicate `id` attributes — invalid HTML where only the first anchor
+ * resolves on click. Empty slugs (heading text that strips to nothing) are
+ * normalized to `'section'` before deduplication so the assigned ids are
+ * still meaningful.
+ *
+ * The seen-ids `Map` lives on `ctx`, scoped to one article; `createMarked`
+ * builds a fresh `Marked` per article so cross-article collisions are
+ * impossible by construction.
+ *
+ * @param {string} baseId  Output of `slugify(plainText)`.
+ * @param {BuildContext} ctx
+ * @returns {string}
+ */
+function uniqueHeadingId(baseId, ctx) {
+  const safeBase = baseId || 'section';
+  const seen = ctx.seenHeadingIds ?? (ctx.seenHeadingIds = new Map());
+  const count = seen.get(safeBase) ?? 0;
+  seen.set(safeBase, count + 1);
+  return count === 0 ? safeBase : `${safeBase}-${count}`;
 }
