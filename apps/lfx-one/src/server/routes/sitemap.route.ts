@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -35,18 +35,27 @@ const SITEMAP_FILE = resolveSitemapPath();
 const sitemapBuffer = readSitemapAtStartup(SITEMAP_FILE);
 
 function resolveSitemapPath(): string {
-  // server.ts is bundled into dist/lfx-one/server/, three levels above the
-  // repo's dist-docs/ directory. Resolve via fileURLToPath so this works
-  // whether running under ts-node, ng serve, or the production bundle.
+  // Both runtime layouts place this file three directory levels below
+  // `apps/lfx-one/`, so a single 3-up climb resolves to the workspace
+  // root in either case:
+  //
+  //   dev / ts-node     : apps/lfx-one/src/server/routes/sitemap.route.ts
+  //                       → ../../../  → apps/lfx-one
+  //   ng-built bundle   : apps/lfx-one/dist/lfx-one/server/server.mjs
+  //                       → ../../../  → apps/lfx-one
+  //
+  // The build pipeline (`scripts/build-docs.mjs`) emits the sitemap to
+  // `apps/lfx-one/dist-docs/sitemap.xml` during `prebuild` / `prestart`,
+  // so the resolved path is correct in dev, in `ng serve`, and in the
+  // production server bundle. (An earlier version of this function had
+  // a second `../../dist-docs` candidate intended as a "production"
+  // fallback, but it actually pointed at `dist/dist-docs/sitemap.xml` —
+  // the path was off by one level. existsSync hid the bug because the
+  // working candidate fired first; the broken candidate is removed
+  // here and `readSitemapAtStartup` logs a clear warning if the file
+  // is missing for any reason.)
   const here = dirname(fileURLToPath(import.meta.url));
-  // dev/ts-node:     apps/lfx-one/src/server/routes  → ../../../dist-docs/sitemap.xml
-  // ng-built bundle: dist/lfx-one/server             → ../../dist-docs/sitemap.xml
-  // The two layouts have different depths, so we test each candidate with
-  // `existsSync` and pick the first that exists. Falling through to the
-  // last candidate when none exists lets the startup reader log a useful
-  // 404 rather than swallowing the configuration error.
-  const candidates = [resolve(here, '..', '..', '..', 'dist-docs', 'sitemap.xml'), resolve(here, '..', '..', 'dist-docs', 'sitemap.xml')];
-  return candidates.find((p) => existsSync(p)) ?? candidates[candidates.length - 1];
+  return resolve(here, '..', '..', '..', 'dist-docs', 'sitemap.xml');
 }
 
 function readSitemapAtStartup(path: string): Buffer | null {

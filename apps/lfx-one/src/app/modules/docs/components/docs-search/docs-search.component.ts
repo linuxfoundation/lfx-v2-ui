@@ -132,9 +132,18 @@ export class DocsSearchComponent {
    * attribute. Calling `router.navigateByUrl(...)` here would issue a
    * second, redundant navigation and emit an extra `NavigationEnd`. This
    * function therefore only resets the panel state.
+   *
+   * Also resets `activeIndex` and `searching` so the input's
+   * `aria-activedescendant` (which reads `activeOptionId()`) does not
+   * keep pointing at a no-longer-rendered listbox option after the
+   * panel closes, and any in-flight search-loading affordance is
+   * cleared. This makes the post-click state identical to the
+   * fresh-page state for both ARIA tooling and visual rendering.
    */
   protected onResultClick(): void {
     this.panelOpen.set(false);
+    this.activeIndex.set(-1);
+    this.searching.set(false);
     this.query.setValue('', { emitEvent: false });
     this.hits.set([]);
   }
