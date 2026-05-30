@@ -139,12 +139,21 @@ export class DocsSearchComponent {
    * panel closes, and any in-flight search-loading affordance is
    * cleared. This makes the post-click state identical to the
    * fresh-page state for both ARIA tooling and visual rendering.
+   *
+   * The query is cleared with `emitEvent: true` (the default) so that
+   * `queryValue` — a `toSignal(query.valueChanges)` — and the derived
+   * `hasQuery` computed update synchronously. If we suppressed the
+   * emission, `hasQuery()` would stay stuck at `true` and `onFocus()`
+   * would reopen the panel the next time the (now-empty) input
+   * received focus. The debounced subscriber in the constructor also
+   * runs on this empty-string emission, but it is idempotent with the
+   * resets above, so the redundancy is harmless.
    */
   protected onResultClick(): void {
     this.panelOpen.set(false);
     this.activeIndex.set(-1);
     this.searching.set(false);
-    this.query.setValue('', { emitEvent: false });
+    this.query.setValue('');
     this.hits.set([]);
   }
 
