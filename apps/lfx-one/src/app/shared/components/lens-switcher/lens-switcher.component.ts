@@ -3,7 +3,8 @@
 
 import { NgClass } from '@angular/common';
 import { afterNextRender, Component, computed, inject, input, signal, Signal, viewChild } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { AvatarComponent } from '@components/avatar/avatar.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { ChangelogDrawerComponent } from '@components/changelog-drawer/changelog-drawer.component';
@@ -18,6 +19,7 @@ import { OpenIntercomDirective } from '@shared/directives/open-intercom.directiv
 import { DialogService } from 'primeng/dynamicdialog';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { TooltipModule } from 'primeng/tooltip';
+import { filter, map, startWith } from 'rxjs';
 
 @Component({
   selector: 'lfx-lens-switcher',
@@ -46,6 +48,21 @@ export class LensSwitcherComponent {
   protected readonly user = this.userService.user;
   protected readonly insightsUrl = buildInsightsUrl();
   protected readonly userMenu = viewChild<Popover>('userMenu');
+
+  /**
+   * Tracks whether the active route is anywhere under `/docs/*` so the docs
+   * icon can render its active-pill state. Subscribes to NavigationEnd and
+   * seeds the initial value from `router.url` so SSR and the first render
+   * agree.
+   */
+  protected readonly isDocsActive = toSignal(
+    this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+      map((event) => event.urlAfterRedirects.startsWith('/docs')),
+      startWith(this.router.url.startsWith('/docs')),
+    ),
+    { initialValue: this.router.url.startsWith('/docs') },
+  );
 
   protected readonly userInitials = this.userService.userInitials;
   protected readonly canImpersonate = this.userService.canImpersonate;

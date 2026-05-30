@@ -3,39 +3,43 @@
 
 import { Component, computed, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
+import { LensSwitcherComponent } from '@components/lens-switcher/lens-switcher.component';
 
+import { DocsSidebarNavComponent } from '../../modules/docs/components/docs-sidebar-nav/docs-sidebar-nav.component';
 import { UserService } from '../../shared/services/user.service';
 
 /**
  * Auth-aware shell for the public-facing user documentation portal (`/docs/**`).
  *
- * Phase 2 skeleton (T018): renders `<router-outlet>` inside a single content
- * column, reads `UserService.authenticated` so consuming templates can
- * branch, and is deliberately MINIMAL. The full split — render the existing
- * app chrome (lens switcher + sidebar + header) for signed-in users vs. a
- * dedicated public sidebar with docs icon, "What's new", and sign-in CTA for
- * unauthenticated visitors — lands in Phase 4 / US2 (T037, T038), and the
- * brand-styling / responsive polish lands in Phase 7 / US5.
+ * Renders one of two side-rails depending on `UserService.authenticated`:
  *
- * The component is intentionally route-tree-stable across auth states: the
- * URL is identical (FR-009c), only the rendered chrome changes. Keeping that
- * invariant in one component avoids the routing flicker that two parallel
- * route trees would introduce (research R6).
+ *   - Authenticated → mounts the existing `LensSwitcherComponent` so the
+ *     full LFX Self Serve chrome (lens icons, avatar, changelog, docs
+ *     button) is preserved verbatim (FR-009a). The user can hop back to
+ *     `/dashboard`, `/foundation`, etc. without leaving `/docs`.
+ *   - Unauthenticated → mounts `DocsSidebarNavComponent` — the public
+ *     minimal shell (docs icon + "What's new" + sign-in CTA), no lens
+ *     switcher, no avatar (FR-009b).
+ *
+ * The URL stays identical across auth flips (FR-009c) — only the rendered
+ * chrome swaps. Keeping the swap in one component avoids the routing
+ * flicker that two parallel route trees would introduce (research R6).
+ *
+ * Note on chrome reuse: this component intentionally renders only the
+ * lens-switcher column, not the full `MainLayoutComponent` left rail
+ * (lens-switcher + lens-driven sidebar). The lens-driven sidebar's items
+ * (My Meetings, My Committees, etc.) aren't useful inside the docs portal
+ * and would compete with the docs taxonomy. Phase 7 / US5 (T048) revisits
+ * this if user feedback diverges.
  */
 @Component({
   selector: 'lfx-docs-layout',
   standalone: true,
-  imports: [RouterModule],
+  imports: [RouterModule, LensSwitcherComponent, DocsSidebarNavComponent],
   templateUrl: './docs-layout.component.html',
   styleUrl: './docs-layout.component.scss',
 })
 export class DocsLayoutComponent {
-  private readonly userService = inject(UserService);
-
-  /**
-   * Authentication signal — read at SSR or hydration time. Phase 4 / US2 wires
-   * the conditional sidebar variants off this. Phase 2 just exposes it so the
-   * template can pick a heading variant for visual continuity.
-   */
+  protected readonly userService = inject(UserService);
   protected readonly isAuthenticated = computed(() => this.userService.authenticated());
 }
