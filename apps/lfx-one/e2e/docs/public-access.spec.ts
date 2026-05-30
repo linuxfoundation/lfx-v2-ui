@@ -21,10 +21,16 @@ import { expect, test } from '@playwright/test';
  */
 
 const DATA_LOAD_TIMEOUT = 30_000;
+const TEST_TIMEOUT = 60_000;
 
 // Anonymous context for every test in this file — overrides the default
 // authenticated `storageState` from `playwright.config.ts`.
 test.use({ storageState: { cookies: [], origins: [] } });
+
+// 30s data-load timeout demands a test timeout that comfortably exceeds it,
+// per docs/architecture/testing/testing-best-practices.md (avoid flake from
+// the default 30s test timeout colliding with a 30s `toBeVisible`).
+test.describe.configure({ timeout: TEST_TIMEOUT });
 
 test.describe('Docs portal — public access (US1)', () => {
   test('landing page renders for anonymous visitors without redirect', async ({ page }) => {

@@ -21,6 +21,12 @@ import { expect, test } from '@playwright/test';
  */
 
 const DATA_LOAD_TIMEOUT = 30_000;
+const TEST_TIMEOUT = 60_000;
+
+// 30s data-load timeout demands a test timeout that comfortably exceeds it,
+// per docs/architecture/testing/testing-best-practices.md (avoid flake from
+// the default 30s test timeout colliding with a 30s `toBeVisible`).
+test.describe.configure({ timeout: TEST_TIMEOUT });
 
 test.describe('Docs portal — shell auth states (US2)', () => {
   test.describe('Authenticated visitor', () => {

@@ -11,6 +11,7 @@ import { expect, test } from '@playwright/test';
  */
 
 const DATA_LOAD_TIMEOUT = 30_000;
+const TEST_TIMEOUT = 60_000;
 const VIEWPORTS = [
   { name: 'mobile', width: 360, height: 640 },
   { name: 'tablet', width: 768, height: 1024 },
@@ -19,6 +20,11 @@ const VIEWPORTS = [
 ] as const;
 
 test.use({ storageState: { cookies: [], origins: [] } });
+
+// 30s data-load timeout demands a test timeout that comfortably exceeds it,
+// per docs/architecture/testing/testing-best-practices.md (avoid flake from
+// the default 30s test timeout colliding with a 30s `toBeVisible`).
+test.describe.configure({ timeout: TEST_TIMEOUT });
 
 test.describe('Docs portal — responsive (US5)', () => {
   for (const vp of VIEWPORTS) {
