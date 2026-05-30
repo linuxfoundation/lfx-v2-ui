@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, inject } from '@angular/core';
-import { RouterModule } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { LensSwitcherComponent } from '@components/lens-switcher/lens-switcher.component';
+import { filter, map, startWith } from 'rxjs';
 
 import { DocsSidebarNavComponent } from '../../modules/docs/components/docs-sidebar-nav/docs-sidebar-nav.component';
 import { UserService } from '../../shared/services/user.service';
@@ -41,5 +43,30 @@ import { UserService } from '../../shared/services/user.service';
 })
 export class DocsLayoutComponent {
   protected readonly userService = inject(UserService);
+  private readonly router = inject(Router);
+
   protected readonly isAuthenticated = computed(() => this.userService.authenticated());
+
+  /**
+   * `/login?returnTo=<current url>` for the mobile sign-in button. Tracks
+   * the active URL via `NavigationEnd` so a visitor on
+   * `/docs/meetings/schedule-meeting` lands back there after sign-in,
+   * not on `/docs`.
+   */
+  protected readonly signInHref = this.initSignInHref();
+
+  private initSignInHref() {
+    return toSignal(
+      this.router.events.pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        map((event) => this.buildSignInHref(event.urlAfterRedirects)),
+        startWith(this.buildSignInHref(this.router.url || '/docs'))
+      ),
+      { initialValue: this.buildSignInHref(this.router.url || '/docs') }
+    );
+  }
+
+  private buildSignInHref(target: string): string {
+    return `/login?returnTo=${encodeURIComponent(target)}`;
+  }
 }

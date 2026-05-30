@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -25,18 +25,18 @@ const SITEMAP_FILE = resolveSitemapPath();
 const sitemapBuffer = readSitemapAtStartup(SITEMAP_FILE);
 
 function resolveSitemapPath(): string {
-  // server.ts is bundled into dist/lfx-one/server/, two levels above the repo's
-  // dist-docs/ directory. Resolve via fileURLToPath so this works whether
-  // running under ts-node, ng serve, or the production bundle.
+  // server.ts is bundled into dist/lfx-one/server/, three levels above the
+  // repo's dist-docs/ directory. Resolve via fileURLToPath so this works
+  // whether running under ts-node, ng serve, or the production bundle.
   const here = dirname(fileURLToPath(import.meta.url));
-  // dev/ts-node:    apps/lfx-one/src/server/routes  → ../../../dist-docs/sitemap.xml
-  // ng-built bundle: dist/lfx-one/server            → ../../../dist-docs/sitemap.xml
-  // Both happen to resolve up three levels from the routes/server dir to the
-  // workspace's apps/lfx-one root, then into dist-docs/. Try the dev path
-  // first; fall back to the build-time path if the file isn't there.
-  const devPath = resolve(here, '..', '..', '..', 'dist-docs', 'sitemap.xml');
-  const builtPath = resolve(here, '..', '..', 'dist-docs', 'sitemap.xml');
-  return devPath || builtPath;
+  // dev/ts-node:     apps/lfx-one/src/server/routes  → ../../../dist-docs/sitemap.xml
+  // ng-built bundle: dist/lfx-one/server             → ../../dist-docs/sitemap.xml
+  // The two layouts have different depths, so we test each candidate with
+  // `existsSync` and pick the first that exists. Falling through to the
+  // last candidate when none exists lets the startup reader log a useful
+  // 404 rather than swallowing the configuration error.
+  const candidates = [resolve(here, '..', '..', '..', 'dist-docs', 'sitemap.xml'), resolve(here, '..', '..', 'dist-docs', 'sitemap.xml')];
+  return candidates.find((p) => existsSync(p)) ?? candidates[candidates.length - 1];
 }
 
 function readSitemapAtStartup(path: string): Buffer | null {
@@ -45,9 +45,11 @@ function readSitemapAtStartup(path: string): Buffer | null {
   } catch (err) {
     // Don't crash the server: an absent sitemap means `yarn docs:build` hasn't
     // run; the route handler returns 404 and an operator can investigate.
+    // Log via the `err` field so Pino's serializer keeps the stack trace
+    // and any custom error properties.
     logger.warning(undefined, 'sitemap_route', 'sitemap.xml not found at startup', {
       path,
-      error: err instanceof Error ? err.message : String(err),
+      err,
     });
     return null;
   }

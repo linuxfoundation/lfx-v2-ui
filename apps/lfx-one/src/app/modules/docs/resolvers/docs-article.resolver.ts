@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { inject } from '@angular/core';
-import { ResolveFn, Router, UrlSegment } from '@angular/router';
+import { RedirectCommand, ResolveFn, Router, UrlSegment } from '@angular/router';
 import type { DocsArticle } from '@lfx-one/shared/interfaces';
 
 import { DocsManifestService } from '../services/docs-manifest.service';
@@ -17,9 +17,11 @@ import { DocsManifestService } from '../services/docs-manifest.service';
  * On hit: returns the article — `DocsArticleComponent` consumes it via
  * `route.snapshot.data['article']`.
  *
- * On miss: returns a `UrlTree` redirecting to `/docs/not-found`, so Angular
- * SSR matches the dedicated server route configured with `status: 404` in
- * `app.routes.server.ts` and serves the proper HTTP status to crawlers.
+ * On miss: returns a `RedirectCommand` pointing at `/docs/not-found` so the
+ * Angular 20 router triggers a navigation redirect (a bare `UrlTree` would
+ * be stored as the resolved value and rendered as if it were an article).
+ * The dedicated server route in `app.routes.server.ts` is configured with
+ * `status: 404`, so SSR serves the proper HTTP status to crawlers.
  *
  * URL normalization (FR / R: SC-008): trailing slash, mixed case, and
  * doubled slashes all resolve to the same canonical slug. The manifest is
@@ -35,10 +37,12 @@ export const docsArticleResolver: ResolveFn<DocsArticle> = (route) => {
     return article;
   }
 
-  // Miss → hand off to the static 404 server route. Returning a `UrlTree`
-  // from a resolver tells Angular's router to navigate without firing a
-  // separate request lifecycle.
-  return router.parseUrl('/docs/not-found') as never;
+  // Miss → tell the router to redirect. Angular 20 only honors a redirect
+  // from a resolver when the returned value is a `RedirectCommand`; a bare
+  // `UrlTree` would be stored as `data['article']` and rendered as if it
+  // were the article (see `apps/lfx-one/node_modules/@angular/router`
+  // resolveNode → instanceof RedirectCommand check).
+  return new RedirectCommand(router.parseUrl('/docs/not-found')) as never;
 };
 
 function normalizeSlug(segments: UrlSegment[]): string {

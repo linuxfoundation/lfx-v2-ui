@@ -60,7 +60,7 @@ function checkFileCoverage(manifest) {
     // from the manifest topics.
     .filter((p) => p !== 'docs/user/index.md');
 
-  const indexedSources = new Set(Object.values(manifest.sourcePathToSlug ?? {}).map((_, i, arr) => Object.keys(manifest.sourcePathToSlug)[i]));
+  const indexedSources = new Set(Object.keys(manifest.sourcePathToSlug ?? {}));
 
   const missing = sourceFiles.filter((p) => !indexedSources.has(p));
   if (missing.length > 0) {

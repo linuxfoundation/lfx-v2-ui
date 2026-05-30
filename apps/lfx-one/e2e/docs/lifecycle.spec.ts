@@ -26,8 +26,14 @@ import { expect, test } from '@playwright/test';
  */
 
 const DATA_LOAD_TIMEOUT = 30_000;
+const TEST_TIMEOUT = 60_000;
 
 test.use({ storageState: { cookies: [], origins: [] } });
+
+// 30s data-load timeout demands a test timeout that comfortably exceeds it,
+// per docs/architecture/testing/testing-best-practices.md (avoid flake from
+// the default 30s test timeout colliding with a 30s `toBeVisible`).
+test.describe.configure({ timeout: TEST_TIMEOUT });
 
 test.describe('Docs portal — content lifecycle (US6)', () => {
   test('renamed/deleted article URL serves the not-found page', async ({ page }) => {
@@ -48,11 +54,17 @@ test.describe('Docs portal — content lifecycle (US6)', () => {
     await page.goto('/docs/another-stale-bookmark', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('docs-not-found')).toBeVisible({ timeout: DATA_LOAD_TIMEOUT });
 
-    // The 404 page links back to /docs and (when topics exist) lists
-    // each topic so authors who renamed a slug still funnel users
-    // toward navigable content.
+    // The 404 page links back to /docs as a primary recovery affordance.
     const backLink = page.locator('a[href="/docs"]').first();
     await expect(backLink).toBeVisible();
+
+    // ...and surfaces the manifest topic list so visitors hitting a
+    // stale bookmark can choose another section without bouncing.
+    // Manifest carries 13 topics; assert at least 3 to keep the test
+    // resilient to taxonomy edits without trivializing the contract.
+    const topicLinks = page.locator('[data-testid="docs-not-found"] a[href^="/docs/"]');
+    await expect(topicLinks.first()).toBeVisible();
+    expect(await topicLinks.count()).toBeGreaterThanOrEqual(3);
   });
 
   test('every sitemap URL resolves successfully', async ({ request }) => {

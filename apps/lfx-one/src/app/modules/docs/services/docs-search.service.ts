@@ -77,7 +77,14 @@ export class DocsSearchService {
   private ensureLoaded(): Promise<void> {
     if (this.miniSearch) return Promise.resolve();
     if (!this.loadPromise) {
-      this.loadPromise = this.loadIndex();
+      // Wrap the load so a single rejected fetch never permanently
+      // disables search for the session. We discard the failed promise
+      // and let the next `search()` retry; concurrent in-flight calls
+      // still share the live promise, so we don't introduce a herd.
+      this.loadPromise = this.loadIndex().catch((err) => {
+        this.loadPromise = undefined;
+        console.warn('[docs-search] failed to load search index; retry on next query', err);
+      });
     }
     return this.loadPromise;
   }

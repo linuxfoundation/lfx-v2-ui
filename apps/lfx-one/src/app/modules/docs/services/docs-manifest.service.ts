@@ -39,18 +39,23 @@ export class DocsManifestService {
    *
    * The manifest emits every article slug in canonical form — lowercase,
    * trimmed, no leading/trailing slashes, hyphenated. The article resolver
-   * (`docs-article.resolver.ts`) normalizes the request URL the same way
-   * before calling `getArticle()`, so bookmarks like:
+   * (`docs-article.resolver.ts`) normalizes the catch-all segments the
+   * same way before calling `getArticle()`, so bookmarks like:
    *
-   *   - `/docs/meetings/Schedule-Meeting/`        (trailing slash + uppercase)
+   *   - `/docs/meetings/Schedule-Meeting/`        (trailing slash + uppercase segments)
    *   - `/docs//meetings/schedule-meeting`         (doubled slash)
-   *   - `/DOCS/meetings/schedule-meeting`          (uppercase docs prefix)
    *
    * all resolve to the same canonical entry — keeping FR-024's "no
    * session tokens or query strings" intent intact and preventing parallel
-   * URL personalities from surfacing in search-engine indexes. Build-time
-   * URL-shape assertion lives in `apps/lfx-one/scripts/build-docs.mjs` so
-   * the manifest itself can never carry a non-canonical entry.
+   * URL personalities from surfacing in search-engine indexes.
+   *
+   * Limitation: the `docs` prefix itself is matched case-sensitively by
+   * the Angular router's `path: 'docs'` config, so `/DOCS/...` (uppercase
+   * prefix) doesn't reach this resolver and 404s at the route layer. The
+   * resolver only normalizes segments after the prefix.
+   *
+   * Build-time URL-shape assertion lives in `apps/lfx-one/scripts/build-docs.mjs`
+   * so the manifest itself can never carry a non-canonical entry.
    */
   public getArticle(slug: string): DocsArticle | undefined {
     return this.manifest.articles[slug];

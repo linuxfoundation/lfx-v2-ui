@@ -214,12 +214,12 @@ US4 is largely a property emerging from US1 (the route table at T020/T021 and th
 
 **Purpose**: Improvements that span multiple stories and final pre-PR validation.
 
-- [X] T056 [P] Document the docs build pipeline and runtime architecture at `docs/architecture/frontend/docs-portal.md` — pipeline diagram, contract references, route registration, layout switching, search lazy-load semantics. Add a row to the Architecture Documentation table in `CLAUDE.md` and `AGENTS.md` only via code-owner review (those files are protected).
-- [X] T057 [P] Add a "Last updated" footer to `DocsArticleComponent` template (`apps/lfx-one/src/app/modules/docs/pages/docs-article/docs-article.component.html`) that renders the article's `lastUpdated` field via the existing `formatDate`/`getRelativeDate` utilities from `@lfx-one/shared/utils`.
+- [x] T056 [P] Document the docs build pipeline and runtime architecture at `docs/architecture/frontend/docs-portal.md` — pipeline diagram, contract references, route registration, layout switching, search lazy-load semantics. Add a row to the Architecture Documentation table in `CLAUDE.md` and `AGENTS.md` only via code-owner review (those files are protected).
+- [x] T057 [P] Add a "Last updated" footer to `DocsArticleComponent` template (`apps/lfx-one/src/app/modules/docs/pages/docs-article/docs-article.component.html`) that renders the article's `lastUpdated` field via the existing `formatDate`/`getRelativeDate` utilities from `@lfx-one/shared/utils`.
 - [ ] T058 [P] Implement a breadcrumb component at `apps/lfx-one/src/app/modules/docs/components/docs-breadcrumb/docs-breadcrumb.component.{ts,html,scss}` consuming `DocsArticle.breadcrumb`; embed it above the article body in `DocsArticleComponent`.
 - [ ] T059 [P] Performance audit: run a Lighthouse pass against three sample article pages and confirm the SC-008 target ("first usable HTML response within 1 second on a typical broadband connection"). Document the run and numbers inline in `apps/lfx-one/e2e/docs/perf-notes.md` (informational, not a blocking gate).
-- [X] T060 Run `yarn lint:check && yarn format:check && yarn check-types` from the repo root; fix any drift introduced by US1–US6 implementation.
-- [X] T061 Run `yarn build` end-to-end and confirm the generated `dist/lfx-one/browser/assets/docs/search-index.json` and `apps/lfx-one/dist-docs/sitemap.xml` are present and valid against their schemas.
+- [x] T060 Run `yarn lint:check && yarn format:check && yarn check-types` from the repo root; fix any drift introduced by US1–US6 implementation.
+- [x] T061 Run `yarn build` end-to-end and confirm the generated `dist/lfx-one/browser/assets/docs/search-index.json` and `apps/lfx-one/dist-docs/sitemap.xml` are present and valid against their schemas.
 - [ ] T062 Run [quickstart.md](./quickstart.md) end-to-end on a clean checkout — add a fixture article, build, hit it in incognito, run the validation scripts — and update `quickstart.md` if any step has drifted.
 - [ ] T063 Invoke the `/preflight` skill (license headers, format, lint, build, protected-file check) per `CLAUDE.md` work-cycle policy.
 - [ ] T064 Invoke the post-commit reviewer pair (`lfx-self-serve-code-reviewer` + `lfx-self-serve-learnings-reviewer`) in parallel after the final commit on the branch, then run the pre-PR full-branch sweep with the `branch` arg per `CLAUDE.md` work-cycle policy. Address Critical and reasonable Important findings before opening the PR.
@@ -311,11 +311,11 @@ Task: "robots.txt in apps/lfx-one/public/robots.txt"                            
 ### Incremental delivery
 
 1. Foundation + US1 → Public portal live (MVP).
-2. - US2 → Signed-in users discover docs via the icon; auth-aware shell engaged.
-3. - US3 → Search reachable from landing and articles.
-4. - US4 → URL stability formalized.
-5. - US5 → Brand styling, responsive, accessible.
-6. - US6 → CI-grade content lifecycle + idempotence.
+2. \+ US2 → Signed-in users discover docs via the icon; auth-aware shell engaged.
+3. \+ US3 → Search reachable from landing and articles.
+4. \+ US4 → URL stability formalized.
+5. \+ US5 → Brand styling, responsive, accessible.
+6. \+ US6 → CI-grade content lifecycle + idempotence.
 7. Polish + pre-PR gates → Open PR.
 
 ### Parallel team strategy

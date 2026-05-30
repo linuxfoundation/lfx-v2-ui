@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { DatePipe, DOCUMENT } from '@angular/common';
-import { Component, computed, ElementRef, HostListener, inject, OnInit } from '@angular/core';
+import { Component, computed, effect, ElementRef, HostListener, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -25,9 +25,12 @@ const DOCS_LINK_PREFIX = '/docs/';
  *
  * SEO wiring (T028): `Title`, `Meta` (description, OG, Twitter card), and a
  * `<link rel="canonical">` pointing at the configured production origin
- * (`https://app.lfx.dev`) — applied in `ngOnInit` for SSR-correct head tags
- * (FR-013, FR-023). The canonical origin is intentionally hard-coded; any
- * future per-environment override would land as a runtime config value.
+ * (`https://app.lfx.dev`) — applied via an `effect` so the head tags
+ * stay in sync with the resolved article on every navigation, including
+ * client-side article→article transitions where Angular reuses this
+ * component instance and `ngOnInit` does not re-fire (FR-013, FR-023).
+ * The canonical origin is intentionally hard-coded; any future
+ * per-environment override would land as a runtime config value.
  *
  * Click interceptor (T028 / research R16): a host-level click listener
  * catches anchor activations whose `href` begins with `/docs/` and routes
@@ -42,7 +45,7 @@ const DOCS_LINK_PREFIX = '/docs/';
   imports: [RouterLink, DatePipe, DocsSearchComponent],
   templateUrl: './docs-article.component.html',
 })
-export class DocsArticleComponent implements OnInit {
+export class DocsArticleComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly docsManifest = inject(DocsManifestService);
@@ -63,8 +66,12 @@ export class DocsArticleComponent implements OnInit {
     return a.siblings.map((slug) => this.docsManifest.getArticle(slug)).filter((s): s is DocsArticle => Boolean(s));
   });
 
-  public ngOnInit(): void {
-    this.applyMetadata();
+  public constructor() {
+    // Drive SEO metadata off the article signal so head tags refresh on
+    // every navigation — `ngOnInit` only fires once for the reused
+    // component instance, leaving the title / OG / canonical pinned to
+    // the first article hit during in-SPA navigation otherwise.
+    effect(() => this.applyMetadata());
   }
 
   @HostListener('click', ['$event'])
@@ -115,6 +122,10 @@ export class DocsArticleComponent implements OnInit {
     this.meta.updateTag({ name: 'twitter:title', content: a.title });
     this.meta.updateTag({ name: 'twitter:description', content: a.description });
     this.setCanonical(canonical);
+    // The not-found page sets `<meta name="robots" content="noindex">`;
+    // clear it on every real article so a stale 404 visit doesn't leave
+    // the tag attached to the next client-side navigation.
+    this.meta.removeTag('name="robots"');
   }
 
   private setCanonical(href: string): void {

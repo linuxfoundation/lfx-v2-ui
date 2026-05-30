@@ -54,7 +54,12 @@ export function createMarked(ctx) {
 
         const rewritten = rewriteHref(href ?? '', ctx);
         const titleAttr = title ? ` title="${escapeAttr(title)}"` : '';
-        const isExternal = isAbsoluteUrl(rewritten) && !rewritten.startsWith(ctx.article.url);
+        // External = any absolute (schema-qualified) URL. Relative paths
+        // are already rewritten to `/docs/<slug>`-shaped internal URLs by
+        // `rewriteHref` and same-page anchors short-circuit there too, so
+        // an absolute scheme reaching this point is, by construction, a
+        // link out to a different host or protocol.
+        const isExternal = isAbsoluteUrl(rewritten);
         const externalAttrs = isExternal ? ' target="_blank" rel="noopener noreferrer"' : '';
         return `<a href="${escapeAttr(rewritten)}"${titleAttr}${externalAttrs}>${text}</a>`;
       },

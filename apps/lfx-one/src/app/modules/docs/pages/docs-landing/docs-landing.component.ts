@@ -61,6 +61,9 @@ export class DocsLandingComponent implements OnInit {
     this.meta.updateTag({ name: 'twitter:title', content: LANDING_TITLE });
     this.meta.updateTag({ name: 'twitter:description', content: LANDING_DESCRIPTION });
     this.setCanonical(canonical);
+    // Clear any noindex tag that the not-found page may have left behind
+    // when the visitor navigated client-side from `/docs/<missing>` here.
+    this.meta.removeTag('name="robots"');
   }
 
   private setCanonical(href: string): void {
