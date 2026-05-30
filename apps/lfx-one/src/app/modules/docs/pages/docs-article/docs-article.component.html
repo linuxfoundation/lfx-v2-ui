@@ -3,6 +3,9 @@
 
 @if (article(); as a) {
   <article class="mx-auto flex max-w-3xl flex-col gap-6" data-testid="docs-article">
+    <div class="flex justify-end">
+      <lfx-docs-search data-testid="docs-article-search" />
+    </div>
     @if (a.breadcrumb.length > 1) {
       <nav aria-label="Breadcrumb" data-testid="docs-breadcrumb">
         <ol class="flex flex-wrap items-center gap-2 text-sm text-gray-500">

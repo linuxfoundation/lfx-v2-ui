@@ -6,6 +6,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import type { DocsTopic } from '@lfx-one/shared/interfaces';
 
+import { DocsSearchComponent } from '../../components/docs-search/docs-search.component';
 import { DocsTopicCardComponent } from '../../components/docs-topic-card/docs-topic-card.component';
 import { DocsManifestService } from '../../services/docs-manifest.service';
 
@@ -33,7 +34,7 @@ const LANDING_DESCRIPTION = 'Browse user guides, FAQs, and how-tos for the LFX S
 @Component({
   selector: 'lfx-docs-landing',
   standalone: true,
-  imports: [DocsTopicCardComponent],
+  imports: [DocsSearchComponent, DocsTopicCardComponent],
   templateUrl: './docs-landing.component.html',
 })
 export class DocsLandingComponent implements OnInit {

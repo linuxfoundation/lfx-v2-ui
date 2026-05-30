@@ -8,12 +8,7 @@
       Browse user guides, FAQs, and how-tos. Pick a topic below to dive in.
     </p>
 
-    <!--
-      Search slot — populated in Phase 5 / US3 (T039) by `<lfx-docs-search>`.
-      Until then, search is reachable only via direct URL and the future
-      sidebar entry (US2).
-    -->
-    <div class="hidden" data-testid="docs-landing-search-slot" aria-hidden="true"></div>
+    <lfx-docs-search data-testid="docs-landing-search" />
   </header>
 
   @if (topics.length > 0) {

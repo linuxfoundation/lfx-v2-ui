@@ -9,6 +9,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type { DocsArticle } from '@lfx-one/shared/interfaces';
 import { map } from 'rxjs/operators';
 
+import { DocsSearchComponent } from '../../components/docs-search/docs-search.component';
 import { DocsManifestService } from '../../services/docs-manifest.service';
 
 const DOCS_CANONICAL_ORIGIN = 'https://app.lfx.dev';
@@ -38,7 +39,7 @@ const DOCS_LINK_PREFIX = '/docs/';
 @Component({
   selector: 'lfx-docs-article',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, DocsSearchComponent],
   templateUrl: './docs-article.component.html',
 })
 export class DocsArticleComponent implements OnInit {

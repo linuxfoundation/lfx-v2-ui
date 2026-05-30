@@ -18,8 +18,15 @@ const SOURCE_ROOT = resolve(REPO_ROOT, 'docs', 'user');
 const GENERATED_DIR = resolve(APP_ROOT, 'src', 'app', 'modules', 'docs', 'generated');
 const DIST_DOCS_DIR = resolve(APP_ROOT, 'dist-docs');
 
+// The search index ships as a static asset so the runtime can lazy-load it
+// once and cache for the session (research R5). Angular's build copies
+// everything under `public/` into `dist/lfx-one/browser/` verbatim, so
+// emitting here gives us a stable URL at /assets/docs/search-index.json.
+// The directory is gitignored — the file is regenerated each build.
+const PUBLIC_ASSETS_DOCS_DIR = resolve(APP_ROOT, 'public', 'assets', 'docs');
+
 const MANIFEST_TS_PATH = resolve(GENERATED_DIR, 'docs-manifest.ts');
-const SEARCH_INDEX_JSON_PATH = resolve(GENERATED_DIR, 'search-index.json');
+const SEARCH_INDEX_JSON_PATH = resolve(PUBLIC_ASSETS_DOCS_DIR, 'search-index.json');
 const SITEMAP_XML_PATH = resolve(DIST_DOCS_DIR, 'sitemap.xml');
 
 const baseUrl = process.env.PCC_BASE_URL || process.env.DOCS_BASE_URL || 'https://app.lfx.dev';
@@ -39,6 +46,7 @@ const sitemapXml = buildSitemapXml({ manifest, baseUrl });
 
 mkdirSync(GENERATED_DIR, { recursive: true });
 mkdirSync(DIST_DOCS_DIR, { recursive: true });
+mkdirSync(PUBLIC_ASSETS_DOCS_DIR, { recursive: true });
 
 writeFileSync(MANIFEST_TS_PATH, renderManifestModule(manifest));
 writeFileSync(SEARCH_INDEX_JSON_PATH, JSON.stringify(searchIndex, null, 2) + '\n');
