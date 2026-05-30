@@ -162,12 +162,12 @@ US4 is largely a property emerging from US1 (the route table at T020/T021 and th
 
 ### E2E test for US4
 
-- [ ] T043 [P] [US4] Add `apps/lfx-one/e2e/docs/url-stability.spec.ts` covering US4 acceptance scenarios 1–3: copy URL → paste into fresh session → identical render; bookmarked URL still works after navigation away and back; topic-landing pages and articles share the same URL pattern.
+- [X] T043 [P] [US4] Add `apps/lfx-one/e2e/docs/url-stability.spec.ts` covering US4 acceptance scenarios 1–3: copy URL → paste into fresh session → identical render; bookmarked URL still works after navigation away and back; topic-landing pages and articles share the same URL pattern.
 
 ### Implementation for US4
 
-- [ ] T044 [US4] Add a build-time URL-shape assertion to `apps/lfx-one/scripts/build-docs.mjs`: every `DocsArticle.url` must match `^/docs/[a-z0-9-]+(/[a-z0-9-]+)*$` — no query strings, no fragments, no uppercase, no underscores. Build fails (non-zero exit) on violation. Depends on T014.
-- [ ] T045 [US4] Verify (and document inline as a comment in `apps/lfx-one/src/app/modules/docs/services/docs-manifest.service.ts`) that the resolver in T021 / T027 normalizes the route URL before lookup so trailing slashes and case variations resolve to the canonical slug — covered by T043's tests.
+- [X] T044 [US4] Add a build-time URL-shape assertion to `apps/lfx-one/scripts/build-docs.mjs`: every `DocsArticle.url` must match `^/docs/[a-z0-9-]+(/[a-z0-9-]+)*$` — no query strings, no fragments, no uppercase, no underscores. Build fails (non-zero exit) on violation. Depends on T014.
+- [X] T045 [US4] Verify (and document inline as a comment in `apps/lfx-one/src/app/modules/docs/services/docs-manifest.service.ts`) that the resolver in T021 / T027 normalizes the route URL before lookup so trailing slashes and case variations resolve to the canonical slug — covered by T043's tests.
 
 **Checkpoint**: US4 complete. URL pattern is enforced at build time and validated at runtime.
 

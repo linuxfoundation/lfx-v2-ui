@@ -34,6 +34,23 @@ export class DocsManifestService {
    * Resolves a route URL fragment (e.g. `'meetings/schedule-meeting'`) to its
    * article, or `undefined` when no article matches. The empty slug `''`
    * resolves to the synthetic root landing.
+   *
+   * URL-normalization contract (US4 / FR-024 / T045):
+   *
+   * The manifest emits every article slug in canonical form — lowercase,
+   * trimmed, no leading/trailing slashes, hyphenated. The article resolver
+   * (`docs-article.resolver.ts`) normalizes the request URL the same way
+   * before calling `getArticle()`, so bookmarks like:
+   *
+   *   - `/docs/meetings/Schedule-Meeting/`        (trailing slash + uppercase)
+   *   - `/docs//meetings/schedule-meeting`         (doubled slash)
+   *   - `/DOCS/meetings/schedule-meeting`          (uppercase docs prefix)
+   *
+   * all resolve to the same canonical entry — keeping FR-024's "no
+   * session tokens or query strings" intent intact and preventing parallel
+   * URL personalities from surfacing in search-engine indexes. Build-time
+   * URL-shape assertion lives in `apps/lfx-one/scripts/build-docs.mjs` so
+   * the manifest itself can never carry a non-canonical entry.
    */
   public getArticle(slug: string): DocsArticle | undefined {
     return this.manifest.articles[slug];

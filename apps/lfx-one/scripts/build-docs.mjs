@@ -41,6 +41,24 @@ if (records.length === 0) {
 }
 
 const { manifest, warnings } = buildDocsManifest({ records });
+
+// FR-024 / SC-002 / US4: every article URL must be human-readable, free of
+// query strings or fragments, and use lowercase + hyphens only. We assert
+// this at build time so authors can't inadvertently introduce a URL that
+// would break bookmarks, sitemap parity, or routing normalization. The
+// regex matches `/docs` exactly (the synthetic landing) or
+// `/docs/<seg>(/<seg>)*` where each segment is `[a-z0-9-]+`.
+const URL_SHAPE = /^\/docs(?:\/[a-z0-9-]+)*$/;
+const violatingUrls = Object.values(manifest.articles)
+  .map((a) => a.url)
+  .filter((url) => !URL_SHAPE.test(url));
+if (violatingUrls.length > 0) {
+  console.error('[docs:build] URL-shape violation (US4 / FR-024):');
+  for (const url of violatingUrls) console.error(`  - ${url}`);
+  console.error('  URLs must match ^/docs(?:/[a-z0-9-]+)*$ — no query strings, fragments, uppercase, or underscores.');
+  process.exit(1);
+}
+
 const searchIndex = buildSearchIndex({ manifest });
 const sitemapXml = buildSitemapXml({ manifest, baseUrl });
 
