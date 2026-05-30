@@ -9,8 +9,10 @@ import {
   Meeting,
   MeetingOccurrence,
   PastMeetingSummary,
+  PastMeetingTranscript,
   RecurrenceSummary,
   SummaryData,
+  TranscriptCue,
   User,
   V1PastMeetingSummary,
   V1SummaryDetail,
@@ -431,4 +433,64 @@ export function transformV1SummaryToV2(summary: PastMeetingSummary): PastMeeting
     created_at: summary.created_at || raw.summary_created_time || '',
     updated_at: summary.updated_at || raw.summary_last_modified_time || raw.modified_at || '',
   };
+}
+
+/**
+ * Resolves the viewable URL for a past meeting transcript.
+ *
+ * Only an actual transcript file counts — Zoom's audio transcript ('TRANSCRIPT')
+ * or closed captions ('CC'). The session share_url is deliberately NOT used: it
+ * points to the recording, so falling back to it makes "View Transcript" open the
+ * recording. A TIMELINE file is a speaker timeline, not a transcript, so it's
+ * excluded too. Returns null (→ "Transcript Unavailable") when no transcript file
+ * exists.
+ */
+export function getPastMeetingTranscriptUrl(transcript: PastMeetingTranscript | null | undefined): string | null {
+  const file = transcript?.recording_files?.find((f) => {
+    const type = f.file_type?.toUpperCase();
+    return type === 'TRANSCRIPT' || type === 'CC';
+  });
+  return file?.download_url || null;
+}
+
+/**
+ * Parses a WebVTT transcript into ordered cues so it can be rendered inline.
+ * Each VTT block is `index / start --> end / "Speaker: text"`. The WEBVTT header
+ * and any NOTE/metadata blocks (no `-->` line) are skipped. Returns [] for empty
+ * or unparseable input.
+ */
+export function parseTranscriptVtt(vtt: string | null | undefined): TranscriptCue[] {
+  if (!vtt) {
+    return [];
+  }
+
+  const cues: TranscriptCue[] = [];
+  const blocks = vtt.split(/\r?\n\r?\n/);
+
+  for (const block of blocks) {
+    const lines = block
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    const tsIndex = lines.findIndex((line) => line.includes('-->'));
+    if (tsIndex === -1) {
+      continue;
+    }
+
+    const timestamp = lines[tsIndex].split('-->')[0].trim().split('.')[0];
+    const body = lines.slice(tsIndex + 1).join(' ').trim();
+    if (!body) {
+      continue;
+    }
+
+    const match = body.match(/^([^:]{1,60}?):\s+(.*)$/);
+    if (match) {
+      cues.push({ timestamp, speaker: match[1].trim(), text: match[2].trim() });
+    } else {
+      cues.push({ timestamp, speaker: '', text: body });
+    }
+  }
+
+  return cues;
 }

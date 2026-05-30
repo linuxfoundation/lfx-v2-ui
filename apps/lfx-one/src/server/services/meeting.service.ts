@@ -23,6 +23,8 @@ import {
   PastMeetingParticipant,
   PastMeetingRecording,
   PastMeetingSummary,
+  PastMeetingTranscript,
+  PastMeetingTranscriptContent,
   PresignAttachmentRequest,
   PresignAttachmentResponse,
   QueryServiceCountResponse,
@@ -32,7 +34,7 @@ import {
   UpdateMeetingRequest,
   UpdatePastMeetingSummaryRequest,
 } from '@lfx-one/shared/interfaces';
-import { buildRecurrenceNeverEndDate, mapITXResponseToMeetingRsvp, transformV1SummaryToV2 } from '@lfx-one/shared/utils';
+import { buildRecurrenceNeverEndDate, getPastMeetingTranscriptUrl, mapITXResponseToMeetingRsvp, transformV1SummaryToV2 } from '@lfx-one/shared/utils';
 import { Request } from 'express';
 
 import { ResourceNotFoundError } from '../errors';
@@ -763,6 +765,90 @@ export class MeetingService {
       return resources[0].data;
     } catch (error) {
       logger.warning(req, 'get_past_meeting_recording', 'Failed to fetch past meeting recording, returning null', {
+        past_meeting_id: pastMeetingUid,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Fetches a past meeting transcript by past meeting UID.
+   *
+   * Transcripts are a separate query-service resource (v1_past_meeting_transcript)
+   * from recordings — they are NOT included in the recording's recording_files,
+   * so they must be fetched independently.
+   */
+  public async getPastMeetingTranscript(req: Request, pastMeetingUid: string): Promise<PastMeetingTranscript | null> {
+    logger.debug(req, 'get_past_meeting_transcript', 'Fetching past meeting transcript', {
+      past_meeting_id: pastMeetingUid,
+    });
+
+    try {
+      const params = {
+        type: 'v1_past_meeting_transcript',
+        tags: `meeting_and_occurrence_id:${pastMeetingUid}`,
+      };
+
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingTranscript>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        params
+      );
+
+      if (!resources || resources.length === 0) {
+        logger.warning(req, 'get_past_meeting_transcript', 'No transcript found for past meeting', {
+          past_meeting_id: pastMeetingUid,
+          type: params.type,
+        });
+        return null;
+      }
+
+      return resources[0].data;
+    } catch (error) {
+      logger.warning(req, 'get_past_meeting_transcript', 'Failed to fetch past meeting transcript, returning null', {
+        past_meeting_id: pastMeetingUid,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Fetches the viewable content (WebVTT) of a past meeting transcript so the UI
+   * can render it inline instead of triggering a download.
+   *
+   * The transcript file lives at a signed platform (Zoom) URL that serves the file
+   * as an attachment, so the browser cannot render it directly — the BFF fetches
+   * the bytes and returns the text.
+   */
+  public async getPastMeetingTranscriptContent(req: Request, pastMeetingUid: string): Promise<PastMeetingTranscriptContent | null> {
+    const transcript = await this.getPastMeetingTranscript(req, pastMeetingUid);
+    const url = getPastMeetingTranscriptUrl(transcript);
+
+    if (!url) {
+      logger.warning(req, 'get_past_meeting_transcript_content', 'No transcript file URL for past meeting', {
+        past_meeting_id: pastMeetingUid,
+      });
+      return null;
+    }
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        logger.warning(req, 'get_past_meeting_transcript_content', 'Transcript file fetch returned non-OK', {
+          past_meeting_id: pastMeetingUid,
+          http_status: response.status,
+        });
+        return null;
+      }
+
+      const content = await response.text();
+      return { content };
+    } catch (error) {
+      logger.warning(req, 'get_past_meeting_transcript_content', 'Failed to fetch transcript content, returning null', {
         past_meeting_id: pastMeetingUid,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
