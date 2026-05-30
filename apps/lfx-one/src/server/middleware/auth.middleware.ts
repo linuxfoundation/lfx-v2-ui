@@ -48,10 +48,13 @@ const DEFAULT_ROUTE_CONFIG: RouteAuthConfig[] = [
   // Invite error page — public so unauthenticated users see the error instead of being redirected to login
   { pattern: '/invite/error', type: 'ssr', auth: 'public' },
 
-  // Public-facing user documentation portal (LFXV2-2001) — `startsWith` matches both `/docs` and `/docs/...`.
-  // Must come BEFORE the catch-all `/` row so unauthenticated visitors and crawlers reach the SSR handler
-  // without being redirected to login. The Angular shell renders an auth-aware variant inside DocsLayoutComponent.
-  { pattern: '/docs', type: 'ssr', auth: 'public' },
+  // Public-facing user documentation portal (LFXV2-2001). The regex pattern bounds the match to
+  // `/docs` exactly or `/docs/<segment>` — a bare `'/docs'` string would `startsWith`-match
+  // `/docs-admin`, `/docsx`, etc. and silently fail-open if such a route is ever added. Must come
+  // BEFORE the catch-all `/` row so unauthenticated visitors and crawlers reach the SSR handler
+  // without being redirected to login. The Angular shell renders an auth-aware variant inside
+  // DocsLayoutComponent.
+  { pattern: /^\/docs(?:\/.*)?$/, type: 'ssr', auth: 'public' },
 
   // Sitemap and robots are public, served by dedicated handlers (sitemap by a route handler in server.ts,
   // robots from apps/lfx-one/public/robots.txt via the static-asset pipeline). The auth row is here as a

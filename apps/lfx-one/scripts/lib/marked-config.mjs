@@ -38,18 +38,22 @@ export function createMarked(ctx) {
       link(rawTokenOrHref, rawTitle, rawText) {
         // marked v17 passes `{ href, title, tokens, text }` as the first arg
         // (object form). We support both legacy and object forms so the
-        // helper works against any minor revision of marked v17.x.
+        // helper works against any minor revision of marked v17.x. The
+        // rendered visible content always comes from `parseInline(tokens)`
+        // — `tokens.text` is the **raw markdown** label (e.g.
+        // `"**Bold** label"`) and would emit literal asterisks if used as
+        // the rendered output.
         let href;
         let title;
-        let text;
+        let renderedText;
         if (typeof rawTokenOrHref === 'object' && rawTokenOrHref !== null) {
           href = rawTokenOrHref.href;
           title = rawTokenOrHref.title ?? null;
-          text = rawTokenOrHref.text ?? this.parser.parseInline(rawTokenOrHref.tokens ?? []);
+          renderedText = this.parser.parseInline(rawTokenOrHref.tokens ?? []);
         } else {
           href = rawTokenOrHref;
           title = rawTitle ?? null;
-          text = rawText ?? '';
+          renderedText = rawText ?? '';
         }
 
         const rewritten = rewriteHref(href ?? '', ctx);
@@ -61,25 +65,33 @@ export function createMarked(ctx) {
         // link out to a different host or protocol.
         const isExternal = isAbsoluteUrl(rewritten);
         const externalAttrs = isExternal ? ' target="_blank" rel="noopener noreferrer"' : '';
-        return `<a href="${escapeAttr(rewritten)}"${titleAttr}${externalAttrs}>${text}</a>`;
+        return `<a href="${escapeAttr(rewritten)}"${titleAttr}${externalAttrs}>${renderedText}</a>`;
       },
 
       heading(rawTokenOrText, rawDepth) {
-        // marked v17: heading receives `{ text, depth, tokens }`; older signatures
-        // pass (text, depth) positionally. Normalize to a uniform shape.
-        let text;
+        // marked v17: heading receives `{ text, depth, tokens }`; older
+        // signatures pass (text, depth) positionally. Normalize to a uniform
+        // shape, then derive two distinct strings: `plainText` for the
+        // slug id (and TOC capture) and `renderedText` for the emitted
+        // HTML. `tokens.text` is the **raw markdown** source for the
+        // heading (e.g. `"Configure the **API** key"`), so using it
+        // directly for output would render literal asterisks; the visible
+        // text must come from `parseInline(tokens)`.
+        let plainText;
+        let renderedText;
         let depth;
         if (typeof rawTokenOrText === 'object' && rawTokenOrText !== null) {
-          text = rawTokenOrText.text ?? this.parser.parseInline(rawTokenOrText.tokens ?? []);
+          plainText = stripHtml(String(rawTokenOrText.text ?? ''));
+          renderedText = this.parser.parseInline(rawTokenOrText.tokens ?? []);
           depth = rawTokenOrText.depth ?? rawDepth ?? 1;
         } else {
-          text = rawTokenOrText;
+          plainText = stripHtml(String(rawTokenOrText));
+          renderedText = String(rawTokenOrText);
           depth = rawDepth ?? 1;
         }
-        const plainText = stripHtml(String(text));
         const id = slugify(plainText);
         ctx.headings.push({ level: Number(depth), text: plainText, id });
-        return `<h${depth} id="${escapeAttr(id)}">${text}</h${depth}>`;
+        return `<h${depth} id="${escapeAttr(id)}">${renderedText}</h${depth}>`;
       },
 
       image(rawTokenOrHref, rawTitle, rawText) {

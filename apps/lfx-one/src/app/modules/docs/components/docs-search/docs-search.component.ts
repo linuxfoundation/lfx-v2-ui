@@ -46,17 +46,23 @@ export class DocsSearchComponent {
   protected readonly inputRef = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
   protected readonly query = new FormControl<string>('', { nonNullable: true });
-  protected readonly queryValue = toSignal(this.query.valueChanges, { initialValue: '' });
-  protected readonly trimmedQuery = computed(() => this.queryValue().trim());
 
   protected readonly hits = signal<DocsSearchHit[]>([]);
   protected readonly searching = signal(false);
   protected readonly activeIndex = signal(-1);
   protected readonly panelOpen = signal(false);
 
+  protected readonly listboxId = 'docs-search-listbox';
+  protected readonly listboxOptionPrefix = `${this.listboxId}-opt-`;
+
+  protected readonly queryValue = toSignal(this.query.valueChanges, { initialValue: '' });
+  protected readonly trimmedQuery = computed(() => this.queryValue().trim());
   protected readonly hasQuery = computed(() => this.trimmedQuery().length > 0);
   protected readonly hasResults = computed(() => this.hits().length > 0);
-  protected readonly listboxId = 'docs-search-listbox';
+  protected readonly activeOptionId = computed(() => {
+    const i = this.activeIndex();
+    return i >= 0 ? `${this.listboxOptionPrefix}${i}` : null;
+  });
 
   public constructor() {
     this.query.valueChanges
@@ -124,10 +130,6 @@ export class DocsSearchComponent {
     this.query.setValue('', { emitEvent: false });
     this.hits.set([]);
     void this.router.navigateByUrl(hit.url);
-  }
-
-  protected hitOptionId(index: number): string {
-    return `${this.listboxId}-opt-${index}`;
   }
 
   @HostListener('document:click', ['$event'])

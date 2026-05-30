@@ -15,7 +15,7 @@
       aria-autocomplete="list"
       [attr.aria-expanded]="panelOpen() && hasQuery() ? 'true' : 'false'"
       [attr.aria-controls]="listboxId"
-      [attr.aria-activedescendant]="activeIndex() >= 0 ? hitOptionId(activeIndex()) : null"
+      [attr.aria-activedescendant]="activeOptionId()"
       placeholder="Search documentation"
       class="w-full rounded-md border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
       [formControl]="query"
@@ -33,7 +33,7 @@
           @for (hit of hits(); track hit.id; let i = $index) {
             <li role="presentation">
               <a
-                [id]="hitOptionId(i)"
+                [id]="listboxOptionPrefix + i"
                 [routerLink]="hit.url"
                 role="option"
                 [attr.aria-selected]="i === activeIndex()"
