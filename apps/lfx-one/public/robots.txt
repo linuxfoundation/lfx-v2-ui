@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /docs
+Allow: /
+
+Disallow: /api
+Disallow: /admin
+Disallow: /login
+
+Sitemap: https://app.lfx.dev/sitemap.xml

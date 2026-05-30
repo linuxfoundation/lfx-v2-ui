@@ -3,20 +3,24 @@
 
 import { Routes } from '@angular/router';
 
+import { docsArticleResolver } from './resolvers/docs-article.resolver';
+
 /**
  * Child route table for the public-facing user documentation portal.
  *
- * Routes:
- *   - `''`  → `DocsLandingComponent`  (`/docs` synthetic landing, FR-002)
- *   - `'**'` → `DocsArticleComponent`  (any nested slug, e.g. `/docs/meetings/schedule-meeting`)
- *
- * The article component reads its slug from `ActivatedRoute.url`. If the
- * slug doesn't resolve to a manifest entry, the article component renders
- * an empty state — Phase 3 (T023) wires a route resolver that swaps in
- * `DocsNotFoundComponent` and returns HTTP 404 from SSR (FR-007).
+ * Routes (matched in order):
+ *   - `''`           → `DocsLandingComponent`     — synthetic `/docs` landing (FR-002).
+ *   - `'not-found'`  → `DocsNotFoundComponent`    — brand-styled 404 (FR-014, Edge Case 4);
+ *                                                   the SSR layer pairs this with status 404 in
+ *                                                   `app.routes.server.ts`.
+ *   - `'**'`         → `DocsArticleComponent`     — any nested slug; the resolver redirects
+ *                                                   miss-URLs to `/docs/not-found`.
  *
  * Lazy-loaded via `loadComponent` so the article + landing chunks stay out
  * of the main browser bundle until a `/docs/**` URL is activated.
+ *
+ * Wildcard ordering matters: keep `not-found` BEFORE the `**` catch-all so
+ * the static 404 page wins over the resolver-driven dynamic article match.
  */
 export const DOCS_ROUTES: Routes = [
   {
@@ -25,7 +29,12 @@ export const DOCS_ROUTES: Routes = [
     loadComponent: () => import('./pages/docs-landing/docs-landing.component').then((m) => m.DocsLandingComponent),
   },
   {
+    path: 'not-found',
+    loadComponent: () => import('./pages/docs-not-found/docs-not-found.component').then((m) => m.DocsNotFoundComponent),
+  },
+  {
     path: '**',
     loadComponent: () => import('./pages/docs-article/docs-article.component').then((m) => m.DocsArticleComponent),
+    resolve: { article: docsArticleResolver },
   },
 ];

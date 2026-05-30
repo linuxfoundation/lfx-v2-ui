@@ -1,28 +1,74 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, inject } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import { Component, inject, OnInit } from '@angular/core';
+import { Meta, Title } from '@angular/platform-browser';
+import type { DocsTopic } from '@lfx-one/shared/interfaces';
 
+import { DocsTopicCardComponent } from '../../components/docs-topic-card/docs-topic-card.component';
 import { DocsManifestService } from '../../services/docs-manifest.service';
 
+const DOCS_CANONICAL_ORIGIN = 'https://app.lfx.dev';
+const LANDING_TITLE = 'LFX Self Serve Documentation';
+const LANDING_DESCRIPTION = 'Browse user guides, FAQs, and how-tos for the LFX Self Serve product — meetings, committees, mailing lists, and more.';
+
 /**
- * Phase 2 stub. Phase 3 / US1 (T024) replaces the template with the
- * topic-tile landing page that satisfies FR-006/FR-008/FR-027 and SC-001.
+ * Public-facing landing page at `/docs`.
+ *
+ * Renders a topic-card grid sourced from `DocsManifestService.getTopics()` —
+ * one tile per top-level topic in `docs/user/`. Per task notes (T024), this
+ * page deliberately IGNORES any VitePress `layout: home` / `hero:` /
+ * `features:` block in `docs/user/index.md`; the canonical landing UX is the
+ * topic grid (research R8).
+ *
+ * Search wiring is deferred to Phase 5 / US3 (T039); the placeholder slot
+ * below documents the contract.
+ *
+ * SEO: title, description, OpenGraph and Twitter-card meta tags are wired in
+ * `ngOnInit` for discoverability (FR-013, FR-023). A `<link rel="canonical">`
+ * is appended to the document head pointing at the production origin so deep
+ * scans from staging or preview environments don't rank duplicate URLs.
  */
 @Component({
   selector: 'lfx-docs-landing',
   standalone: true,
-  template: `
-    <h1 class="text-2xl font-semibold">LFX Self Serve Documentation</h1>
-    <p class="mt-2 text-gray-600">
-      {{ topicsCount() }} topic{{ topicsCount() === 1 ? '' : 's' }} available. Full landing page lands in Phase 3.
-    </p>
-  `,
+  imports: [DocsTopicCardComponent],
+  templateUrl: './docs-landing.component.html',
 })
-export class DocsLandingComponent {
+export class DocsLandingComponent implements OnInit {
   private readonly docsManifest = inject(DocsManifestService);
+  private readonly title = inject(Title);
+  private readonly meta = inject(Meta);
+  private readonly document = inject(DOCUMENT);
 
-  protected topicsCount(): number {
-    return this.docsManifest.getTopics().length;
+  protected readonly topics: DocsTopic[] = this.docsManifest.getTopics();
+
+  public ngOnInit(): void {
+    this.applyMetadata();
+  }
+
+  private applyMetadata(): void {
+    const canonical = `${DOCS_CANONICAL_ORIGIN}/docs`;
+    this.title.setTitle(LANDING_TITLE);
+    this.meta.updateTag({ name: 'description', content: LANDING_DESCRIPTION });
+    this.meta.updateTag({ property: 'og:title', content: LANDING_TITLE });
+    this.meta.updateTag({ property: 'og:description', content: LANDING_DESCRIPTION });
+    this.meta.updateTag({ property: 'og:type', content: 'website' });
+    this.meta.updateTag({ property: 'og:url', content: canonical });
+    this.meta.updateTag({ name: 'twitter:card', content: 'summary' });
+    this.meta.updateTag({ name: 'twitter:title', content: LANDING_TITLE });
+    this.meta.updateTag({ name: 'twitter:description', content: LANDING_DESCRIPTION });
+    this.setCanonical(canonical);
+  }
+
+  private setCanonical(href: string): void {
+    let link = this.document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!link) {
+      link = this.document.createElement('link');
+      link.setAttribute('rel', 'canonical');
+      this.document.head.appendChild(link);
+    }
+    link.setAttribute('href', href);
   }
 }

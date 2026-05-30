@@ -1,0 +1,23 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<a
+  [routerLink]="url()"
+  class="group flex h-full flex-col gap-2 rounded-lg border border-gray-200 bg-white p-5 shadow-sm transition hover:border-primary hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+  [attr.aria-label]="'Browse ' + topic().name + ' documentation, ' + articleCountLabel()"
+  data-testid="docs-topic-card">
+  <div class="flex items-center gap-2">
+    @if (topic().icon) {
+      <i class="text-primary" [class]="topic().icon" aria-hidden="true"></i>
+    }
+    <h2 class="text-lg font-semibold text-gray-900 group-hover:text-primary">
+      {{ topic().name }}
+    </h2>
+  </div>
+  @if (topic().description) {
+    <p class="text-sm text-gray-600">{{ topic().description }}</p>
+  }
+  <span class="mt-auto pt-2 text-xs uppercase tracking-wide text-gray-500">
+    {{ articleCountLabel() }}
+  </span>
+</a>
