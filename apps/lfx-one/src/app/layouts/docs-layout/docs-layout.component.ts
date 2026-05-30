@@ -51,7 +51,9 @@ export class DocsLayoutComponent {
    * `/login?returnTo=<current url>` for the mobile sign-in button. Tracks
    * the active URL via `NavigationEnd` so a visitor on
    * `/docs/meetings/schedule-meeting` lands back there after sign-in,
-   * not on `/docs`.
+   * not on `/docs`. `router.events` is cold, so `startWith` seeds the
+   * synchronous initial value and `requireSync` lets us skip a redundant
+   * `initialValue` literal that would otherwise be dead code.
    */
   protected readonly signInHref = this.initSignInHref();
 
@@ -62,7 +64,7 @@ export class DocsLayoutComponent {
         map((event) => this.buildSignInHref(event.urlAfterRedirects)),
         startWith(this.buildSignInHref(this.router.url || '/docs'))
       ),
-      { initialValue: this.buildSignInHref(this.router.url || '/docs') }
+      { requireSync: true }
     );
   }
 

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import { DatePipe, DOCUMENT } from '@angular/common';
-import { Component, computed, effect, ElementRef, HostListener, inject } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { Component, computed, ElementRef, HostListener, inject } from '@angular/core';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type { DocsArticle } from '@lfx-one/shared/interfaces';
@@ -25,10 +25,13 @@ const DOCS_LINK_PREFIX = '/docs/';
  *
  * SEO wiring (T028): `Title`, `Meta` (description, OG, Twitter card), and a
  * `<link rel="canonical">` pointing at the configured production origin
- * (`https://app.lfx.dev`) — applied via an `effect` so the head tags
- * stay in sync with the resolved article on every navigation, including
- * client-side article→article transitions where Angular reuses this
- * component instance and `ngOnInit` does not re-fire (FR-013, FR-023).
+ * (`https://app.lfx.dev`) — driven off `toObservable(article)` with
+ * `takeUntilDestroyed()` so head tags stay in sync with every navigation,
+ * including client-side article→article transitions where Angular reuses
+ * this component instance and `ngOnInit` does not re-fire (FR-013,
+ * FR-023). `effect()` would do the same job but the frontend convention
+ * checklist reserves it for logging/debugging only — `toObservable` +
+ * RxJS pipes is the documented alternative for DOM side effects.
  * The canonical origin is intentionally hard-coded; any future
  * per-environment override would land as a runtime config value.
  *
@@ -67,11 +70,16 @@ export class DocsArticleComponent {
   });
 
   public constructor() {
-    // Drive SEO metadata off the article signal so head tags refresh on
-    // every navigation — `ngOnInit` only fires once for the reused
-    // component instance, leaving the title / OG / canonical pinned to
-    // the first article hit during in-SPA navigation otherwise.
-    effect(() => this.applyMetadata());
+    // SEO sync — re-applies head tags whenever `article()` changes. We
+    // deliberately use `toObservable` + `takeUntilDestroyed` rather than
+    // `effect()` because the frontend convention checklist reserves `effect()`
+    // for logging/debugging (`docs/reviews/frontend-checklist.md` §5). The
+    // constructor runs in the component's injection context so
+    // `takeUntilDestroyed()` auto-binds the component's `DestroyRef` and
+    // tears down the subscription on destroy without us retaining it.
+    toObservable(this.article)
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.applyMetadata());
   }
 
   @HostListener('click', ['$event'])
