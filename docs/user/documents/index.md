@@ -9,8 +9,6 @@ last_updated: 2026-05-23
 intercom_collection: Documents
 ---
 
-# Documents
-
 This page applies to users with **maintainer**, **board-member**, or **executive-director** personas.
 
 The Documents section lets you browse and manage documents associated with your Linux Foundation projects. Documents typically include governance materials, meeting notes, policy files, and other project-related content.

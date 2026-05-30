@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Committees
 ---
 
-# Create a Committee
-
 This article applies to users with **maintainer**, **board-member**, or **executive-director** roles. You can create new committees for your project directly from the LFX Self Serve portal.
 
 ## Before you begin

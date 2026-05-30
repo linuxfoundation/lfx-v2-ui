@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Events
 ---
 
-# Events FAQ
-
 ## What is the difference between Events and Meetings?
 
 **Events** are Linux Foundation public conferences, summits, and community gatherings. **Meetings** are internal project meetings such as Technical Steering Committee (TSC) calls and working group sessions. Use the **Events** section for public LFX events and the **Meetings** section for project-scoped calls.

@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Profile
 ---
 
-# Edit Your Profile
-
 Use the Profile section to keep your account information current. Your profile is visible to other community members and is used in communications from the Linux Foundation.
 
 ## Profile tabs

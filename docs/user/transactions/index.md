@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Transactions
 ---
 
-# My Transactions
-
 The My Transactions section shows your Linux Foundation purchase history. Recent purchases may take up to 48 hours to appear. This includes payments for training courses, certifications, event registrations, and other LFX purchases.
 
 ## What you can do

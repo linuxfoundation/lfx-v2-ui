@@ -9,8 +9,6 @@ last_updated: 2026-05-23
 intercom_collection: Surveys
 ---
 
-# Surveys
-
 Creating and managing surveys requires a **maintainer**, **board-member**, or **executive-director** persona. Contributors can respond to surveys they receive but cannot create them.
 
 The Surveys section lets you create surveys for your project community, collect responses, and analyze feedback including Net Promoter Score (NPS) data. Surveys are a tool for gathering structured input from contributors, maintainers, and stakeholders.

@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Trainings
 ---
 
-# Manage Trainings
-
 Use the Trainings section to view your Linux Foundation training enrollments and track your progress.
 
 ## View your training enrollments

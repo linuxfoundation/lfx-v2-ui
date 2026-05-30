@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Badges
 ---
 
-# Badges
-
 The Badges section shows all the LFX credentialing badges you have earned through your participation in Linux Foundation projects and programs. Badges are digital credentials that recognize your contributions, certifications, and involvement across the LFX platform.
 
 ## What you can do

@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Trainings
 ---
 
-# Training & Certifications
-
 The Training & Certifications section shows your Linux Foundation training enrollments and certifications. Training programs are offered through the Linux Foundation's learning platform and help you develop skills recognized by the open source community.
 
 ## What you can do

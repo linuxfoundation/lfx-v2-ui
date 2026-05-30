@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Dashboards
 ---
 
-# Dashboard FAQ
-
 ## Why don't I see all four lenses?
 
 The lenses available to you depend on your persona. Contributors and maintainers see the **Me** and **Project** lenses. Board members and executive directors additionally see the **Foundation** lens. Executive directors also have access to the **Org** lens. If you believe you should have access to a lens that is not visible, contact your foundation or project administrator.

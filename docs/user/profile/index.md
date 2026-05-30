@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Profile
 ---
 
-# Profile
-
 The Profile section is where you manage your personal account information on LFX Self Serve. Your profile controls how you appear to other community members and how you receive communications from the Linux Foundation.
 
 ## What you can do

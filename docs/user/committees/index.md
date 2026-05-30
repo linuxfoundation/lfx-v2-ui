@@ -9,8 +9,6 @@ last_updated: 2026-05-23
 intercom_collection: Committees
 ---
 
-# My Groups
-
 This page applies to users with **maintainer**, **board-member**, or **executive-director** personas. Contributors can view committee information but cannot create or manage committees.
 
 In LFX Self Serve, committees are displayed as **Groups**. Navigate to **My Groups** at `/groups` to see your committee memberships. Committees are formal groups that govern project decisions, including Technical Steering Committees (TSCs), boards, and other working groups.

@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Meetings
 ---
 
-# Meetings FAQ
-
 ## Who can create meetings?
 
 Users with **maintainer**, **board-member**, or **executive-director** personas can create and manage meetings. Contributors can view meeting details but cannot create or edit meetings.

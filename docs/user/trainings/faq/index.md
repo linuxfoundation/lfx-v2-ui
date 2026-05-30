@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Trainings
 ---
 
-# Trainings FAQ
-
 ## How do I enroll in a training course?
 
 Enrollment is handled on the Linux Foundation training platform ([training.linuxfoundation.org](https://training.linuxfoundation.org)). LFX Self Serve shows your enrolled courses in read-only view. Go to the **Useful links** tab on the Training & Certifications page and select **LF Training Portal** to access the training catalog.

@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Votes
 ---
 
-# Create a Vote
-
 This article applies to users with **maintainer**, **board-member**, or **executive-director** personas. Use this guide to create a new poll for your project's governance decisions.
 
 ## Before you begin

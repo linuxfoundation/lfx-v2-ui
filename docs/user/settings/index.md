@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Settings
 ---
 
-# Account Settings
-
 The Settings section lets you manage your account preferences within LFX Self Serve. Settings are separate from your profile information and cover email addresses, password and two-factor authentication, and developer API token settings.
 
 ## What you can do

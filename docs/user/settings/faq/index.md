@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Settings
 ---
 
-# Settings FAQ
-
 ## What is the difference between Settings and Profile?
 
 **Settings** (`/settings`) manages your account security and access credentials — email addresses, password, two-factor authentication, and your developer API token. **Profile** (`/profile`) manages your personal information — such as your name, work history, affiliations, and connected identities. Both are accessible from the left navigation.

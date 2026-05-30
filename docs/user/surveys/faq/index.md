@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Surveys
 ---
 
-# Surveys FAQ
-
 ## Who can create a survey?
 
 Users with **maintainer**, **board-member**, or **executive-director** personas can create surveys. Contributors can respond to surveys they receive.

@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Transactions
 ---
 
-# Transactions FAQ
-
 ## What purchases appear in my transaction history?
 
 Your transaction history includes all purchases made through the LFX platform under your account, such as training course enrollments, certification exams, and event registrations.

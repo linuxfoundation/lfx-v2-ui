@@ -9,8 +9,6 @@ last_updated: 2026-05-23
 intercom_collection: Mailing Lists
 ---
 
-# Mailing Lists
-
 The Mailing Lists section lets you view and manage email mailing lists associated with your Linux Foundation projects. Mailing lists are the primary communication channel for many open source project communities.
 
 ## What you can do

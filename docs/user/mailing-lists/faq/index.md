@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Mailing Lists
 ---
 
-# Mailing Lists FAQ
-
 ## Who can subscribe to a mailing list?
 
 All authenticated LFX users can subscribe to project mailing lists. Some lists may be restricted to project members or have moderation enabled.

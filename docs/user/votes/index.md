@@ -9,8 +9,6 @@ last_updated: 2026-05-23
 intercom_collection: Votes
 ---
 
-# Votes
-
 All authenticated users can view polls and cast votes on polls they are eligible for. Creating and managing polls requires a **maintainer**, **board-member**, or **executive-director** persona.
 
 The Votes section lets you create and manage polls for formal project governance decisions. Votes are used for committee elections, policy approvals, and other decisions that require a recorded community response.

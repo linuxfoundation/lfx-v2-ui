@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Votes
 ---
 
-# Manage Votes
-
 This article applies to users with **maintainer**, **board-member**, or **executive-director** personas. Use this guide to view, update, and manage polls in your project.
 
 ## View polls

@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Committees
 ---
 
-# Manage Committees
-
 This article applies to users with **maintainer**, **board-member**, or **executive-director** roles. Use the Committees section to view committee membership, update details, and manage your project's governance groups.
 
 ## View all committees

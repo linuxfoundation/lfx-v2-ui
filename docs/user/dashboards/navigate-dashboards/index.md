@@ -9,8 +9,6 @@ last_updated: 2026-05-22
 intercom_collection: Dashboards
 ---
 
-# Navigate Your Dashboard
-
 The LFX Self Serve dashboard adapts based on your persona and the lens you have selected. This article explains how to switch lenses, what each view contains, and how to use the project context switcher.
 
 ## Switch lenses
