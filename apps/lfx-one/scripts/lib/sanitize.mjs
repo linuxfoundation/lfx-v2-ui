@@ -96,8 +96,5 @@ export function sanitizeDocsHtml(html) {
         };
       },
     },
-    // Disable the URL-rewriter's default lower-casing — heading anchors are
-    // already lowercase and we don't want href fragments mangled.
-    enforceHtmlBoundary: true,
   });
 }

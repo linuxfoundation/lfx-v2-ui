@@ -36,11 +36,18 @@ const DOCS_LINK_PREFIX = '/docs/';
  * per-environment override would land as a runtime config value.
  *
  * Click interceptor (T028 / research R16): a host-level click listener
- * catches anchor activations whose `href` begins with `/docs/` and routes
- * them via `Router.navigateByUrl()` so internal cross-links navigate inside
- * the SPA without a full reload. External links and in-page anchors
- * (`#section`) fall through to the browser default. Modifier-key clicks
- * (cmd/ctrl/shift/alt) also fall through so "open in new tab" still works.
+ * catches anchor activations inside the sanitized `[innerHTML]` body
+ * (`data-testid="docs-article-body"`) whose `href` begins with `/docs/`
+ * and routes them via `Router.navigateByUrl()` so cross-links rewritten
+ * by `marked-config.mjs` navigate inside the SPA without a full reload.
+ * The interceptor is *scoped to the body container* on purpose —
+ * framework-rendered anchors (breadcrumb / siblings via `[routerLink]`,
+ * search results via `DocsSearchComponent.activate()`) already navigate
+ * via Angular's router, so intercepting them at the host level would
+ * cause a redundant double `navigateByUrl` to the same URL. External
+ * links and in-page anchors (`#section`) fall through to the browser
+ * default. Modifier-key clicks (cmd/ctrl/shift/alt) also fall through so
+ * "open in new tab" still works.
  */
 @Component({
   selector: 'lfx-docs-article',
@@ -58,9 +65,7 @@ export class DocsArticleComponent {
   private readonly host = inject(ElementRef<HTMLElement>);
 
   /** Article resolved by `docsArticleResolver` — guaranteed non-null on a successful navigation. */
-  protected readonly article = toSignal<DocsArticle | undefined>(this.route.data.pipe(map((d): DocsArticle | undefined => d['article'])), {
-    initialValue: undefined,
-  });
+  protected readonly article = this.initArticle();
 
   /** Sibling articles in the same topic, denormalized for cheap renders. */
   protected readonly siblings = computed(() => {
@@ -86,6 +91,12 @@ export class DocsArticleComponent {
   protected handleAnchorClick(event: MouseEvent): void {
     const anchor = this.findAnchor(event.target);
     if (!anchor) return;
+
+    // Only intercept clicks inside the sanitized markdown body. Framework
+    // anchors (breadcrumb/siblings via [routerLink], search results via
+    // DocsSearchComponent.activate()) handle their own SPA navigation and
+    // would otherwise get a redundant second `navigateByUrl` call here.
+    if (!this.isInsideArticleBody(anchor)) return;
 
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
       return;
@@ -113,6 +124,17 @@ export class DocsArticleComponent {
       node = node.parentNode;
     }
     return null;
+  }
+
+  /**
+   * True when `anchor` is a descendant of the `[innerHTML]` body container
+   * (`data-testid="docs-article-body"`). Looked up live on each click rather
+   * than cached because `[innerHTML]` re-renders on every navigation, which
+   * would invalidate any held reference.
+   */
+  private isInsideArticleBody(anchor: HTMLAnchorElement): boolean {
+    const body = this.host.nativeElement.querySelector('[data-testid="docs-article-body"]');
+    return body instanceof HTMLElement ? body.contains(anchor) : false;
   }
 
   private applyMetadata(): void {
@@ -144,5 +166,9 @@ export class DocsArticleComponent {
       this.document.head.appendChild(link);
     }
     link.setAttribute('href', href);
+  }
+
+  private initArticle() {
+    return toSignal<DocsArticle | undefined>(this.route.data.pipe(map((d): DocsArticle | undefined => d['article'])), { initialValue: undefined });
   }
 }

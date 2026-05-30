@@ -4,27 +4,9 @@
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, PLATFORM_ID } from '@angular/core';
-import type { DocsSearchEntry, DocsSearchIndexFile } from '@lfx-one/shared/interfaces';
+import type { DocsSearchEntry, DocsSearchHit, DocsSearchIndexFile } from '@lfx-one/shared/interfaces';
 import MiniSearch from 'minisearch';
 import { firstValueFrom } from 'rxjs';
-
-/**
- * Aggregated search hit — one row in the result list.
- */
-export interface DocsSearchHit {
-  /** Article slug — also the MiniSearch document id. */
-  id: string;
-  /** Article URL. */
-  url: string;
-  /** Article title. */
-  title: string;
-  /** Topic slug. */
-  topic: string;
-  /** Plain-text snippet around the matched terms. */
-  snippet: string;
-  /** Search-engine relevance score (`MiniSearch.search()` output). */
-  score: number;
-}
 
 const SEARCH_INDEX_URL = '/assets/docs/search-index.json';
 const SNIPPET_LENGTH = 220;

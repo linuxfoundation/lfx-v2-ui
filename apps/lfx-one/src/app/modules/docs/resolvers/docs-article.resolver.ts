@@ -27,7 +27,7 @@ import { DocsManifestService } from '../services/docs-manifest.service';
  * doubled slashes all resolve to the same canonical slug. The manifest is
  * generated lower-case so we lower-case the request side once here.
  */
-export const docsArticleResolver: ResolveFn<DocsArticle> = (route) => {
+export const docsArticleResolver: ResolveFn<DocsArticle | RedirectCommand> = (route) => {
   const router = inject(Router);
   const manifest = inject(DocsManifestService);
 
@@ -42,7 +42,7 @@ export const docsArticleResolver: ResolveFn<DocsArticle> = (route) => {
   // `UrlTree` would be stored as `data['article']` and rendered as if it
   // were the article (see `apps/lfx-one/node_modules/@angular/router`
   // resolveNode → instanceof RedirectCommand check).
-  return new RedirectCommand(router.parseUrl('/docs/not-found')) as never;
+  return new RedirectCommand(router.parseUrl('/docs/not-found'));
 };
 
 function normalizeSlug(segments: UrlSegment[]): string {

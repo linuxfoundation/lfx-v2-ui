@@ -332,6 +332,10 @@ function computeSiblings(article, articles) {
   const peers = [];
   for (const a of articles.values()) {
     if (a.slug === '' || a.slug === article.slug) continue;
+    // Exclude the topic landing from leaf-article sibling lists — the
+    // breadcrumb already surfaces it, and "More in this topic" should
+    // surface peer how-to articles, not the parent overview page.
+    if (a.isTopicLanding && !article.isTopicLanding) continue;
     if (a.topic === article.topic) peers.push(a);
   }
   peers.sort(sortByDisplayOrderThenAlpha);

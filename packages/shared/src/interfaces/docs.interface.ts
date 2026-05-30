@@ -241,6 +241,26 @@ export interface DocsSearchEntry {
 }
 
 /**
+ * One row in a search-results panel — the runtime view of a `DocsSearchEntry`
+ * after `MiniSearch.search()` has scored it and the runtime has computed a
+ * snippet around the matched terms.
+ */
+export interface DocsSearchHit {
+  /** Article slug — also the MiniSearch document id. */
+  id: string;
+  /** Article URL. */
+  url: string;
+  /** Article title. */
+  title: string;
+  /** Topic slug. */
+  topic: string;
+  /** Plain-text snippet around the matched terms. */
+  snippet: string;
+  /** Search-engine relevance score (`MiniSearch.search()` output). */
+  score: number;
+}
+
+/**
  * Serialized search-index payload shipped at `/assets/search-index.json`.
  * The `miniSearch` field is the result of `MiniSearch.toJSON()`; the runtime
  * service calls `MiniSearch.loadJSON()` to revive it.

@@ -36,30 +36,38 @@ export class DocsSidebarNavComponent {
   private readonly router = inject(Router);
 
   /** Active when the route lives under `/docs/*` — matches the lens-switcher behaviour. */
-  protected readonly isDocsActive = toSignal(
-    this.router.events.pipe(
-      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
-      map((event) => event.urlAfterRedirects.startsWith('/docs')),
-      startWith(this.router.url.startsWith('/docs'))
-    ),
-    { initialValue: this.router.url.startsWith('/docs') }
-  );
+  protected readonly isDocsActive = this.initIsDocsActive();
 
   /**
    * Encoded returnTo query parameter for the sign-in CTA. Falls back to
    * `/docs` so the destination is always meaningful even before the first
    * NavigationEnd fires.
    */
-  protected readonly signInUrl = toSignal(
-    this.router.events.pipe(
-      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
-      map(() => this.buildLoginHref()),
-      startWith(this.buildLoginHref())
-    ),
-    { initialValue: this.buildLoginHref() }
-  );
+  protected readonly signInUrl = this.initSignInUrl();
 
   protected readonly whatsNewHref = computed(() => this.signInUrl());
+
+  private initIsDocsActive() {
+    return toSignal(
+      this.router.events.pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        map((event) => event.urlAfterRedirects.startsWith('/docs')),
+        startWith(this.router.url.startsWith('/docs'))
+      ),
+      { requireSync: true }
+    );
+  }
+
+  private initSignInUrl() {
+    return toSignal(
+      this.router.events.pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        map(() => this.buildLoginHref()),
+        startWith(this.buildLoginHref())
+      ),
+      { requireSync: true }
+    );
+  }
 
   private buildLoginHref(): string {
     // SSR: router.url is the request path; in the browser it's the live URL

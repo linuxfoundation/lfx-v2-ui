@@ -55,14 +55,7 @@ export class LensSwitcherComponent {
    * seeds the initial value from `router.url` so SSR and the first render
    * agree.
    */
-  protected readonly isDocsActive = toSignal(
-    this.router.events.pipe(
-      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
-      map((event) => event.urlAfterRedirects.startsWith('/docs')),
-      startWith(this.router.url.startsWith('/docs'))
-    ),
-    { initialValue: this.router.url.startsWith('/docs') }
-  );
+  protected readonly isDocsActive = this.initIsDocsActive();
 
   protected readonly userInitials = this.userService.userInitials;
   protected readonly canImpersonate = this.userService.canImpersonate;
@@ -113,5 +106,16 @@ export class LensSwitcherComponent {
 
   protected openChangelogDrawer(): void {
     this.changelogDrawerVisible.set(true);
+  }
+
+  private initIsDocsActive() {
+    return toSignal(
+      this.router.events.pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        map((event) => event.urlAfterRedirects.startsWith('/docs')),
+        startWith(this.router.url.startsWith('/docs'))
+      ),
+      { requireSync: true }
+    );
   }
 }

@@ -7,7 +7,9 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
 
-import { DocsSearchHit, DocsSearchService } from '../../services/docs-search.service';
+import type { DocsSearchHit } from '@lfx-one/shared/interfaces';
+
+import { DocsSearchService } from '../../services/docs-search.service';
 
 /**
  * Reactive search box + result panel for the docs portal.

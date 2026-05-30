@@ -20,6 +20,16 @@ import { logger } from '../services/logger.service';
  * sitemap. Cache miss (file absent) is treated as 404 rather than 500 — it
  * means the docs build hasn't run yet, which is recoverable by an operator
  * without the page returning a scary error to a crawler.
+ *
+ * Architectural deviation from the controller-service-route triad
+ * (`docs/reviews/backend-checklist.md` §1): this file intentionally
+ * collapses the three layers because there is no business logic and no
+ * external service to abstract — it reads a static build artifact and
+ * emits it verbatim. Splitting into a `SitemapService.getSitemap()`,
+ * `SitemapController.serve()`, and a route registration would add three
+ * files of indirection over a single `readFileSync` call. If this ever
+ * grows real logic (per-request generation, dynamic URLs, env-aware
+ * canonical hosts, etc.), it should be split out at that point.
  */
 const SITEMAP_FILE = resolveSitemapPath();
 const sitemapBuffer = readSitemapAtStartup(SITEMAP_FILE);
