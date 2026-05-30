@@ -1,0 +1,17 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<!--
+  Phase 2 skeleton — minimal single-column shell.
+  US2 (T037/T038) replaces this with the auth-aware split: full app chrome
+  (lens switcher + sidebar) for signed-in users vs. dedicated public docs
+  sidebar for unauthenticated visitors. The auth signal is already exposed
+  on the component so the swap is a template-only change.
+-->
+<div class="flex min-h-screen flex-col bg-white">
+  <main class="flex flex-1 flex-col" data-testid="docs-content">
+    <div class="flex-grow px-5 md:px-8 py-6">
+      <router-outlet />
+    </div>
+  </main>
+</div>
