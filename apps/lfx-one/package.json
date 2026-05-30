@@ -26,7 +26,8 @@
     "docs:validate": "node scripts/validate-manifest.mjs",
     "docs:check-coverage": "node scripts/check-coverage.mjs",
     "docs:check-sitemap": "node scripts/check-sitemap.mjs",
-    "docs:check": "yarn docs:build && yarn docs:validate && yarn docs:check-coverage && yarn docs:check-sitemap"
+    "docs:check-idempotence": "node scripts/check-idempotence.mjs",
+    "docs:check": "yarn docs:build && yarn docs:validate && yarn docs:check-coverage && yarn docs:check-sitemap && yarn docs:check-idempotence"
   },
   "private": true,
   "dependencies": {
@@ -93,6 +94,8 @@
     "@types/node": "^18.18.0",
     "@types/pdfkit": "^0.13.9",
     "@types/sanitize-html": "^2.16.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "angular-eslint": "21.0.1",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.39.1",
