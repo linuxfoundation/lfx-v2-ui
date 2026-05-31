@@ -18,7 +18,8 @@ import { ProjectService } from '../services/project.service';
  *
  * Slug resolution: prefers the `?project=` query param (authoritative for the navigation
  * target, works before the lens has synced) then falls back to the active context's slug.
- * Redirects to /foundation/overview on denial or unrecoverable error.
+ * Redirects to /foundation/overview?project=<slug> on denial so the correct project
+ * context is preserved in the destination URL.
  */
 export const writerGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const personaService = inject(PersonaService);
@@ -35,11 +36,13 @@ export const writerGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
     return router.parseUrl('/foundation/overview');
   }
 
+  const deniedUrl = router.parseUrl(`/foundation/overview?project=${slug}`);
+
   return projectService.getProject(slug, false).pipe(
-    map((project) => (project?.writer === true ? true : router.parseUrl('/foundation/overview'))),
+    map((project) => (project?.writer === true ? true : deniedUrl)),
     catchError((err) => {
       console.error('writerGuard: writer-permission lookup failed', { slug, error: err });
-      return of(router.parseUrl('/foundation/overview'));
+      return of(deniedUrl);
     })
   );
 };
