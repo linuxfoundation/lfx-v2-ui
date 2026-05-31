@@ -138,7 +138,7 @@ test.describe('Membership Key Contacts — pessimistic writes (US2)', () => {
   test('add reflects only after the backend confirms, then shows success toast', async ({ page }) => {
     await mockDetail(page, { foundation: foundationHeader(), keyContacts: nineRows() });
     await mockEmployees(page, []);
-    await page.route(/\/lens\/memberships\/[^/]+\/key-contacts$/, async (route) => {
+    await page.route(/\/api\/orgs\/[^/]+\/lens\/memberships\/[^/]+\/key-contacts$/, async (route) => {
       if (route.request().method() !== 'POST') return route.fallback();
       const contact = {
         contactType: 'technical',
@@ -168,7 +168,7 @@ test.describe('Membership Key Contacts — pessimistic writes (US2)', () => {
   test('capacity conflict keeps the modal open with an inline error and no false save', async ({ page }) => {
     await mockDetail(page, { foundation: foundationHeader(), keyContacts: nineRows() });
     await mockEmployees(page, []);
-    await page.route(/\/lens\/memberships\/[^/]+\/key-contacts$/, async (route) => {
+    await page.route(/\/api\/orgs\/[^/]+\/lens\/memberships\/[^/]+\/key-contacts$/, async (route) => {
       if (route.request().method() !== 'POST') return route.fallback();
       await route.fulfill({
         status: 409,
@@ -188,6 +188,34 @@ test.describe('Membership Key Contacts — pessimistic writes (US2)', () => {
     const saveError = page.getByTestId('edit-key-contact-save-error');
     await expect(saveError).toBeVisible({ timeout: 10_000 });
     await expect(saveError).toContainText('Capacity limit reached for this role.');
+    await expect(page.getByTestId('edit-key-contact-modal')).toBeVisible();
+    await expect(page.getByTestId('membership-detail-key-contacts-empty-technical')).toBeVisible();
+  });
+
+  test('5xx server error keeps the modal open with a retryable fallback error', async ({ page }) => {
+    await mockDetail(page, { foundation: foundationHeader(), keyContacts: nineRows() });
+    await mockEmployees(page, []);
+    // The BFF collapses upstream 5xx to a 502 + generic fallback (no raw noise leaks).
+    await page.route(/\/api\/orgs\/[^/]+\/lens\/memberships\/[^/]+\/key-contacts$/, async (route) => {
+      if (route.request().method() !== 'POST') return route.fallback();
+      await route.fulfill({
+        status: 502,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: { code: 'KEY_CONTACT_WRITE_FAILED', message: "Couldn't save right now. Please try again.", conflict: false } }),
+      });
+    });
+
+    await page.goto(detailUrl(), { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('membership-detail-key-contacts-edit-technical').click();
+    await page.getByTestId('edit-key-contact-email-input').fill('boom.5xx@example.com');
+    await page.getByTestId('edit-key-contact-first-name-input').fill('Boom');
+    await page.getByTestId('edit-key-contact-last-name-input').fill('Server');
+    await page.getByTestId('edit-key-contact-primary-button').click();
+
+    // Modal stays open with the generic fallback so the user can retry without reopening.
+    const saveError = page.getByTestId('edit-key-contact-save-error');
+    await expect(saveError).toBeVisible({ timeout: 10_000 });
+    await expect(saveError).toContainText("Couldn't save right now. Please try again.");
     await expect(page.getByTestId('edit-key-contact-modal')).toBeVisible();
     await expect(page.getByTestId('membership-detail-key-contacts-empty-technical')).toBeVisible();
   });

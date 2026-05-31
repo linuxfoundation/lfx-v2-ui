@@ -65,6 +65,13 @@ export function mapKeyContactUpstreamError(error: unknown): KeyContactErrorResul
         message: cleanMessage(rawMessage, 'The request was invalid. Check the contact details and try again.'),
         conflict: false,
       };
+    // Explicit upstream 5xx range: never echo the raw upstream message — collapse
+    // to the generic fallback so server-internal noise can't leak to the client.
+    case 500:
+    case 502:
+    case 503:
+    case 504:
+      return { status: 502, message: KeyContactErrorMapping.fallbackMessage, conflict: false };
     default:
       return { status: 502, message: KeyContactErrorMapping.fallbackMessage, conflict: false };
   }
