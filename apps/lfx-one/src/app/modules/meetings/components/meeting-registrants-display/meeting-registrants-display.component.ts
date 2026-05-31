@@ -93,8 +93,8 @@ export class MeetingRegistrantsDisplayComponent {
   public readonly filteredRegistrants = this.initFilteredRegistrants();
 
   // Committee (board) and direct registrant sections for the two-section layout
-  public readonly committeeFilteredRegistrants: Signal<MeetingRegistrant[]> = this.initCommitteeFilteredRegistrants();
-  public readonly directFilteredRegistrants: Signal<MeetingRegistrant[]> = this.initDirectFilteredRegistrants();
+  public readonly committeeFilteredRegistrants = computed(() => this.filteredRegistrants().filter((r) => r.type === 'committee'));
+  public readonly directFilteredRegistrants = computed(() => this.filteredRegistrants().filter((r) => r.type !== 'committee'));
 
   // Filtered past meeting participants based on search
   public readonly filteredPastParticipants = this.initFilteredPastParticipants();
@@ -356,14 +356,6 @@ export class MeetingRegistrantsDisplayComponent {
         return matchesSearch && matchesRsvp && matchesGroup;
       });
     });
-  }
-
-  private initCommitteeFilteredRegistrants(): Signal<MeetingRegistrant[]> {
-    return computed(() => this.filteredRegistrants().filter((r) => r.type === 'committee'));
-  }
-
-  private initDirectFilteredRegistrants(): Signal<MeetingRegistrant[]> {
-    return computed(() => this.filteredRegistrants().filter((r) => r.type !== 'committee'));
   }
 
   private initFilteredPastParticipants() {
