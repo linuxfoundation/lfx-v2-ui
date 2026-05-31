@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, signal } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
@@ -14,7 +14,7 @@ import { ProjectContextService } from '@services/project-context.service';
 import { MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { StepperModule } from 'primeng/stepper';
-import { BehaviorSubject, catchError, concat, filter, finalize, forkJoin, Observable, of, switchMap, take, toArray } from 'rxjs';
+import { BehaviorSubject, catchError, concat, filter, finalize, forkJoin, Observable, of, skip, switchMap, take, toArray } from 'rxjs';
 import { getHttpErrorDetail } from '@shared/utils/http-error.utils';
 
 import { CommitteeBasicInfoComponent } from '../components/committee-basic-info/committee-basic-info.component';
@@ -44,6 +44,7 @@ export class CommitteeManageComponent {
   private readonly committeeService = inject(CommitteeService);
   private readonly messageService = inject(MessageService);
   private readonly projectContextService = inject(ProjectContextService);
+  private readonly destroyRef = inject(DestroyRef);
   // Mode and state signals
   public mode = signal<'create' | 'edit'>('create');
   public committeeId = signal<string | null>(null);
@@ -89,6 +90,14 @@ export class CommitteeManageComponent {
   public readonly committeeLabelPlural = COMMITTEE_LABEL.plural;
 
   public constructor() {
+    toObservable(this.projectContextService.canWrite)
+      .pipe(
+        skip(1),
+        filter((canWrite) => !canWrite),
+        take(1),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => this.router.navigateByUrl('/foundation/overview'));
     // Initialize step based on mode
     this.currentStep = toSignal(
       this.route.queryParamMap.pipe(

@@ -1,8 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, Signal, signal } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { Component, computed, DestroyRef, inject, Signal, signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
@@ -17,7 +17,7 @@ import { ProjectContextService } from '@services/project-context.service';
 import { ProjectService } from '@services/project.service';
 import { MessageService } from 'primeng/api';
 import { StepperModule } from 'primeng/stepper';
-import { catchError, filter, Observable, of, switchMap, tap, throwError } from 'rxjs';
+import { catchError, filter, Observable, of, skip, switchMap, take, tap, throwError } from 'rxjs';
 
 import { MailingListBasicInfoComponent } from '../components/mailing-list-basic-info/mailing-list-basic-info.component';
 import { MailingListSettingsComponent } from '../components/mailing-list-settings/mailing-list-settings.component';
@@ -44,6 +44,7 @@ export class MailingListManageComponent {
   private readonly messageService = inject(MessageService);
   private readonly projectContextService = inject(ProjectContextService);
   private readonly projectService = inject(ProjectService);
+  private readonly destroyRef = inject(DestroyRef);
 
   // Protected constants
   public readonly totalSteps = MAILING_LIST_TOTAL_STEPS;
@@ -76,6 +77,17 @@ export class MailingListManageComponent {
   public readonly isLastStep: Signal<boolean> = this.initIsLastStep();
   public readonly initialPublicValue: Signal<boolean | null> = this.initInitialPublicValue();
   public currentStep: Signal<number> = this.initCurrentStep();
+
+  public constructor() {
+    toObservable(this.projectContextService.canWrite)
+      .pipe(
+        skip(1),
+        filter((canWrite) => !canWrite),
+        take(1),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => this.router.navigateByUrl('/foundation/overview'));
+  }
 
   public nextStep(): void {
     const next = this.currentStep() + 1;
