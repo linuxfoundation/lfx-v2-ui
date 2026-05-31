@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { NgClass } from '@angular/common';
+import { NgClass, NgTemplateOutlet } from '@angular/common';
 import { Component, computed, DestroyRef, effect, inject, input, InputSignal, output, OutputEmitterRef, Signal, signal, WritableSignal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
@@ -19,7 +19,7 @@ import { RegistrantFormComponent } from '../registrant-form/registrant-form.comp
 
 @Component({
   selector: 'lfx-meeting-registrants-display',
-  imports: [AvatarComponent, ButtonComponent, TooltipModule, ReactiveFormsModule, RegistrantFormComponent, SelectComponent, NgClass],
+  imports: [AvatarComponent, ButtonComponent, TooltipModule, ReactiveFormsModule, RegistrantFormComponent, SelectComponent, NgClass, NgTemplateOutlet],
   templateUrl: './meeting-registrants-display.component.html',
 })
 export class MeetingRegistrantsDisplayComponent {
@@ -91,6 +91,10 @@ export class MeetingRegistrantsDisplayComponent {
 
   // Filtered registrants based on search and filters
   public readonly filteredRegistrants = this.initFilteredRegistrants();
+
+  // Committee (board) and direct registrant sections for the two-section layout
+  public readonly committeeFilteredRegistrants: Signal<MeetingRegistrant[]> = this.initCommitteeFilteredRegistrants();
+  public readonly directFilteredRegistrants: Signal<MeetingRegistrant[]> = this.initDirectFilteredRegistrants();
 
   // Filtered past meeting participants based on search
   public readonly filteredPastParticipants = this.initFilteredPastParticipants();
@@ -352,6 +356,14 @@ export class MeetingRegistrantsDisplayComponent {
         return matchesSearch && matchesRsvp && matchesGroup;
       });
     });
+  }
+
+  private initCommitteeFilteredRegistrants(): Signal<MeetingRegistrant[]> {
+    return computed(() => this.filteredRegistrants().filter((r) => r.type === 'committee'));
+  }
+
+  private initDirectFilteredRegistrants(): Signal<MeetingRegistrant[]> {
+    return computed(() => this.filteredRegistrants().filter((r) => r.type !== 'committee'));
   }
 
   private initFilteredPastParticipants() {
