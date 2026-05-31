@@ -51,7 +51,5 @@ export const newsletterAccessGuard: CanActivateFn = (route: ActivatedRouteSnapsh
   // both explicit writer grants and owner-equivalent roles.
   const deniedUrl = router.parseUrl(`/foundation/overview?project=${slug}`);
 
-  return projectService.getProject(slug, false).pipe(
-    map((project) => (project?.writer === true ? true : deniedUrl))
-  );
+  return projectService.getProject(slug, false).pipe(map((project) => (project?.writer === true ? true : deniedUrl)));
 };
