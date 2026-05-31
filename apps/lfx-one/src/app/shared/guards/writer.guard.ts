@@ -3,7 +3,7 @@
 
 import { inject } from '@angular/core';
 import { ActivatedRouteSnapshot, CanActivateFn, Router } from '@angular/router';
-import { catchError, map, of } from 'rxjs';
+import { map } from 'rxjs';
 
 import { PersonaService } from '../services/persona.service';
 import { ProjectContextService } from '../services/project-context.service';
@@ -39,10 +39,6 @@ export const writerGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const deniedUrl = router.parseUrl(`/foundation/overview?project=${slug}`);
 
   return projectService.getProject(slug, false).pipe(
-    map((project) => (project?.writer === true ? true : deniedUrl)),
-    catchError((err) => {
-      console.error('writerGuard: writer-permission lookup failed', { slug, error: err });
-      return of(deniedUrl);
-    })
+    map((project) => (project?.writer === true ? true : deniedUrl))
   );
 };

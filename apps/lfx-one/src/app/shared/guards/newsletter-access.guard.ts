@@ -3,7 +3,7 @@
 
 import { inject } from '@angular/core';
 import { ActivatedRouteSnapshot, CanActivateFn, Router } from '@angular/router';
-import { catchError, map, of } from 'rxjs';
+import { map } from 'rxjs';
 
 import { PersonaService } from '../services/persona.service';
 import { ProjectContextService } from '../services/project-context.service';
@@ -52,13 +52,6 @@ export const newsletterAccessGuard: CanActivateFn = (route: ActivatedRouteSnapsh
   const deniedUrl = router.parseUrl(`/foundation/overview?project=${slug}`);
 
   return projectService.getProject(slug, false).pipe(
-    map((project) => (project?.writer === true ? true : deniedUrl)),
-    catchError((err) => {
-      // Surface the failure to Datadog RUM rather than silently bouncing —
-      // a 5xx / transport error looks identical to a legitimate deny from
-      // the user's perspective and we want it triageable.
-      console.error('newsletterAccessGuard: writer-permission lookup failed', { slug, error: err });
-      return of(deniedUrl);
-    })
+    map((project) => (project?.writer === true ? true : deniedUrl))
   );
 };
