@@ -16,7 +16,7 @@
 
 ## Build pipeline
 
-The pipeline is plain Node.js, lives under [`apps/lfx-one/scripts/`](../../../apps/lfx-one/scripts/), and runs as a `prebuild` / `predev` hook from `apps/lfx-one/package.json`:
+The pipeline is plain Node.js, lives under [`apps/lfx-one/scripts/`](../../../apps/lfx-one/scripts/), and is chained directly into `start`, `build*`, `watch`, and `test` via `&&` in `apps/lfx-one/package.json`:
 
 ```text
 docs/user/**/index.md

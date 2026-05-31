@@ -58,6 +58,7 @@ logs
 *.md
 docs/*
 !docs/user
+!docs/user/**
 
 # Firebase
 firebase-debug.log

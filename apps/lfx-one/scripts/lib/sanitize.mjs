@@ -74,7 +74,7 @@ export function sanitizeDocsHtml(html) {
       code: ['class'],
     },
     allowedSchemes: ['http', 'https', 'mailto', 'tel'],
-    allowedSchemesByTag: { img: ['http', 'https', 'data'] },
+    allowedSchemesByTag: { img: ['http', 'https'] },
     allowedSchemesAppliedToAttributes: ['href', 'src'],
     transformTags: {
       a: (tagName, attribs) => {

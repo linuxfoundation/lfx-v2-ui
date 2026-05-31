@@ -21,9 +21,19 @@ import { docsManifest } from '../generated/docs-manifest';
  * docs:build` yet), the build fails with a clear "module not found" — better
  * than a runtime crash deep in route activation.
  */
+const EXPECTED_SCHEMA_VERSION = 1;
+
 @Injectable({ providedIn: 'root' })
 export class DocsManifestService {
   private readonly manifest: DocsManifest = docsManifest;
+
+  constructor() {
+    if (docsManifest.schemaVersion !== EXPECTED_SCHEMA_VERSION) {
+      throw new Error(
+        `[DocsManifestService] schema version mismatch: expected ${EXPECTED_SCHEMA_VERSION}, got ${docsManifest.schemaVersion}. Run \`yarn docs:build\` and rebuild the app.`,
+      );
+    }
+  }
 
   /** Returns the full manifest. Used by the landing page and any taxonomy UI. */
   public getManifest(): DocsManifest {
