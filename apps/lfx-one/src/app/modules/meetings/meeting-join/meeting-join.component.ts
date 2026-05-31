@@ -276,10 +276,7 @@ export class MeetingJoinComponent implements OnInit {
     this.restrictedView = this.initializeRestrictedView();
     this.isPastMeeting = this.initializeIsPastMeeting();
     this.pastMeetingSummary = this.initializePastMeetingSummary();
-    this.hasSummaryContent = computed(() => {
-      const data = this.pastMeetingSummary()?.summary_data;
-      return !!(data?.edited_content || data?.content);
-    });
+    this.hasSummaryContent = this.initializeHasSummaryContent();
     this.pastMeetingRecording = this.initializePastMeetingRecording();
     this.pastMeetingAttachments = this.initializePastMeetingAttachments();
     this.primaryRecordingUrl = this.initializePrimaryRecordingUrl();
@@ -1118,6 +1115,13 @@ export class MeetingJoinComponent implements OnInit {
       const primary = sessionsWithShareUrl.reduce((largest, session) => (session.total_size > largest.total_size ? session : largest), sessionsWithShareUrl[0]);
 
       return primary.share_url ?? null;
+    });
+  }
+
+  private initializeHasSummaryContent(): Signal<boolean> {
+    return computed(() => {
+      const data = this.pastMeetingSummary()?.summary_data;
+      return !!(data?.edited_content || data?.content);
     });
   }
 

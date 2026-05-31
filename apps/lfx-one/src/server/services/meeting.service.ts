@@ -850,6 +850,9 @@ export class MeetingService {
         return null;
       }
 
+      // Content-Length is only an early fast-path reject — it's absent on chunked
+      // responses (Zoom often serves transcripts chunked), so the streaming reader
+      // below is the real byte cap.
       const declaredLength = Number(response.headers.get('content-length'));
       if (declaredLength > MAX_TRANSCRIPT_BYTES) {
         logger.warning(req, 'get_past_meeting_transcript_content', 'Transcript file exceeds size limit, returning null', {
@@ -860,16 +863,33 @@ export class MeetingService {
         return null;
       }
 
-      const content = await response.text();
-      if (content.length > MAX_TRANSCRIPT_BYTES) {
-        logger.warning(req, 'get_past_meeting_transcript_content', 'Transcript content exceeds size limit, returning null', {
-          past_meeting_id: pastMeetingUid,
-          length: content.length,
-          max_bytes: MAX_TRANSCRIPT_BYTES,
-        });
-        return null;
+      const reader = response.body?.getReader();
+      if (!reader) {
+        return { content: '' };
       }
 
+      // Read the body in chunks and abort once accumulated bytes exceed the cap.
+      // This holds even when Content-Length is missing and counts real bytes
+      // (not UTF-16 code units).
+      const chunks: Uint8Array[] = [];
+      let receivedBytes = 0;
+      let result = await reader.read();
+      while (!result.done) {
+        receivedBytes += result.value.byteLength;
+        if (receivedBytes > MAX_TRANSCRIPT_BYTES) {
+          await reader.cancel();
+          logger.warning(req, 'get_past_meeting_transcript_content', 'Transcript content exceeds size limit, returning null', {
+            past_meeting_id: pastMeetingUid,
+            received_bytes: receivedBytes,
+            max_bytes: MAX_TRANSCRIPT_BYTES,
+          });
+          return null;
+        }
+        chunks.push(result.value);
+        result = await reader.read();
+      }
+
+      const content = Buffer.concat(chunks).toString('utf-8');
       return { content };
     } catch (error) {
       logger.warning(req, 'get_past_meeting_transcript_content', 'Failed to fetch transcript content, returning null', {

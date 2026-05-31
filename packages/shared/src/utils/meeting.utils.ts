@@ -436,14 +436,17 @@ export function transformV1SummaryToV2(summary: PastMeetingSummary): PastMeeting
 }
 
 /**
- * Resolves the viewable URL for a past meeting transcript.
+ * Resolves the viewable download URL for a past meeting transcript.
  *
- * Only an actual transcript file counts — Zoom's audio transcript ('TRANSCRIPT')
- * or closed captions ('CC'). The session share_url is deliberately NOT used: it
- * points to the recording, so falling back to it makes "View Transcript" open the
- * recording. A TIMELINE file is a speaker timeline, not a transcript, so it's
- * excluded too. Returns null (→ "Transcript Unavailable") when no transcript file
- * exists.
+ * Only an actual transcript file counts — Zoom's audio transcript (`TRANSCRIPT`)
+ * or closed captions (`CC`), matched case-insensitively. The session `share_url`
+ * is deliberately NOT used (it points to the recording, so falling back to it
+ * makes "View Transcript" open the recording), and a `TIMELINE` file is a speaker
+ * timeline, not a transcript, so it's excluded too.
+ *
+ * @param transcript - The past meeting transcript resource (may be null/undefined).
+ * @returns The transcript file's `download_url`, or `null` when no transcript file
+ *   exists (which the UI renders as "Transcript Unavailable").
  */
 export function getPastMeetingTranscriptUrl(transcript: PastMeetingTranscript | null | undefined): string | null {
   const file = transcript?.recording_files?.find((f) => {
@@ -455,9 +458,15 @@ export function getPastMeetingTranscriptUrl(transcript: PastMeetingTranscript | 
 
 /**
  * Parses a WebVTT transcript into ordered cues so it can be rendered inline.
- * Each VTT block is `index / start --> end / "Speaker: text"`. The WEBVTT header
- * and any NOTE/metadata blocks (no `-->` line) are skipped. Returns [] for empty
- * or unparseable input.
+ *
+ * Each VTT block is `index / start --> end / "Speaker: text"`. The `WEBVTT` header
+ * and any NOTE/metadata blocks (no `-->` line) are skipped; the cue timestamp is
+ * trimmed to `HH:MM:SS` and a short prefix before the first `": "` is treated as
+ * the speaker (otherwise `speaker` is `''`).
+ *
+ * @param vtt - The raw WebVTT transcript string (may be null/undefined).
+ * @returns The parsed {@link TranscriptCue} list in document order, or `[]` for
+ *   empty or unparseable input.
  */
 export function parseTranscriptVtt(vtt: string | null | undefined): TranscriptCue[] {
   if (!vtt) {
