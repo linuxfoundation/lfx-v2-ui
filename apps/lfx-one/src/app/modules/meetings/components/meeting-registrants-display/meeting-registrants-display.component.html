@@ -194,20 +194,27 @@
               </div>
             </div>
           }
-        } @else if (hasCommittees() && committeeFilteredRegistrants().length > 0) {
-          <!-- Two-section layout: Board Members above divider, Guests below -->
-          <div class="flex flex-col gap-2" data-testid="board-members-section">
-            <div class="flex items-center gap-2 px-1">
-              <i class="fa-light fa-building-columns text-gray-400 text-xs"></i>
-              <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Board Members ({{ committeeFilteredRegistrants().length }})</span>
+        } @else if (hasCommittees()) {
+          <!-- Two-section layout: Board Members above divider, Guests below.
+               Each section only renders when it has items, so filters that
+               zero out one section don't drop the other section's label. -->
+          @if (committeeFilteredRegistrants().length > 0) {
+            <div class="flex flex-col gap-2" data-testid="board-members-section">
+              <div class="flex items-center gap-2 px-1">
+                <i class="fa-light fa-building-columns text-gray-400 text-xs"></i>
+                <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Board Members ({{ committeeFilteredRegistrants().length }})</span>
+              </div>
+              @for (registrant of committeeFilteredRegistrants(); track registrant.uid) {
+                <ng-container *ngTemplateOutlet="registrantCard; context: { $implicit: registrant }"></ng-container>
+              }
             </div>
-            @for (registrant of committeeFilteredRegistrants(); track registrant.uid) {
-              <ng-container *ngTemplateOutlet="registrantCard; context: { $implicit: registrant }"></ng-container>
-            }
-          </div>
+          }
+
+          @if (committeeFilteredRegistrants().length > 0 && directFilteredRegistrants().length > 0) {
+            <div class="border-t border-gray-200 my-1"></div>
+          }
 
           @if (directFilteredRegistrants().length > 0) {
-            <div class="border-t border-gray-200 my-1"></div>
             <div class="flex flex-col gap-2" data-testid="guests-section">
               <div class="flex items-center gap-2 px-1">
                 <i class="fa-light fa-user text-gray-400 text-xs"></i>
@@ -216,6 +223,13 @@
               @for (registrant of directFilteredRegistrants(); track registrant.uid) {
                 <ng-container *ngTemplateOutlet="registrantCard; context: { $implicit: registrant }"></ng-container>
               }
+            </div>
+          }
+
+          @if (committeeFilteredRegistrants().length === 0 && directFilteredRegistrants().length === 0 && !showAddRegistrant()) {
+            <div class="flex w-full items-center justify-center gap-4 py-8 col-span-2">
+              <i class="fa-light fa-users text-2xl text-gray-500"></i>
+              <span class="text-sm text-gray-500">No guests found</span>
             </div>
           }
         } @else {
