@@ -22,8 +22,8 @@ import { ProjectService } from '../services/project.service';
  * links and hard reloads work before the lens has finished syncing the
  * active context. Falls back to the active context's slug only when no
  * query param is present (e.g., the bare `/newsletters` lens-redirect
- * path). Falls back to `/foundation/overview` on denial / unrecoverable
- * error to match the existing executiveDirectorGuard's behavior.
+ * path). Falls back to `/foundation/overview?project=<slug>` on denial /
+ * unrecoverable error to preserve the active project context.
  */
 export const newsletterAccessGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const personaService = inject(PersonaService);
@@ -49,14 +49,16 @@ export const newsletterAccessGuard: CanActivateFn = (route: ActivatedRouteSnapsh
   // Writer / owner check on the resolved project. project.writer is set
   // server-side by the FGA-driven authorization check and is true for
   // both explicit writer grants and owner-equivalent roles.
+  const deniedUrl = router.parseUrl(`/foundation/overview?project=${slug}`);
+
   return projectService.getProject(slug, false).pipe(
-    map((project) => (project?.writer === true ? true : router.parseUrl('/foundation/overview'))),
+    map((project) => (project?.writer === true ? true : deniedUrl)),
     catchError((err) => {
       // Surface the failure to Datadog RUM rather than silently bouncing —
       // a 5xx / transport error looks identical to a legitimate deny from
       // the user's perspective and we want it triageable.
       console.error('newsletterAccessGuard: writer-permission lookup failed', { slug, error: err });
-      return of(router.parseUrl('/foundation/overview'));
+      return of(deniedUrl);
     })
   );
 };
