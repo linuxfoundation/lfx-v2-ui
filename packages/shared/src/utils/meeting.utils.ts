@@ -488,7 +488,10 @@ export function parseTranscriptVtt(vtt: string | null | undefined): TranscriptCu
     }
 
     const timestamp = lines[tsIndex].split('-->')[0].trim().split('.')[0];
-    const body = lines.slice(tsIndex + 1).join(' ').trim();
+    const body = lines
+      .slice(tsIndex + 1)
+      .join(' ')
+      .trim();
     if (!body) {
       continue;
     }
