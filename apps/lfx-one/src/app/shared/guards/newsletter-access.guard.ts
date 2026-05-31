@@ -49,7 +49,7 @@ export const newsletterAccessGuard: CanActivateFn = (route: ActivatedRouteSnapsh
   // Writer / owner check on the resolved project. project.writer is set
   // server-side by the FGA-driven authorization check and is true for
   // both explicit writer grants and owner-equivalent roles.
-  const deniedUrl = router.parseUrl(`/foundation/overview?project=${slug}`);
+  const deniedUrl = router.createUrlTree(['/foundation/overview'], { queryParams: { project: slug } });
 
   return projectService.getProject(slug, false).pipe(map((project) => (project?.writer === true ? true : deniedUrl)));
 };

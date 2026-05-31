@@ -36,7 +36,7 @@ export const writerGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
     return router.parseUrl('/foundation/overview');
   }
 
-  const deniedUrl = router.parseUrl(`/foundation/overview?project=${slug}`);
+  const deniedUrl = router.createUrlTree(['/foundation/overview'], { queryParams: { project: slug } });
 
   return projectService.getProject(slug, false).pipe(map((project) => (project?.writer === true ? true : deniedUrl)));
 };
