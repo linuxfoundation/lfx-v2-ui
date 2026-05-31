@@ -1,8 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, DestroyRef, inject, Signal, signal } from '@angular/core';
-import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { Component, computed, inject, Signal, signal } from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
@@ -16,15 +16,15 @@ import {
 } from '@lfx-one/shared/constants';
 import { Committee, CommitteeReference, CreateSurveyRequest, SurveyDistributionMethod, SurveyReminderType } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
-import { ProjectContextService } from '@services/project-context.service';
 import { SurveyService } from '@services/survey.service';
+import { evictOnWriteAccessLoss } from '@shared/utils/evict-on-write-access-loss.util';
 import { MessageComponent } from '@components/message/message.component';
 import { markFormControlsAsTouched } from '@lfx-one/shared/utils';
 import { trimmedRequired } from '@lfx-one/shared/validators';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { StepperModule } from 'primeng/stepper';
-import { catchError, combineLatest, distinctUntilChanged, filter, map, of, skip, switchMap, take } from 'rxjs';
+import { catchError, combineLatest, distinctUntilChanged, filter, map, of, switchMap, take } from 'rxjs';
 
 import { SurveyAudienceTypeComponent } from '../components/survey-audience-type/survey-audience-type.component';
 import { SurveyEmailDraftComponent } from '../components/survey-email-draft/survey-email-draft.component';
@@ -56,8 +56,6 @@ export class SurveyManageComponent {
   private readonly messageService = inject(MessageService);
   private readonly committeeService = inject(CommitteeService);
   private readonly surveyService = inject(SurveyService);
-  private readonly projectContextService = inject(ProjectContextService);
-  private readonly destroyRef = inject(DestroyRef);
 
   // Committee context — when navigated from a committee tab with ?committee_uid=
   public readonly committeeContext = signal<Committee | null>(null);
@@ -87,14 +85,7 @@ export class SurveyManageComponent {
 
   public constructor() {
     this.initCommitteeContext();
-    toObservable(this.projectContextService.canWrite)
-      .pipe(
-        skip(1),
-        filter((canWrite) => !canWrite),
-        take(1),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe(() => this.router.navigateByUrl('/foundation/overview'));
+    evictOnWriteAccessLoss();
   }
 
   public nextStep(): void {
