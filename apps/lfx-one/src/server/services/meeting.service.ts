@@ -835,8 +835,13 @@ export class MeetingService {
       return null;
     }
 
+    // Bound the upstream fetch: cap how long we wait and how many bytes we buffer
+    // so a slow or oversized transcript file can't tie up the event loop or exhaust memory.
+    const MAX_TRANSCRIPT_BYTES = 5 * 1024 * 1024; // 5 MB
+    const TRANSCRIPT_FETCH_TIMEOUT_MS = 15000;
+
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, { signal: AbortSignal.timeout(TRANSCRIPT_FETCH_TIMEOUT_MS) });
       if (!response.ok) {
         logger.warning(req, 'get_past_meeting_transcript_content', 'Transcript file fetch returned non-OK', {
           past_meeting_id: pastMeetingUid,
@@ -845,7 +850,26 @@ export class MeetingService {
         return null;
       }
 
+      const declaredLength = Number(response.headers.get('content-length'));
+      if (declaredLength > MAX_TRANSCRIPT_BYTES) {
+        logger.warning(req, 'get_past_meeting_transcript_content', 'Transcript file exceeds size limit, returning null', {
+          past_meeting_id: pastMeetingUid,
+          content_length: declaredLength,
+          max_bytes: MAX_TRANSCRIPT_BYTES,
+        });
+        return null;
+      }
+
       const content = await response.text();
+      if (content.length > MAX_TRANSCRIPT_BYTES) {
+        logger.warning(req, 'get_past_meeting_transcript_content', 'Transcript content exceeds size limit, returning null', {
+          past_meeting_id: pastMeetingUid,
+          length: content.length,
+          max_bytes: MAX_TRANSCRIPT_BYTES,
+        });
+        return null;
+      }
+
       return { content };
     } catch (error) {
       logger.warning(req, 'get_past_meeting_transcript_content', 'Failed to fetch transcript content, returning null', {

@@ -484,9 +484,12 @@ export function parseTranscriptVtt(vtt: string | null | undefined): TranscriptCu
       continue;
     }
 
-    const match = body.match(/^([^:]{1,60}?):\s+(.*)$/);
-    if (match) {
-      cues.push({ timestamp, speaker: match[1].trim(), text: match[2].trim() });
+    // Split "Speaker: text" without a regex — a backtracking pattern over the
+    // external transcript content is a ReDoS risk (flagged by CodeQL). A short
+    // prefix before the first ": " is treated as the speaker.
+    const separatorIndex = body.indexOf(': ');
+    if (separatorIndex > 0 && separatorIndex <= 60) {
+      cues.push({ timestamp, speaker: body.slice(0, separatorIndex).trim(), text: body.slice(separatorIndex + 2).trim() });
     } else {
       cues.push({ timestamp, speaker: '', text: body });
     }

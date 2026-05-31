@@ -799,7 +799,11 @@ export interface PastMeetingTranscript {
   meeting_and_occurrence_id?: string;
   /** Transcript title */
   title?: string;
-  /** Transcript files (e.g., Zoom TIMELINE JSON) carrying a download URL */
+  /**
+   * Transcript-related files, each carrying a download URL. The viewable
+   * transcript is the TRANSCRIPT/CC file (resolved by getPastMeetingTranscriptUrl);
+   * the array may also include non-transcript files such as a TIMELINE.
+   */
   recording_files?: RecordingFile[];
   /** Recording sessions carrying the shareable URL */
   sessions?: RecordingSession[];
