@@ -99,6 +99,9 @@ export * from './sse.interface';
 // Copilot interfaces
 export * from './copilot.interface';
 
+// Campaign interfaces
+export * from './campaign.interface';
+
 // Committee application interfaces
 export * from './committee-application.interface';
 
