@@ -4,17 +4,20 @@
 import { Component, signal } from '@angular/core';
 
 import { CAMPAIGN_TABS } from '@lfx-one/shared/constants';
-import type { CampaignTab } from '@lfx-one/shared/interfaces';
+import type { CampaignBriefOutput, CampaignTab } from '@lfx-one/shared/interfaces';
+
+import { PlanningTabComponent } from './components/planning-tab/planning-tab.component';
 
 @Component({
   selector: 'lfx-campaigns',
-  imports: [],
+  imports: [PlanningTabComponent],
   templateUrl: './campaigns.component.html',
   styleUrl: './campaigns.component.scss',
 })
 export class CampaignsComponent {
   protected readonly tabs = CAMPAIGN_TABS;
   protected readonly selectedTab = signal<CampaignTab>('planning');
+  protected readonly briefOutput = signal<CampaignBriefOutput | null>(null);
 
   protected selectTab(tab: CampaignTab): void {
     this.selectedTab.set(tab);
@@ -39,5 +42,10 @@ export class CampaignsComponent {
       const target = (event.target as HTMLElement).parentElement?.children[newIndex] as HTMLElement | undefined;
       target?.focus();
     }
+  }
+
+  protected onProceedToImplementation(brief: CampaignBriefOutput): void {
+    this.briefOutput.set(brief);
+    this.selectedTab.set('implementation');
   }
 }
