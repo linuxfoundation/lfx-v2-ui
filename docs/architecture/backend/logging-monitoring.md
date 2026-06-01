@@ -407,18 +407,24 @@ for (const [category, persona] of Object.entries(COMMITTEE_CATEGORY_TO_PERSONA))
 
 ### Controller-Level Error Logging
 
-**Standard controllers (default):** Do NOT call `logger.error()` in catch blocks. Use bare `next(error)`. The `apiErrorHandler` middleware logs all errors centrally with full structured context (error type, status code, request ID, path, method). Calling `logger.error()` before `next(error)` is a reviewer-flagged anti-pattern.
+**Standard controllers (default, preferred):** Prefer bare `next(error)` in catch blocks rather than calling `logger.error()` first. The `apiErrorHandler` middleware logs all errors centrally with full structured context (error type, status code, request ID, path, method), so a plain delegation keeps logging in one place and avoids duplicate logs. Adding a `logger.error()` call before `next(error)` purely to restate what the middleware already records is the pattern to avoid.
 
 ```typescript
 try {
   // ... operation
 } catch (error) {
-  // Do NOT call logger.error() here — apiErrorHandler logs centrally
+  // Prefer delegating — apiErrorHandler logs centrally
   return next(error); // Pass to error middleware
 }
 ```
 
-**Exception — controllers that do not delegate to `apiErrorHandler`:** Any controller that handles its own response in the catch block — and therefore never calls `next(error)` / never reaches `apiErrorHandler` — must log errors itself. This covers SSE / streaming controllers (`res.end()`), redirect-based flows (e.g., auth callbacks), and any path where the headers are already sent. The middleware's `skipIfLogged` option below exists primarily to make those paths safe; it is not an invitation to log in every catch block.
+**Legitimate exceptions:** Some controller paths do log in catch blocks for good reason, and that is fine:
+
+- **Controllers that handle their own response** — any path that never calls `next(error)` / never reaches `apiErrorHandler` (SSE / streaming controllers calling `res.end()`, redirect-based flows such as auth callbacks, or any path where headers are already sent) must log errors itself.
+- **Partial-failure / batch paths** — helpers that log a failure and continue processing remaining items, or that record per-item failures, legitimately log even when they later delegate.
+- **Added context** — logging to attach context the middleware cannot see (e.g. a specific error classification) before delegating is acceptable.
+
+The middleware's `skipIfLogged` option below makes the delegating-after-logging paths safe by preventing a double log; it is not an invitation to restate the middleware's log in every catch block.
 
 ### Error Middleware with Severity-Based Logging
 
@@ -478,9 +484,9 @@ export function apiErrorHandler(error: Error, req: Request, res: Response, next:
 
 ### How Duplicate Prevention Works
 
-Standard controllers no longer log in catch blocks, so `apiErrorHandler` is the single source of error logs. For the legacy/SSE paths where a controller does call `logger.error()` before delegating to the middleware, `skipIfLogged` prevents a double log:
+When standard controllers delegate with a bare `next(error)`, `apiErrorHandler` is the single source of error logs. For the paths where a controller does call `logger.error()` before delegating to the middleware (SSE / self-responding flows, partial-failure helpers, or added-context logging), `skipIfLogged` prevents a double log:
 
-1. (Legacy/SSE only) Controller logs error: `logger.error(req, 'create_meeting', startTime, error, metadata)`
+1. (Self-responding / partial-failure / added-context paths) Controller logs error: `logger.error(req, 'create_meeting', startTime, error, metadata)`
 2. LoggerService marks operation as "logged" in WeakMap
 3. Error middleware tries to log: `logger.error(req, operation, Date.now(), error, metadata, { skipIfLogged: true })`
 4. LoggerService checks if already logged → skips if true

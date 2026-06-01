@@ -211,7 +211,7 @@ export class ItemService {
 
 ### Logging Rules
 
-- **Controllers**: `logger.startOperation()` → `logger.success()` on success; bare `return next(error)` in catch blocks. Do NOT call `logger.error()` in controller catch blocks — `apiErrorHandler` logs all errors centrally (exception: any controller that handles its own response and never delegates to `next(error)` / `apiErrorHandler` — SSE/streaming, redirect-based auth callbacks, or paths where headers are already sent).
+- **Controllers**: `logger.startOperation()` → `logger.success()` on success; prefer a bare `return next(error)` in catch blocks so `apiErrorHandler` logs all errors centrally and no duplicate log is emitted. Logging in a catch block is still legitimate where it earns its place: controllers that handle their own response and never delegate to `next(error)` / `apiErrorHandler` (SSE/streaming, redirect-based auth callbacks, or paths where headers are already sent), partial-failure / batch helpers that log and continue, and cases that attach context the middleware cannot see.
 - **Services**: `logger.debug()` for tracing, `logger.info()` for significant operations, `logger.warning()` for graceful errors
 - **Never** import `serverLogger` directly — always use `logger` from `logger.service.ts`
 
