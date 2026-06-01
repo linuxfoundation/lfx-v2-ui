@@ -34,7 +34,11 @@
           <i class="fa-light fa-award text-xl" aria-hidden="true"></i>
         </div>
         <div class="flex flex-col gap-0.5">
-          <p class="text-xl font-medium text-gray-900">&mdash;</p>
+          @if (statsLoading()) {
+            <p class="text-xl font-medium text-gray-400">&mdash;</p>
+          } @else {
+            <p class="text-xl font-medium text-gray-900">{{ trainingStats()?.certificatesEarned ?? 0 }}</p>
+          }
           <p class="text-sm font-normal text-gray-900">Certificates Earned</p>
         </div>
       </button>
@@ -53,7 +57,11 @@
           <i class="fa-light fa-book-open text-xl" aria-hidden="true"></i>
         </div>
         <div class="flex flex-col gap-0.5">
-          <p class="text-xl font-medium text-gray-900">&mdash;</p>
+          @if (statsLoading()) {
+            <p class="text-xl font-medium text-gray-400">&mdash;</p>
+          } @else {
+            <p class="text-xl font-medium text-gray-900">{{ trainingStats()?.trainingsEnrolled ?? 0 }}</p>
+          }
           <p class="text-sm font-normal text-gray-900">Trainings Enrolled</p>
         </div>
       </button>
@@ -64,7 +72,11 @@
           <i class="fa-light fa-users text-xl" aria-hidden="true"></i>
         </div>
         <div class="flex flex-col gap-0.5">
-          <p class="text-xl font-medium text-gray-900">&mdash;</p>
+          @if (statsLoading()) {
+            <p class="text-xl font-medium text-gray-400">&mdash;</p>
+          } @else {
+            <p class="text-xl font-medium text-gray-900">{{ trainingStats()?.employeesEngaged ?? 0 }}</p>
+          }
           <p class="text-sm font-normal text-gray-900">Employees Engaged</p>
         </div>
       </div>

@@ -7,15 +7,17 @@ import { isPlatformBrowser } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, PLATFORM_ID, signal, Signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DEFAULT_ORG_TRAINING_TAB_ID, ORG_TRAINING_LEVEL_OPTIONS, ORG_TRAINING_TABS, VALID_ORG_TRAINING_TAB_IDS } from '@lfx-one/shared/constants';
-import type { OrgTrainingTabId } from '@lfx-one/shared/interfaces';
+import type { OrgTrainingStats, OrgTrainingTabId } from '@lfx-one/shared/interfaces';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
+import { catchError, filter, of, switchMap, tap } from 'rxjs';
 
 import { CardComponent } from '@components/card/card.component';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { AccountContextService } from '@shared/services/account-context.service';
+import { OrgLensTrainingService } from '@shared/services/org-lens-training.service';
 
 @Component({
   selector: 'lfx-org-training',
@@ -29,6 +31,7 @@ export class OrgTrainingComponent {
   private readonly router = inject(Router);
   private readonly accountContext = inject(AccountContextService);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly trainingService = inject(OrgLensTrainingService);
 
   // ─── Configuration ─────────────────────────────────────────────────────────
   protected readonly tabs = ORG_TRAINING_TABS;
@@ -37,10 +40,12 @@ export class OrgTrainingComponent {
   // ─── Writable Signals ──────────────────────────────────────────────────────
   protected readonly searchTerm = signal('');
   protected readonly selectedLevel = signal<string | null>(null);
+  protected readonly statsLoading = signal(false);
 
   // ─── Computed / toSignal ───────────────────────────────────────────────────
   protected readonly companyName = computed(() => this.accountContext.selectedAccount().accountName ?? '');
   protected readonly activeTab: Signal<OrgTrainingTabId> = this.initActiveTab();
+  protected readonly trainingStats: Signal<OrgTrainingStats | null> = this.initTrainingStats();
 
   // ─── Protected Methods ─────────────────────────────────────────────────────
   protected switchTab(tabId: OrgTrainingTabId): void {
@@ -85,5 +90,25 @@ export class OrgTrainingComponent {
       const raw = queryParamMap().get('tab');
       return raw && VALID_ORG_TRAINING_TAB_IDS.has(raw as OrgTrainingTabId) ? (raw as OrgTrainingTabId) : DEFAULT_ORG_TRAINING_TAB_ID;
     });
+  }
+
+  private initTrainingStats(): Signal<OrgTrainingStats | null> {
+    const accountId$ = toObservable(computed(() => this.accountContext.selectedAccount()?.accountId));
+    return toSignal(
+      accountId$.pipe(
+        filter((id): id is string => !!id),
+        tap(() => this.statsLoading.set(true)),
+        switchMap((id) =>
+          this.trainingService.getTrainingStats(id).pipe(
+            tap(() => this.statsLoading.set(false)),
+            catchError(() => {
+              this.statsLoading.set(false);
+              return of(null);
+            })
+          )
+        )
+      ),
+      { initialValue: null }
+    );
   }
 }

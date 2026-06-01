@@ -4,6 +4,16 @@
 /** Active tab on the org training & certifications page */
 export type OrgTrainingTabId = 'certifications' | 'trainings';
 
+/** Summary statistics for the org training & certifications stat strip */
+export interface OrgTrainingStats {
+  /** Count of certification records (STATUS = 'Certified') across all employees */
+  certificatesEarned: number;
+  /** Count of training enrollment records (STATUS != 'Certified') across all employees */
+  trainingsEnrolled: number;
+  /** Count of distinct employees with any training or certification record */
+  employeesEngaged: number;
+}
+
 /**
  * Certification status derived from expiration date
  */
