@@ -10,6 +10,7 @@ import {
   CommitteeMember,
   CommitteeSettingsData,
   CommitteeUpdateData,
+  CommitteeUser,
   CreateCommitteeDocumentRequest,
   CreateCommitteeJoinApplicationRequest,
   CreateCommitteeMemberRequest,
@@ -227,11 +228,17 @@ export class CommitteeService {
    *   that need slug-based navigation (e.g. the GET /committees/:id controller for the
    *   detail page's Parent Project link). Internal callers (existence checks, meeting
    *   fan-out, member CRUD) should leave this off — they don't use these fields.
+   * @param options.includeInheritedPermissions When true, enriches the response with
+   *   `inherited_writers` / `inherited_auditors` — the parent project's manage/review
+   *   grants, so the members roster can label inherited managers correctly (see LFXV2-2059).
+   *   Costs one extra upstream project-settings fetch and is best-effort (empty on failure
+   *   or when the caller can't read the parent project's permissions), so default is `false`.
+   *   Enable only on the user-facing detail read (GET /committees/:id).
    */
   public async getCommitteeById(
     req: Request,
     committeeId: string,
-    options: { includeMembership?: boolean; includeProjectMetadata?: boolean } = {}
+    options: { includeMembership?: boolean; includeProjectMetadata?: boolean; includeInheritedPermissions?: boolean } = {}
   ): Promise<Committee> {
     const committee = await this.microserviceProxy.proxyRequest<Committee>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}`, 'GET');
 
@@ -243,17 +250,20 @@ export class CommitteeService {
       });
     }
 
-    // Fetch settings, optional caller membership, and access in parallel
-    const [settings, membership, withAccess] = await Promise.all([
+    // Fetch settings, optional caller membership, access, and optional inherited
+    // (parent-project) permissions in parallel.
+    const [settings, membership, withAccess, inheritedPermissions] = await Promise.all([
       this.getCommitteeSettings(req, committeeId),
       options.includeMembership ? this.getCallerMembership(req, committeeId) : Promise.resolve(null),
       this.accessCheckService.addAccessToResource(req, committee, 'committee'),
+      options.includeInheritedPermissions ? this.getInheritedPermissions(req, committee.project_uid) : Promise.resolve(null),
     ]);
 
     const merged = {
       ...withAccess,
       ...settings,
       ...(membership && { my_role: membership.role, my_member_uid: membership.member_uid }),
+      ...(inheritedPermissions && { inherited_writers: inheritedPermissions.writers, inherited_auditors: inheritedPermissions.auditors }),
     };
 
     if (!options.includeProjectMetadata) {
@@ -1215,6 +1225,49 @@ export class CommitteeService {
         committee_uid: committeeId,
       });
       return {};
+    }
+  }
+
+  /**
+   * Fetches the parent project's manage/review grants so the committee members roster can
+   * label users who inherit "Manage" / "Reviewer" from the foundation/parent level (LFXV2-2059).
+   *
+   * The committee's effective `writer` boolean already reflects this inheritance via the
+   * authorization model (`committee#writer` derives from `writer from project`); this method
+   * supplies the per-user lists the roster needs to mirror that inheritance in the UI.
+   *
+   * Best-effort: returns empty lists when no project is associated or when the upstream
+   * project-settings read fails (e.g. the caller cannot read the parent project's
+   * permissions). Never throws — inherited labels are display-only and must not break the
+   * committee fetch.
+   *
+   * @returns Writers/auditors mapped to `CommitteeUser`, matching the shape of the
+   *   committee-scoped `writers` / `auditors` lists.
+   */
+  private async getInheritedPermissions(req: Request, projectUid?: string): Promise<{ writers: CommitteeUser[]; auditors: CommitteeUser[] }> {
+    if (!projectUid) {
+      return { writers: [], auditors: [] };
+    }
+
+    try {
+      const settings = await this.projectService.getProjectSettings(req, projectUid);
+      // Project UserInfo -> CommitteeUser (username is optional upstream; default to '' so
+      // roster matching falls back to email, mirroring how committee writers/auditors match).
+      const toCommitteeUser = (u: { name: string; email: string; username?: string; avatar?: string }): CommitteeUser => ({
+        username: u.username ?? '',
+        email: u.email,
+        name: u.name,
+        avatar: u.avatar,
+      });
+      return {
+        writers: (settings.writers ?? []).map(toCommitteeUser),
+        auditors: (settings.auditors ?? []).map(toCommitteeUser),
+      };
+    } catch {
+      logger.debug(req, 'get_inherited_permissions', 'Failed to fetch parent project permissions, returning empty', {
+        project_uid: projectUid,
+      });
+      return { writers: [], auditors: [] };
     }
   }
 

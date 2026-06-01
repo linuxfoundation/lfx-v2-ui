@@ -79,7 +79,10 @@ export class CommitteeMembersComponent implements OnInit {
   public committeeLabel = COMMITTEE_LABEL;
 
   // Computed signals — inline per component-organization.md
-  // Permission is solely driven by the API's writer flag
+  // Driven by the API's effective `writer` flag, which already reflects access inherited
+  // from the parent/foundation project (authz model: committee#writer derives from
+  // `writer from project`). No separate inherited check is needed here — a foundation-level
+  // manager's `writer` flag is already true (LFXV2-2059).
   public readonly canManageMembers = computed(() => !!this.committee()?.writer);
   // Default to hidden while committee is loading (fail closed for privacy)
   public readonly isMembersVisible = computed(() => {
@@ -142,8 +145,11 @@ export class CommitteeMembersComponent implements OnInit {
     if (!committee) return 'member';
     const memberEmail = member.email?.toLowerCase();
     const matches = (u: { username: string; email: string }) => (member.username && u.username === member.username) || u.email?.toLowerCase() === memberEmail;
-    if (committee.writers?.some(matches)) return 'manage';
-    if (committee.auditors?.some(matches)) return 'review';
+    // Committee-scoped grants take precedence, then fall back to grants inherited from the
+    // parent/foundation project so a foundation-level "Manage" user is labelled correctly
+    // rather than showing as a plain member (LFXV2-2059).
+    if (committee.writers?.some(matches) || committee.inherited_writers?.some(matches)) return 'manage';
+    if (committee.auditors?.some(matches) || committee.inherited_auditors?.some(matches)) return 'review';
     return 'member';
   }
 
