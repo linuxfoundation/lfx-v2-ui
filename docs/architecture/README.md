@@ -82,7 +82,7 @@ LFX One is a modern Angular 20 SSR application built with stable zoneless change
 
 ### DevOps & Deployment
 
-1. **Deployment** — Chart source: [`charts/lfx-self-serve/README.md`](../../charts/lfx-self-serve/README.md). Deployed values, environment promotion, image tags, and ApplicationSets: `lfx-v2-argocd` (`values/dev/lfx-v2-ui.yaml`, staging, prod).
+1. **Deployment** — Chart source: `charts/lfx-self-serve/README.md` (in the repo root, outside this docs site). Deployed values, environment promotion, image tags, and ApplicationSets: `lfx-v2-argocd` (`values/dev/lfx-v2-ui.yaml`, staging, prod).
 2. **[Logging & Monitoring](./backend/logging-monitoring.md)** - Production monitoring
 3. **[Error Handling](./backend/error-handling-architecture.md)** - Error management
 

@@ -189,7 +189,7 @@ lfx-one/
 
 The application deploys as a Helm chart:
 
-- Chart source: [`charts/lfx-self-serve/README.md`](../charts/lfx-self-serve/README.md)
+- Chart source: `charts/lfx-self-serve/README.md` (in the repo root, outside this docs site)
 - Deployed values, image tags, ApplicationSets, environment promotion: `lfx-v2-argocd` (`values/<env>/lfx-v2-ui.yaml`)
 - Shared platform chart (NATS, OpenFGA, OpenSearch, Heimdall): `lfx-v2-helm`
 
