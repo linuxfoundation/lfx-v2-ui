@@ -4,10 +4,10 @@
 import { DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { MessageService } from 'primeng/api';
 import { filter, skip, take } from 'rxjs';
 
 import { LensService } from '../services/lens.service';
+import { PendingToastService } from '../services/pending-toast.service';
 import { ProjectContextService } from '../services/project-context.service';
 
 /**
@@ -33,7 +33,7 @@ export function evictOnWriteAccessLoss(): void {
   const router = inject(Router);
   const projectContextService = inject(ProjectContextService);
   const lensService = inject(LensService);
-  const messageService = inject(MessageService);
+  const pendingToastService = inject(PendingToastService);
   const destroyRef = inject(DestroyRef);
 
   toObservable(projectContextService.canWrite)
@@ -44,19 +44,16 @@ export function evictOnWriteAccessLoss(): void {
       takeUntilDestroyed(destroyRef)
     )
     .subscribe(() => {
-      messageService.add({
+      pendingToastService.set({
         severity: 'error',
         summary: 'Access Denied',
         detail: 'You do not have permission to perform this action on this project.',
         life: 5000,
       });
-      // Defer navigation by one tick so the toast renders before the route change.
-      setTimeout(() => {
-        const slug = projectContextService.activeContext()?.slug;
-        const lens = lensService.activeLens();
-        const overviewPath = lens === 'project' ? '/project/overview' : '/foundation/overview';
-        const url = slug ? router.createUrlTree([overviewPath], { queryParams: { project: slug } }) : router.parseUrl(overviewPath);
-        router.navigateByUrl(url);
-      }, 50);
+      const slug = projectContextService.activeContext()?.slug;
+      const lens = lensService.activeLens();
+      const overviewPath = lens === 'project' ? '/project/overview' : '/foundation/overview';
+      const url = slug ? router.createUrlTree([overviewPath], { queryParams: { project: slug } }) : router.parseUrl(overviewPath);
+      router.navigateByUrl(url);
     });
 }

@@ -3,10 +3,10 @@
 
 import { inject } from '@angular/core';
 import { ActivatedRouteSnapshot, CanActivateFn, Router } from '@angular/router';
-import { MessageService } from 'primeng/api';
-import { map, of, switchMap, timer } from 'rxjs';
+import { map } from 'rxjs';
 
 import { PersonaService } from '../services/persona.service';
+import { PendingToastService } from '../services/pending-toast.service';
 import { ProjectContextService } from '../services/project-context.service';
 import { ProjectService } from '../services/project.service';
 
@@ -26,7 +26,7 @@ export const writerGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const personaService = inject(PersonaService);
   const projectContextService = inject(ProjectContextService);
   const projectService = inject(ProjectService);
-  const messageService = inject(MessageService);
+  const pendingToastService = inject(PendingToastService);
   const router = inject(Router);
 
   if (personaService.currentPersona() === 'executive-director') {
@@ -48,16 +48,17 @@ export const writerGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const deniedUrl = router.createUrlTree([overviewPath], { queryParams: { project: slug } });
 
   return projectService.getProject(slug, false).pipe(
-    switchMap((project) => {
-      if (project?.writer === true) return of(true);
-      messageService.add({
-        severity: 'error',
-        summary: 'Access Denied',
-        detail: 'You do not have permission to perform this action on this project.',
-        life: 5000,
-      });
-      // Delay the redirect by one tick so the toast renders before navigation fires.
-      return timer(50).pipe(map(() => deniedUrl));
+    map((project) => {
+      if (project?.writer !== true) {
+        pendingToastService.set({
+          severity: 'error',
+          summary: 'Access Denied',
+          detail: 'You do not have permission to perform this action on this project.',
+          life: 5000,
+        });
+        return deniedUrl;
+      }
+      return true;
     })
   );
 };

@@ -2,15 +2,18 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, inject, makeStateKey, REQUEST_CONTEXT, TransferState } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { AuthContext, User } from '@lfx-one/shared/interfaces';
+import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
+import { filter } from 'rxjs';
 
 import { getRuntimeConfig } from './shared/providers/runtime-config.provider';
 import { AccountContextService } from './shared/services/account-context.service';
 import { DataDogRumService } from './shared/services/datadog-rum.service';
 import { FeatureFlagService } from './shared/services/feature-flag.service';
 import { IntercomService } from './shared/services/intercom.service';
+import { PendingToastService } from './shared/services/pending-toast.service';
 import { PlausibleService } from './shared/services/plausible.service';
 import { SegmentService } from './shared/services/segment.service';
 import { UserService } from './shared/services/user.service';
@@ -29,12 +32,20 @@ export class AppComponent {
   private readonly dataDogRumService = inject(DataDogRumService);
   private readonly accountContextService = inject(AccountContextService);
   private readonly intercomService = inject(IntercomService);
+  private readonly router = inject(Router);
+  private readonly messageService = inject(MessageService);
+  private readonly pendingToastService = inject(PendingToastService);
 
   public auth: AuthContext | undefined;
   public transferState = inject(TransferState);
   public serverKey = makeStateKey<AuthContext>('auth');
 
   public constructor() {
+    this.router.events.pipe(filter((e) => e instanceof NavigationEnd)).subscribe(() => {
+      const pending = this.pendingToastService.consume();
+      if (pending) this.messageService.add(pending);
+    });
+
     // Initialize Segment tracking
     this.segmentService.initialize();
 
