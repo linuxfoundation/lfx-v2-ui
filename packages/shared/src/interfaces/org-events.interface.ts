@@ -61,3 +61,27 @@ export interface GetOrgEventsOptions {
   readonly offset: number;
   readonly sortOrder: 'ASC' | 'DESC';
 }
+
+/** Raw row returned by the org upcoming/past events Snowflake query (backend query layer). */
+export interface OrgEventRow {
+  EVENT_ID: string;
+  EVENT_NAME: string;
+  FOUNDATION: string | null;
+  EVENT_START_DATE: Date | string | null;
+  EVENT_END_DATE: Date | string | null;
+  EVENT_LOCATION: string | null;
+  EVENT_CITY: string | null;
+  EVENT_COUNTRY: string | null;
+  EVENT_URL: string | null;
+  EVENT_REGISTRATION_URL: string | null;
+  ORG_ATTENDEE_COUNT: number;
+  IS_REGISTERED: boolean;
+  TOTAL_RECORDS: number;
+}
+
+/** Raw row returned by the org events summary Snowflake query (backend query layer). */
+export interface OrgEventsSummaryRow {
+  TOTAL_EVENTS: number;
+  PAST_EVENTS: number;
+  UPCOMING_EVENTS: number;
+}

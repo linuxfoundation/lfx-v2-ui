@@ -1,29 +1,12 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import type { GetOrgEventsOptions, OrgEvent, OrgEventsResponse, OrgEventsSummary } from '@lfx-one/shared/interfaces';
+import type { GetOrgEventsOptions, OrgEvent, OrgEventRow, OrgEventsResponse, OrgEventsSummary, OrgEventsSummaryRow } from '@lfx-one/shared/interfaces';
 import { formatDateToUTC } from '@lfx-one/shared/utils';
 import type { Request } from 'express';
 
 import { logger } from './logger.service';
 import { SnowflakeService } from './snowflake.service';
-
-/** Raw row returned by the org upcoming/past events Snowflake query. */
-interface OrgEventRow {
-  EVENT_ID: string;
-  EVENT_NAME: string;
-  FOUNDATION: string | null;
-  EVENT_START_DATE: Date | string | null;
-  EVENT_END_DATE: Date | string | null;
-  EVENT_LOCATION: string | null;
-  EVENT_CITY: string | null;
-  EVENT_COUNTRY: string | null;
-  EVENT_URL: string | null;
-  EVENT_REGISTRATION_URL: string | null;
-  ORG_ATTENDEE_COUNT: number;
-  IS_REGISTERED: boolean;
-  TOTAL_RECORDS: number;
-}
 
 /** Service for org-lens event list endpoints — queries org employees' event footprint via Snowflake. */
 export class OrgLensEventsService {
@@ -158,15 +141,9 @@ export class OrgLensEventsService {
       WHERE er.REGISTRATION_STATUS = 'Accepted'
     `;
 
-    interface SummaryRow {
-      TOTAL_EVENTS: number;
-      PAST_EVENTS: number;
-      UPCOMING_EVENTS: number;
-    }
-
     let result;
     try {
-      result = await this.snowflakeService.execute<SummaryRow>(sql, [accountId]);
+      result = await this.snowflakeService.execute<OrgEventsSummaryRow>(sql, [accountId]);
     } catch (error) {
       logger.warning(req, 'get_org_lens_events_summary', 'Snowflake query failed, returning zero counts', {
         error: error instanceof Error ? error.message : String(error),
