@@ -306,12 +306,12 @@ These 15 audits cover the patterns most commonly flagged by reviewers across 20+
 
 In changed `.html` files, look for raw form elements that must use LFX wrappers:
 
-| Raw element | Required wrapper |
-| --- | --- |
-| `<input` | `lfx-input-text` (or other `lfx-input-*` variant) |
-| `<select` | `lfx-select` |
-| `<textarea` | `lfx-textarea` |
-| `<div` with `animate-pulse` class | `<p-skeleton>` from PrimeNG |
+| Raw element                       | Required wrapper                                  |
+| --------------------------------- | ------------------------------------------------- |
+| `<input`                          | `lfx-input-text` (or other `lfx-input-*` variant) |
+| `<select`                         | `lfx-select`                                      |
+| `<textarea`                       | `lfx-textarea`                                    |
+| `<div` with `animate-pulse` class | `<p-skeleton>` from PrimeNG                       |
 
 Exceptions: elements inside comments, or `<input type="hidden">`. Note: LFX wrappers require `FormGroup` + `FormControl` — `ngModel` is not supported.
 

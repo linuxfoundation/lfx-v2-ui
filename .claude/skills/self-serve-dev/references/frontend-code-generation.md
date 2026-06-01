@@ -59,7 +59,7 @@ Every new `.ts`, `.html`, and `.scss` file MUST start with the appropriate licen
 
 When you finish, output a clear summary so the `/self-serve-dev` workflow and the user can see what happened:
 
-```
+```text
 ═══════════════════════════════════════════
 Self Serve frontend pattern review complete
 ═══════════════════════════════════════════
