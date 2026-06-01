@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, inject, makeStateKey, REQUEST_CONTEXT, TransferState } from '@angular/core';
+import { afterNextRender, Component, inject, Injector, makeStateKey, REQUEST_CONTEXT, TransferState } from '@angular/core';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { AuthContext, User } from '@lfx-one/shared/interfaces';
 import { MessageService } from 'primeng/api';
@@ -35,6 +35,7 @@ export class AppComponent {
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
   private readonly pendingToastService = inject(PendingToastService);
+  private readonly injector = inject(Injector);
 
   public auth: AuthContext | undefined;
   public transferState = inject(TransferState);
@@ -43,8 +44,9 @@ export class AppComponent {
   public constructor() {
     this.router.events.pipe(filter((e) => e instanceof NavigationEnd)).subscribe(() => {
       const pending = this.pendingToastService.consume();
-      // Defer to next macrotask so the toast component renders after the navigation cycle.
-      if (pending) setTimeout(() => this.messageService.add(pending));
+      // afterNextRender ensures the toast fires inside Angular's next rendering cycle so
+      // PrimeNG's OnPush toast component can react to markForCheck() within the same tick.
+      if (pending) afterNextRender(() => this.messageService.add(pending), { injector: this.injector });
     });
 
     // Initialize Segment tracking
