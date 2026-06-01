@@ -44,6 +44,7 @@ export class OrgTrainingComponent {
 
   // ─── Writable Signals ──────────────────────────────────────────────────────
   protected readonly statsLoading = signal(false);
+  protected readonly statsError = signal(false);
 
   // ─── Computed / toSignal ───────────────────────────────────────────────────
   protected readonly companyName = computed(() => this.accountContext.selectedAccount().accountName ?? '');
@@ -87,12 +88,16 @@ export class OrgTrainingComponent {
     return toSignal(
       orgUid$.pipe(
         filter((id): id is string => !!id),
-        tap(() => this.statsLoading.set(true)),
+        tap(() => {
+          this.statsLoading.set(true);
+          this.statsError.set(false);
+        }),
         switchMap((id) =>
           this.trainingService.getTrainingStats(id).pipe(
             tap(() => this.statsLoading.set(false)),
             catchError(() => {
               this.statsLoading.set(false);
+              this.statsError.set(true);
               return of(null);
             })
           )
