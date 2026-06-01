@@ -11,8 +11,8 @@ import { SelectModule } from 'primeng/select';
 import { catchError, combineLatest, debounceTime, filter, finalize, of, skip, switchMap, tap } from 'rxjs';
 
 import { CardComponent } from '@components/card/card.component';
+import { CardTabsBarComponent } from '@components/card-tabs-bar/card-tabs-bar.component';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
-import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import {
   DEFAULT_EVENTS_PAGE_SIZE,
   DEFAULT_ORG_EVENTS_TAB_ID,
@@ -44,10 +44,10 @@ import { OrgUpcomingEventsTableComponent } from './components/org-upcoming-event
   imports: [
     FormsModule,
     CardComponent,
+    CardTabsBarComponent,
     EmptyStateComponent,
     SelectModule,
     InputTextModule,
-    FilterPillsComponent,
     DiscoverEventsButtonComponent,
     EventAttendeesDrawerComponent,
     EventSpeakersDrawerComponent,
