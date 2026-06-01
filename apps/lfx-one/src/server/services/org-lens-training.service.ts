@@ -8,9 +8,10 @@ import type { OrgTrainingStats } from '@lfx-one/shared/interfaces';
 import { SnowflakeService } from './snowflake.service';
 
 interface OrgTrainingStatsRow {
-  CERTIFICATES_EARNED: number;
-  TRAININGS_ENROLLED: number;
-  EMPLOYEES_ENGAGED: number;
+  CERTIFIED_EMPLOYEES: number;
+  CERTIFICATIONS_EARNED: number;
+  EMPLOYEES_IN_TRAINING: number;
+  TRAINING_COURSES_ENROLLED: number;
 }
 
 /** Aggregates training & certification counts from ORG_PEOPLE_TRAINING for an org account. */
@@ -18,19 +19,17 @@ export class OrgLensTrainingService {
   private readonly snowflakeService = SnowflakeService.getInstance();
 
   public async getTrainingStats(accountId: string): Promise<OrgTrainingStats> {
-    // All three metrics count distinct people so they share a consistent semantic:
-    //   CERTIFICATES_EARNED  — people who earned ≥1 certification
-    //   TRAININGS_ENROLLED   — people enrolled in ≥1 training (non-certified status)
-    //   EMPLOYEES_ENGAGED    — union: people with any training or certification record
-    //
-    // This ensures EMPLOYEES_ENGAGED ≥ each of the other two individually.
-    // The sum of the first two can still exceed EMPLOYEES_ENGAGED when some
-    // employees appear in both groups (i.e. have both trainings and certifications).
+    // Two metric families, each split into a distinct-people count and a record count:
+    //   CERTIFIED_EMPLOYEES       — distinct people who completed ≥1 certification
+    //   CERTIFICATIONS_EARNED     — total certification records (ignores who earned them)
+    //   EMPLOYEES_IN_TRAINING     — distinct people enrolled in ≥1 training (non-certified)
+    //   TRAINING_COURSES_ENROLLED — total training enrollment records (ignores who enrolled)
     const query = `
       SELECT
-        COUNT(DISTINCT CASE WHEN STATUS = 'Certified'  THEN PERSON_KEY END) AS CERTIFICATES_EARNED,
-        COUNT(DISTINCT CASE WHEN STATUS != 'Certified' THEN PERSON_KEY END) AS TRAININGS_ENROLLED,
-        COUNT(DISTINCT PERSON_KEY)                                           AS EMPLOYEES_ENGAGED
+        COUNT(DISTINCT CASE WHEN STATUS = 'Certified'  THEN PERSON_KEY END) AS CERTIFIED_EMPLOYEES,
+        COUNT_IF(STATUS = 'Certified')                                       AS CERTIFICATIONS_EARNED,
+        COUNT(DISTINCT CASE WHEN STATUS != 'Certified' THEN PERSON_KEY END) AS EMPLOYEES_IN_TRAINING,
+        COUNT_IF(STATUS != 'Certified')                                      AS TRAINING_COURSES_ENROLLED
       FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_PEOPLE_TRAINING
       WHERE ACCOUNT_ID = ?
     `;
@@ -39,9 +38,10 @@ export class OrgLensTrainingService {
     const row = result.rows[0];
 
     return {
-      certificatesEarned: row?.CERTIFICATES_EARNED ?? 0,
-      trainingsEnrolled: row?.TRAININGS_ENROLLED ?? 0,
-      employeesEngaged: row?.EMPLOYEES_ENGAGED ?? 0,
+      certifiedEmployees: row?.CERTIFIED_EMPLOYEES ?? 0,
+      certificationsEarned: row?.CERTIFICATIONS_EARNED ?? 0,
+      employeesInTraining: row?.EMPLOYEES_IN_TRAINING ?? 0,
+      trainingCoursesEnrolled: row?.TRAINING_COURSES_ENROLLED ?? 0,
     };
   }
 }

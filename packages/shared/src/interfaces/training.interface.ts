@@ -6,12 +6,14 @@ export type OrgTrainingTabId = 'certifications' | 'trainings';
 
 /** Summary statistics for the org training & certifications stat strip */
 export interface OrgTrainingStats {
-  /** Count of certification records (STATUS = 'Certified') across all employees */
-  certificatesEarned: number;
-  /** Count of training enrollment records (STATUS != 'Certified') across all employees */
-  trainingsEnrolled: number;
-  /** Count of distinct employees with any training or certification record */
-  employeesEngaged: number;
+  /** Count of distinct employees who completed at least one certification (STATUS = 'Certified') */
+  certifiedEmployees: number;
+  /** Total count of certification records (STATUS = 'Certified'), regardless of how many employees earned them */
+  certificationsEarned: number;
+  /** Count of distinct employees enrolled in at least one training (STATUS != 'Certified') */
+  employeesInTraining: number;
+  /** Total count of training enrollment records (STATUS != 'Certified'), regardless of how many employees enrolled */
+  trainingCoursesEnrolled: number;
 }
 
 /**

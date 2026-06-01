@@ -18,9 +18,9 @@
 
   <!-- Stat Strip -->
   <lfx-card styleClass="[&_.p-card-body]:p-0 [&_.p-card-content]:p-0" data-testid="org-training-stats">
-    <div class="grid w-full grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-200">
+    <div class="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-gray-200">
 
-      <!-- Certificates Earned (clickable → Certifications tab) -->
+      <!-- Certified Employees (clickable → Certifications tab) -->
       <button
         type="button"
         class="flex items-center gap-3 p-4 text-left w-full hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset"
@@ -28,22 +28,45 @@
         [class.ring-2]="activeTab() === 'certifications'"
         [class.ring-inset]="activeTab() === 'certifications'"
         [class.ring-blue-500]="activeTab() === 'certifications'"
-        data-testid="org-training-stat-certifications"
+        data-testid="org-training-stat-certified-employees"
         (click)="onStatCardClick('certifications')">
-        <div class="flex items-center justify-center w-11 h-11 rounded-full bg-purple-100 text-purple-600 flex-shrink-0">
+        <div class="flex items-center justify-center w-11 h-11 rounded-full bg-violet-100 text-violet-600 flex-shrink-0">
+          <i class="fa-light fa-user-check text-xl" aria-hidden="true"></i>
+        </div>
+        <div class="flex flex-col gap-0.5">
+          @if (statsLoading()) {
+            <p class="text-xl font-medium text-gray-400">&mdash;</p>
+          } @else {
+            <p class="text-xl font-medium text-gray-900">{{ trainingStats()?.certifiedEmployees ?? 0 }}</p>
+          }
+          <p class="text-sm font-normal text-gray-900">Certified Employees</p>
+        </div>
+      </button>
+
+      <!-- Certifications Earned (clickable → Certifications tab) -->
+      <button
+        type="button"
+        class="flex items-center gap-3 p-4 text-left w-full hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset"
+        [class.bg-blue-50]="activeTab() === 'certifications'"
+        [class.ring-2]="activeTab() === 'certifications'"
+        [class.ring-inset]="activeTab() === 'certifications'"
+        [class.ring-blue-500]="activeTab() === 'certifications'"
+        data-testid="org-training-stat-certifications-earned"
+        (click)="onStatCardClick('certifications')">
+        <div class="flex items-center justify-center w-11 h-11 rounded-full bg-amber-100 text-amber-600 flex-shrink-0">
           <i class="fa-light fa-award text-xl" aria-hidden="true"></i>
         </div>
         <div class="flex flex-col gap-0.5">
           @if (statsLoading()) {
             <p class="text-xl font-medium text-gray-400">&mdash;</p>
           } @else {
-            <p class="text-xl font-medium text-gray-900">{{ trainingStats()?.certificatesEarned ?? 0 }}</p>
+            <p class="text-xl font-medium text-gray-900">{{ trainingStats()?.certificationsEarned ?? 0 }}</p>
           }
-          <p class="text-sm font-normal text-gray-900">Certificates Earned</p>
+          <p class="text-sm font-normal text-gray-900">Certifications Earned</p>
         </div>
       </button>
 
-      <!-- Enrolled Trainings (clickable → Trainings tab) -->
+      <!-- Employees in Training (clickable → Trainings tab) -->
       <button
         type="button"
         class="flex items-center gap-3 p-4 text-left w-full hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset"
@@ -51,35 +74,43 @@
         [class.ring-2]="activeTab() === 'trainings'"
         [class.ring-inset]="activeTab() === 'trainings'"
         [class.ring-blue-500]="activeTab() === 'trainings'"
-        data-testid="org-training-stat-enrolled"
+        data-testid="org-training-stat-employees-in-training"
         (click)="onStatCardClick('trainings')">
         <div class="flex items-center justify-center w-11 h-11 rounded-full bg-blue-100 text-blue-600 flex-shrink-0">
-          <i class="fa-light fa-book-open text-xl" aria-hidden="true"></i>
-        </div>
-        <div class="flex flex-col gap-0.5">
-          @if (statsLoading()) {
-            <p class="text-xl font-medium text-gray-400">&mdash;</p>
-          } @else {
-            <p class="text-xl font-medium text-gray-900">{{ trainingStats()?.trainingsEnrolled ?? 0 }}</p>
-          }
-          <p class="text-sm font-normal text-gray-900">Trainings Enrolled</p>
-        </div>
-      </button>
-
-      <!-- Employees Engaged (read-only — unique employees with any training or certification enrollment) -->
-      <div class="flex items-center gap-3 p-4" data-testid="org-training-stat-engaged">
-        <div class="flex items-center justify-center w-11 h-11 rounded-full bg-amber-100 text-amber-600 flex-shrink-0">
           <i class="fa-light fa-users text-xl" aria-hidden="true"></i>
         </div>
         <div class="flex flex-col gap-0.5">
           @if (statsLoading()) {
             <p class="text-xl font-medium text-gray-400">&mdash;</p>
           } @else {
-            <p class="text-xl font-medium text-gray-900">{{ trainingStats()?.employeesEngaged ?? 0 }}</p>
+            <p class="text-xl font-medium text-gray-900">{{ trainingStats()?.employeesInTraining ?? 0 }}</p>
           }
-          <p class="text-sm font-normal text-gray-900">Employees Engaged</p>
+          <p class="text-sm font-normal text-gray-900">Employees in Training</p>
         </div>
-      </div>
+      </button>
+
+      <!-- Training Courses Enrolled (clickable → Trainings tab) -->
+      <button
+        type="button"
+        class="flex items-center gap-3 p-4 text-left w-full hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset"
+        [class.bg-blue-50]="activeTab() === 'trainings'"
+        [class.ring-2]="activeTab() === 'trainings'"
+        [class.ring-inset]="activeTab() === 'trainings'"
+        [class.ring-blue-500]="activeTab() === 'trainings'"
+        data-testid="org-training-stat-training-courses-enrolled"
+        (click)="onStatCardClick('trainings')">
+        <div class="flex items-center justify-center w-11 h-11 rounded-full bg-emerald-100 text-emerald-600 flex-shrink-0">
+          <i class="fa-light fa-book-open text-xl" aria-hidden="true"></i>
+        </div>
+        <div class="flex flex-col gap-0.5">
+          @if (statsLoading()) {
+            <p class="text-xl font-medium text-gray-400">&mdash;</p>
+          } @else {
+            <p class="text-xl font-medium text-gray-900">{{ trainingStats()?.trainingCoursesEnrolled ?? 0 }}</p>
+          }
+          <p class="text-sm font-normal text-gray-900">Training Courses Enrolled</p>
+        </div>
+      </button>
 
     </div>
   </lfx-card>

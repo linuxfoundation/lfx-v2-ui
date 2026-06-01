@@ -32,9 +32,10 @@ export class OrgLensTrainingController {
 
       logger.success(req, 'get_org_lens_training_stats', startTime, {
         account_id: accountId,
-        certificates_earned: response.certificatesEarned,
-        trainings_enrolled: response.trainingsEnrolled,
-        employees_engaged: response.employeesEngaged,
+        certified_employees: response.certifiedEmployees,
+        certifications_earned: response.certificationsEarned,
+        employees_in_training: response.employeesInTraining,
+        training_courses_enrolled: response.trainingCoursesEnrolled,
       });
 
       res.setHeader('Cache-Control', 'no-store');
