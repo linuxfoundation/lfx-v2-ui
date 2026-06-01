@@ -7,11 +7,17 @@
   </div>
 
   <!-- Tab Navigation -->
-  <div class="flex gap-1 rounded-lg bg-gray-100 p-1" data-testid="campaigns-tab-nav">
-    @for (tab of tabs; track tab.id) {
+  <div class="flex gap-1 rounded-lg bg-gray-100 p-1" role="tablist" aria-label="Campaign tabs" data-testid="campaigns-tab-nav">
+    @for (tab of tabs; track tab.id; let i = $index) {
       <button
         type="button"
+        role="tab"
+        [attr.aria-selected]="selectedTab() === tab.id"
+        [attr.aria-controls]="'panel-' + tab.id"
+        [attr.id]="'tab-' + tab.id"
+        [attr.tabindex]="selectedTab() === tab.id ? 0 : -1"
         (click)="selectTab(tab.id)"
+        (keydown)="onTabKeydown($event, i)"
         [class]="
           selectedTab() === tab.id
             ? 'flex items-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-900 shadow-sm'
@@ -25,7 +31,7 @@
   </div>
 
   <!-- Tab Content -->
-  <div data-testid="campaigns-tab-content">
+  <div role="tabpanel" [id]="'panel-' + selectedTab()" [attr.aria-labelledby]="'tab-' + selectedTab()" data-testid="campaigns-tab-content">
     <p class="text-sm text-gray-500">Select a tab above. Tab components will be added in subsequent PRs.</p>
   </div>
 </div>
