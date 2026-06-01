@@ -95,6 +95,8 @@ export class OrgLensEventsService {
       WHERE 1=1
         ${searchQueryFilter}
         ${statusFilter}
+      -- pageSize, offset, and sortOrder are pre-validated by the controller (numeric bounds + allowlist);
+      -- structural keywords cannot be bound via Snowflake ? params, so they are interpolated here.
       ORDER BY o.EVENT_START_DATE ${sortOrder}
       LIMIT ${pageSize} OFFSET ${offset}
     `;

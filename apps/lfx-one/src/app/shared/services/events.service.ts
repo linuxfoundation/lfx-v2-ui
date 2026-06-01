@@ -135,6 +135,7 @@ export class EventsService {
     return this.http.get<OrgEventsSummary>(`/api/orgs/${encodeURIComponent(accountId)}/lens/events/summary`);
   }
 
+  // Called by the upcoming/past events table — wired in LFXV2-1899.
   public getOrgEvents(accountId: string, params: GetOrgEventsParams = {}): Observable<OrgEventsResponse> {
     let httpParams = new HttpParams();
 
