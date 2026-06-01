@@ -270,7 +270,7 @@ export interface DocsSearchHit {
 }
 
 /**
- * Serialized search-index payload shipped at `/assets/search-index.json`.
+ * Serialized search-index payload shipped at `/assets/docs/search-index.json`.
  * The `miniSearch` field is the result of `MiniSearch.toJSON()`; the runtime
  * service calls `MiniSearch.loadJSON()` to revive it.
  */

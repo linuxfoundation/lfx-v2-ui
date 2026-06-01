@@ -20,7 +20,7 @@ This article applies to users with **maintainer**, **board-member**, or **execut
 
 ## Cast your vote
 
-1. Open an open poll from the votes dashboard.
+1. Open an active poll from the votes dashboard.
 2. Select your preferred option or options from the poll.
 3. Submit your vote.
 
