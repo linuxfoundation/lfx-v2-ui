@@ -33,8 +33,8 @@ export class OrgTrainingComponent {
   private readonly trainingService = inject(OrgLensTrainingService);
 
   // ─── Configuration ─────────────────────────────────────────────────────────
-  protected readonly tabs = ORG_TRAINING_TABS;
-  protected readonly levelOptions = ORG_TRAINING_LEVEL_OPTIONS;
+  protected readonly tabs = [...ORG_TRAINING_TABS];
+  protected readonly levelOptions = [...ORG_TRAINING_LEVEL_OPTIONS];
 
   // ─── Forms ─────────────────────────────────────────────────────────────────
   protected readonly filterForm = new FormGroup({
