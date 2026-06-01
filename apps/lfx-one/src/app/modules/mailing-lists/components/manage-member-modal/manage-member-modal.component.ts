@@ -203,11 +203,12 @@ export class ManageMemberModalComponent {
 
     let detail = defaultMessage;
     if (error instanceof HttpErrorResponse) {
-      if (error.status === 409) {
-        const email = this.form.getRawValue().email as string;
-        detail = `${email} is already subscribed to this mailing list.`;
+      // The already-subscribed conflict only applies when adding a new member
+      if (error.status === 409 && !this.isEditMode()) {
+        const email = (this.form.getRawValue().email as string)?.trim();
+        detail = `${email || 'This email'} is already subscribed to this mailing list.`;
       } else {
-        detail = (error.error as { message?: string })?.message || defaultMessage;
+        detail = this.extractHttpErrorMessage(error, defaultMessage);
       }
     } else if (error instanceof Error) {
       detail = error.message;
@@ -218,5 +219,15 @@ export class ManageMemberModalComponent {
       summary: 'Error',
       detail,
     });
+  }
+
+  // Upstream bodies vary: plain string, { message }, or none — preserve detail where present
+  private extractHttpErrorMessage(error: HttpErrorResponse, defaultMessage: string): string {
+    const body = error.error;
+    if (typeof body === 'string' && body.trim()) {
+      return body;
+    }
+
+    return (body as { message?: string })?.message || defaultMessage;
   }
 }
