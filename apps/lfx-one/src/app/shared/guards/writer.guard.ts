@@ -18,8 +18,8 @@ import { ProjectService } from '../services/project.service';
  *
  * Slug resolution: prefers the `?project=` query param (authoritative for the navigation
  * target, works before the lens has synced) then falls back to the active context's slug.
- * Redirects to /foundation/overview?project=<slug> on denial so the correct project
- * context is preserved in the destination URL.
+ * Redirects to the lens-appropriate overview on denial so the correct project context is
+ * preserved and NavigationService.applyDefaultSelection does not override the selection.
  */
 export const writerGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const personaService = inject(PersonaService);
@@ -33,10 +33,16 @@ export const writerGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
 
   const slug = route.queryParamMap.get('project') ?? projectContextService.activeContext()?.slug ?? null;
   if (!slug) {
-    return router.parseUrl('/foundation/overview');
+    return router.parseUrl('/project/overview');
   }
 
-  const deniedUrl = router.createUrlTree(['/foundation/overview'], { queryParams: { project: slug } });
+  // Use the lens encoded in the route ancestry (parent route carries data.lens) so the
+  // denied redirect lands on the same lens the user was navigating within, preventing
+  // NavigationService.applyDefaultSelection from overriding the project when it does not
+  // appear in the foundation items list.
+  const routeLens = route.parent?.data?.['lens'] ?? route.data?.['lens'];
+  const overviewPath = routeLens === 'foundation' ? '/foundation/overview' : '/project/overview';
+  const deniedUrl = router.createUrlTree([overviewPath], { queryParams: { project: slug } });
 
   return projectService.getProject(slug, false).pipe(map((project) => (project?.writer === true ? true : deniedUrl)));
 };

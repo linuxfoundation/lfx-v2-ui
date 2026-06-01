@@ -43,13 +43,12 @@ export const newsletterAccessGuard: CanActivateFn = (route: ActivatedRouteSnapsh
   // it (e.g., the `/newsletters` lens-redirect parent).
   const slug = route.queryParamMap.get('project') ?? projectContextService.activeContext()?.slug ?? null;
   if (!slug) {
-    return router.parseUrl('/foundation/overview');
+    return router.parseUrl('/project/overview');
   }
 
-  // Writer / owner check on the resolved project. project.writer is set
-  // server-side by the FGA-driven authorization check and is true for
-  // both explicit writer grants and owner-equivalent roles.
-  const deniedUrl = router.createUrlTree(['/foundation/overview'], { queryParams: { project: slug } });
+  const routeLens = route.parent?.data?.['lens'] ?? route.data?.['lens'];
+  const overviewPath = routeLens === 'foundation' ? '/foundation/overview' : '/project/overview';
+  const deniedUrl = router.createUrlTree([overviewPath], { queryParams: { project: slug } });
 
   return projectService.getProject(slug, false).pipe(map((project) => (project?.writer === true ? true : deniedUrl)));
 };
