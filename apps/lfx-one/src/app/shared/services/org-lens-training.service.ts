@@ -14,7 +14,7 @@ import { Observable } from 'rxjs';
 export class OrgLensTrainingService {
   private readonly http = inject(HttpClient);
 
-  public getTrainingStats(accountId: string): Observable<OrgTrainingStats> {
-    return this.http.get<OrgTrainingStats>(`/api/orgs/${encodeURIComponent(accountId)}/lens/training/stats`);
+  public getTrainingStats(orgUid: string): Observable<OrgTrainingStats> {
+    return this.http.get<OrgTrainingStats>(`/api/orgs/${encodeURIComponent(orgUid)}/lens/training/stats`);
   }
 }

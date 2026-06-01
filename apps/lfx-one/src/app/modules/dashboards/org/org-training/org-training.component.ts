@@ -83,9 +83,9 @@ export class OrgTrainingComponent {
   }
 
   private initTrainingStats(): Signal<OrgTrainingStats | null> {
-    const accountId$ = toObservable(computed(() => this.accountContext.selectedAccount()?.accountId));
+    const orgUid$ = toObservable(computed(() => this.accountContext.selectedAccount()?.uid));
     return toSignal(
-      accountId$.pipe(
+      orgUid$.pipe(
         filter((id): id is string => !!id),
         tap(() => this.statsLoading.set(true)),
         switchMap((id) =>
