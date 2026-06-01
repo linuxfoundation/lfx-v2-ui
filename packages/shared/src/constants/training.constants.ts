@@ -5,10 +5,10 @@ import type { OrgTrainingTabId } from '../interfaces/training.interface';
 
 // ─── Org Training page constants ───────────────────────────────────────────
 
-export const ORG_TRAINING_TABS: { id: OrgTrainingTabId; label: string; icon: string }[] = [
+export const ORG_TRAINING_TABS: readonly { id: OrgTrainingTabId; label: string; icon: string }[] = [
   { id: 'certifications', label: 'Certifications', icon: 'fa-light fa-award' },
   { id: 'trainings', label: 'Trainings', icon: 'fa-light fa-book-open' },
-];
+] as const;
 
 export const DEFAULT_ORG_TRAINING_TAB_ID: OrgTrainingTabId = 'certifications';
 
@@ -18,7 +18,7 @@ export const ORG_TRAINING_LEVEL_OPTIONS = [
   { label: 'Beginner', value: 'BEGINNER' },
   { label: 'Intermediate', value: 'INTERMEDIATE' },
   { label: 'Advanced', value: 'ADVANCED' },
-];
+] as const;
 
 // ─── Me-lens training constants ────────────────────────────────────────────
 

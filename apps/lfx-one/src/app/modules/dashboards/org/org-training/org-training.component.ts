@@ -9,7 +9,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DEFAULT_ORG_TRAINING_TAB_ID, ORG_TRAINING_LEVEL_OPTIONS, ORG_TRAINING_TABS, VALID_ORG_TRAINING_TAB_IDS } from '@lfx-one/shared/constants';
 import type { OrgTrainingStats, OrgTrainingTabId } from '@lfx-one/shared/interfaces';
-import { catchError, filter, of, switchMap, tap } from 'rxjs';
+import { catchError, finalize, of, switchMap } from 'rxjs';
 
 import { CardComponent } from '@components/card/card.component';
 import { CardTabsBarComponent } from '@components/card-tabs-bar/card-tabs-bar.component';
@@ -87,24 +87,27 @@ export class OrgTrainingComponent {
   }
 
   private initTrainingStats(): Signal<OrgTrainingStats | null> {
-    const orgUid$ = toObservable(computed(() => this.accountContext.selectedAccount()?.uid));
+    const orgUid$ = toObservable(computed(() => this.accountContext.selectedAccount()?.uid ?? null));
     return toSignal(
       orgUid$.pipe(
-        filter((id): id is string => !!id),
-        tap(() => {
+        switchMap((id) => {
+          if (!id) {
+            this.statsLoading.set(false);
+            this.statsError.set(false);
+            return of(null);
+          }
+
           this.statsLoading.set(true);
           this.statsError.set(false);
-        }),
-        switchMap((id) =>
-          this.trainingService.getTrainingStats(id).pipe(
-            tap(() => this.statsLoading.set(false)),
+
+          return this.trainingService.getTrainingStats(id).pipe(
             catchError(() => {
-              this.statsLoading.set(false);
               this.statsError.set(true);
               return of(null);
-            })
-          )
-        )
+            }),
+            finalize(() => this.statsLoading.set(false))
+          );
+        })
       ),
       { initialValue: null }
     );
