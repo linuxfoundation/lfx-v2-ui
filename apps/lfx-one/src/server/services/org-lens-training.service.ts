@@ -18,11 +18,19 @@ export class OrgLensTrainingService {
   private readonly snowflakeService = SnowflakeService.getInstance();
 
   public async getTrainingStats(accountId: string): Promise<OrgTrainingStats> {
+    // All three metrics count distinct people so they share a consistent semantic:
+    //   CERTIFICATES_EARNED  — people who earned ≥1 certification
+    //   TRAININGS_ENROLLED   — people enrolled in ≥1 training (non-certified status)
+    //   EMPLOYEES_ENGAGED    — union: people with any training or certification record
+    //
+    // This ensures EMPLOYEES_ENGAGED ≥ each of the other two individually.
+    // The sum of the first two can still exceed EMPLOYEES_ENGAGED when some
+    // employees appear in both groups (i.e. have both trainings and certifications).
     const query = `
       SELECT
-        COUNT_IF(STATUS = 'Certified')  AS CERTIFICATES_EARNED,
-        COUNT_IF(STATUS != 'Certified') AS TRAININGS_ENROLLED,
-        COUNT(DISTINCT PERSON_KEY)      AS EMPLOYEES_ENGAGED
+        COUNT(DISTINCT CASE WHEN STATUS = 'Certified'  THEN PERSON_KEY END) AS CERTIFICATES_EARNED,
+        COUNT(DISTINCT CASE WHEN STATUS != 'Certified' THEN PERSON_KEY END) AS TRAININGS_ENROLLED,
+        COUNT(DISTINCT PERSON_KEY)                                           AS EMPLOYEES_ENGAGED
       FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_PEOPLE_TRAINING
       WHERE ACCOUNT_ID = ?
     `;
