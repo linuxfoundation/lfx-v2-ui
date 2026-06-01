@@ -1,19 +1,16 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { afterNextRender, Component, inject, Injector, makeStateKey, REQUEST_CONTEXT, TransferState } from '@angular/core';
-import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { Component, inject, makeStateKey, REQUEST_CONTEXT, TransferState } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
 import { AuthContext, User } from '@lfx-one/shared/interfaces';
-import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
-import { filter } from 'rxjs';
 
 import { getRuntimeConfig } from './shared/providers/runtime-config.provider';
 import { AccountContextService } from './shared/services/account-context.service';
 import { DataDogRumService } from './shared/services/datadog-rum.service';
 import { FeatureFlagService } from './shared/services/feature-flag.service';
 import { IntercomService } from './shared/services/intercom.service';
-import { PendingToastService } from './shared/services/pending-toast.service';
 import { PlausibleService } from './shared/services/plausible.service';
 import { SegmentService } from './shared/services/segment.service';
 import { UserService } from './shared/services/user.service';
@@ -32,23 +29,11 @@ export class AppComponent {
   private readonly dataDogRumService = inject(DataDogRumService);
   private readonly accountContextService = inject(AccountContextService);
   private readonly intercomService = inject(IntercomService);
-  private readonly router = inject(Router);
-  private readonly messageService = inject(MessageService);
-  private readonly pendingToastService = inject(PendingToastService);
-  private readonly injector = inject(Injector);
-
   public auth: AuthContext | undefined;
   public transferState = inject(TransferState);
   public serverKey = makeStateKey<AuthContext>('auth');
 
   public constructor() {
-    this.router.events.pipe(filter((e) => e instanceof NavigationEnd)).subscribe(() => {
-      const pending = this.pendingToastService.consume();
-      // afterNextRender ensures the toast fires inside Angular's next rendering cycle so
-      // PrimeNG's OnPush toast component can react to markForCheck() within the same tick.
-      if (pending) afterNextRender(() => this.messageService.add(pending), { injector: this.injector });
-    });
-
     // Initialize Segment tracking
     this.segmentService.initialize();
 

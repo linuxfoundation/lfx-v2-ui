@@ -6,7 +6,6 @@ import { ActivatedRouteSnapshot, CanActivateFn, Router } from '@angular/router';
 import { map } from 'rxjs';
 
 import { PersonaService } from '../services/persona.service';
-import { PendingToastService } from '../services/pending-toast.service';
 import { ProjectContextService } from '../services/project-context.service';
 import { ProjectService } from '../services/project.service';
 
@@ -30,7 +29,6 @@ export const newsletterAccessGuard: CanActivateFn = (route: ActivatedRouteSnapsh
   const personaService = inject(PersonaService);
   const projectContextService = inject(ProjectContextService);
   const projectService = inject(ProjectService);
-  const pendingToastService = inject(PendingToastService);
   const router = inject(Router);
 
   // Fast path: ED persona. Synchronous (cookie-seeded) so SSR + first-paint
@@ -57,12 +55,6 @@ export const newsletterAccessGuard: CanActivateFn = (route: ActivatedRouteSnapsh
   return projectService.getProject(slug, false).pipe(
     map((project) => {
       if (project?.writer !== true) {
-        pendingToastService.set({
-          severity: 'error',
-          summary: 'Access Denied',
-          detail: 'You do not have permission to perform this action on this project.',
-          life: 5000,
-        });
         return deniedUrl;
       }
       return true;

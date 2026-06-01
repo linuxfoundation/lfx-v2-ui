@@ -7,7 +7,6 @@ import { Router } from '@angular/router';
 import { filter, skip, take } from 'rxjs';
 
 import { LensService } from '../services/lens.service';
-import { PendingToastService } from '../services/pending-toast.service';
 import { ProjectContextService } from '../services/project-context.service';
 
 /**
@@ -33,7 +32,6 @@ export function evictOnWriteAccessLoss(): void {
   const router = inject(Router);
   const projectContextService = inject(ProjectContextService);
   const lensService = inject(LensService);
-  const pendingToastService = inject(PendingToastService);
   const destroyRef = inject(DestroyRef);
 
   toObservable(projectContextService.canWrite)
@@ -44,12 +42,6 @@ export function evictOnWriteAccessLoss(): void {
       takeUntilDestroyed(destroyRef)
     )
     .subscribe(() => {
-      pendingToastService.set({
-        severity: 'error',
-        summary: 'Access Denied',
-        detail: 'You do not have permission to perform this action on this project.',
-        life: 5000,
-      });
       const slug = projectContextService.activeContext()?.slug;
       const lens = lensService.activeLens();
       const overviewPath = lens === 'project' ? '/project/overview' : '/foundation/overview';
