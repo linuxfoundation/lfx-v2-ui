@@ -183,28 +183,29 @@
                 <td class="px-4 py-3 align-middle">
                   <div class="flex items-center justify-end gap-1">
                     @if (canManage()) {
-                      <button
-                        type="button"
-                        class="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
-                        [disabled]="user.editDisabledBase || isSubmitting()"
-                        [pTooltip]="user.editTooltip"
-                        tooltipPosition="top"
-                        [attr.aria-label]="'Edit access for ' + user.name"
-                        [attr.data-testid]="'org-access-edit-' + user.email"
-                        (click)="openEdit(user)">
-                        <i class="fa-light fa-pen-to-square" aria-hidden="true"></i>
-                      </button>
-                      <button
-                        type="button"
-                        class="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
-                        [disabled]="user.isLastAdmin || isSubmitting()"
-                        [pTooltip]="user.removeTooltip"
-                        tooltipPosition="top"
-                        [attr.aria-label]="'Remove access for ' + user.name"
-                        [attr.data-testid]="'org-access-remove-' + user.email"
-                        (click)="confirmRemove(user)">
-                        <i class="fa-light fa-trash" aria-hidden="true"></i>
-                      </button>
+                      <!-- Tooltip lives on the wrapper: PrimeNG pTooltip won't fire on a natively [disabled] button. -->
+                      <span class="inline-flex" [pTooltip]="user.editTooltip" tooltipPosition="top">
+                        <button
+                          type="button"
+                          class="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
+                          [disabled]="user.editDisabledBase || isSubmitting()"
+                          [attr.aria-label]="'Edit access for ' + user.name"
+                          [attr.data-testid]="'org-access-edit-' + user.email"
+                          (click)="openEdit(user)">
+                          <i class="fa-light fa-pen-to-square" aria-hidden="true"></i>
+                        </button>
+                      </span>
+                      <span class="inline-flex" [pTooltip]="user.removeTooltip" tooltipPosition="top">
+                        <button
+                          type="button"
+                          class="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                          [disabled]="user.isLastAdmin || isSubmitting()"
+                          [attr.aria-label]="'Remove access for ' + user.name"
+                          [attr.data-testid]="'org-access-remove-' + user.email"
+                          (click)="confirmRemove(user)">
+                          <i class="fa-light fa-trash" aria-hidden="true"></i>
+                        </button>
+                      </span>
                     } @else {
                       <span class="text-xs text-gray-300">&mdash;</span>
                     }
