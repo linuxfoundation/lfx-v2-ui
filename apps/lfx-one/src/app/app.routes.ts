@@ -144,8 +144,7 @@ export const routes: Routes = [
               description: 'Training enrollments and certifications across your organization.',
               icon: 'fa-light fa-graduation-cap',
             },
-            loadComponent: () =>
-              import('./modules/dashboards/org/org-training/org-training.component').then((m) => m.OrgTrainingComponent),
+            loadComponent: () => import('./modules/dashboards/org/org-training/org-training.component').then((m) => m.OrgTrainingComponent),
           },
           {
             path: 'meetings',

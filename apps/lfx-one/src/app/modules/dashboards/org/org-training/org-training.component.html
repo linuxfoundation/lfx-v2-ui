@@ -11,15 +11,12 @@
         Training &amp; Certifications
       }
     </h1>
-    <p class="text-sm text-gray-500" data-testid="org-training-subtitle">
-      Training enrollments and certifications across your organization.
-    </p>
+    <p class="text-sm text-gray-500" data-testid="org-training-subtitle">Training enrollments and certifications across your organization.</p>
   </header>
 
   <!-- Stat Strip -->
   <lfx-card styleClass="[&_.p-card-body]:p-0 [&_.p-card-content]:p-0" data-testid="org-training-stats">
     <div class="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-gray-200">
-
       <!-- Certified Employees (clickable → Certifications tab) -->
       <button
         type="button"
@@ -95,13 +92,11 @@
           <p class="text-sm font-normal text-gray-900">Training Courses Enrolled</p>
         </div>
       </button>
-
     </div>
   </lfx-card>
 
   <!-- Content Card: tabs + search + filter + tab panels -->
   <lfx-card styleClass="[&_.p-card-body]:p-0 [&_.p-card-content]:p-0" data-testid="org-training-content-card">
-
     <!-- Tab Pills Bar -->
     <lfx-card-tabs-bar [options]="tabs" [selectedFilter]="activeTab()" (filterChange)="onActiveTabChange($event)" data-testid="org-training-tabs" />
 
@@ -147,6 +142,5 @@
         </section>
       }
     }
-
   </lfx-card>
 </main>
