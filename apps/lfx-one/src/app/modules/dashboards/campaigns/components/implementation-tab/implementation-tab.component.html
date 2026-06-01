@@ -80,9 +80,7 @@
 
         <!-- Budget Split -->
         <div class="mt-4 flex flex-col gap-2">
-          <label class="text-xs font-medium text-gray-700"
-            >Budget Split: Search {{ campaignForm.controls.searchBudgetPct.value }}% / Display {{ displayBudgetPct() }}%</label
-          >
+          <label class="text-xs font-medium text-gray-700">Budget Split: Search {{ 100 - displayBudgetPct() }}% / Display {{ displayBudgetPct() }}%</label>
           <input type="range" formControlName="searchBudgetPct" min="0" max="100" class="w-full accent-blue-600" data-testid="implementation-budget-split" />
         </div>
 
@@ -113,7 +111,7 @@
             data-testid="implementation-add-headline" />
         </div>
         <div class="flex flex-col gap-2" formArrayName="headlines">
-          @for (control of headlinesArray().controls; track $index; let i = $index) {
+          @for (control of headlinesArray.controls; track $index; let i = $index) {
             <div class="flex items-center gap-2">
               <input
                 type="text"
@@ -123,7 +121,7 @@
                 class="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 [attr.data-testid]="'implementation-headline-' + i" />
               <span class="text-xs text-gray-400">{{ control.value?.length || 0 }}/{{ charLimits.searchHeadline }}</span>
-              @if (headlinesArray().length > 1) {
+              @if (headlinesArray.length > 1) {
                 <button type="button" (click)="removeHeadline(i)" class="text-gray-400 hover:text-red-500" [attr.aria-label]="'Remove headline ' + (i + 1)">
                   <i class="fa-light fa-xmark" aria-hidden="true"></i>
                 </button>
@@ -147,7 +145,7 @@
             data-testid="implementation-add-description" />
         </div>
         <div class="flex flex-col gap-2" formArrayName="descriptions">
-          @for (control of descriptionsArray().controls; track $index; let i = $index) {
+          @for (control of descriptionsArray.controls; track $index; let i = $index) {
             <div class="flex items-center gap-2">
               <textarea
                 [formControlName]="i"
@@ -157,7 +155,7 @@
                 class="flex-1 resize-none rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 [attr.data-testid]="'implementation-description-' + i"></textarea>
               <span class="text-xs text-gray-400">{{ control.value?.length || 0 }}/{{ charLimits.searchDescription }}</span>
-              @if (descriptionsArray().length > 1) {
+              @if (descriptionsArray.length > 1) {
                 <button
                   type="button"
                   (click)="removeDescription(i)"

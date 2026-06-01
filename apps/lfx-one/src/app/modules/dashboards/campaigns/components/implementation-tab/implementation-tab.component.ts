@@ -1,13 +1,15 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, DestroyRef, effect, inject, input, signal } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { CAMPAIGN_BUDGET_DEFAULTS, CAMPAIGN_CHAR_LIMITS } from '@lfx-one/shared/constants';
 import { CampaignService } from '@services/campaign.service';
-import { Subscription } from 'rxjs';
+import { map, startWith, Subscription, take } from 'rxjs';
 
+import type { Signal } from '@angular/core';
 import type { CampaignBriefOutput, CampaignCreateResponse, CampaignCreateResult, CampaignKeyword, CampaignType } from '@lfx-one/shared/interfaces';
 
 type ImplementationStep = 'form' | 'creating' | 'results';
@@ -22,6 +24,7 @@ export class ImplementationTabComponent {
   // === Services ===
   private readonly campaignService = inject(CampaignService);
   private readonly fb = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
 
   // === Inputs ===
   public readonly briefData = input<CampaignBriefOutput | null>(null);
@@ -56,16 +59,18 @@ export class ImplementationTabComponent {
   protected readonly briefHsToken = signal<string | null>(null);
   protected readonly briefDriveFolderUrl = signal('');
 
-  // === Computed Signals ===
-  protected readonly displayBudgetPct = computed(() => 100 - this.campaignForm.controls.searchBudgetPct.value);
-  protected readonly headlinesArray = computed(() => this.campaignForm.controls.headlines as FormArray);
-  protected readonly descriptionsArray = computed(() => this.campaignForm.controls.descriptions as FormArray);
-  protected readonly campaignName = computed(() => {
-    const name = this.campaignForm.controls.eventName.value;
-    const region = this.campaignForm.controls.countryCode.value || 'NA';
-    const startDate = this.campaignForm.controls.startDate.value || '';
-    return name ? `Events | ${name} | ${region} | Conversions | Prospecting | Search | Linux Foundation | BoFU | ${startDate}` : '';
-  });
+  // === Reactive Signals (from form valueChanges) ===
+  protected readonly displayBudgetPct: Signal<number> = this.initDisplayBudgetPct();
+  protected readonly campaignName: Signal<string> = this.initCampaignName();
+
+  // === Form Array Accessors ===
+  protected get headlinesArray(): FormArray {
+    return this.campaignForm.controls.headlines as FormArray;
+  }
+
+  protected get descriptionsArray(): FormArray {
+    return this.campaignForm.controls.descriptions as FormArray;
+  }
 
   // === Private State ===
   private jobSubscription: Subscription | null = null;
@@ -196,18 +201,59 @@ export class ImplementationTabComponent {
   }
 
   private pollJob(jobId: string): void {
-    this.jobSubscription = this.campaignService.getCreateResult(jobId).subscribe({
-      next: (result: CampaignCreateResponse | null) => {
-        if (result) {
-          this.results.set(result.campaigns);
-          this.errors.set(result.errors);
+    const MAX_POLLS = 150; // 5 minutes at 2s interval
+    this.jobSubscription = this.campaignService
+      .getCreateResult(jobId)
+      .pipe(take(MAX_POLLS), takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result: CampaignCreateResponse | null) => {
+          if (result) {
+            this.results.set(result.campaigns);
+            this.errors.set(result.errors);
+            this.step.set('results');
+          }
+        },
+        error: () => {
+          this.errors.set(['Failed to retrieve campaign results.']);
           this.step.set('results');
-        }
-      },
-      error: () => {
-        this.errors.set(['Failed to retrieve campaign results.']);
-        this.step.set('results');
-      },
-    });
+        },
+        complete: () => {
+          if (this.step() === 'creating') {
+            this.errors.set(['Campaign creation timed out. Check Google Ads for status.']);
+            this.step.set('results');
+          }
+        },
+      });
+  }
+
+  // === Private Initializers ===
+  private initDisplayBudgetPct(): Signal<number> {
+    return toSignal(
+      this.campaignForm.controls.searchBudgetPct.valueChanges.pipe(
+        startWith(this.campaignForm.controls.searchBudgetPct.value),
+        map((v) => 100 - v)
+      ),
+      { initialValue: 100 - CAMPAIGN_BUDGET_DEFAULTS.searchBudgetPct }
+    );
+  }
+
+  private initCampaignName(): Signal<string> {
+    return toSignal(
+      this.campaignForm.valueChanges.pipe(
+        startWith(this.campaignForm.getRawValue()),
+        map((form) => {
+          const name = form.eventName;
+          const region = form.countryCode || 'NA';
+          const startDate = form.startDate || '';
+          const includeSearch = form.includeSearch;
+          const includeDemandGen = form.includeDemandGen;
+          let channel = 'Search';
+          if (includeSearch && includeDemandGen) channel = 'Multi';
+          else if (includeDemandGen) channel = 'DG Display';
+          return name ? `Events | ${name} | ${region} | Conversions | Prospecting | ${channel} | Linux Foundation | BoFU | ${startDate}` : '';
+        })
+      ),
+      { initialValue: '' }
+    );
   }
 }
