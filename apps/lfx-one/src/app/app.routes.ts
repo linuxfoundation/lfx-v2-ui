@@ -134,7 +134,7 @@ export const routes: Routes = [
           {
             path: 'events',
             data: { lens: 'org', title: 'Events', description: 'Events your organization is sponsoring or attending.', icon: 'fa-light fa-calendar' },
-            loadComponent: loadOrgPlaceholderPage,
+            loadComponent: () => import('./modules/events/org-events-dashboard/org-events-dashboard.component').then((m) => m.OrgEventsDashboardComponent),
           },
           {
             path: 'training',
@@ -339,6 +339,17 @@ export const routes: Routes = [
         pathMatch: 'full',
       },
     ],
+  },
+  // Public-facing user documentation portal (LFXV2-2001).
+  // Sibling of the authGuard'd root: every /docs/** URL renders inside
+  // DocsLayoutComponent without requiring authentication. The auth-aware
+  // shell (full chrome for signed-in users vs. minimal docs sidebar for
+  // unauthenticated visitors) is implemented inside DocsLayoutComponent
+  // itself (research R6) so the URL is identical across auth states (FR-009c).
+  {
+    path: 'docs',
+    loadComponent: () => import('./layouts/docs-layout/docs-layout.component').then((m) => m.DocsLayoutComponent),
+    loadChildren: () => import('./modules/docs/docs.routes').then((m) => m.DOCS_ROUTES),
   },
   {
     path: 'meetings/not-found',

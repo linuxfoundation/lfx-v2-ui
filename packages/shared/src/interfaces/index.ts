@@ -183,8 +183,14 @@ export * from './org-lens-access.interface';
 export * from './org-people-key-contacts.interface';
 export * from './org-people-key-contacts.internal.interface';
 
+// Org Events interfaces
+export * from './org-events.interface';
+
 // Newsletter interfaces
 export * from './newsletter.interface';
 
 // Invite interfaces
 export * from './invite.interface';
+
+// Docs portal interfaces (build artifacts + runtime models for /docs)
+export * from './docs.interface';
