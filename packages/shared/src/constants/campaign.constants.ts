@@ -48,6 +48,14 @@ export const CAMPAIGN_GOALS: readonly CampaignGoalOption[] = [
 
 export const CAMPAIGN_JOB_POLL_INTERVAL_MS = 2000;
 
+/**
+ * Upper-bound thresholds for each pacing label (percentage of budget spent).
+ * A campaign's pacingPct falls into the first bucket whose threshold it does not exceed:
+ *   pacingPct < 50  → underspending
+ *   pacingPct < 90  → normal
+ *   pacingPct < 100 → constrained
+ *   pacingPct ≥ 100 → overspending (130 marks severe overspending)
+ */
 export const CAMPAIGN_PACING_THRESHOLDS = {
   underspending: 50,
   normal: 90,
