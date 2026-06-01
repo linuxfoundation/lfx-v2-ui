@@ -1,7 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { Component, inject, PLATFORM_ID, signal } from '@angular/core';
 
 import { CAMPAIGN_TABS } from '@lfx-one/shared/constants';
 import type { CampaignBriefOutput, CampaignTab } from '@lfx-one/shared/interfaces';
@@ -15,6 +16,8 @@ import { PlanningTabComponent } from './components/planning-tab/planning-tab.com
   styleUrl: './campaigns.component.scss',
 })
 export class CampaignsComponent {
+  private readonly platformId = inject(PLATFORM_ID);
+
   protected readonly tabs = CAMPAIGN_TABS;
   protected readonly selectedTab = signal<CampaignTab>('planning');
   protected readonly briefOutput = signal<CampaignBriefOutput | null>(null);
@@ -39,8 +42,10 @@ export class CampaignsComponent {
     if (newIndex !== null) {
       event.preventDefault();
       this.selectTab(this.tabs[newIndex].id);
-      const target = (event.target as HTMLElement).parentElement?.children[newIndex] as HTMLElement | undefined;
-      target?.focus();
+      if (isPlatformBrowser(this.platformId)) {
+        const target = (event.target as HTMLElement).parentElement?.children[newIndex] as HTMLElement | undefined;
+        target?.focus();
+      }
     }
   }
 

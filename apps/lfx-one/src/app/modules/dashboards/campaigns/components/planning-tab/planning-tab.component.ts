@@ -154,7 +154,6 @@ export class PlanningTabComponent implements OnInit {
     this.eventDetails.set(null);
     this.copyBuffer.set('');
     this.structuredCopy.set(null);
-    this.hsUtm.set(null);
     this.keywords.set([]);
     this.errorMessage.set(null);
 
@@ -233,8 +232,10 @@ export class PlanningTabComponent implements OnInit {
   }
 
   protected copyToClipboard(): void {
-    if (isPlatformBrowser(this.platformId)) {
-      navigator.clipboard.writeText(this.copyBuffer());
+    if (isPlatformBrowser(this.platformId) && navigator.clipboard) {
+      navigator.clipboard.writeText(this.copyBuffer()).catch(() => {
+        /* clipboard access denied — fail gracefully */
+      });
     }
   }
 
