@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: MIT
 
 import { isPlatformBrowser } from '@angular/common';
-import { Component, computed, inject, output, PLATFORM_ID, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { Component, computed, DestroyRef, inject, OnInit, output, PLATFORM_ID, signal } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { CAMPAIGN_GOALS, CAMPAIGN_PLATFORMS } from '@lfx-one/shared/constants';
 import { CampaignService } from '@services/campaign.service';
-import { Subscription } from 'rxjs';
+import { debounceTime, Subject, Subscription } from 'rxjs';
 
 import type {
   CampaignBriefOutput,
@@ -30,11 +30,12 @@ type PlanningStep = 'input' | 'generating' | 'review';
   templateUrl: './planning-tab.component.html',
   styleUrl: './planning-tab.component.scss',
 })
-export class PlanningTabComponent {
+export class PlanningTabComponent implements OnInit {
   // === Services ===
   private readonly campaignService = inject(CampaignService);
   private readonly fb = inject(FormBuilder);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly destroyRef = inject(DestroyRef);
 
   // === Outputs ===
   public readonly proceedToImplementation = output<CampaignBriefOutput>();
@@ -69,6 +70,7 @@ export class PlanningTabComponent {
   protected readonly keywords = signal<CampaignKeyword[]>([]);
   protected readonly errorMessage = signal<string | null>(null);
   protected lastLookedUpEvent = '';
+  private readonly urlInput$ = new Subject<string>();
 
   // === Editable Review Signals ===
   protected readonly editSearchHeadlines = signal<string[]>([]);
@@ -89,6 +91,11 @@ export class PlanningTabComponent {
   // === Private State ===
   private briefSubscription: Subscription | null = null;
 
+  // === Lifecycle ===
+  public ngOnInit(): void {
+    this.urlInput$.pipe(debounceTime(500), takeUntilDestroyed(this.destroyRef)).subscribe((eventName) => this.lookupHubSpot(eventName));
+  }
+
   // === Protected Methods ===
   protected togglePlatform(platformId: CampaignPlatform): void {
     const current = new Set(this.selectedPlatforms());
@@ -108,7 +115,7 @@ export class PlanningTabComponent {
     const url = this.briefForm.controls.url.value.trim();
     const eventName = this.extractEventName(url);
     if (eventName.length > 3) {
-      this.lookupHubSpot(eventName);
+      this.urlInput$.next(eventName);
     }
   }
 
@@ -162,18 +169,21 @@ export class PlanningTabComponent {
       totalBudget: budgetStr ? Number(budgetStr) : undefined,
     };
 
-    this.briefSubscription = this.campaignService.generateBrief(request).subscribe({
-      next: (event: SSEEvent<CampaignSSEEventType>) => this.handleSSEEvent(event),
-      error: () => {
-        this.errorMessage.set('Connection lost. Please try again.');
-        this.step.set('input');
-      },
-      complete: () => {
-        if (this.step() === 'generating') {
-          this.step.set('review');
-        }
-      },
-    });
+    this.briefSubscription = this.campaignService
+      .generateBrief(request)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (event: SSEEvent<CampaignSSEEventType>) => this.handleSSEEvent(event),
+        error: () => {
+          this.errorMessage.set('Connection lost. Please try again.');
+          this.step.set('input');
+        },
+        complete: () => {
+          if (this.step() === 'generating') {
+            this.step.set('review');
+          }
+        },
+      });
   }
 
   protected reset(): void {
