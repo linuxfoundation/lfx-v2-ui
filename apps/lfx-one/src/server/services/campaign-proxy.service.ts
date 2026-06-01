@@ -10,6 +10,7 @@ import type {
   CampaignCreateResult,
   CampaignJobStatus,
   CampaignKeyword,
+  CampaignSSEEventType,
 } from '@lfx-one/shared/interfaces';
 import type { Request } from 'express';
 
@@ -88,6 +89,7 @@ async function hubspotSearchCampaign(eventName: string): Promise<HubSpotUtmResul
       limit: 10,
       properties: ['hs_name', 'hs_utm', 'hs_start_date'],
     }),
+    signal: AbortSignal.timeout(15_000),
   });
 
   if (!response.ok) {
@@ -125,6 +127,7 @@ async function hubspotCreateCampaign(eventName: string): Promise<HubSpotUtmResul
     method: 'POST',
     headers: hsHeaders(),
     body: JSON.stringify({ properties: { hs_name: eventName } }),
+    signal: AbortSignal.timeout(15_000),
   });
 
   if (!createResponse.ok) {
@@ -143,6 +146,7 @@ async function hubspotCreateCampaign(eventName: string): Promise<HubSpotUtmResul
       limit: 1,
       properties: ['hs_name', 'hs_utm'],
     }),
+    signal: AbortSignal.timeout(15_000),
   }).catch(() => null);
 
   let hsUtm: string | null = null;
@@ -198,6 +202,7 @@ async function aiChat(systemPrompt: string, userPrompt: string, maxTokens = 4096
       max_tokens: maxTokens,
       temperature: 0.7,
     }),
+    signal: AbortSignal.timeout(60_000),
   });
 
   if (!response.ok) {
@@ -206,6 +211,9 @@ async function aiChat(systemPrompt: string, userPrompt: string, maxTokens = 4096
   }
 
   const data = (await response.json()) as { choices: { message: { content: string } }[] };
+  if (!data.choices?.length || !data.choices[0]?.message?.content) {
+    throw new Error('AI proxy returned empty or malformed response');
+  }
   return data.choices[0].message.content;
 }
 
@@ -230,7 +238,7 @@ async function* aiChatStream(systemPrompt: string, userPrompt: string, signal: A
       temperature: 0.7,
       stream: true,
     }),
-    signal,
+    signal: AbortSignal.any([signal, AbortSignal.timeout(120_000)]),
   });
 
   if (!response.ok || !response.body) {
@@ -315,6 +323,7 @@ If a field cannot be determined, use null.`;
 // ---------------------------------------------------------------------------
 
 const jobs = new Map<string, CampaignJobStatus>();
+const JOB_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 function createJob(): string {
   const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -324,6 +333,7 @@ function createJob(): string {
 
 function completeJob(jobId: string, result: CampaignCreateResponse): void {
   jobs.set(jobId, { status: 'done', result });
+  setTimeout(() => jobs.delete(jobId), JOB_TTL_MS);
 }
 
 // ---------------------------------------------------------------------------
@@ -364,6 +374,45 @@ const GEO_TARGET_MAP: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
+// SSRF protection for user-supplied URLs
+// ---------------------------------------------------------------------------
+
+const PRIVATE_IP_PATTERNS = [/^127\./, /^10\./, /^172\.(1[6-9]|2\d|3[01])\./, /^192\.168\./, /^169\.254\./, /^0\./];
+
+const BLOCKED_HOSTNAMES = new Set(['localhost', '[::1]']);
+
+function validateScrapeUrl(rawUrl: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    throw new Error('Invalid URL');
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error(`Blocked protocol: ${parsed.protocol}`);
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+
+  if (BLOCKED_HOSTNAMES.has(hostname) || hostname === '0.0.0.0' || hostname === '::1') {
+    throw new Error('Blocked host: private/internal address');
+  }
+
+  if (PRIVATE_IP_PATTERNS.some((re) => re.test(hostname))) {
+    throw new Error('Blocked host: private IP range');
+  }
+
+  const allowlist = getEnv('CAMPAIGN_BRIEF_SCRAPE_HOST_ALLOWLIST');
+  if (allowlist) {
+    const allowed = allowlist.split(',').map((h) => h.trim().toLowerCase());
+    if (!allowed.includes(hostname)) {
+      throw new Error(`Host not in allowlist: ${hostname}`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // CampaignProxyService — brief generation + campaign creation
 // ---------------------------------------------------------------------------
 
@@ -394,15 +443,27 @@ export class CampaignProxyService {
 
   // === Brief generation (SSE stream) ===
 
-  public async *streamBrief(req: Request, body: CampaignBriefRequest, signal: AbortSignal): AsyncGenerator<{ type: string; data: unknown }> {
+  public async *streamBrief(req: Request, body: CampaignBriefRequest, signal: AbortSignal): AsyncGenerator<{ type: CampaignSSEEventType; data: unknown }> {
     yield { type: 'status', data: `Scraping ${body.url}...` };
+
+    try {
+      validateScrapeUrl(body.url);
+    } catch (error) {
+      yield { type: 'error', data: `Blocked URL: ${error instanceof Error ? error.message : 'Invalid URL'}` };
+      return;
+    }
 
     let html = '';
     try {
       const scrapeResponse = await fetch(body.url, {
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LFX/1.0)' },
-        signal: AbortSignal.timeout(15_000),
+        signal: AbortSignal.any([signal, AbortSignal.timeout(15_000)]),
+        redirect: 'error',
       });
+      if (!scrapeResponse.ok) {
+        yield { type: 'error', data: `Event page returned ${scrapeResponse.status}` };
+        return;
+      }
       html = await scrapeResponse.text();
     } catch (error) {
       yield { type: 'error', data: `Failed to fetch event page: ${error instanceof Error ? error.message : 'Unknown error'}` };
@@ -551,19 +612,19 @@ export class CampaignProxyService {
       } catch (error: unknown) {
         if (getGadsErrorCode(error) === 'DUPLICATE_CAMPAIGN_NAME') {
           try {
-            const retryBody = { ...body, startDate: `${body.startDate}-${Date.now().toString(36).slice(-4)}` };
+            const retryBody = { ...body, eventName: `${body.eventName} ${Date.now().toString(36).slice(-4)}` };
             const result = campaignType === 'search' ? await this.createSearchCampaign(retryBody) : await this.createDemandGenCampaign(retryBody);
             results.push(result);
             continue;
           } catch (retryError: unknown) {
             const detail = extractGadsErrorMessage(retryError);
-            logger.error(undefined, 'campaign_create_type', 0, retryError as Error, { campaignType, detail });
+            logger.error(undefined, 'campaign_create_type', Date.now(), retryError as Error, { campaignType, detail });
             errors.push(`${campaignType}: ${detail}`);
             continue;
           }
         }
         const detail = extractGadsErrorMessage(error);
-        logger.error(undefined, 'campaign_create_type', 0, error as Error, { campaignType, detail });
+        logger.error(undefined, 'campaign_create_type', Date.now(), error as Error, { campaignType, detail });
         errors.push(`${campaignType}: ${detail}`);
       }
     }
@@ -660,7 +721,7 @@ export class CampaignProxyService {
         ad_group: adGroupResource,
         ad: {
           responsive_search_ad: {
-            headlines: headlines.map((h, i) => ({ text: h.slice(0, 30), pinned_field: i < 3 ? i + 1 : undefined })),
+            headlines: headlines.map((h) => ({ text: h.slice(0, 30) })),
             descriptions: descriptions.map((d) => ({ text: d.slice(0, 90) })),
           },
           final_urls: [finalUrl],
@@ -763,8 +824,9 @@ export class CampaignProxyService {
 // ---------------------------------------------------------------------------
 
 function resolveMatchType(matchType: string): number {
-  if (matchType === 'Exact') return enums.KeywordMatchType.EXACT;
-  if (matchType === 'Phrase') return enums.KeywordMatchType.PHRASE;
+  const normalized = matchType.toLowerCase();
+  if (normalized === 'exact') return enums.KeywordMatchType.EXACT;
+  if (normalized === 'phrase') return enums.KeywordMatchType.PHRASE;
   return enums.KeywordMatchType.BROAD;
 }
 
@@ -908,7 +970,7 @@ const REGION_MAP: Record<string, string> = {
 };
 
 function buildCampaignName(body: CampaignCreateRequest, campaignType: string): string {
-  const region = REGION_MAP[body.countryCode] || 'Global';
+  const region = REGION_MAP[body.countryCode.toUpperCase()] || 'Global';
   const adFormat = campaignType === 'Search' ? 'Search' : 'DG Display';
   const targeting = campaignType === 'Search' ? 'Prospecting' : 'Intent';
   const funnel = campaignType === 'Search' ? 'BoFU' : 'MoFU';

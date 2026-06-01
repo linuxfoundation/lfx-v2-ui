@@ -376,6 +376,10 @@ environment:
   GADS_CUSTOMER_ID:
     value:
 
+  # Campaign Brief Scrape — SSRF host allowlist (comma-separated)
+  CAMPAIGN_BRIEF_SCRAPE_HOST_ALLOWLIST:
+    value: "events.linuxfoundation.org,lfevents.linuxfoundation.org,www.linuxfoundation.org"
+
   # HubSpot Configuration (Campaign UTM Tracking)
   HUBSPOT_ACCESS_TOKEN:
     value:

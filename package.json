@@ -63,7 +63,6 @@
     ]
   },
   "dependencies": {
-    "chart.js": "^4.5.1",
-    "google-ads-api": "^23.0.0"
+    "chart.js": "^4.5.1"
   }
 }
