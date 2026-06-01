@@ -30,7 +30,7 @@ export class DocsManifestService {
   constructor() {
     if (docsManifest.schemaVersion !== EXPECTED_SCHEMA_VERSION) {
       throw new Error(
-        `[DocsManifestService] schema version mismatch: expected ${EXPECTED_SCHEMA_VERSION}, got ${docsManifest.schemaVersion}. Run \`yarn docs:build\` and rebuild the app.`,
+        `[DocsManifestService] schema version mismatch: expected ${EXPECTED_SCHEMA_VERSION}, got ${docsManifest.schemaVersion}. Run \`yarn docs:build\` and rebuild the app.`
       );
     }
   }
