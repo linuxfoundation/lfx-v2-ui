@@ -128,7 +128,7 @@
     <!-- Tab Panels -->
     @for (tab of tabs; track tab.id) {
       @if (activeTab() === tab.id) {
-        <section role="tabpanel" tabindex="0" [id]="'org-training-panel-' + tab.id" [attr.data-testid]="'org-training-panel-' + tab.id" class="p-5">
+        <section [id]="'org-training-panel-' + tab.id" [attr.data-testid]="'org-training-panel-' + tab.id" class="p-5">
           <lfx-empty-state
             [icon]="tab.icon"
             title="Coming soon"

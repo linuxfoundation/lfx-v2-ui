@@ -33,6 +33,7 @@ export class OrgTrainingComponent {
   private readonly trainingService = inject(OrgLensTrainingService);
 
   // ─── Configuration ─────────────────────────────────────────────────────────
+  // Shared constants are readonly; copy into mutable arrays for the component inputs that expect them.
   protected readonly tabs = [...ORG_TRAINING_TABS];
   protected readonly levelOptions = [...ORG_TRAINING_LEVEL_OPTIONS];
 
@@ -91,6 +92,7 @@ export class OrgTrainingComponent {
     return toSignal(
       orgUid$.pipe(
         switchMap((id) => {
+          // No org selected (or context cleared mid-flight): reset state instead of leaving loading stuck.
           if (!id) {
             this.statsLoading.set(false);
             this.statsError.set(false);
@@ -105,6 +107,7 @@ export class OrgTrainingComponent {
               this.statsError.set(true);
               return of(null);
             }),
+            // finalize clears loading once — covers success and the recovered error path.
             finalize(() => this.statsLoading.set(false))
           );
         })
