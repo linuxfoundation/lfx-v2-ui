@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lfx.dev/schemas/docs-search-index.schema.json",
   "title": "DocsSearchIndexFile",
-  "description": "Build artifact emitted by apps/lfx-one/scripts/build-docs.mjs and shipped as /assets/search-index.json. Lazy-loaded by DocsSearchService on first interaction with the search field. Schema-versioned independently of the manifest.",
+  "description": "Build artifact emitted by apps/lfx-one/scripts/build-docs.mjs and shipped as /assets/docs/search-index.json. Lazy-loaded by DocsSearchService on first interaction with the search field. Schema-versioned independently of the manifest.",
   "type": "object",
   "required": ["schemaVersion", "generatedAt", "miniSearch", "entries"],
   "additionalProperties": false,

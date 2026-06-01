@@ -79,7 +79,10 @@ export function sanitizeDocsHtml(html) {
     transformTags: {
       a: (tagName, attribs) => {
         const href = attribs.href ?? '';
-        const isInternal = href.startsWith('/') || href.startsWith('#');
+        // Protocol-relative URLs (//host or /\host) are external — don't
+        // match them as internal just because they start with '/'.
+        const isProtocolRelative = href.startsWith('//') || href.startsWith('/\\');
+        const isInternal = (href.startsWith('/') && !isProtocolRelative) || href.startsWith('#');
         if (isInternal) {
           // Strip target/rel that may have leaked through from authored HTML;
           // keep them for external only.
