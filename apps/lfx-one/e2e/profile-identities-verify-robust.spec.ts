@@ -218,3 +218,5 @@ test.describe('Identities Verify Flow - Robust Tests', () => {
     });
   });
 });
+
+// Generated with [Claude Code](https://claude.ai/code)

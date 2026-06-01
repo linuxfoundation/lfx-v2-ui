@@ -1,6 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+// Generated with [Claude Code](https://claude.ai/code)
+
 import { TLF_INDIVIDUAL_SUPPORTER } from '@lfx-one/shared/constants';
 import { EnrollmentMembership, IndividualEnrollment, RawMembership } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';

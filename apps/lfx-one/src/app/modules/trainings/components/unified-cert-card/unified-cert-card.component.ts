@@ -1,6 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+// Generated with [Claude Code](https://claude.ai/code)
+
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input, Signal } from '@angular/core';
 import { ButtonSeverity, UnifiedCertification, UnifiedCertState } from '@lfx-one/shared/interfaces';

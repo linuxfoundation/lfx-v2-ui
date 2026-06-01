@@ -1,6 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+// Generated with [Claude Code](https://claude.ai/code)
+
 import { Routes } from '@angular/router';
 import { authGuard } from '@shared/guards/auth.guard';
 

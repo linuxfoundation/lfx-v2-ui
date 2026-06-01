@@ -1,6 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+// Generated with [Claude Code](https://claude.ai/code)
+
 import {
   COMING_SOON_SENTINEL,
   DEFAULT_EVENT_SORT_FIELD,
