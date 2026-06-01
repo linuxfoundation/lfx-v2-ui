@@ -64,10 +64,6 @@ export class EventAttendeesDrawerComponent {
     return initials(name);
   }
 
-  protected onClose(): void {
-    this.visible.set(false);
-  }
-
   private initAttendeesData() {
     return toSignal(
       toObservable(this.visible).pipe(

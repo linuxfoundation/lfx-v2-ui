@@ -314,40 +314,45 @@ export class OrgLensEventsService {
   public async getEventSpeakers(req: Request, accountId: string, eventId: string, searchQuery?: string): Promise<OrgEventSpeakersResponse> {
     logger.debug(req, 'get_event_speakers', 'Fetching event speakers', { account_id: accountId, event_id: eventId });
 
-    const searchFilter = searchQuery ? 'AND (UPPER(COALESCE(p.NAME, es.SPEAKER_EMAIL)) LIKE UPPER(?) OR UPPER(es.SPEAKER_EMAIL) LIKE UPPER(?))' : '';
+    const searchFilter = searchQuery ? 'AND (UPPER(COALESCE(p.NAME, er.USER_EMAIL)) LIKE UPPER(?) OR UPPER(er.USER_EMAIL) LIKE UPPER(?))' : '';
 
     const sql = `
       WITH account AS (
         SELECT ACCOUNT_NAME
         FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_LENS_ACCOUNT_CONTEXT
         WHERE ACCOUNT_ID = ?
+      ),
+      org_emails AS (
+        SELECT DISTINCT UPPER(EMAIL) AS EMAIL
+        FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_PEOPLE_ALL
+        WHERE ACCOUNT_ID = ?
       )
       SELECT
-        es.SPEAKER_EMAIL                                                                                          AS CONTACT_ID,
-        COALESCE(
-          p.NAME,
-          NULLIF(TRIM(COALESCE(es.SPEAKER_FIRST_NAME, '') || ' ' || COALESCE(es.SPEAKER_LAST_NAME, '')), ''),
-          es.SPEAKER_EMAIL
-        )                                                                                                         AS NAME,
-        COALESCE(p.TITLE, es.JOB_TITLE)                                                                          AS JOB_TITLE,
-        es.SPEAKER_STATUS                                                                                         AS STATUS,
-        MAX(es.EVENT_NAME)                                                                                        AS EVENT_NAME
-      FROM ANALYTICS.GOLD_FACT.EVENT_SPEAKERS es
-      JOIN account a ON UPPER(es.ACCOUNT_NAME) = UPPER(a.ACCOUNT_NAME)
+        er.USER_EMAIL                           AS CONTACT_ID,
+        COALESCE(p.NAME, er.USER_EMAIL)         AS NAME,
+        p.TITLE                                 AS JOB_TITLE,
+        er.REGISTRATION_STATUS                  AS STATUS,
+        MAX(er.EVENT_NAME)                      AS EVENT_NAME
+      FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
       LEFT JOIN ANALYTICS.PLATINUM_LFX_ONE.ORG_PEOPLE_ALL p
-        ON UPPER(p.EMAIL) = UPPER(es.SPEAKER_EMAIL) AND p.ACCOUNT_ID = ?
-      WHERE es.EVENT_ID = ?
-        AND es.SPEAKER_STATUS IN ('Accepted', 'In Review')
+        ON UPPER(p.EMAIL) = UPPER(er.USER_EMAIL) AND p.ACCOUNT_ID = ?
+      WHERE er.EVENT_ID = ?
+        AND er.USER_ROLE = 'Speaker'
+        AND er.REGISTRATION_STATUS NOT IN ('Cancelled', 'Declined', 'Rejected')
+        AND (
+          UPPER(er.USER_EMAIL) IN (SELECT EMAIL FROM org_emails)
+          OR UPPER(er.ACCOUNT_NAME) IN (SELECT UPPER(a.ACCOUNT_NAME) FROM account a)
+        )
         ${searchFilter}
       GROUP BY
-        es.SPEAKER_EMAIL,
-        COALESCE(p.NAME, NULLIF(TRIM(COALESCE(es.SPEAKER_FIRST_NAME, '') || ' ' || COALESCE(es.SPEAKER_LAST_NAME, '')), ''), es.SPEAKER_EMAIL),
-        COALESCE(p.TITLE, es.JOB_TITLE),
-        es.SPEAKER_STATUS
+        er.USER_EMAIL,
+        COALESCE(p.NAME, er.USER_EMAIL),
+        p.TITLE,
+        er.REGISTRATION_STATUS
       ORDER BY NAME ASC NULLS LAST
     `;
 
-    const binds: string[] = [accountId, accountId, eventId];
+    const binds: string[] = [accountId, accountId, accountId, eventId];
     if (searchQuery) {
       binds.push(`%${searchQuery}%`, `%${searchQuery}%`);
     }

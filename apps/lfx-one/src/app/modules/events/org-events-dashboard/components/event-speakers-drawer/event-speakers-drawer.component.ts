@@ -65,10 +65,6 @@ export class EventSpeakersDrawerComponent {
     return initials(name);
   }
 
-  protected onClose(): void {
-    this.visible.set(false);
-  }
-
   private initSpeakersData() {
     return toSignal(
       toObservable(this.visible).pipe(
