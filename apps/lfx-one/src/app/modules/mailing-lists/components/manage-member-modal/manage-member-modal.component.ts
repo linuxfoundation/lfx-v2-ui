@@ -3,6 +3,7 @@
 
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardSelectorComponent } from '@components/card-selector/card-selector.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
@@ -199,12 +200,23 @@ export class ManageMemberModalComponent {
 
   private handleError(error: unknown, defaultMessage: string): void {
     this.submitting.set(false);
-    const errorMessage = error instanceof Error ? error.message : (error as { error?: { message?: string } })?.error?.message || defaultMessage;
+
+    let detail = defaultMessage;
+    if (error instanceof HttpErrorResponse) {
+      if (error.status === 409) {
+        const email = this.form.getRawValue().email as string;
+        detail = `${email} is already subscribed to this mailing list.`;
+      } else {
+        detail = (error.error as { message?: string })?.message || defaultMessage;
+      }
+    } else if (error instanceof Error) {
+      detail = error.message;
+    }
 
     this.messageService.add({
       severity: 'error',
       summary: 'Error',
-      detail: errorMessage,
+      detail,
     });
   }
 }
