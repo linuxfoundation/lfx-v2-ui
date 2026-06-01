@@ -112,7 +112,7 @@ The main content area is identical in both states — only the rail swaps. This 
 
 1. Drop a new `index.md` under `docs/user/<topic>/<slug>/` (the `<topic>` directory must already exist; topics are deliberately curated).
 2. Front-matter is optional. Title falls back to the first H1; description falls back to a body snippet (FR-028).
-3. Run `yarn docs:build` (or just `yarn dev` — the `predev` hook covers it).
+3. Run `yarn start` (or `yarn build`) — `yarn docs:build` is chained explicitly into `start`, `build`, `build:development`, `build:production`, `build:staging`, `watch`, and `test` via `&&`, so the manifest, search index, and sitemap regenerate before Angular compiles. There is no `predev` / `prebuild` hook (Yarn 4 under `turbo run` does not fire `pre*` lifecycle hooks). To regenerate just the docs artifacts without invoking Angular, run `yarn docs:build` directly.
 4. Run `yarn docs:check` before pushing — fails loud on missing manifest entry, schema drift, sitemap drift, or non-deterministic output.
 
 Removing or renaming a slug is a breaking change for bookmarks. The not-found page surfaces a topic recovery list to soften that — see `docs-not-found.component.html`.

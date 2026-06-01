@@ -4,13 +4,13 @@
 import { DOCUMENT } from '@angular/common';
 import { Component, inject, OnInit } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
+import { DOCS_CANONICAL_ORIGIN } from '@lfx-one/shared/constants';
 import type { DocsTopic } from '@lfx-one/shared/interfaces';
 
 import { DocsSearchComponent } from '../../components/docs-search/docs-search.component';
 import { DocsTopicCardComponent } from '../../components/docs-topic-card/docs-topic-card.component';
 import { DocsManifestService } from '../../services/docs-manifest.service';
 
-const DOCS_CANONICAL_ORIGIN = 'https://app.lfx.dev';
 const LANDING_TITLE = 'LFX Self Serve Documentation';
 const LANDING_DESCRIPTION = 'Browse user guides, FAQs, and how-tos for the LFX Self Serve product — meetings, committees, mailing lists, and more.';
 

@@ -9,6 +9,15 @@
 export const DOCS_ROUTE_PREFIX = '/docs';
 
 /**
+ * Production origin for canonical URL construction in SEO head tags.
+ * Used by the docs landing and article components to emit
+ * `<link rel="canonical">` and OpenGraph / Twitter-card URLs that point at
+ * the production deployment regardless of which preview / staging origin
+ * is rendering the page.
+ */
+export const DOCS_CANONICAL_ORIGIN = 'https://app.lfx.dev';
+
+/**
  * Canonical display order for top-level docs topics on the landing page,
  * breadcrumbs, and any taxonomy-driven UI.
  *

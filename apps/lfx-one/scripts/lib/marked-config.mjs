@@ -150,6 +150,13 @@ export function rewriteHref(href, ctx) {
     // Schema-qualified — http(s), mailto, tel, etc. Leave alone.
     return href;
   }
+  // Root-relative URLs (e.g. `/docs`, `/docs/meetings`, `/login`) and
+  // protocol-relative URLs (`//host/path`) are already valid absolute
+  // references — treating them as relative markdown file paths would
+  // route them through `sourcePathToSlug`, which has no entry for them,
+  // producing bogus "broken cross-link" warnings. Pass them through
+  // unchanged.
+  if (href.startsWith('/')) return href;
 
   // Relative path. Split off any trailing #fragment.
   const [pathPart, fragment = ''] = href.split('#');

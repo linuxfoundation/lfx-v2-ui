@@ -47,13 +47,13 @@ export class DocsSearchComponent {
 
   protected readonly query = new FormControl<string>('', { nonNullable: true });
 
+  protected readonly listboxId = 'docs-search-listbox';
+  protected readonly listboxOptionPrefix = `${this.listboxId}-opt-`;
+
   protected readonly hits = signal<DocsSearchHit[]>([]);
   protected readonly searching = signal(false);
   protected readonly activeIndex = signal(-1);
   protected readonly panelOpen = signal(false);
-
-  protected readonly listboxId = 'docs-search-listbox';
-  protected readonly listboxOptionPrefix = `${this.listboxId}-opt-`;
 
   protected readonly queryValue = toSignal(this.query.valueChanges, { initialValue: '' });
   protected readonly trimmedQuery = computed(() => this.queryValue().trim());

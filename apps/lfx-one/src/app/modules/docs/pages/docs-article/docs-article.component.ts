@@ -6,14 +6,13 @@ import { Component, computed, ElementRef, HostListener, inject } from '@angular/
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { DOCS_CANONICAL_ORIGIN } from '@lfx-one/shared/constants';
 import type { DocsArticle } from '@lfx-one/shared/interfaces';
 import { isDocsPath } from '@lfx-one/shared/utils';
 import { map } from 'rxjs/operators';
 
 import { DocsSearchComponent } from '../../components/docs-search/docs-search.component';
 import { DocsManifestService } from '../../services/docs-manifest.service';
-
-const DOCS_CANONICAL_ORIGIN = 'https://app.lfx.dev';
 
 /**
  * Renders one documentation article.
