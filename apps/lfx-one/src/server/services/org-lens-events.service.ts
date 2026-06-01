@@ -89,6 +89,17 @@ export class OrgLensEventsService {
         FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_PEOPLE_ALL
         WHERE ACCOUNT_ID = ?
       ),
+      -- Corporate email domains for sponsor/speaker detection when account names differ
+      -- (e.g. EVENT_REGISTRATIONS stores "Google" while ORG_LENS_ACCOUNT_CONTEXT stores "Google LLC")
+      org_email_domains AS (
+        SELECT DISTINCT SPLIT_PART(LOWER(EMAIL), '@', 2) AS DOMAIN
+        FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_PEOPLE_ALL
+        WHERE ACCOUNT_ID = ?
+          AND SPLIT_PART(LOWER(EMAIL), '@', 2) NOT IN (
+            'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'live.com',
+            'icloud.com', 'aol.com', 'protonmail.com', 'pm.me'
+          )
+      ),
       -- Canonical account names for sponsor detection fallback
       account AS (
         SELECT ACCOUNT_NAME
@@ -110,7 +121,7 @@ export class OrgLensEventsService {
           MAX(er.EVENT_REGISTRATION_URL) AS EVENT_REGISTRATION_URL,
           COUNT(DISTINCT CASE WHEN UPPER(er.USER_EMAIL) IN (SELECT EMAIL FROM org_emails) AND er.REGISTRATION_STATUS = 'Accepted' THEN er.USER_EMAIL END) AS ORG_ATTENDEE_COUNT,
           COUNT(DISTINCT CASE WHEN UPPER(er.USER_EMAIL) IN (SELECT EMAIL FROM org_emails) AND er.USER_ROLE = 'Speaker' AND er.REGISTRATION_STATUS = 'Accepted' THEN er.USER_EMAIL END) AS ORG_SPEAKER_ACCEPTED_COUNT,
-          MAX(CASE WHEN er.USER_ROLE = 'Sponsor' AND er.REGISTRATION_STATUS NOT IN ('Cancelled', 'Declined', 'Rejected') AND (UPPER(er.USER_EMAIL) IN (SELECT EMAIL FROM org_emails) OR UPPER(er.ACCOUNT_NAME) IN (SELECT UPPER(a.ACCOUNT_NAME) FROM account a)) THEN 1 ELSE 0 END) AS IS_ORG_SPONSOR
+          MAX(CASE WHEN er.USER_ROLE = 'Sponsor' AND er.REGISTRATION_STATUS NOT IN ('Cancelled', 'Declined', 'Rejected') AND (UPPER(er.USER_EMAIL) IN (SELECT EMAIL FROM org_emails) OR UPPER(er.ACCOUNT_NAME) IN (SELECT UPPER(a.ACCOUNT_NAME) FROM account a) OR SPLIT_PART(LOWER(er.USER_EMAIL), '@', 2) IN (SELECT DOMAIN FROM org_email_domains)) THEN 1 ELSE 0 END) AS IS_ORG_SPONSOR
         FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS er
         WHERE er.EVENT_ID IN (SELECT EVENT_ID FROM org_pe)
         GROUP BY er.EVENT_ID
@@ -124,6 +135,7 @@ export class OrgLensEventsService {
           AND (
             UPPER(er.USER_EMAIL) IN (SELECT EMAIL FROM org_emails)
             OR UPPER(er.ACCOUNT_NAME) IN (SELECT UPPER(a.ACCOUNT_NAME) FROM account a)
+            OR SPLIT_PART(LOWER(er.USER_EMAIL), '@', 2) IN (SELECT DOMAIN FROM org_email_domains)
           )
         GROUP BY er.EVENT_ID
       ),
@@ -163,7 +175,7 @@ export class OrgLensEventsService {
       LIMIT ${pageSize} OFFSET ${offset}
     `;
 
-    const binds: string[] = [accountId, accountId, accountId, userEmail];
+    const binds: string[] = [accountId, accountId, accountId, accountId, userEmail];
     if (searchQuery) binds.push(`%${searchQuery}%`);
 
     let result;
