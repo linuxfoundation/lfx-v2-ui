@@ -26,7 +26,7 @@ You are publishing, subscribing, or making NATS request/reply calls from the Sel
 
 ## Reference
 
-- [`docs/architecture/backend/nats-integration.md`](../../../../docs/architecture/backend/nats-integration.md) — the canonical NATS architecture doc. Treat this as the source of truth; do not maintain a separate copy under this skill.
+- [`docs/architecture/backend/nats-integration.md`](../../../docs/architecture/backend/nats-integration.md) — the canonical NATS architecture doc. Treat this as the source of truth; do not maintain a separate copy under this skill.
 
 ## Scope boundaries
 

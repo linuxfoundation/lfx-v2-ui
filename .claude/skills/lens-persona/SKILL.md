@@ -28,7 +28,7 @@ You are working on code that depends on the Self Serve lens/persona system: dash
 
 ## Reference
 
-- [`docs/architecture/frontend/lens-system.md`](../../../../docs/architecture/frontend/lens-system.md) — the canonical lens/persona architecture doc. Treat this as the source of truth; do not maintain a separate copy under this skill.
+- [`docs/architecture/frontend/lens-system.md`](../../../docs/architecture/frontend/lens-system.md) — the canonical lens/persona architecture doc. Treat this as the source of truth; do not maintain a separate copy under this skill.
 
 ## Scope boundaries
 

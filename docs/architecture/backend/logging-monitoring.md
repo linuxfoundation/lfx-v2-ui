@@ -418,7 +418,7 @@ try {
 }
 ```
 
-**Exception — SSE / streaming controllers:** Controllers that handle their own response in the catch block (e.g., SSE streaming with `res.end()`) must log errors themselves since `apiErrorHandler` is never reached. The middleware's `skipIfLogged` option below exists primarily to make those legacy paths safe; it is not an invitation to log in every catch block.
+**Exception — controllers that do not delegate to `apiErrorHandler`:** Any controller that handles its own response in the catch block — and therefore never calls `next(error)` / never reaches `apiErrorHandler` — must log errors itself. This covers SSE / streaming controllers (`res.end()`), redirect-based flows (e.g., auth callbacks), and any path where the headers are already sent. The middleware's `skipIfLogged` option below exists primarily to make those paths safe; it is not an invitation to log in every catch block.
 
 ### Error Middleware with Severity-Based Logging
 

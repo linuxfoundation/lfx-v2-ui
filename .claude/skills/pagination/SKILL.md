@@ -27,7 +27,7 @@ You are building or modifying a Self Serve backend endpoint that returns a list 
 
 ## Reference
 
-- [`docs/architecture/backend/pagination.md`](../../../../docs/architecture/backend/pagination.md) — the canonical pagination architecture doc. Treat this as the source of truth; do not maintain a separate copy under this skill.
+- [`docs/architecture/backend/pagination.md`](../../../docs/architecture/backend/pagination.md) — the canonical pagination architecture doc. Treat this as the source of truth; do not maintain a separate copy under this skill.
 
 ## Scope boundaries
 

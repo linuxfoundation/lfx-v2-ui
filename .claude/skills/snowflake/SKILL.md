@@ -27,7 +27,7 @@ You are writing or modifying SQL that runs against Snowflake through Self Serve'
 
 ## Reference
 
-- [`docs/architecture/backend/snowflake-integration.md`](../../../../docs/architecture/backend/snowflake-integration.md) — the canonical Snowflake architecture doc. Treat this as the source of truth; do not maintain a separate copy under this skill.
+- [`docs/architecture/backend/snowflake-integration.md`](../../../docs/architecture/backend/snowflake-integration.md) — the canonical Snowflake architecture doc. Treat this as the source of truth; do not maintain a separate copy under this skill.
 
 ## Scope boundaries
 

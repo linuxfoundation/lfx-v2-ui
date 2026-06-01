@@ -30,7 +30,7 @@ If the work is a modal dialog (not a slide-in), this skill does not apply.
 
 ## Reference
 
-- [`docs/architecture/frontend/drawer-pattern.md`](../../../../docs/architecture/frontend/drawer-pattern.md) — the canonical drawer architecture doc. Treat this as the source of truth; do not maintain a separate copy under this skill.
+- [`docs/architecture/frontend/drawer-pattern.md`](../../../docs/architecture/frontend/drawer-pattern.md) — the canonical drawer architecture doc. Treat this as the source of truth; do not maintain a separate copy under this skill.
 
 ## Scope boundaries
 
