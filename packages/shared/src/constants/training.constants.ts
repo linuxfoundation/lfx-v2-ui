@@ -13,7 +13,6 @@ export const ORG_TRAINING_TABS = [
 ];
 
 export const ORG_TRAINING_LEVEL_OPTIONS = [
-  { label: 'All Levels', value: null },
   { label: 'Beginner', value: 'BEGINNER' },
   { label: 'Intermediate', value: 'INTERMEDIATE' },
   { label: 'Advanced', value: 'ADVANCED' },

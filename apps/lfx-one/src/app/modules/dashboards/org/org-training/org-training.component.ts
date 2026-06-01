@@ -3,25 +3,25 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, PLATFORM_ID, signal, Signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, Signal } from '@angular/core';
+import { FormControl, FormGroup } from '@angular/forms';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router } from '@angular/router';
 import { DEFAULT_ORG_TRAINING_TAB_ID, ORG_TRAINING_LEVEL_OPTIONS, ORG_TRAINING_TABS, VALID_ORG_TRAINING_TAB_IDS } from '@lfx-one/shared/constants';
 import type { OrgTrainingStats, OrgTrainingTabId } from '@lfx-one/shared/interfaces';
-import { InputTextModule } from 'primeng/inputtext';
-import { SelectModule } from 'primeng/select';
 import { catchError, filter, of, switchMap, tap } from 'rxjs';
 
 import { CardComponent } from '@components/card/card.component';
+import { CardTabsBarComponent } from '@components/card-tabs-bar/card-tabs-bar.component';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
+import { InputTextComponent } from '@components/input-text/input-text.component';
+import { SelectComponent } from '@components/select/select.component';
 import { AccountContextService } from '@shared/services/account-context.service';
 import { OrgLensTrainingService } from '@shared/services/org-lens-training.service';
 
 @Component({
   selector: 'lfx-org-training',
-  imports: [FormsModule, CardComponent, EmptyStateComponent, InputTextModule, SelectModule],
+  imports: [CardComponent, CardTabsBarComponent, EmptyStateComponent, InputTextComponent, SelectComponent],
   templateUrl: './org-training.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -30,16 +30,19 @@ export class OrgTrainingComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly accountContext = inject(AccountContextService);
-  private readonly platformId = inject(PLATFORM_ID);
   private readonly trainingService = inject(OrgLensTrainingService);
 
   // ─── Configuration ─────────────────────────────────────────────────────────
   protected readonly tabs = ORG_TRAINING_TABS;
   protected readonly levelOptions = ORG_TRAINING_LEVEL_OPTIONS;
 
+  // ─── Forms ─────────────────────────────────────────────────────────────────
+  protected readonly filterForm = new FormGroup({
+    search: new FormControl(''),
+    level: new FormControl<string | null>(null),
+  });
+
   // ─── Writable Signals ──────────────────────────────────────────────────────
-  protected readonly searchTerm = signal('');
-  protected readonly selectedLevel = signal<string | null>(null);
   protected readonly statsLoading = signal(false);
 
   // ─── Computed / toSignal ───────────────────────────────────────────────────
@@ -60,21 +63,8 @@ export class OrgTrainingComponent {
     });
   }
 
-  protected onTabKeydown(event: KeyboardEvent): void {
-    const ids = this.tabs.map((t) => t.id);
-    const idx = ids.indexOf(this.activeTab());
-    let next: number | null = null;
-    if (event.key === 'ArrowRight') next = (idx + 1) % ids.length;
-    else if (event.key === 'ArrowLeft') next = (idx - 1 + ids.length) % ids.length;
-    else if (event.key === 'Home') next = 0;
-    else if (event.key === 'End') next = ids.length - 1;
-    if (next !== null) {
-      event.preventDefault();
-      this.switchTab(ids[next]);
-      if (isPlatformBrowser(this.platformId)) {
-        (document.getElementById(`org-training-tab-${ids[next]}`) as HTMLElement | null)?.focus();
-      }
-    }
+  protected onActiveTabChange(tabId: string): void {
+    this.switchTab(tabId as OrgTrainingTabId);
   }
 
   protected onStatCardClick(tabId: OrgTrainingTabId): void {
