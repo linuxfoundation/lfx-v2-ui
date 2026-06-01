@@ -2,37 +2,18 @@
 // SPDX-License-Identifier: MIT
 
 import { ORG_KEY_CONTACT_REQUIRED_ROLES } from '@lfx-one/shared/constants';
-import type { OrgKeyContactAssignment, OrgKeyContactsResponse, OrgKeyContactsStats, QueryServiceResponse } from '@lfx-one/shared/interfaces';
+import type {
+  KeyContactIndexedDoc,
+  OrgKeyContactAssignment,
+  OrgKeyContactsResponse,
+  OrgKeyContactsStats,
+  ProjectMembershipIndexedDoc,
+  QueryServiceResponse,
+} from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
 import { fetchAllQueryResources } from '../helpers/query-service.helper';
 import { MicroserviceProxyService } from './microservice-proxy.service';
-
-/** Indexed `key_contact.data` shape on query-service — only the fields we read. */
-interface KeyContactIndexedDoc {
-  uid?: string;
-  membership_uid?: string;
-  email?: string;
-  first_name?: string;
-  last_name?: string;
-  title?: string | null;
-  role?: string;
-  status?: string | null;
-  board_member?: boolean;
-  primary_contact?: boolean;
-  b2b_org_uid?: string;
-}
-
-/** Indexed `project_membership.data` shape on query-service — only the fields we read. */
-interface ProjectMembershipIndexedDoc {
-  uid?: string;
-  project_uid?: string | null;
-  project_slug?: string;
-  project_name?: string | null;
-  status?: string;
-  tier?: string | null;
-  year?: string | null;
-}
 
 /** Org Lens — People → Key Contacts tab. V1 is org-wide and read-only; membership-scoped reads + writes live in OrgLensKeyContactsService (spec 024). */
 export class OrgPeopleKeyContactsService {

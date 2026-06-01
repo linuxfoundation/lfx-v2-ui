@@ -178,6 +178,7 @@ export * from './org-people.interface';
 
 // Org People — Key Contacts tab (spec 005)
 export * from './org-people-key-contacts.interface';
+export * from './org-people-key-contacts.internal.interface';
 
 // Newsletter interfaces
 export * from './newsletter.interface';

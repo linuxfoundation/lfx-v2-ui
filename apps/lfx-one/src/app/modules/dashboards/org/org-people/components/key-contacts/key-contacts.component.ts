@@ -46,15 +46,16 @@ export class KeyContactsComponent {
     role: new FormControl<string>('', { nonNullable: true }),
   });
 
+  // WritableSignals — keep grouped per component-organization.md (writables → computed/toSignal).
   protected readonly sortColumn = signal<OrgKeyContactSortColumn>('name');
   protected readonly sortDirection = signal<OrgKeyContactSortDirection>(1);
   protected readonly expansion = signal<Record<string, boolean>>({});
   protected readonly retryTrigger = signal<number>(0);
-
   private readonly loadingState = signal<boolean>(true);
-  protected readonly isLoading = this.loadingState.asReadonly();
-
   private readonly fetchErrorState = signal<boolean>(false);
+
+  // Computed / toSignal / readonly views — derived signals follow the writable block.
+  protected readonly isLoading = this.loadingState.asReadonly();
   protected readonly fetchError = this.fetchErrorState.asReadonly();
 
   // Mirror reactive form into a signal so computeds re-run on input — FormGroup.value is not a signal.
