@@ -42,14 +42,16 @@ export class FeatureFlagService {
       this.context.set(userContext);
       this.isInitialized.set(true);
 
-      // The provider may already be READY (the app initializer awaits
-      // setProviderAndWait before bootstrap), so seed the signal eagerly and
-      // let the Ready handler cover the slower streaming case.
+      // Register handlers BEFORE seeding from the current status so a READY
+      // transition that lands in the gap can't be missed: the Ready handler
+      // covers the slower streaming case, and the status seed below covers the
+      // already-READY case (the app initializer awaits setProviderAndWait before
+      // bootstrap). Setting the signal twice is idempotent.
+      this.setupEventHandlers();
+
       if (this.client.providerStatus === ProviderStatus.READY) {
         this.isProviderReady.set(true);
       }
-
-      this.setupEventHandlers();
     } catch (error) {
       console.error('Failed to initialize feature flag service:', error);
       this.isInitialized.set(false);
