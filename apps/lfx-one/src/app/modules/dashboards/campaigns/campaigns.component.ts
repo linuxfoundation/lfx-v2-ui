@@ -7,11 +7,12 @@ import { Component, inject, PLATFORM_ID, signal } from '@angular/core';
 import { CAMPAIGN_TABS } from '@lfx-one/shared/constants';
 import type { CampaignBriefOutput, CampaignTab } from '@lfx-one/shared/interfaces';
 
+import { ImplementationTabComponent } from './components/implementation-tab/implementation-tab.component';
 import { PlanningTabComponent } from './components/planning-tab/planning-tab.component';
 
 @Component({
   selector: 'lfx-campaigns',
-  imports: [PlanningTabComponent],
+  imports: [PlanningTabComponent, ImplementationTabComponent],
   templateUrl: './campaigns.component.html',
   styleUrl: './campaigns.component.scss',
 })
