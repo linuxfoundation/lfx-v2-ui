@@ -1,16 +1,18 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import type { OrgTrainingTabId } from '../interfaces/training.interface';
+
 // ─── Org Training page constants ───────────────────────────────────────────
 
-export const DEFAULT_ORG_TRAINING_TAB_ID = 'certifications' as const;
-
-export const VALID_ORG_TRAINING_TAB_IDS = new Set(['certifications', 'trainings']);
-
-export const ORG_TRAINING_TABS = [
-  { id: 'certifications' as const, label: 'Certifications', icon: 'fa-light fa-award' },
-  { id: 'trainings' as const, label: 'Trainings', icon: 'fa-light fa-book-open' },
+export const ORG_TRAINING_TABS: { id: OrgTrainingTabId; label: string; icon: string }[] = [
+  { id: 'certifications', label: 'Certifications', icon: 'fa-light fa-award' },
+  { id: 'trainings', label: 'Trainings', icon: 'fa-light fa-book-open' },
 ];
+
+export const DEFAULT_ORG_TRAINING_TAB_ID: OrgTrainingTabId = 'certifications';
+
+export const VALID_ORG_TRAINING_TAB_IDS: ReadonlySet<OrgTrainingTabId> = new Set(ORG_TRAINING_TABS.map((tab) => tab.id));
 
 export const ORG_TRAINING_LEVEL_OPTIONS = [
   { label: 'Beginner', value: 'BEGINNER' },

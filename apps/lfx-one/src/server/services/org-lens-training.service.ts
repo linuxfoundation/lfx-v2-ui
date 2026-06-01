@@ -24,12 +24,17 @@ export class OrgLensTrainingService {
     //   CERTIFICATIONS_EARNED     — total certification records (ignores who earned them)
     //   EMPLOYEES_IN_TRAINING     — distinct people enrolled in ≥1 training (non-certified)
     //   TRAINING_COURSES_ENROLLED — total training enrollment records (ignores who enrolled)
+    //
+    // STATUS is nullable. Only the exact string 'Certified' counts as certified; every other
+    // value — including NULL — is treated as training. `IS DISTINCT FROM` is used (rather than
+    // `!=`) so NULL rows fall into the training branch instead of being silently dropped, which
+    // matches the people-side convention (org-lens-people.service.ts: STATUS === 'Certified').
     const query = `
       SELECT
-        COUNT(DISTINCT CASE WHEN STATUS = 'Certified'  THEN PERSON_KEY END) AS CERTIFIED_EMPLOYEES,
-        COUNT_IF(STATUS = 'Certified')                                       AS CERTIFICATIONS_EARNED,
-        COUNT(DISTINCT CASE WHEN STATUS != 'Certified' THEN PERSON_KEY END) AS EMPLOYEES_IN_TRAINING,
-        COUNT_IF(STATUS != 'Certified')                                      AS TRAINING_COURSES_ENROLLED
+        COUNT(DISTINCT CASE WHEN STATUS = 'Certified' THEN PERSON_KEY END)              AS CERTIFIED_EMPLOYEES,
+        COUNT_IF(STATUS = 'Certified')                                                  AS CERTIFICATIONS_EARNED,
+        COUNT(DISTINCT CASE WHEN STATUS IS DISTINCT FROM 'Certified' THEN PERSON_KEY END) AS EMPLOYEES_IN_TRAINING,
+        COUNT_IF(STATUS IS DISTINCT FROM 'Certified')                                   AS TRAINING_COURSES_ENROLLED
       FROM ANALYTICS.PLATINUM_LFX_ONE.ORG_PEOPLE_TRAINING
       WHERE ACCOUNT_ID = ?
     `;

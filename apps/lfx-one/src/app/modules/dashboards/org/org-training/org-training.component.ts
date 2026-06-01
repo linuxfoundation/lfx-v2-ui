@@ -47,7 +47,7 @@ export class OrgTrainingComponent {
   protected readonly statsError = signal(false);
 
   // ─── Computed / toSignal ───────────────────────────────────────────────────
-  protected readonly companyName = computed(() => this.accountContext.selectedAccount().accountName ?? '');
+  protected readonly companyName = computed(() => this.accountContext.selectedAccount()?.accountName ?? '');
   protected readonly activeTab: Signal<OrgTrainingTabId> = this.initActiveTab();
   protected readonly trainingStats: Signal<OrgTrainingStats | null> = this.initTrainingStats();
 
@@ -65,6 +65,9 @@ export class OrgTrainingComponent {
   }
 
   protected onActiveTabChange(tabId: string): void {
+    if (!VALID_ORG_TRAINING_TAB_IDS.has(tabId as OrgTrainingTabId)) {
+      return;
+    }
     this.switchTab(tabId as OrgTrainingTabId);
   }
 
