@@ -3,7 +3,7 @@
 
 import { computed, Injectable, Signal, signal } from '@angular/core';
 import { User } from '@lfx-one/shared';
-import { Client, EvaluationContext, JsonValue, OpenFeature, ProviderEvents } from '@openfeature/web-sdk';
+import { Client, EvaluationContext, JsonValue, OpenFeature, ProviderEvents, ProviderStatus } from '@openfeature/web-sdk';
 
 @Injectable({
   providedIn: 'root',
@@ -11,10 +11,14 @@ import { Client, EvaluationContext, JsonValue, OpenFeature, ProviderEvents } fro
 export class FeatureFlagService {
   private client: Client | null = null;
   private readonly isInitialized = signal<boolean>(false);
+  private readonly isProviderReady = signal<boolean>(false);
   private readonly context = signal<EvaluationContext | null>(null);
 
   // Public readonly signals
   public readonly initialized = this.isInitialized.asReadonly();
+
+  /** True once the OpenFeature provider reaches READY (real flag values streamed); distinct from `initialized` (user context applied). */
+  public readonly providerReady = this.isProviderReady.asReadonly();
 
   /**
    * Initialize OpenFeature client with user context
@@ -37,6 +41,13 @@ export class FeatureFlagService {
       this.client = OpenFeature.getClient();
       this.context.set(userContext);
       this.isInitialized.set(true);
+
+      // The provider may already be READY (the app initializer awaits
+      // setProviderAndWait before bootstrap), so seed the signal eagerly and
+      // let the Ready handler cover the slower streaming case.
+      if (this.client.providerStatus === ProviderStatus.READY) {
+        this.isProviderReady.set(true);
+      }
 
       this.setupEventHandlers();
     } catch (error) {
@@ -147,7 +158,10 @@ export class FeatureFlagService {
     };
 
     // Set up event handlers for flag changes
-    this.client.addHandler(ProviderEvents.Ready, forceSignalUpdate);
+    this.client.addHandler(ProviderEvents.Ready, () => {
+      this.isProviderReady.set(true);
+      forceSignalUpdate();
+    });
     this.client.addHandler(ProviderEvents.ConfigurationChanged, forceSignalUpdate);
     this.client.addHandler(ProviderEvents.ContextChanged, forceSignalUpdate);
     this.client.addHandler(ProviderEvents.Reconciling, forceSignalUpdate);
