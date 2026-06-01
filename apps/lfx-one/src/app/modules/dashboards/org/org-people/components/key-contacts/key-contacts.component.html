@@ -155,7 +155,7 @@
             @for (group of sortedGroups(); track group.email) {
               @let expanded = !!expansion()[group.email];
               <tr
-                class="cursor-pointer border-b border-gray-100 hover:bg-gray-50"
+                class="cursor-pointer border-b border-gray-100 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                 role="button"
                 tabindex="0"
                 [attr.aria-expanded]="expanded"

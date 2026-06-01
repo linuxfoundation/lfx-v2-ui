@@ -22,7 +22,8 @@ export interface OrgKeyContactAssignment {
   lastName: string;
   displayName: string;
   title: string | null;
-  role: OrgKeyContactRole | string;
+  // Wire-level: any string upstream may send. Narrow to OrgKeyContactRole via isCanonicalOrgKeyContactRole before indexing role-keyed maps.
+  role: string;
   foundationSlug: string;
   foundationName: string | null;
   canEdit: boolean;

@@ -25,9 +25,10 @@ export const ORG_KEY_CONTACT_ROLE_PILL_CLASSES: Readonly<Record<OrgKeyContactRol
   'Event Sponsorship Contact': 'bg-orange-50 text-orange-700 border-orange-300',
 };
 
-/** Type guard for arbitrary upstream role strings — narrows to the canonical 9 for safe Record indexing. */
+/** Type guard for arbitrary upstream role strings — narrows to the canonical 9 for safe Record indexing.
+ * Uses `Object.prototype.hasOwnProperty.call` so inherited keys (e.g. `toString`) don't pass the guard. */
 export function isCanonicalOrgKeyContactRole(role: string): role is OrgKeyContactRole {
-  return role in ORG_KEY_CONTACT_ROLE_PILL_CLASSES;
+  return Object.prototype.hasOwnProperty.call(ORG_KEY_CONTACT_ROLE_PILL_CLASSES, role);
 }
 
 /** Fallback pill class for any role string not in the canonical 9. */

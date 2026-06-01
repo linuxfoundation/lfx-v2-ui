@@ -36,6 +36,11 @@ interface ProjectMembershipIndexedDoc {
 
 /** Org Lens — People → Key Contacts tab. V1 is org-wide and read-only; membership-scoped reads + writes live in OrgLensKeyContactsService (spec 024). */
 export class OrgPeopleKeyContactsService {
+  // Active membership statuses, case-insensitive — mirrors OrgMembershipResolverService so we don't silently drop 'purchased' or mixed-case 'active' memberships.
+  private static readonly activeMembershipStatuses = new Set(['active', 'purchased']);
+  // Match OrgMembershipResolverService's page size so org-wide reads aren't artificially fragmented into more round trips than necessary.
+  private static readonly queryPageSize = 500;
+
   private readonly microserviceProxy: MicroserviceProxyService;
 
   public constructor() {
@@ -45,30 +50,37 @@ export class OrgPeopleKeyContactsService {
   /** Bundled GET — joins active key_contact rows to their project_membership and computes the filter-independent stat strip (FR-004). Caller passes b2b_org UUID directly because the upstream b2b_org index has no indexed sfid field. */
   public async getKeyContacts(req: Request, orgUid: string): Promise<OrgKeyContactsResponse> {
     const tags = `b2b_org_uid:${orgUid}`;
+    // failOnPartial: true on both fetches — stats are computed off the full active dataset, so a dropped page would silently produce wrong counts and missing-join filters.
     const [contacts, memberships] = await Promise.all([
-      fetchAllQueryResources<KeyContactIndexedDoc>(req, (pageToken) =>
-        this.microserviceProxy.proxyRequest<QueryServiceResponse<KeyContactIndexedDoc>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-          type: 'key_contact',
-          tags,
-          per_page: 50,
-          ...(pageToken && { page_token: pageToken }),
-        })
+      fetchAllQueryResources<KeyContactIndexedDoc>(
+        req,
+        (pageToken) =>
+          this.microserviceProxy.proxyRequest<QueryServiceResponse<KeyContactIndexedDoc>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+            type: 'key_contact',
+            tags,
+            per_page: OrgPeopleKeyContactsService.queryPageSize,
+            ...(pageToken && { page_token: pageToken }),
+          }),
+        { failOnPartial: true }
       ),
-      fetchAllQueryResources<ProjectMembershipIndexedDoc>(req, (pageToken) =>
-        this.microserviceProxy.proxyRequest<QueryServiceResponse<ProjectMembershipIndexedDoc>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-          type: 'project_membership',
-          tags,
-          per_page: 50,
-          ...(pageToken && { page_token: pageToken }),
-        })
+      fetchAllQueryResources<ProjectMembershipIndexedDoc>(
+        req,
+        (pageToken) =>
+          this.microserviceProxy.proxyRequest<QueryServiceResponse<ProjectMembershipIndexedDoc>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+            type: 'project_membership',
+            tags,
+            per_page: OrgPeopleKeyContactsService.queryPageSize,
+            ...(pageToken && { page_token: pageToken }),
+          }),
+        { failOnPartial: true }
       ),
     ]);
 
-    // Membership filter is case-sensitive ('Active' only); contact-side is case-insensitive because legacy rows are mixed-case.
+    // Case-insensitive membership status filter — same Set ('active', 'purchased') as OrgMembershipResolverService so we don't drop valid memberships.
     const membershipByUid = new Map<string, ProjectMembershipIndexedDoc>();
     for (const m of memberships) {
       if (!m.uid) continue;
-      if (m.status !== 'Active') continue;
+      if (!OrgPeopleKeyContactsService.activeMembershipStatuses.has((m.status ?? '').toLowerCase())) continue;
       membershipByUid.set(m.uid, m);
     }
 

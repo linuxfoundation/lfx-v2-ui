@@ -248,7 +248,8 @@ export class KeyContactsComponent {
         }),
         switchMap(([orgUid]) => {
           if (!orgUid) {
-            this.loadingState.set(false);
+            // Hold the skeleton until the org selector populates a uid — flipping loadingState to false here would
+            // briefly render the "no data" empty state on mount before the account-context emits the real uid.
             return of(EMPTY_ORG_KEY_CONTACTS_RESPONSE);
           }
           return this.dataService.getKeyContacts(orgUid).pipe(
