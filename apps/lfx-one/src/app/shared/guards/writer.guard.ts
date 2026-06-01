@@ -4,7 +4,7 @@
 import { inject } from '@angular/core';
 import { ActivatedRouteSnapshot, CanActivateFn, Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
-import { map, tap } from 'rxjs';
+import { map, of, switchMap, timer } from 'rxjs';
 
 import { PersonaService } from '../services/persona.service';
 import { ProjectContextService } from '../services/project-context.service';
@@ -48,16 +48,16 @@ export const writerGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const deniedUrl = router.createUrlTree([overviewPath], { queryParams: { project: slug } });
 
   return projectService.getProject(slug, false).pipe(
-    tap((project) => {
-      if (project?.writer !== true) {
-        messageService.add({
-          severity: 'error',
-          summary: 'Access Denied',
-          detail: 'You do not have permission to perform this action on this project.',
-          life: 5000,
-        });
-      }
-    }),
-    map((project) => (project?.writer === true ? true : deniedUrl))
+    switchMap((project) => {
+      if (project?.writer === true) return of(true);
+      messageService.add({
+        severity: 'error',
+        summary: 'Access Denied',
+        detail: 'You do not have permission to perform this action on this project.',
+        life: 5000,
+      });
+      // Delay the redirect by one tick so the toast renders before navigation fires.
+      return timer(50).pipe(map(() => deniedUrl));
+    })
   );
 };

@@ -50,10 +50,13 @@ export function evictOnWriteAccessLoss(): void {
         detail: 'You do not have permission to perform this action on this project.',
         life: 5000,
       });
-      const slug = projectContextService.activeContext()?.slug;
-      const lens = lensService.activeLens();
-      const overviewPath = lens === 'project' ? '/project/overview' : '/foundation/overview';
-      const url = slug ? router.createUrlTree([overviewPath], { queryParams: { project: slug } }) : router.parseUrl(overviewPath);
-      router.navigateByUrl(url);
+      // Defer navigation by one tick so the toast renders before the route change.
+      setTimeout(() => {
+        const slug = projectContextService.activeContext()?.slug;
+        const lens = lensService.activeLens();
+        const overviewPath = lens === 'project' ? '/project/overview' : '/foundation/overview';
+        const url = slug ? router.createUrlTree([overviewPath], { queryParams: { project: slug } }) : router.parseUrl(overviewPath);
+        router.navigateByUrl(url);
+      }, 50);
     });
 }
