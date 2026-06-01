@@ -180,8 +180,10 @@ export class OrgLensAccessComponent {
       .pipe(take(1), takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
-          this.listData.set(res);
           this.isInviting.set(false);
+          // Drop the response if the selected org changed mid-flight — don't overwrite the new org's list.
+          if (res.orgUid !== orgUid) return;
+          this.listData.set(res);
           this.addModalVisible.set(false);
           this.messageService.add({
             severity: 'success',
@@ -219,8 +221,10 @@ export class OrgLensAccessComponent {
       .pipe(take(1), takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
-          this.listData.set(res);
           this.isSubmitting.set(false);
+          // Drop the response if the selected org changed mid-flight — don't overwrite the new org's list.
+          if (res.orgUid !== orgUid) return;
+          this.listData.set(res);
           this.editModalVisible.set(false);
           this.editingUser.set(null);
           this.messageService.add({
@@ -265,8 +269,10 @@ export class OrgLensAccessComponent {
       .pipe(take(1), takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
-          this.listData.set(res);
           this.isSubmitting.set(false);
+          // Drop the response if the selected org changed mid-flight — don't overwrite the new org's list.
+          if (res.orgUid !== orgUid) return;
+          this.listData.set(res);
           this.messageService.add({
             severity: 'success',
             summary: 'Access removed',

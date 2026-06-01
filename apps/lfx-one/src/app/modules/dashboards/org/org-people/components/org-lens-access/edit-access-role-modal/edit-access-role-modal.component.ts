@@ -58,6 +58,9 @@ export class EditAccessRoleModalComponent {
 
   protected onCancel(): void {
     if (this.saving()) return;
+    // Re-seed to the current role so a discarded selection can't survive a same-user re-open
+    // (linkedSignal won't re-evaluate when `user()` keeps the same reference).
+    this.selectedRole.set(this.user()?.role ?? 'viewer');
     this.visible.set(false);
   }
 }

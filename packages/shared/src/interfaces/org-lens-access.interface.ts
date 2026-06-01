@@ -11,6 +11,9 @@ export type OrgAccessRole = 'admin' | 'viewer';
 /** Invite lifecycle state surfaced from the settings record. */
 export type OrgAccessInviteStatus = 'pending' | 'accepted' | 'revoked' | 'expired';
 
+/** Invite states that can appear on a listed row (revoked/expired are filtered out before listing). */
+export type OrgAccessListedInviteStatus = Extract<OrgAccessInviteStatus, 'pending' | 'accepted'>;
+
 /** Type-filter selection (single-select) for the access table toolbar. */
 export type OrgAccessFilter = 'all' | 'admin' | 'viewer' | 'invited';
 
@@ -29,7 +32,7 @@ export interface OrgAccessUser {
   /** `admin` (writer) or `viewer` (auditor). */
   role: OrgAccessRole;
   /** `accepted` or `pending` for listed rows. */
-  inviteStatus: OrgAccessInviteStatus;
+  inviteStatus: OrgAccessListedInviteStatus;
   /** `true` when `inviteStatus !== 'accepted'`. Drives the "Invited" filter and hides Edit. */
   isPending: boolean;
 }
