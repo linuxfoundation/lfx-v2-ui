@@ -32,9 +32,6 @@ export const writerGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   }
 
   const slug = route.queryParamMap.get('project') ?? projectContextService.activeContext()?.slug ?? null;
-  if (!slug) {
-    return router.parseUrl('/project/overview');
-  }
 
   // Use the lens encoded in the route ancestry (parent route carries data.lens) so the
   // denied redirect lands on the same lens the user was navigating within, preventing
@@ -42,6 +39,10 @@ export const writerGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   // appear in the foundation items list.
   const routeLens = route.parent?.data?.['lens'] ?? route.data?.['lens'];
   const overviewPath = routeLens === 'foundation' ? '/foundation/overview' : '/project/overview';
+
+  if (!slug) {
+    return router.parseUrl(overviewPath);
+  }
   const deniedUrl = router.createUrlTree([overviewPath], { queryParams: { project: slug } });
 
   return projectService.getProject(slug, false).pipe(map((project) => (project?.writer === true ? true : deniedUrl)));

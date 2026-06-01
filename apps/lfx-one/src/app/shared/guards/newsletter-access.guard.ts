@@ -22,8 +22,8 @@ import { ProjectService } from '../services/project.service';
  * links and hard reloads work before the lens has finished syncing the
  * active context. Falls back to the active context's slug only when no
  * query param is present (e.g., the bare `/newsletters` lens-redirect
- * path). Falls back to `/foundation/overview?project=<slug>` on denial /
- * unrecoverable error to preserve the active project context.
+ * path). Redirects to the lens-appropriate overview on denial to preserve
+ * the active project context without triggering a lens switch.
  */
 export const newsletterAccessGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const personaService = inject(PersonaService);
@@ -42,12 +42,14 @@ export const newsletterAccessGuard: CanActivateFn = (route: ActivatedRouteSnapsh
   // Fall back to the active context for cases where the URL doesn't carry
   // it (e.g., the `/newsletters` lens-redirect parent).
   const slug = route.queryParamMap.get('project') ?? projectContextService.activeContext()?.slug ?? null;
-  if (!slug) {
-    return router.parseUrl('/project/overview');
-  }
 
   const routeLens = route.parent?.data?.['lens'] ?? route.data?.['lens'];
   const overviewPath = routeLens === 'foundation' ? '/foundation/overview' : '/project/overview';
+
+  if (!slug) {
+    return router.parseUrl(overviewPath);
+  }
+
   const deniedUrl = router.createUrlTree([overviewPath], { queryParams: { project: slug } });
 
   return projectService.getProject(slug, false).pipe(map((project) => (project?.writer === true ? true : deniedUrl)));
