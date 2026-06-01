@@ -2,26 +2,27 @@
 // SPDX-License-Identifier: MIT
 
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, PLATFORM_ID, signal, Signal } from '@angular/core';
+import { Component, computed, inject, PLATFORM_ID, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { SelectModule } from 'primeng/select';
+import { InputTextModule } from 'primeng/inputtext';
+import { catchError, filter, of, switchMap } from 'rxjs';
+
 import { CardComponent } from '@components/card/card.component';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { DEFAULT_ORG_EVENTS_TAB_ID, ORG_EVENTS_STATUS_OPTIONS, ORG_EVENTS_TABS, VALID_ORG_EVENTS_TAB_IDS } from '@lfx-one/shared/constants';
 import type { OrgEventStatFilterId, OrgEventsSummary, OrgEventsTabId } from '@lfx-one/shared/interfaces';
-import { AccountContextService } from '@app/shared/services/account-context.service';
-import { EventsService } from '@app/shared/services/events.service';
-import { catchError, filter, of, switchMap } from 'rxjs';
-import { SelectModule } from 'primeng/select';
-import { InputTextModule } from 'primeng/inputtext';
+import { AccountContextService } from '@services/account-context.service';
+import { EventsService } from '@services/events.service';
+
 import { DiscoverEventsButtonComponent } from '../components/discover-events-button/discover-events-button.component';
 
 @Component({
   selector: 'lfx-org-events-dashboard',
   imports: [FormsModule, CardComponent, EmptyStateComponent, SelectModule, InputTextModule, DiscoverEventsButtonComponent],
   templateUrl: './org-events-dashboard.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OrgEventsDashboardComponent {
   // === Private injections ===
@@ -32,25 +33,26 @@ export class OrgEventsDashboardComponent {
   private readonly platformId = inject(PLATFORM_ID);
 
   // === Template constants ===
-  protected readonly tabs = ORG_EVENTS_TABS;
-  protected readonly statusOptions = ORG_EVENTS_STATUS_OPTIONS;
+  public readonly tabs = ORG_EVENTS_TABS;
+  public readonly statusOptions = ORG_EVENTS_STATUS_OPTIONS;
 
   // === WritableSignals ===
-  protected readonly activeStatFilter = signal<OrgEventStatFilterId | null>(null);
-  protected readonly searchTerm = signal('');
-  protected readonly selectedStatus = signal<string | null>(null);
+  // activeStatFilter drives card highlight + aria-pressed; filter wiring to the events table arrives in LFXV2-1899
+  public readonly activeStatFilter = signal<OrgEventStatFilterId | null>(null);
+  public readonly searchTerm = signal('');
+  public readonly selectedStatus = signal<string | null>(null);
 
   // === Computed / toSignal ===
-  protected readonly companyName = computed(() => this.accountContext.selectedAccount().accountName ?? '');
-  protected readonly activeTab: Signal<OrgEventsTabId> = this.initActiveTab();
-  protected readonly eventsSummary: Signal<OrgEventsSummary | null> = this.initEventsSummary();
+  public readonly companyName = computed(() => this.accountContext.selectedAccount().accountName ?? '');
+  public readonly activeTab: Signal<OrgEventsTabId> = this.initActiveTab();
+  public readonly eventsSummary: Signal<OrgEventsSummary | null> = this.initEventsSummary();
 
-  // === Protected methods ===
-  protected applyEventsStatFilter(id: OrgEventStatFilterId): void {
+  // === Public methods ===
+  public applyEventsStatFilter(id: OrgEventStatFilterId): void {
     this.activeStatFilter.set(this.activeStatFilter() === id ? null : id);
   }
 
-  protected switchTab(tabId: OrgEventsTabId): void {
+  public switchTab(tabId: OrgEventsTabId): void {
     if (tabId === this.activeTab()) {
       return;
     }
@@ -62,7 +64,7 @@ export class OrgEventsDashboardComponent {
     });
   }
 
-  protected onTabKeydown(event: KeyboardEvent): void {
+  public onTabKeydown(event: KeyboardEvent): void {
     const ids = this.tabs.map((t) => t.id);
     const idx = ids.indexOf(this.activeTab());
     let next: number | null = null;
