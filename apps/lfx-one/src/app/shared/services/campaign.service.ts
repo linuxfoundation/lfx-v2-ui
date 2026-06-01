@@ -17,7 +17,7 @@ import {
   CampaignMonitorResponse,
   SSEEvent,
 } from '@lfx-one/shared/interfaces';
-import { filter, map, Observable, of, switchMap, takeWhile, timer } from 'rxjs';
+import { exhaustMap, filter, map, Observable, of, take, takeWhile, timer } from 'rxjs';
 
 import { SseService } from './sse.service';
 
@@ -73,8 +73,10 @@ export class CampaignService {
   }
 
   private pollJobStatus(jobId: string): Observable<CampaignJobStatus> {
+    const maxPolls = Math.ceil(300_000 / CAMPAIGN_JOB_POLL_INTERVAL_MS);
     return timer(0, CAMPAIGN_JOB_POLL_INTERVAL_MS).pipe(
-      switchMap(() => this.http.get<CampaignJobStatus>(`/api/campaigns/jobs/${encodeURIComponent(jobId)}`)),
+      take(maxPolls),
+      exhaustMap(() => this.http.get<CampaignJobStatus>(`/api/campaigns/jobs/${encodeURIComponent(jobId)}`)),
       takeWhile((status) => status.status === 'running', true)
     );
   }
