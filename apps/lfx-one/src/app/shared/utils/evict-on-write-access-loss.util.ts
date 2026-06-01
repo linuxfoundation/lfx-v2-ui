@@ -4,6 +4,7 @@
 import { DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
+import { MessageService } from 'primeng/api';
 import { filter, skip, take } from 'rxjs';
 
 import { LensService } from '../services/lens.service';
@@ -32,6 +33,7 @@ export function evictOnWriteAccessLoss(): void {
   const router = inject(Router);
   const projectContextService = inject(ProjectContextService);
   const lensService = inject(LensService);
+  const messageService = inject(MessageService);
   const destroyRef = inject(DestroyRef);
 
   toObservable(projectContextService.canWrite)
@@ -42,6 +44,12 @@ export function evictOnWriteAccessLoss(): void {
       takeUntilDestroyed(destroyRef)
     )
     .subscribe(() => {
+      messageService.add({
+        severity: 'error',
+        summary: 'Access Denied',
+        detail: 'You do not have permission to perform this action on this project.',
+        life: 5000,
+      });
       const slug = projectContextService.activeContext()?.slug;
       const lens = lensService.activeLens();
       const overviewPath = lens === 'project' ? '/project/overview' : '/foundation/overview';
