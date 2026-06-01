@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import type { CampaignGoal, CampaignPhase, CampaignPlatform } from '../interfaces/campaign.interface';
+import type { CampaignGoal, CampaignPhase, CampaignPlatform } from '../interfaces';
 
 export interface CampaignTabOption {
   id: CampaignPhase;
@@ -52,6 +52,7 @@ export const CAMPAIGN_PACING_THRESHOLDS = {
   underspending: 50,
   normal: 90,
   constrained: 100,
+  overspending: 130,
 } as const;
 
 export const CAMPAIGN_CHAR_LIMITS = {
