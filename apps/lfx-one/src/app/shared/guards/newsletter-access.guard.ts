@@ -3,7 +3,8 @@
 
 import { inject } from '@angular/core';
 import { ActivatedRouteSnapshot, CanActivateFn, Router } from '@angular/router';
-import { map } from 'rxjs';
+import { MessageService } from 'primeng/api';
+import { map, tap } from 'rxjs';
 
 import { PersonaService } from '../services/persona.service';
 import { ProjectContextService } from '../services/project-context.service';
@@ -29,6 +30,7 @@ export const newsletterAccessGuard: CanActivateFn = (route: ActivatedRouteSnapsh
   const personaService = inject(PersonaService);
   const projectContextService = inject(ProjectContextService);
   const projectService = inject(ProjectService);
+  const messageService = inject(MessageService);
   const router = inject(Router);
 
   // Fast path: ED persona. Synchronous (cookie-seeded) so SSR + first-paint
@@ -52,5 +54,17 @@ export const newsletterAccessGuard: CanActivateFn = (route: ActivatedRouteSnapsh
 
   const deniedUrl = router.createUrlTree([overviewPath], { queryParams: { project: slug } });
 
-  return projectService.getProject(slug, false).pipe(map((project) => (project?.writer === true ? true : deniedUrl)));
+  return projectService.getProject(slug, false).pipe(
+    tap((project) => {
+      if (project?.writer !== true) {
+        messageService.add({
+          severity: 'error',
+          summary: 'Access Denied',
+          detail: 'You do not have permission to perform this action on this project.',
+          life: 5000,
+        });
+      }
+    }),
+    map((project) => (project?.writer === true ? true : deniedUrl))
+  );
 };
