@@ -43,7 +43,8 @@ export class AppComponent {
   public constructor() {
     this.router.events.pipe(filter((e) => e instanceof NavigationEnd)).subscribe(() => {
       const pending = this.pendingToastService.consume();
-      if (pending) this.messageService.add(pending);
+      // Defer to next macrotask so the toast component renders after the navigation cycle.
+      if (pending) setTimeout(() => this.messageService.add(pending));
     });
 
     // Initialize Segment tracking
