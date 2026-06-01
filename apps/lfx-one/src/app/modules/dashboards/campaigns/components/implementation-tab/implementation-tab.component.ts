@@ -5,7 +5,7 @@ import { Component, DestroyRef, effect, inject, input, signal } from '@angular/c
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
-import { CAMPAIGN_BUDGET_DEFAULTS, CAMPAIGN_CHAR_LIMITS } from '@lfx-one/shared/constants';
+import { CAMPAIGN_BUDGET_DEFAULTS, CAMPAIGN_CHAR_LIMITS, CAMPAIGN_JOB_POLL_INTERVAL_MS } from '@lfx-one/shared/constants';
 import { CampaignService } from '@services/campaign.service';
 import { map, startWith, Subscription, take } from 'rxjs';
 
@@ -201,7 +201,8 @@ export class ImplementationTabComponent {
   }
 
   private pollJob(jobId: string): void {
-    const MAX_POLLS = 150; // 5 minutes at 2s interval
+    const MAX_POLL_DURATION_MS = 300_000;
+    const MAX_POLLS = Math.ceil(MAX_POLL_DURATION_MS / CAMPAIGN_JOB_POLL_INTERVAL_MS);
     this.jobSubscription = this.campaignService
       .getCreateResult(jobId)
       .pipe(take(MAX_POLLS), takeUntilDestroyed(this.destroyRef))
