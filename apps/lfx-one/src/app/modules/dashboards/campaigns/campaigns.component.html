@@ -31,7 +31,14 @@
   </div>
 
   <!-- Tab Content -->
-  <div role="tabpanel" [id]="'panel-' + selectedTab()" [attr.aria-labelledby]="'tab-' + selectedTab()" data-testid="campaigns-tab-content">
-    <p class="text-sm text-gray-500">Select a tab above. Tab components will be added in subsequent PRs.</p>
-  </div>
+  @for (tab of tabs; track tab.id) {
+    <div
+      role="tabpanel"
+      [id]="'panel-' + tab.id"
+      [attr.aria-labelledby]="'tab-' + tab.id"
+      [hidden]="selectedTab() !== tab.id"
+      [attr.data-testid]="'campaigns-' + tab.id + '-panel'">
+      <p class="text-sm text-gray-500">{{ tab.label }} tab content will be added in subsequent PRs.</p>
+    </div>
+  }
 </div>
