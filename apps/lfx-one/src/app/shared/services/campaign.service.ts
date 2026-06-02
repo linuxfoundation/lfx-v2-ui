@@ -3,27 +3,24 @@
 
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { CAMPAIGN_JOB_POLL_INTERVAL_MS } from '@lfx-one/shared/constants';
 import {
   AudienceDemographics,
   CampaignBriefRequest,
   CampaignCreateRequest,
   CampaignCreateResponse,
   CampaignJobStatus,
+  CampaignMonitorResponse,
   CampaignSSEEventType,
   HubSpotUtmCreateResult,
   HubSpotUtmLookupResult,
   KeywordMetricsResponse,
-  CampaignMonitorResponse,
   SSEEvent,
 } from '@lfx-one/shared/interfaces';
-import { exhaustMap, filter, map, Observable, of, take, takeWhile, timer } from 'rxjs';
+import { exhaustMap, last, map, Observable, of, take, takeWhile, timer } from 'rxjs';
 
 import { SseService } from './sse.service';
 
-// ---------------------------------------------------------------------------
-// Service
-// ---------------------------------------------------------------------------
+const CAMPAIGN_JOB_POLL_INTERVAL_MS = 2000;
 
 @Injectable({ providedIn: 'root' })
 export class CampaignService {
@@ -47,8 +44,11 @@ export class CampaignService {
     }
 
     return this.pollJobStatus(jobId).pipe(
-      filter((status) => status.status === 'done'),
-      map((status) => status.result ?? null)
+      last(),
+      map((status) => {
+        if (status.status === 'done') return status.result ?? null;
+        throw new Error('Campaign creation timed out');
+      })
     );
   }
 
