@@ -401,9 +401,18 @@ export class PlanningTabComponent implements OnInit {
       case 'copy_token':
         this.copyBuffer.update((buf) => buf + (event.data as string));
         break;
-      case 'copy_structured':
-        this.structuredCopy.set(event.data as Record<string, unknown>);
+      case 'copy_structured': {
+        const raw = event.data as Record<string, unknown>;
+        const nested = raw['platforms'] as Record<string, unknown> | undefined;
+        if (nested) {
+          for (const [key, value] of Object.entries(nested)) {
+            if (!(key in raw)) raw[key] = value;
+          }
+          delete raw['platforms'];
+        }
+        this.structuredCopy.set(raw);
         break;
+      }
       case 'hubspot_utm': {
         const utmData = event.data as { hsUtm?: string } | string;
         this.hsUtm.set(typeof utmData === 'string' ? utmData : (utmData?.hsUtm ?? null));
