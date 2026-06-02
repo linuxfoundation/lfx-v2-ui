@@ -154,6 +154,7 @@ export class MicroserviceProxyService {
       LFX_V2_SERVICE: process.env['LFX_V2_SERVICE'] || 'http://lfx-api.k8s.orb.local',
       LFX_V2_MEMBER_SERVICE: process.env['LFX_V2_MEMBER_SERVICE'] || process.env['LFX_V2_SERVICE'] || 'http://lfx-api.k8s.orb.local',
     };
-    return urls[service];
+    // Strip trailing slashes so a config value like `https://host/` can't produce `host//path`.
+    return urls[service].replace(/\/+$/, '');
   }
 }

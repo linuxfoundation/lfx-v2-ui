@@ -129,7 +129,10 @@ export class OrgLensAccessController {
       return;
     }
     // Manager-only gate (FR-011) — surface a clear 403 the UI maps to "no permission".
-    if (error instanceof MicroserviceError && error.statusCode === 403) {
+    // Only the LOCAL assertCanManage gate matches here: proxied upstream errors set
+    // `originalMessage` (via MicroserviceError.fromMicroserviceResponse), so an upstream 403
+    // (token/ACL) falls through to mapAccessUpstreamError instead of being mislabeled.
+    if (error instanceof MicroserviceError && error.statusCode === 403 && !error.originalMessage) {
       logger.warning(req, operation, 'Org access write rejected: caller is not a manager', { status: 403 });
       res.setHeader('Cache-Control', 'no-store');
       res.status(403).json({ error: { code: 'FORBIDDEN', message: error.message, conflict: false } });
