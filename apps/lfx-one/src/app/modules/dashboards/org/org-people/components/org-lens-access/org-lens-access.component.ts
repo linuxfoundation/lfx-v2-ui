@@ -71,6 +71,7 @@ export class OrgLensAccessComponent {
   protected readonly roleBadgeLabel = ORG_ACCESS_ROLE_BADGE_LABEL;
   protected readonly roleBadgeTooltip = ORG_ACCESS_ROLE_BADGE_TOOLTIP;
   protected readonly tableSkeletonRows: readonly number[] = [0, 1, 2, 3, 4];
+  protected readonly summarySkeletonCards: readonly number[] = [0, 1, 2];
 
   // Toolbar + pagination state.
   protected readonly searchTerm = signal<string>('');
@@ -181,8 +182,10 @@ export class OrgLensAccessComponent {
       .subscribe({
         next: (res) => {
           this.isInviting.set(false);
-          // Drop the response if the selected org changed mid-flight — don't overwrite the new org's list.
-          if (res.orgUid !== orgUid) return;
+          // Drop the response if the selected org changed mid-flight. res.orgUid echoes the org the
+          // request was issued for, so compare it to the LIVE selection (not the captured orgUid,
+          // which it always equals) to avoid overwriting a newly-selected org's list.
+          if (res.orgUid !== this.accountContext.selectedAccount().uid) return;
           this.listData.set(res);
           this.addModalVisible.set(false);
           this.messageService.add({
@@ -222,8 +225,9 @@ export class OrgLensAccessComponent {
       .subscribe({
         next: (res) => {
           this.isSubmitting.set(false);
-          // Drop the response if the selected org changed mid-flight — don't overwrite the new org's list.
-          if (res.orgUid !== orgUid) return;
+          // Drop the response if the selected org changed mid-flight (compare the live selection;
+          // res.orgUid always equals the captured orgUid the request was issued for).
+          if (res.orgUid !== this.accountContext.selectedAccount().uid) return;
           this.listData.set(res);
           this.editModalVisible.set(false);
           this.editingUser.set(null);
@@ -270,8 +274,9 @@ export class OrgLensAccessComponent {
       .subscribe({
         next: (res) => {
           this.isSubmitting.set(false);
-          // Drop the response if the selected org changed mid-flight — don't overwrite the new org's list.
-          if (res.orgUid !== orgUid) return;
+          // Drop the response if the selected org changed mid-flight (compare the live selection;
+          // res.orgUid always equals the captured orgUid the request was issued for).
+          if (res.orgUid !== this.accountContext.selectedAccount().uid) return;
           this.listData.set(res);
           this.messageService.add({
             severity: 'success',

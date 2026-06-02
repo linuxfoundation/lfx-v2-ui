@@ -58,6 +58,12 @@ export function mapAccessUpstreamError(error: unknown): AccessErrorResult {
     case 504:
       return { status: 502, message: AccessErrorMapping.fallbackMessage, conflict: false };
     default:
+      // Pass through unmapped client errors (e.g. 422 validation, 429 rate-limit) with a cleaned
+      // message so the failure class isn't misreported as a server error; collapse genuine 5xx and
+      // unknown statuses to the generic 502 so server-internal noise can't leak to the client.
+      if (typeof status === 'number' && status >= 400 && status < 500) {
+        return { status, message: cleanMessage(rawMessage, AccessErrorMapping.fallbackMessage), conflict: false };
+      }
       return { status: 502, message: AccessErrorMapping.fallbackMessage, conflict: false };
   }
 }

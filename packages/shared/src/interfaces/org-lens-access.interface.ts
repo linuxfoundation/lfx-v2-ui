@@ -109,7 +109,7 @@ export interface MemberServiceOrgUser {
   invite_status?: OrgAccessInviteStatus;
 }
 
-/** GET/PUT /b2b_orgs/{uid}/settings body (full-replace semantics on PUT). */
+/** GET /b2b_orgs/{uid}/settings body. Writes use the per-principal endpoints, not a full-replace PUT. */
 export interface MemberServiceB2bOrgSettings {
   writers?: MemberServiceOrgUser[];
   auditors?: MemberServiceOrgUser[];

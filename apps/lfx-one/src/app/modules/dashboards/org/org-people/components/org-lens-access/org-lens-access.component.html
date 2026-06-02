@@ -75,7 +75,7 @@
     <!-- Summary cards -->
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3" data-testid="org-access-summary">
       @if (isLoading()) {
-        @for (i of [0, 1, 2]; track i) {
+        @for (i of summarySkeletonCards; track i) {
           <div class="rounded-lg border border-gray-200 bg-white p-4">
             <p-skeleton width="3rem" height="1.5rem" />
             <div class="mt-2 text-xs text-gray-500">&nbsp;</div>

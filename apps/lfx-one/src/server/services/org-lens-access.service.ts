@@ -40,9 +40,16 @@ export class OrgLensAccessService {
 
   // ── public API (controller boundary) ─────────────────────────────────────────
 
-  /** US1 — list elevated-access principals + summary + caller management flag. */
-  public async listAccessUsers(req: Request, orgUid: string): Promise<OrgAccessListResponse> {
-    const [settings, canManage] = await Promise.all([this.fetchSettings(req, orgUid), this.resolveCanManage(req, orgUid)]);
+  /**
+   * US1 — list elevated-access principals + summary + caller management flag.
+   * Pass `knownCanManage` from a write path that already asserted it to avoid a redundant
+   * role-grants lookup on the post-write refresh.
+   */
+  public async listAccessUsers(req: Request, orgUid: string, knownCanManage?: boolean): Promise<OrgAccessListResponse> {
+    const [settings, canManage] = await Promise.all([
+      this.fetchSettings(req, orgUid),
+      knownCanManage === undefined ? this.resolveCanManage(req, orgUid) : Promise.resolve(knownCanManage),
+    ]);
     const users = await this.enrichJobTitles(req, orgUid, this.mapPrincipals(settings));
     return { orgUid, users, summary: this.buildSummary(users), canManage };
   }
@@ -58,7 +65,8 @@ export class OrgLensAccessService {
       ...(cleanName ? { name: cleanName } : {}),
     };
     await this.microserviceProxy.proxyRequest(req, 'LFX_V2_MEMBER_SERVICE', `/b2b_orgs/${encodeURIComponent(orgUid)}/settings/users`, 'POST', undefined, body);
-    return this.listAccessUsers(req, orgUid);
+    // canManage was just asserted true above — reuse it to skip a second role-grants lookup.
+    return this.listAccessUsers(req, orgUid, true);
   }
 
   /** US2 — change a principal's role (Admin ⇄ Viewer) via the per-principal PUT endpoint; returns the refreshed list. */
@@ -73,7 +81,8 @@ export class OrgLensAccessService {
       undefined,
       { invited_as: ORG_ACCESS_ROLE_RELATION[role] }
     );
-    return this.listAccessUsers(req, orgUid);
+    // canManage was just asserted true above — reuse it to skip a second role-grants lookup.
+    return this.listAccessUsers(req, orgUid, true);
   }
 
   /** US3 — revoke a principal's access via the per-principal DELETE endpoint; returns the refreshed list. */
@@ -86,7 +95,8 @@ export class OrgLensAccessService {
       `/b2b_orgs/${encodeURIComponent(orgUid)}/settings/users/${encodeURIComponent(target)}`,
       'DELETE'
     );
-    return this.listAccessUsers(req, orgUid);
+    // canManage was just asserted true above — reuse it to skip a second role-grants lookup.
+    return this.listAccessUsers(req, orgUid, true);
   }
 
   // ── base helpers ─────────────────────────────────────────────────────────────
