@@ -15,6 +15,8 @@ import {
   CreateCommitteeJoinApplicationRequest,
   CreateCommitteeMemberRequest,
   MyCommittee,
+  Project,
+  ProjectSettings,
   QueryServiceCountResponse,
   QueryServiceResponse,
   UploadCommitteeDocumentRequest,
@@ -1229,19 +1231,23 @@ export class CommitteeService {
   }
 
   /**
-   * Fetches the parent project's manage/review grants so the committee members roster can
-   * label users who inherit "Manage" / "Reviewer" from the foundation/parent level (LFXV2-2059).
+   * Collects the manage/review grants the committee inherits from its project ancestry so the
+   * members roster can label users who hold a "Manage" / "Reviewer" grant at the project or
+   * foundation level rather than directly on the committee (LFXV2-2059).
    *
-   * The committee's effective `writer` boolean already reflects this inheritance via the
-   * authorization model (`committee#writer` derives from `writer from project`); this method
-   * supplies the per-user lists the roster needs to mirror that inheritance in the UI.
+   * Walks the chain `committee's project_uid -> parent -> ... -> foundation root`, reading each
+   * level's project settings and unioning the writers/auditors. This mirrors the authorization
+   * model, which inherits at every hop (`committee#writer` derives from `writer from project`,
+   * and `project#writer` from `writer from parent`), so a grant anywhere up the chain — most
+   * importantly a foundation-level "Manage" — is an effective committee grant. Reading only the
+   * immediate project (the round-1 behaviour) missed grants stored higher up, which is why a
+   * foundation manager still showed as a plain member.
    *
-   * Best-effort: returns empty lists when no project is associated or when the upstream
-   * project-settings read fails (e.g. the caller cannot read the parent project's
-   * permissions). Never throws — inherited labels are display-only and must not break the
-   * committee fetch.
+   * Best-effort and never throws — inherited labels are display-only and must not break the
+   * committee fetch. A level the caller cannot read (or a missing project) simply contributes no
+   * grants. The walk is depth-capped and visited-guarded so a malformed parent link cannot loop.
    *
-   * @returns Writers/auditors mapped to `CommitteeUser`, matching the shape of the
+   * @returns Deduped writers/auditors mapped to `CommitteeUser`, matching the shape of the
    *   committee-scoped `writers` / `auditors` lists.
    */
   private async getInheritedPermissions(req: Request, projectUid?: string): Promise<{ writers: CommitteeUser[]; auditors: CommitteeUser[] }> {
@@ -1249,26 +1255,55 @@ export class CommitteeService {
       return { writers: [], auditors: [] };
     }
 
-    try {
-      const settings = await this.projectService.getProjectSettings(req, projectUid);
-      // Project UserInfo -> CommitteeUser (username is optional upstream; default to '' so
-      // roster matching falls back to email, mirroring how committee writers/auditors match).
-      const toCommitteeUser = (u: { name: string; email: string; username?: string; avatar?: string }): CommitteeUser => ({
-        username: u.username ?? '',
-        email: u.email,
-        name: u.name,
-        avatar: u.avatar,
-      });
-      return {
-        writers: (settings.writers ?? []).map(toCommitteeUser),
-        auditors: (settings.auditors ?? []).map(toCommitteeUser),
-      };
-    } catch {
-      logger.debug(req, 'get_inherited_permissions', 'Failed to fetch parent project permissions, returning empty', {
-        project_uid: projectUid,
-      });
-      return { writers: [], auditors: [] };
+    // Project UserInfo -> CommitteeUser (username is optional upstream; default to '' so roster
+    // matching falls back to email, mirroring how committee writers/auditors match).
+    const toCommitteeUser = (u: { name: string; email: string; username?: string; avatar?: string }): CommitteeUser => ({
+      username: u.username ?? '',
+      email: u.email,
+      name: u.name,
+      avatar: u.avatar,
+    });
+    // Dedup key: prefer the Auth0 username, fall back to email — the same identity keys the
+    // roster matches on, so a user granted at two levels collapses to one entry.
+    const keyOf = (u: CommitteeUser): string => (u.username || u.email || '').toLowerCase();
+
+    const writersByKey = new Map<string, CommitteeUser>();
+    const auditorsByKey = new Map<string, CommitteeUser>();
+    const visited = new Set<string>();
+    const MAX_DEPTH = 8;
+
+    let currentUid: string | undefined = projectUid;
+    while (currentUid && !visited.has(currentUid) && visited.size < MAX_DEPTH) {
+      const levelUid: string = currentUid;
+      visited.add(levelUid);
+
+      // This level's grants and the project record (to find the parent) in parallel; both are
+      // best-effort so an unreadable level contributes nothing and the walk still continues.
+      const [settings, project]: [ProjectSettings | null, Project | null] = await Promise.all([
+        this.projectService.getProjectSettings(req, levelUid).catch(() => null),
+        this.projectService.getProjectById(req, levelUid, false).catch(() => null),
+      ]);
+
+      for (const u of settings?.writers ?? []) {
+        const cu = toCommitteeUser(u);
+        writersByKey.set(keyOf(cu), cu);
+      }
+      for (const u of settings?.auditors ?? []) {
+        const cu = toCommitteeUser(u);
+        auditorsByKey.set(keyOf(cu), cu);
+      }
+
+      currentUid = project?.parent_uid || undefined;
     }
+
+    logger.debug(req, 'get_inherited_permissions', 'Collected inherited committee permissions from project ancestry', {
+      project_uid: projectUid,
+      levels_visited: visited.size,
+      inherited_writers: writersByKey.size,
+      inherited_auditors: auditorsByKey.size,
+    });
+
+    return { writers: [...writersByKey.values()], auditors: [...auditorsByKey.values()] };
   }
 
   /**

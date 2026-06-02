@@ -21,10 +21,12 @@ import {
   CommitteeMember,
   CommitteeMemberFilterChip,
   CommitteeMemberFilterChipConfig,
+  CommitteeMemberPermissionInfo,
   CommitteePermissionLevel,
   CommitteeUser,
   TagSeverity,
 } from '@lfx-one/shared/interfaces';
+import { canManageCommitteeMembers, resolveCommitteeMemberPermission } from '@lfx-one/shared/utils';
 import { CommitteeService } from '@services/committee.service';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -83,7 +85,7 @@ export class CommitteeMembersComponent implements OnInit {
   // from the parent/foundation project (authz model: committee#writer derives from
   // `writer from project`). No separate inherited check is needed here — a foundation-level
   // manager's `writer` flag is already true (LFXV2-2059).
-  public readonly canManageMembers = computed(() => !!this.committee()?.writer);
+  public readonly canManageMembers = computed(() => canManageCommitteeMembers(this.committee()));
   // Default to hidden while committee is loading (fail closed for privacy)
   public readonly isMembersVisible = computed(() => {
     const committee = this.committee();
@@ -140,17 +142,13 @@ export class CommitteeMembersComponent implements OnInit {
     menuComponent.toggle(event);
   }
 
-  public getMemberPermission(member: CommitteeMember): CommitteePermissionLevel {
-    const committee = this.committee();
-    if (!committee) return 'member';
-    const memberEmail = member.email?.toLowerCase();
-    const matches = (u: { username: string; email: string }) => (member.username && u.username === member.username) || u.email?.toLowerCase() === memberEmail;
-    // Committee-scoped grants take precedence, then fall back to grants inherited from the
-    // parent/foundation project so a foundation-level "Manage" user is labelled correctly
-    // rather than showing as a plain member (LFXV2-2059).
-    if (committee.writers?.some(matches) || committee.inherited_writers?.some(matches)) return 'manage';
-    if (committee.auditors?.some(matches) || committee.inherited_auditors?.some(matches)) return 'review';
-    return 'member';
+  /**
+   * Resolve a member's roster permission (committee-scoped role, else inherited project/foundation
+   * grant) plus whether it was inherited. Delegates to the shared pure resolver so the logic is
+   * unit-testable in isolation (LFXV2-2059).
+   */
+  public getMemberPermissionInfo(member: CommitteeMember): CommitteeMemberPermissionInfo {
+    return resolveCommitteeMemberPermission(this.committee(), member);
   }
 
   public getMemberPermissionSeverity(permission: CommitteePermissionLevel): TagSeverity {
@@ -159,9 +157,11 @@ export class CommitteeMembersComponent implements OnInit {
     return 'secondary';
   }
 
-  public getMemberPermissionLabel(permission: CommitteePermissionLevel): string {
-    if (permission === 'manage') return 'Manage';
-    if (permission === 'review') return 'Reviewer';
+  public getMemberPermissionLabel(permission: CommitteePermissionLevel, inherited = false): string {
+    // Inherited grants only apply to manage/review; 'member' never carries the suffix.
+    const suffix = inherited ? ' (inherited)' : '';
+    if (permission === 'manage') return `Manage${suffix}`;
+    if (permission === 'review') return `Reviewer${suffix}`;
     return 'Member';
   }
 

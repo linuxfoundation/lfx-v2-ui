@@ -749,3 +749,11 @@ export interface TabConfigEntry {
 
 /** Permission level for a committee member. */
 export type CommitteePermissionLevel = 'manage' | 'review' | 'member';
+
+/** A committee member's resolved roster permission, plus whether it was inherited rather than direct. */
+export interface CommitteeMemberPermissionInfo {
+  /** Resolved permission level shown on the roster. */
+  level: CommitteePermissionLevel;
+  /** True when `level` comes only from an inherited (project/foundation) grant, not a committee-scoped role. */
+  inherited: boolean;
+}
