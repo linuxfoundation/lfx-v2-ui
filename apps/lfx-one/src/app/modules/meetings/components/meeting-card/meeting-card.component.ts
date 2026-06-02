@@ -42,6 +42,8 @@ import {
   DEFAULT_MEETING_TYPE_CONFIG,
   getCurrentOrNextOccurrence,
   getPastMeetingTranscriptUrl,
+  isPastMeetingSummaryAwaitingApproval,
+  isPastMeetingSummaryVisible,
   Meeting,
   MeetingAttachment,
   MeetingCancelOccurrenceResult,
@@ -134,6 +136,8 @@ export class MeetingCardComponent implements OnInit {
   // Computed values for template
   public readonly summaryContent: Signal<string | null> = this.initSummaryContent();
   public readonly summaryApproved: Signal<boolean> = this.initSummaryApproved();
+  public readonly summaryVisible: Signal<boolean> = this.initSummaryVisible();
+  public readonly summaryAwaitingApproval: Signal<boolean> = this.initSummaryAwaitingApproval();
   public readonly hasSummary: Signal<boolean> = this.initHasSummary();
   public readonly recordingShareUrl: Signal<string | null> = this.initRecordingShareUrl();
   public readonly hasRecording: Signal<boolean> = this.initHasRecording();
@@ -700,6 +704,17 @@ export class MeetingCardComponent implements OnInit {
 
   private initSummaryApproved(): Signal<boolean> {
     return computed(() => this.summary()?.approved || false);
+  }
+
+  // Visible to all viewers once approved, or whenever the meeting never required
+  // approval — only a requires-approval summary that isn't approved stays hidden.
+  private initSummaryVisible(): Signal<boolean> {
+    return computed(() => isPastMeetingSummaryVisible(this.summary()));
+  }
+
+  // Drives the organizer-only review banner: requires approval and not yet approved.
+  private initSummaryAwaitingApproval(): Signal<boolean> {
+    return computed(() => isPastMeetingSummaryAwaitingApproval(this.summary()));
   }
 
   private initHasSummary(): Signal<boolean> {
