@@ -34,9 +34,6 @@ export * from './meeting.interface';
 // Calendar interfaces
 export * from './calendar.interface';
 
-// Campaign interfaces
-export * from './campaign.interface';
-
 // Search interfaces
 export * from './search.interface';
 
@@ -98,9 +95,6 @@ export * from './sse.interface';
 
 // Copilot interfaces
 export * from './copilot.interface';
-
-// Campaign interfaces
-export * from './campaign.interface';
 
 // Committee application interfaces
 export * from './committee-application.interface';
