@@ -740,7 +740,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (kw of keywords(); track kw.term) {
+                @for (kw of keywords(); track $index) {
                   <tr class="border-b border-gray-100">
                     <td class="py-2 pr-4 font-mono text-xs text-gray-800">{{ kw.term }}</td>
                     <td class="py-2 pr-4 text-xs text-gray-600">{{ kw.matchType }}</td>
