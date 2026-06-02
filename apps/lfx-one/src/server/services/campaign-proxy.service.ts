@@ -33,10 +33,16 @@ let gadsCustomer: Customer | null = null;
 
 function getGadsClient(): GoogleAdsApi {
   if (!gadsClient) {
+    const clientId = getEnv('GADS_CLIENT_ID');
+    const clientSecret = getEnv('GADS_CLIENT_SECRET');
+    const developerToken = getEnv('GADS_DEVELOPER_TOKEN');
+    if (!clientId || !clientSecret || !developerToken) {
+      throw new Error('Google Ads credentials not configured — set GADS_CLIENT_ID, GADS_CLIENT_SECRET, and GADS_DEVELOPER_TOKEN');
+    }
     gadsClient = new GoogleAdsApi({
-      client_id: getEnv('GADS_CLIENT_ID'),
-      client_secret: getEnv('GADS_CLIENT_SECRET'),
-      developer_token: getEnv('GADS_DEVELOPER_TOKEN'),
+      client_id: clientId,
+      client_secret: clientSecret,
+      developer_token: developerToken,
     });
   }
   return gadsClient;
@@ -77,7 +83,7 @@ function hsHeaders(): Record<string, string> {
 }
 
 function buildUtmTokenFallback(campaignId: string, name: string): string {
-  return `${campaignId}-${encodeURIComponent(name)}`;
+  return `${campaignId}-${name}`;
 }
 
 async function hubspotSearchCampaign(eventName: string): Promise<HubSpotUtmResult> {
@@ -118,6 +124,10 @@ async function hubspotSearchCampaign(eventName: string): Promise<HubSpotUtmResul
 
   scored.sort((a, b) => b.score - a.score);
   const best = scored[0];
+
+  if (best.score === 0) {
+    return { found: false, hsUtm: null, campaignName: '', campaignId: null };
+  }
 
   return { found: true, hsUtm: best.hsUtm, campaignName: best.name, campaignId: best.id };
 }
@@ -324,10 +334,19 @@ If a field cannot be determined, use null.`;
 
 const jobs = new Map<string, CampaignJobStatus>();
 const JOB_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const JOB_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes — mark hung jobs as failed
 
 function createJob(): string {
   const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   jobs.set(jobId, { status: 'running' });
+
+  setTimeout(() => {
+    const job = jobs.get(jobId);
+    if (job?.status === 'running') {
+      completeJob(jobId, { success: false, campaigns: [], errors: ['Job timed out after 5 minutes'] });
+    }
+  }, JOB_TIMEOUT_MS);
+
   return jobId;
 }
 
@@ -377,11 +396,13 @@ const GEO_TARGET_MAP: Record<string, string> = {
 // SSRF protection for user-supplied URLs
 // ---------------------------------------------------------------------------
 
-const PRIVATE_IP_PATTERNS = [/^127\./, /^10\./, /^172\.(1[6-9]|2\d|3[01])\./, /^192\.168\./, /^169\.254\./, /^0\./];
+const PRIVATE_IP_PATTERNS = [/^127\./, /^10\./, /^172\.(1[6-9]|2\d|3[01])\./, /^192\.168\./, /^169\.254\./, /^0\./, /^::1$/, /^fc[0-9a-f]{2}:/i, /^fe80:/i];
 
 const BLOCKED_HOSTNAMES = new Set(['localhost', '[::1]']);
 
-function validateScrapeUrl(rawUrl: string): void {
+const ALLOWED_PORTS = new Set(['', '80', '443']);
+
+async function validateScrapeUrl(rawUrl: string): Promise<void> {
   let parsed: URL;
   try {
     parsed = new URL(rawUrl);
@@ -389,8 +410,12 @@ function validateScrapeUrl(rawUrl: string): void {
     throw new Error('Invalid URL');
   }
 
-  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-    throw new Error(`Blocked protocol: ${parsed.protocol}`);
+  if (parsed.protocol !== 'https:') {
+    throw new Error('Only HTTPS URLs are allowed');
+  }
+
+  if (!ALLOWED_PORTS.has(parsed.port)) {
+    throw new Error(`Non-standard port not allowed: ${parsed.port}`);
   }
 
   const hostname = parsed.hostname.toLowerCase();
@@ -401,6 +426,20 @@ function validateScrapeUrl(rawUrl: string): void {
 
   if (PRIVATE_IP_PATTERNS.some((re) => re.test(hostname))) {
     throw new Error('Blocked host: private IP range');
+  }
+
+  const { promises: dns } = await import('node:dns');
+  try {
+    const addresses = await dns.resolve4(hostname).catch(() => [] as string[]);
+    const addresses6 = await dns.resolve6(hostname).catch(() => [] as string[]);
+    for (const addr of [...addresses, ...addresses6]) {
+      if (PRIVATE_IP_PATTERNS.some((re) => re.test(addr))) {
+        throw new Error('Blocked host: resolves to private IP');
+      }
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Blocked host')) throw error;
+    throw new Error(`DNS resolution failed for ${hostname}`);
   }
 
   const allowlist = getEnv('CAMPAIGN_BRIEF_SCRAPE_HOST_ALLOWLIST');
@@ -447,7 +486,7 @@ export class CampaignProxyService {
     yield { type: 'status', data: `Scraping ${body.url}...` };
 
     try {
-      validateScrapeUrl(body.url);
+      await validateScrapeUrl(body.url);
     } catch (error) {
       yield { type: 'error', data: `Blocked URL: ${error instanceof Error ? error.message : 'Invalid URL'}` };
       return;
@@ -498,7 +537,8 @@ export class CampaignProxyService {
       }
     }
 
-    const platformList = (body.platforms || ['google-ads']).join(', ');
+    const platforms = body.platforms?.length ? body.platforms : (['google-ads'] as const);
+    const platformList = platforms.join(', ');
     yield { type: 'status', data: `Generating copy for ${platformList}...` };
 
     const userPrompt = buildCopyPrompt(body, eventDetails);
@@ -533,7 +573,7 @@ export class CampaignProxyService {
       return;
     }
 
-    if (body.platforms?.includes('google-ads') || !body.platforms) {
+    if (platforms.includes('google-ads')) {
       yield { type: 'status', data: 'Generating keyword list...' };
 
       try {
@@ -586,45 +626,48 @@ export class CampaignProxyService {
 
   public async getJobStatus(_req: Request, jobId: string): Promise<CampaignJobStatus> {
     const job = jobs.get(jobId);
-    if (!job) return { status: 'done', result: { success: false, campaigns: [], errors: ['Job not found'] } };
+    if (!job) return { status: 'not_found' };
     return job;
   }
 
   // === Private: campaign creation orchestration ===
 
   private async executeCampaignCreation(jobId: string, body: CampaignCreateRequest): Promise<void> {
-    if (!body.hsToken) {
+    const startTime = Date.now();
+    let hsToken = body.hsToken;
+    if (!hsToken) {
       try {
         const hsUtm = await resolveHubSpotUtm(body.eventName);
-        if (hsUtm) body.hsToken = hsUtm;
+        if (hsUtm) hsToken = hsUtm;
       } catch {
         // HubSpot unavailable — fall back to event slug for UTM
       }
     }
 
+    const effectiveBody = hsToken ? { ...body, hsToken } : body;
     const results: CampaignCreateResult[] = [];
     const errors: string[] = [];
 
     for (const campaignType of body.campaignTypes) {
       try {
-        const result = campaignType === 'search' ? await this.createSearchCampaign(body) : await this.createDemandGenCampaign(body);
+        const result = campaignType === 'search' ? await this.createSearchCampaign(effectiveBody) : await this.createDemandGenCampaign(effectiveBody);
         results.push(result);
       } catch (error: unknown) {
         if (getGadsErrorCode(error) === 'DUPLICATE_CAMPAIGN_NAME') {
           try {
-            const retryBody = { ...body, eventName: `${body.eventName} ${Date.now().toString(36).slice(-4)}` };
+            const retryBody = { ...effectiveBody, eventName: `${effectiveBody.eventName} ${Date.now().toString(36).slice(-4)}` };
             const result = campaignType === 'search' ? await this.createSearchCampaign(retryBody) : await this.createDemandGenCampaign(retryBody);
             results.push(result);
             continue;
           } catch (retryError: unknown) {
             const detail = extractGadsErrorMessage(retryError);
-            logger.error(undefined, 'campaign_create_type', Date.now(), retryError as Error, { campaignType, detail });
+            logger.error(undefined, 'campaign_create_type', startTime, retryError as Error, { campaignType, detail });
             errors.push(`${campaignType}: ${detail}`);
             continue;
           }
         }
         const detail = extractGadsErrorMessage(error);
-        logger.error(undefined, 'campaign_create_type', Date.now(), error as Error, { campaignType, detail });
+        logger.error(undefined, 'campaign_create_type', startTime, error as Error, { campaignType, detail });
         errors.push(`${campaignType}: ${detail}`);
       }
     }
