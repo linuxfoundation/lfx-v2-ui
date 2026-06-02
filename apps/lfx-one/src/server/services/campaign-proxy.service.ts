@@ -96,10 +96,16 @@ let gadsCustomer: Customer | null = null;
 
 function getGadsClient(): GoogleAdsApi {
   if (!gadsClient) {
+    const clientId = getEnv('GADS_CLIENT_ID');
+    const clientSecret = getEnv('GADS_CLIENT_SECRET');
+    const developerToken = getEnv('GADS_DEVELOPER_TOKEN');
+    if (!clientId || !clientSecret || !developerToken) {
+      throw new Error('Google Ads credentials not configured (GADS_CLIENT_ID, GADS_CLIENT_SECRET, GADS_DEVELOPER_TOKEN)');
+    }
     gadsClient = new GoogleAdsApi({
-      client_id: getEnv('GADS_CLIENT_ID'),
-      client_secret: getEnv('GADS_CLIENT_SECRET'),
-      developer_token: getEnv('GADS_DEVELOPER_TOKEN'),
+      client_id: clientId,
+      client_secret: clientSecret,
+      developer_token: developerToken,
     });
   }
   return gadsClient;
@@ -181,6 +187,10 @@ async function hubspotSearchCampaign(eventName: string): Promise<HubSpotUtmResul
 
   scored.sort((a, b) => b.score - a.score);
   const best = scored[0];
+
+  if (best.score === 0) {
+    return { found: false, hsUtm: null, campaignName: '', campaignId: null };
+  }
 
   return { found: true, hsUtm: best.hsUtm, campaignName: best.name, campaignId: best.id };
 }
@@ -273,8 +283,12 @@ async function aiChat(systemPrompt: string, userPrompt: string, maxTokens = 4096
     throw new Error(`AI request failed (${response.status}): ${text}`);
   }
 
-  const data = (await response.json()) as { choices: { message: { content: string } }[] };
-  return data.choices[0].message.content;
+  const data = (await response.json()) as { choices?: { message?: { content?: string } }[] };
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error('AI proxy returned an empty or malformed response');
+  }
+  return content;
 }
 
 async function* aiChatStream(systemPrompt: string, userPrompt: string, signal: AbortSignal, maxTokens = 4096): AsyncGenerator<string> {
@@ -298,7 +312,7 @@ async function* aiChatStream(systemPrompt: string, userPrompt: string, signal: A
       temperature: 0.7,
       stream: true,
     }),
-    signal,
+    signal: AbortSignal.any([signal, AbortSignal.timeout(120_000)]),
   });
 
   if (!response.ok || !response.body) {
@@ -487,10 +501,26 @@ export class CampaignProxyService {
 
     let html = '';
     try {
-      const scrapeResponse = await fetch(safeUrl, {
+      let scrapeResponse = await fetch(safeUrl, {
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LFX/1.0)' },
         signal: AbortSignal.any([signal, AbortSignal.timeout(15_000)]),
+        redirect: 'manual',
       });
+
+      // Follow redirects manually to validate each target against SSRF
+      let redirectCount = 0;
+      while (scrapeResponse.status >= 300 && scrapeResponse.status < 400 && redirectCount < 5) {
+        const location = scrapeResponse.headers.get('location');
+        if (!location) break;
+        const redirectUrl = await validateScrapeUrl(new URL(location, safeUrl).href);
+        scrapeResponse = await fetch(redirectUrl, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LFX/1.0)' },
+          signal: AbortSignal.any([signal, AbortSignal.timeout(15_000)]),
+          redirect: 'manual',
+        });
+        redirectCount++;
+      }
+
       if (!scrapeResponse.ok) {
         yield { type: 'error', data: `Event page returned HTTP ${scrapeResponse.status}` };
         return;
@@ -1018,7 +1048,7 @@ function sanitizeDelimiter(value: string): string {
 }
 
 function buildCampaignName(body: CampaignCreateRequest, campaignType: string): string {
-  const region = REGION_MAP[body.countryCode] || 'Global';
+  const region = REGION_MAP[body.countryCode.toUpperCase()] || 'Global';
   const adFormat = campaignType === 'Search' ? 'Search' : 'DG Display';
   const targeting = campaignType === 'Search' ? 'Prospecting' : 'Intent';
   const funnel = campaignType === 'Search' ? 'BoFU' : 'MoFU';
