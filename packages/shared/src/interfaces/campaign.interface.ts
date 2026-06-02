@@ -7,7 +7,7 @@
 
 export type CampaignPlatform = 'google-ads' | 'microsoft-ads' | 'linkedin-ads' | 'meta-ads' | 'reddit-ads' | 'brave-ads' | 'feathr' | 'twitter-ads';
 
-export type CampaignPhase = 'planning' | 'implementation' | 'monitoring' | 'optimization';
+export type CampaignPhase = 'planning' | 'implementation' | 'insights' | 'optimization';
 
 export type CampaignStatus = 'draft' | 'paused' | 'enabled' | 'removed' | 'limited' | 'unknown';
 
@@ -21,6 +21,22 @@ export interface CampaignTabOption {
   id: CampaignTab;
   label: string;
   icon: string;
+}
+
+// ---------------------------------------------------------------------------
+// Campaign Name Structure
+// ---------------------------------------------------------------------------
+
+export interface ParsedCampaignName {
+  program: string;
+  baseName: string;
+  region: string;
+  objective: string;
+  targeting: string;
+  adFormat: string;
+  project: string;
+  funnelStage: string;
+  raw: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -123,8 +139,9 @@ export interface CampaignCreateResponse {
 }
 
 export interface CampaignJobStatus {
-  status: 'running' | 'done';
+  status: 'running' | 'done' | 'error' | 'not_found';
   result?: CampaignCreateResponse;
+  error?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -142,7 +159,10 @@ export interface CampaignMetrics {
   adFormat: string;
   targeting: string;
   status: CampaignStatus;
+  startDate: string;
+  endDate: string;
   budgetDay: number;
+  totalBudget: number;
   spend: number;
   impressions: number;
   clicks: number;
@@ -151,15 +171,25 @@ export interface CampaignMetrics {
   conversions: number;
   pacingPct: number;
   pacingLabel: PacingLabel;
-  actionRules: CampaignActionItem[];
+  campaignId: string;
+  googleAdsUrl: string;
 }
 
 export interface CampaignActionItem {
-  campaign: string;
+  eventName: string;
+  campaigns: string[];
+  campaignUrls: Record<string, string>;
   priority: ActionPriority;
   issue: string;
   action: string;
-  owner: string;
+  metrics: {
+    spend: number;
+    budget: number;
+    pacingPct: number;
+    impressions: number;
+    clicks: number;
+    conversions: number;
+  };
 }
 
 export interface CampaignAccountTotals {
@@ -190,6 +220,8 @@ export interface KeywordMetrics {
   status: string;
   adGroup: string;
   campaign: string;
+  campaignId: string;
+  googleAdsUrl: string;
   impressions: number;
   clicks: number;
   ctr: number;
@@ -233,6 +265,81 @@ export interface AudienceDemographics {
   age: AudienceBucket[];
   gender: AudienceBucket[];
   device: AudienceBucket[];
+}
+
+// ---------------------------------------------------------------------------
+// Optimization Insights
+// ---------------------------------------------------------------------------
+
+export interface ImpressionShareMetrics {
+  campaignName: string;
+  eventName: string;
+  campaignId: string;
+  googleAdsUrl: string;
+  impressionShare: number | null;
+  budgetLostShare: number | null;
+  rankLostShare: number | null;
+  impressions: number;
+  clicks: number;
+}
+
+export interface SearchTermMetrics {
+  searchTerm: string;
+  campaignName: string;
+  eventName: string;
+  campaignId: string;
+  googleAdsUrl: string;
+  impressions: number;
+  clicks: number;
+  ctr: number;
+  avgCpc: number;
+  spend: number;
+  conversions: number;
+}
+
+export interface QualityScoreInsight {
+  keyword: string;
+  matchType: string;
+  qualityScore: number | null;
+  expectedCtr: string;
+  adRelevance: string;
+  landingPage: string;
+  campaignName: string;
+  eventName: string;
+  campaignId: string;
+  googleAdsUrl: string;
+  impressions: number;
+  clicks: number;
+  spend: number;
+}
+
+export interface GeoPerformance {
+  country: string;
+  countryCode: string;
+  impressions: number;
+  clicks: number;
+  ctr: number;
+  spend: number;
+  conversions: number;
+}
+
+export interface DayOfWeekPerformance {
+  day: string;
+  impressions: number;
+  clicks: number;
+  ctr: number;
+  spend: number;
+  conversions: number;
+}
+
+export interface OptimizationInsightsResponse {
+  pulledAt: string;
+  days: number;
+  impressionShare: ImpressionShareMetrics[];
+  searchTerms: SearchTermMetrics[];
+  qualityScores: QualityScoreInsight[];
+  geoPerformance: GeoPerformance[];
+  dayOfWeek: DayOfWeekPerformance[];
 }
 
 // ---------------------------------------------------------------------------
