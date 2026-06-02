@@ -47,6 +47,7 @@ import sitemapRouter from './routes/sitemap.route';
 import surveysRouter from './routes/surveys.route';
 import trainingRouter from './routes/training.route';
 import enrollmentRouter from './routes/enrollment.route';
+import crowdfundingRouter from './routes/crowdfunding.route';
 import transactionRouter from './routes/transaction.route';
 import userRouter from './routes/user.route';
 import votesRouter from './routes/votes.route';
@@ -235,6 +236,7 @@ app.use('/api/impersonate', impersonationRouter);
 app.use('/api/training', trainingRouter);
 app.use('/api/rewards', rewardsRouter);
 app.use('/api/enrollments', enrollmentRouter);
+app.use('/api/crowdfunding', crowdfundingRouter);
 app.use('/api/transactions', transactionRouter);
 app.use('/api/changelog', changelogRouter);
 app.use('/api/projects/:projectUid/newsletters', newslettersRouter);
@@ -329,6 +331,7 @@ app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
     dataDogRumApplicationId: process.env['DD_RUM_APPLICATION_ID'] || '',
     allowedTracingUrls: [process.env['LFX_V2_SERVICE'], process.env['PCC_BASE_URL']].filter(Boolean) as string[],
     intercomAppId: process.env['INTERCOM_APP_ID'] || '',
+    stripePublishableKey: process.env['STRIPE_PUBLISHABLE_KEY'] || '',
   };
 
   logger.debug(req, 'intercom_ssr_context', 'Intercom SSR inputs resolved', {
