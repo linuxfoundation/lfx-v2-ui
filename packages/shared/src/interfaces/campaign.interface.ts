@@ -15,7 +15,7 @@ export type CampaignType = 'search' | 'demand-gen';
 
 export type CampaignGoal = 'conversions' | 'brand-awareness' | 'traffic' | 'lead-generation' | 'engagement';
 
-export type CampaignTab = 'planning' | 'implementation' | 'monitoring' | 'optimization';
+export type CampaignTab = CampaignPhase;
 
 export interface CampaignTabOption {
   id: CampaignTab;
